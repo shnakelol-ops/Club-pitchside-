@@ -9,6 +9,7 @@ import {
 export default function App() {
   const hostRef = useRef<HTMLDivElement>(null);
   const floatingControlsRef = useRef<HTMLDivElement>(null);
+  const [selectedEventKind, setSelectedEventKind] = useState<MatchEventKind>("POINT");
   const selectedEventRef = useRef<MatchEventKind>("POINT");
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const handleRef = useRef<{
@@ -17,6 +18,7 @@ export default function App() {
   } | null>(null);
 
   const selectEventKind = (kind: MatchEventKind) => {
+    setSelectedEventKind(kind);
     selectedEventRef.current = kind;
     handleRef.current?.setActiveEventKind(kind);
     setIsPickerOpen(false);
@@ -115,11 +117,18 @@ export default function App() {
                   selectEventKind(kind);
                 }}
                 style={{
-                  border: "1px solid rgba(148,163,184,0.4)",
+                  border:
+                    kind === selectedEventKind
+                      ? "1px solid rgba(34,197,94,0.82)"
+                      : "1px solid rgba(148,163,184,0.4)",
                   borderRadius: 8,
-                  background: "rgba(15,23,42,0.9)",
+                  background:
+                    kind === selectedEventKind
+                      ? "rgba(22,101,52,0.52)"
+                      : "rgba(15,23,42,0.9)",
                   color: "#e2e8f0",
                   fontSize: 11,
+                  fontWeight: kind === selectedEventKind ? 700 : 500,
                   lineHeight: 1.2,
                   padding: "6px 8px",
                   cursor: "pointer",
@@ -127,11 +136,28 @@ export default function App() {
                   whiteSpace: "nowrap",
                 }}
               >
-                {kind}
+                {kind === selectedEventKind ? `✓ ${kind}` : kind}
               </button>
             ))}
           </div>
         ) : null}
+        <div
+          aria-live="polite"
+          style={{
+            border: "1px solid rgba(148,163,184,0.35)",
+            borderRadius: 999,
+            background: "rgba(15,23,42,0.72)",
+            color: "#cbd5e1",
+            fontSize: 10,
+            fontWeight: 600,
+            padding: "4px 8px",
+            lineHeight: 1,
+            whiteSpace: "nowrap",
+            letterSpacing: 0.25,
+          }}
+        >
+          {selectedEventKind}
+        </div>
         <button
           type="button"
           onClick={() => {
@@ -143,7 +169,9 @@ export default function App() {
             width: 48,
             height: 48,
             borderRadius: "999px",
-            border: "1px solid rgba(148,163,184,0.45)",
+            border: isPickerOpen
+              ? "1px solid rgba(34,197,94,0.78)"
+              : "1px solid rgba(148,163,184,0.45)",
             background: "rgba(15,23,42,0.76)",
             backdropFilter: "blur(6px)",
             WebkitBackdropFilter: "blur(6px)",
