@@ -55,8 +55,10 @@ export function drawStatsMarkers(
   g.clear();
 
   const worldToScreenScale = Math.max(opts?.worldToScreenScale ?? 1, 0.004);
-  const minPx = opts?.minScreenRadiusPx ?? 3.2;
+  const minPx = opts?.minScreenRadiusPx ?? 4;
   const minWorldRadius = minPx / worldToScreenScale;
+  const minRingWidth = 1 / worldToScreenScale;
+  const minHaloRadius = 2 / worldToScreenScale;
 
   for (const event of events) {
     const style = getStatsMarkerStyle(event);
@@ -64,13 +66,25 @@ export function drawStatsMarkers(
     const radius = Math.max(style.radius, minWorldRadius);
     const fill = parseCssColorForPixi(style.fill);
     const stroke = parseCssColorForPixi(style.stroke);
+    const ringWidth = Math.max(style.strokeWidth, minRingWidth);
+    const haloRadius = radius + minHaloRadius;
+
+    // Subtle dark halo improves readability against bright turf stripes.
+    g.circle(worldPoint.x, worldPoint.y, haloRadius).fill({
+      color: 0x020617,
+      alpha: 0.22,
+    });
 
     g.circle(worldPoint.x, worldPoint.y, radius)
       .fill({ color: fill.color, alpha: fill.alpha })
       .stroke({
-        width: style.strokeWidth,
+        width: ringWidth,
         color: stroke.color,
         alpha: stroke.alpha,
       });
+
+    // Bright center dot helps identify stacked/overlapping markers quickly.
+    g.circle(worldPoint.x, worldPoint.y, Math.max(radius * 0.32, 1.25 / worldToScreenScale))
+      .fill({ color: 0xffffff, alpha: 0.9 });
   }
 }

@@ -8,44 +8,68 @@ export type StatsMarkerStyle = {
   fill: string;
   stroke: string;
   strokeWidth: number;
+  contrastStroke: string;
+  contrastStrokeWidth: number;
+  centerDot: string;
+  centerDotRadiusScale: number;
 };
 
 function styleForType(type: MatchEventKind): StatsMarkerStyle {
   switch (type) {
     case "GOAL":
       return {
-        radius: 3.2,
+        radius: 3.35,
         fill: "rgba(22, 163, 74, 1)",
         stroke: "rgba(250, 204, 21, 1)",
-        strokeWidth: 0.75,
+        strokeWidth: 0.95,
+        contrastStroke: "rgba(4, 15, 10, 0.62)",
+        contrastStrokeWidth: 0.65,
+        centerDot: "rgba(255, 255, 240, 0.96)",
+        centerDotRadiusScale: 0.27,
       };
     case "POINT":
       return {
-        radius: 2.7,
-        fill: "rgba(153, 246, 228, 1)",
-        stroke: "rgba(13, 148, 136, 1)",
-        strokeWidth: 0.5,
+        radius: 3.0,
+        fill: "rgba(167, 243, 208, 1)",
+        stroke: "rgba(5, 150, 105, 1)",
+        strokeWidth: 0.78,
+        contrastStroke: "rgba(3, 18, 14, 0.58)",
+        contrastStrokeWidth: 0.56,
+        centerDot: "rgba(248, 255, 252, 0.92)",
+        centerDotRadiusScale: 0.24,
       };
     case "WIDE":
       return {
-        radius: 3.1,
-        fill: "rgba(220, 38, 38, 1)",
-        stroke: "rgba(127, 29, 29, 1)",
-        strokeWidth: 0.65,
+        radius: 3.15,
+        fill: "rgba(244, 63, 94, 1)",
+        stroke: "rgba(190, 18, 60, 1)",
+        strokeWidth: 0.85,
+        contrastStroke: "rgba(28, 5, 10, 0.66)",
+        contrastStrokeWidth: 0.62,
+        centerDot: "rgba(255, 238, 242, 0.9)",
+        centerDotRadiusScale: 0.22,
       };
     case "TURNOVER_WON":
       return {
-        radius: 2.5,
+        radius: 2.85,
         fill: "rgba(6, 182, 212, 1)",
-        stroke: "rgba(14, 116, 144, 1)",
-        strokeWidth: 0.5,
+        stroke: "rgba(3, 105, 161, 1)",
+        strokeWidth: 0.74,
+        contrastStroke: "rgba(6, 18, 24, 0.58)",
+        contrastStrokeWidth: 0.52,
+        centerDot: "rgba(236, 254, 255, 0.9)",
+        centerDotRadiusScale: 0.2,
       };
     case "TURNOVER_LOST":
       return {
-        radius: 2.5,
+        radius: 2.85,
         fill: "rgba(251, 113, 133, 1)",
-        stroke: "rgba(190, 18, 60, 1)",
-        strokeWidth: 0.5,
+        stroke: "rgba(190, 24, 93, 1)",
+        strokeWidth: 0.74,
+        contrastStroke: "rgba(30, 9, 18, 0.58)",
+        contrastStrokeWidth: 0.52,
+        centerDot: "rgba(255, 241, 245, 0.9)",
+        centerDotRadiusScale: 0.2,
       };
     default: {
       const _never: never = type;
