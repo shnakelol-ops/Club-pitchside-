@@ -1,25 +1,39 @@
 import { useEffect, useRef } from "react";
 
 import { createPixiPitchSurface } from "./core/pitch/create-pixi-pitch-surface";
+import type { MatchEventKind } from "./core/stats/stats-event-model";
 
 export default function App() {
   const hostRef = useRef<HTMLDivElement>(null);
+  const selectedEventRef = useRef<MatchEventKind>("POINT");
+  const handleRef = useRef<{
+    destroy: () => void;
+    setActiveEventKind: (kind: MatchEventKind) => void;
+  } | null>(null);
 
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
 
     let disposed = false;
-    let handle: { destroy: () => void } | null = null;
-    void createPixiPitchSurface(host, { sport: "gaelic" }).then((nextHandle) => {
+    let handle: {
+      destroy: () => void;
+      setActiveEventKind: (kind: MatchEventKind) => void;
+    } | null = null;
+    void createPixiPitchSurface(host, {
+      sport: "gaelic",
+      activeEventKind: selectedEventRef.current,
+    }).then((nextHandle) => {
       if (disposed) {
         nextHandle.destroy();
         return;
       }
       handle = nextHandle;
+      handleRef.current = nextHandle;
     });
     return () => {
       disposed = true;
+      handleRef.current = null;
       handle?.destroy();
     };
   }, []);
@@ -36,6 +50,42 @@ export default function App() {
         padding: 16,
       }}
     >
+      <div
+        style={{
+          position: "fixed",
+          top: 12,
+          left: 12,
+          zIndex: 20,
+          display: "flex",
+          gap: 6,
+          flexWrap: "wrap",
+          maxWidth: "calc(100vw - 24px)",
+        }}
+      >
+        {(["GOAL", "POINT", "WIDE", "TURNOVER_WON", "TURNOVER_LOST"] as const).map(
+          (kind) => (
+            <button
+              key={kind}
+              type="button"
+              onClick={() => {
+                selectedEventRef.current = kind;
+                handleRef.current?.setActiveEventKind(kind);
+              }}
+              style={{
+                border: "1px solid rgba(148,163,184,0.45)",
+                borderRadius: 8,
+                background: "rgba(15,23,42,0.85)",
+                color: "#e2e8f0",
+                fontSize: 11,
+                padding: "6px 8px",
+                cursor: "pointer",
+              }}
+            >
+              {kind}
+            </button>
+          ),
+        )}
+      </div>
       <div
         ref={hostRef}
         style={{

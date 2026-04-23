@@ -1,13 +1,21 @@
-import { Application, Container } from "pixi.js";
+import { Application, Container, Graphics } from "pixi.js";
 
 import { BOARD_PITCH_VIEWBOX } from "./pitch-space";
 import { createPitchRoot } from "./create-pitch-root";
+import { viewportCssToBoardNorm } from "../coordinates/pitch-coordinates";
+import { drawStatsMarkers } from "../stats/draw-stats-markers";
+import type { MatchEvent, MatchEventKind } from "../stats/stats-event-model";
 
 export type CreatePixiPitchSurfaceOptions = {
   sport: "soccer" | "gaelic" | "hurling";
+  events?: readonly MatchEvent[];
+  activeEventKind?: MatchEventKind;
+  onPitchTap?: (nx: number, ny: number) => void;
 };
 
 export type PixiPitchSurfaceHandle = {
+  setEvents: (events: readonly MatchEvent[]) => void;
+  setActiveEventKind: (kind: MatchEventKind) => void;
   destroy: () => void;
 };
 
@@ -56,15 +64,68 @@ export async function createPixiPitchSurface(
 
   const pitchRoot = createPitchRoot(options.sport);
   world.addChild(pitchRoot.root);
+  const statsMarkers = new Graphics();
+  statsMarkers.eventMode = "none";
+  world.addChild(statsMarkers);
+
+  let eventsState: readonly MatchEvent[] = options.events ?? [];
+  let activeEventKindState: MatchEventKind = options.activeEventKind ?? "POINT";
+  const onPitchTapState = options.onPitchTap;
+
+  const redrawMarkers = () => {
+    drawStatsMarkers(statsMarkers, eventsState);
+  };
+
+  const hitArea = new Graphics();
+  hitArea
+    .rect(0, 0, BOARD_PITCH_VIEWBOX.w, BOARD_PITCH_VIEWBOX.h)
+    .fill({ color: 0xffffff, alpha: 0.0001 });
+  hitArea.eventMode = "static";
+  hitArea.zIndex = 100;
+  world.addChild(hitArea);
+  world.sortableChildren = true;
+  world.sortChildren();
+
+  hitArea.on("pointerdown", (event) => {
+    const rect = host.getBoundingClientRect();
+    const stageX = event.clientX - rect.left;
+    const stageY = event.clientY - rect.top;
+    const { nx, ny } = viewportCssToBoardNorm(stageX, stageY, rect.width, rect.height);
+
+    if (onPitchTapState) {
+      onPitchTapState(nx, ny);
+      return;
+    }
+
+    const nextEvent: MatchEvent = {
+      id: `evt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      kind: activeEventKindState,
+      nx,
+      ny,
+      timestampMs: Date.now(),
+    };
+    eventsState = [...eventsState, nextEvent];
+    redrawMarkers();
+  });
 
   const resizeObserver = new ResizeObserver(() => fitWorld(host, app, world));
   resizeObserver.observe(host);
   fitWorld(host, app, world);
+  redrawMarkers();
 
   return {
+    setEvents: (events) => {
+      eventsState = events;
+      redrawMarkers();
+    },
+    setActiveEventKind: (kind) => {
+      activeEventKindState = kind;
+    },
     destroy: () => {
       resizeObserver.disconnect();
       pitchRoot.dispose();
+      hitArea.destroy();
+      statsMarkers.destroy();
       try {
         host.removeChild(app.canvas as HTMLCanvasElement);
       } catch {
