@@ -1,12 +1,53 @@
 import { useEffect, useRef, useState } from "react";
 
 import { createPixiPitchSurface } from "./core/pitch/create-pixi-pitch-surface";
-import {
-  MATCH_EVENT_KINDS,
-  type MatchEventKind,
-} from "./core/stats/stats-event-model";
+import { type MatchEventKind } from "./core/stats/stats-event-model";
 
 type VisibilityMode = "ALL" | "LAST_5" | "LAST_10";
+
+const EVENT_GROUPS: Array<{
+  title: string;
+  columns: string;
+  items: Array<{ label: string; kind: MatchEventKind }>;
+}> = [
+  {
+    title: "Scoring / attacking",
+    columns: "repeat(5, minmax(0, 1fr))",
+    items: [
+      { label: "GOAL", kind: "GOAL" },
+      { label: "POINT", kind: "POINT" },
+      { label: "2PT", kind: "TWO_POINTER" },
+      { label: "WIDE", kind: "WIDE" },
+      { label: "Ṣ", kind: "SHOT" },
+    ],
+  },
+  {
+    title: "Matchday essentials",
+    columns: "repeat(6, minmax(0, 1fr))",
+    items: [
+      { label: "T+", kind: "TURNOVER_WON" },
+      { label: "T−", kind: "TURNOVER_LOST" },
+      { label: "K+", kind: "KICKOUT_WON" },
+      { label: "K−", kind: "KICKOUT_CONCEDED" },
+      { label: "F+", kind: "FREE_WON" },
+      { label: "F−", kind: "FREE_CONCEDED" },
+    ],
+  },
+];
+
+const EVENT_LABEL_BY_KIND: Record<MatchEventKind, string> = {
+  GOAL: "GOAL",
+  POINT: "POINT",
+  TWO_POINTER: "2PT",
+  WIDE: "WIDE",
+  SHOT: "Ṣ",
+  TURNOVER_WON: "T+",
+  TURNOVER_LOST: "T−",
+  KICKOUT_WON: "K+",
+  KICKOUT_CONCEDED: "K−",
+  FREE_WON: "F+",
+  FREE_CONCEDED: "F−",
+};
 
 export default function App() {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -113,48 +154,80 @@ export default function App() {
             style={{
               display: "flex",
               flexDirection: "column",
-              gap: 6,
+              gap: 8,
               padding: 8,
               borderRadius: 12,
               border: "1px solid rgba(148,163,184,0.35)",
               background: "rgba(15,23,42,0.72)",
               backdropFilter: "blur(6px)",
               WebkitBackdropFilter: "blur(6px)",
+              width: "min(96vw, 420px)",
             }}
           >
-            {MATCH_EVENT_KINDS.map((kind) => (
-              <button
-                key={kind}
-                type="button"
-                onClick={() => {
-                  selectEventKind(kind);
-                }}
+            {EVENT_GROUPS.map((group) => (
+              <div
+                key={group.title}
                 style={{
-                  border:
-                    kind === selectedEventKind
-                      ? "1px solid rgba(34,197,94,0.82)"
-                      : "1px solid rgba(148,163,184,0.4)",
-                  borderRadius: 8,
-                  background:
-                    kind === selectedEventKind
-                      ? "rgba(22,101,52,0.52)"
-                      : "rgba(15,23,42,0.9)",
-                  color: "#e2e8f0",
-                  fontSize: 11,
-                  fontWeight: kind === selectedEventKind ? 700 : 500,
-                  lineHeight: 1.2,
-                  padding: "6px 8px",
-                  cursor: "pointer",
-                  textAlign: "left",
-                  whiteSpace: "nowrap",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 4,
                 }}
               >
-                {kind === selectedEventKind ? `✓ ${kind}` : kind}
-              </button>
+                <span
+                  style={{
+                    fontSize: 10,
+                    lineHeight: 1.1,
+                    color: "#cbd5e1",
+                    opacity: 0.82,
+                    paddingLeft: 2,
+                  }}
+                >
+                  {group.title}
+                </span>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: group.columns,
+                    gap: 4,
+                  }}
+                >
+                  {group.items.map((item) => {
+                    const isActive = item.kind === selectedEventKind;
+                    return (
+                      <button
+                        key={item.label}
+                        type="button"
+                        onClick={() => {
+                          selectEventKind(item.kind);
+                        }}
+                        style={{
+                          border: isActive
+                            ? "1px solid rgba(34,197,94,0.82)"
+                            : "1px solid rgba(148,163,184,0.4)",
+                          borderRadius: 8,
+                          background: isActive
+                            ? "rgba(22,101,52,0.52)"
+                            : "rgba(15,23,42,0.9)",
+                          color: "#e2e8f0",
+                          fontSize: 10,
+                          fontWeight: isActive ? 700 : 600,
+                          lineHeight: 1.1,
+                          padding: "7px 4px",
+                          cursor: "pointer",
+                          textAlign: "center",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {item.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             ))}
             <div
               style={{
-                marginTop: 2,
+                marginTop: 1,
                 display: "flex",
                 gap: 4,
                 flexWrap: "wrap",
@@ -234,7 +307,7 @@ export default function App() {
             letterSpacing: 0.25,
           }}
         >
-          {selectedEventKind}
+          {EVENT_LABEL_BY_KIND[selectedEventKind]}
         </div>
         <button
           type="button"
