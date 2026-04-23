@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { createPixiPitchSurface } from "./core/pitch/create-pixi-pitch-surface";
 import {
@@ -8,11 +8,19 @@ import {
 
 export default function App() {
   const hostRef = useRef<HTMLDivElement>(null);
+  const floatingControlsRef = useRef<HTMLDivElement>(null);
   const selectedEventRef = useRef<MatchEventKind>("POINT");
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
   const handleRef = useRef<{
     destroy: () => void;
     setActiveEventKind: (kind: MatchEventKind) => void;
   } | null>(null);
+
+  const selectEventKind = (kind: MatchEventKind) => {
+    selectedEventRef.current = kind;
+    handleRef.current?.setActiveEventKind(kind);
+    setIsPickerOpen(false);
+  };
 
   useEffect(() => {
     const host = hostRef.current;
@@ -41,6 +49,22 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!isPickerOpen) return;
+
+    const onPointerDownOutside = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (floatingControlsRef.current?.contains(target)) return;
+      setIsPickerOpen(false);
+    };
+
+    document.addEventListener("pointerdown", onPointerDownOutside);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDownOutside);
+    };
+  }, [isPickerOpen]);
+
   return (
     <main
       style={{
@@ -57,38 +81,83 @@ export default function App() {
       }}
     >
       <div
+        ref={floatingControlsRef}
         style={{
           position: "fixed",
-          top: 12,
-          left: 12,
+          right: 12,
+          bottom: 12,
           zIndex: 20,
           display: "flex",
-          gap: 6,
-          flexWrap: "wrap",
-          maxWidth: "calc(100vw - 24px)",
+          flexDirection: "column",
+          alignItems: "flex-end",
+          gap: 8,
         }}
       >
-        {MATCH_EVENT_KINDS.map((kind) => (
-          <button
-            key={kind}
-            type="button"
-            onClick={() => {
-              selectedEventRef.current = kind;
-              handleRef.current?.setActiveEventKind(kind);
-            }}
+        {isPickerOpen ? (
+          <div
             style={{
-              border: "1px solid rgba(148,163,184,0.45)",
-              borderRadius: 8,
-              background: "rgba(15,23,42,0.85)",
-              color: "#e2e8f0",
-              fontSize: 11,
-              padding: "6px 8px",
-              cursor: "pointer",
+              display: "flex",
+              flexDirection: "column",
+              gap: 6,
+              padding: 8,
+              borderRadius: 12,
+              border: "1px solid rgba(148,163,184,0.35)",
+              background: "rgba(15,23,42,0.72)",
+              backdropFilter: "blur(6px)",
+              WebkitBackdropFilter: "blur(6px)",
             }}
           >
-            {kind}
-          </button>
-        ))}
+            {MATCH_EVENT_KINDS.map((kind) => (
+              <button
+                key={kind}
+                type="button"
+                onClick={() => {
+                  selectEventKind(kind);
+                }}
+                style={{
+                  border: "1px solid rgba(148,163,184,0.4)",
+                  borderRadius: 8,
+                  background: "rgba(15,23,42,0.9)",
+                  color: "#e2e8f0",
+                  fontSize: 11,
+                  lineHeight: 1.2,
+                  padding: "6px 8px",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {kind}
+              </button>
+            ))}
+          </div>
+        ) : null}
+        <button
+          type="button"
+          onClick={() => {
+            setIsPickerOpen((prev) => !prev);
+          }}
+          aria-label="Toggle event picker"
+          aria-expanded={isPickerOpen}
+          style={{
+            width: 48,
+            height: 48,
+            borderRadius: "999px",
+            border: "1px solid rgba(148,163,184,0.45)",
+            background: "rgba(15,23,42,0.76)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            color: "#e2e8f0",
+            fontSize: 18,
+            lineHeight: 1,
+            cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {isPickerOpen ? "×" : "●"}
+        </button>
       </div>
       <div
         ref={hostRef}
