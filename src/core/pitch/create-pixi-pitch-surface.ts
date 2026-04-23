@@ -12,6 +12,7 @@ import {
   type MatchEvent,
   type MatchEventKind,
 } from "../stats/stats-event-model";
+import { createMatchEventStore } from "../stats/match-event-store";
 
 export type CreatePixiPitchSurfaceOptions = {
   sport: "soccer" | "gaelic" | "hurling";
@@ -74,7 +75,8 @@ export async function createPixiPitchSurface(
   statsMarkers.eventMode = "none";
   world.addChild(statsMarkers);
 
-  let eventsState: readonly MatchEvent[] = options.events ?? [];
+  const eventStore = createMatchEventStore(options.events ?? []);
+  let eventsState: readonly MatchEvent[] = eventStore.getAll();
   let activeEventKindState: MatchEventKind = options.activeEventKind ?? "POINT";
   const onPitchTapState = options.onPitchTap;
 
@@ -109,7 +111,8 @@ export async function createPixiPitchSurface(
       ny,
       timestampMs: Date.now(),
     });
-    eventsState = [...eventsState, nextEvent];
+    eventStore.add(nextEvent);
+    eventsState = eventStore.getAll();
     redrawMarkers();
   });
 
@@ -120,7 +123,9 @@ export async function createPixiPitchSurface(
 
   return {
     setEvents: (events) => {
-      eventsState = events;
+      eventStore.clear();
+      for (const event of events) eventStore.add(event);
+      eventsState = eventStore.getAll();
       redrawMarkers();
     },
     setActiveEventKind: (kind) => {
