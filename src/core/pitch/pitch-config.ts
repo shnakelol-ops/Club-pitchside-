@@ -1,9 +1,9 @@
 import { PITCH_STYLE_TOKENS } from "./pitch-style-tokens";
+import { BOARD_PITCH_VIEWBOX } from "./pitch-space";
 
 export type PitchSport = "soccer" | "gaelic" | "hurling";
 
 const Lg = PITCH_STYLE_TOKENS.lines.gaelic;
-const VB = { w: 160, h: 100 } as const;
 
 type LineSpec = {
   kind: "line";
@@ -269,9 +269,9 @@ function buildGaelicFootballLandscapeMarkings(): PitchMarking[] {
 const gaelicLandscapeMarkings = buildGaelicFootballLandscapeMarkings();
 
 export const pitchConfig: Record<PitchSport, PitchConfig> = {
-  soccer: { viewBox: VB, inner: { x: 2, y: 2, w: 156, h: 96 }, markings: soccerMarkings },
-  gaelic: { viewBox: VB, inner: { x: 2, y: 2, w: 156, h: 96 }, markings: gaelicLandscapeMarkings },
-  hurling: { viewBox: VB, inner: { x: 2, y: 2, w: 156, h: 96 }, markings: gaelicLandscapeMarkings },
+  soccer: { viewBox: BOARD_PITCH_VIEWBOX, inner: { x: 2, y: 2, w: 156, h: 96 }, markings: soccerMarkings },
+  gaelic: { viewBox: BOARD_PITCH_VIEWBOX, inner: { x: 2, y: 2, w: 156, h: 96 }, markings: gaelicLandscapeMarkings },
+  hurling: { viewBox: BOARD_PITCH_VIEWBOX, inner: { x: 2, y: 2, w: 156, h: 96 }, markings: gaelicLandscapeMarkings },
 };
 
 export function getPitchConfig(sport: PitchSport): PitchConfig {

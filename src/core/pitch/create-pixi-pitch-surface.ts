@@ -2,9 +2,16 @@ import { Application, Container, Graphics } from "pixi.js";
 
 import { BOARD_PITCH_VIEWBOX } from "./pitch-space";
 import { createPitchRoot } from "./create-pitch-root";
-import { viewportCssToBoardNorm } from "../coordinates/pitch-coordinates";
+import {
+  letterboxPitchWorld,
+  viewportCssToBoardNorm,
+} from "../coordinates/pitch-coordinates";
 import { drawStatsMarkers } from "../stats/draw-stats-markers";
-import type { MatchEvent, MatchEventKind } from "../stats/stats-event-model";
+import {
+  createMatchEvent,
+  type MatchEvent,
+  type MatchEventKind,
+} from "../stats/stats-event-model";
 
 export type CreatePixiPitchSurfaceOptions = {
   sport: "soccer" | "gaelic" | "hurling";
@@ -32,8 +39,7 @@ function fitWorld(host: HTMLElement, app: Application, world: Container): void {
     width / BOARD_PITCH_VIEWBOX.w,
     height / BOARD_PITCH_VIEWBOX.h,
   );
-  const offsetX = (width - BOARD_PITCH_VIEWBOX.w * scale) / 2;
-  const offsetY = (height - BOARD_PITCH_VIEWBOX.h * scale) / 2;
+  const { offsetX, offsetY } = letterboxPitchWorld(width, height);
   world.scale.set(scale, scale);
   world.position.set(offsetX, offsetY);
 }
@@ -88,22 +94,21 @@ export async function createPixiPitchSurface(
 
   hitArea.on("pointerdown", (event) => {
     const rect = host.getBoundingClientRect();
-    const stageX = event.clientX - rect.left;
-    const stageY = event.clientY - rect.top;
-    const { nx, ny } = viewportCssToBoardNorm(stageX, stageY, rect.width, rect.height);
+    const hostX = event.clientX - rect.left;
+    const hostY = event.clientY - rect.top;
+    const { nx, ny } = viewportCssToBoardNorm(hostX, hostY, rect.width, rect.height);
 
     if (onPitchTapState) {
       onPitchTapState(nx, ny);
       return;
     }
 
-    const nextEvent: MatchEvent = {
-      id: `evt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    const nextEvent: MatchEvent = createMatchEvent({
       kind: activeEventKindState,
       nx,
       ny,
       timestampMs: Date.now(),
-    };
+    });
     eventsState = [...eventsState, nextEvent];
     redrawMarkers();
   });

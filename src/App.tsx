@@ -1,7 +1,10 @@
 import { useEffect, useRef } from "react";
 
 import { createPixiPitchSurface } from "./core/pitch/create-pixi-pitch-surface";
-import type { MatchEventKind } from "./core/stats/stats-event-model";
+import {
+  MATCH_EVENT_KINDS,
+  type MatchEventKind,
+} from "./core/stats/stats-event-model";
 
 export default function App() {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -62,29 +65,27 @@ export default function App() {
           maxWidth: "calc(100vw - 24px)",
         }}
       >
-        {(["GOAL", "POINT", "WIDE", "TURNOVER_WON", "TURNOVER_LOST"] as const).map(
-          (kind) => (
-            <button
-              key={kind}
-              type="button"
-              onClick={() => {
-                selectedEventRef.current = kind;
-                handleRef.current?.setActiveEventKind(kind);
-              }}
-              style={{
-                border: "1px solid rgba(148,163,184,0.45)",
-                borderRadius: 8,
-                background: "rgba(15,23,42,0.85)",
-                color: "#e2e8f0",
-                fontSize: 11,
-                padding: "6px 8px",
-                cursor: "pointer",
-              }}
-            >
-              {kind}
-            </button>
-          ),
-        )}
+        {MATCH_EVENT_KINDS.map((kind) => (
+          <button
+            key={kind}
+            type="button"
+            onClick={() => {
+              selectedEventRef.current = kind;
+              handleRef.current?.setActiveEventKind(kind);
+            }}
+            style={{
+              border: "1px solid rgba(148,163,184,0.45)",
+              borderRadius: 8,
+              background: "rgba(15,23,42,0.85)",
+              color: "#e2e8f0",
+              fontSize: 11,
+              padding: "6px 8px",
+              cursor: "pointer",
+            }}
+          >
+            {kind}
+          </button>
+        ))}
       </div>
       <div
         ref={hostRef}

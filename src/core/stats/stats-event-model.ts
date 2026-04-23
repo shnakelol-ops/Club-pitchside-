@@ -26,14 +26,6 @@ export type CreateMatchEventInput = {
   id?: string;
 };
 
-export type MatchEventTapPayload = {
-  nx: number;
-  ny: number;
-  atMs: number;
-  stageX: number;
-  stageY: number;
-};
-
 function newMatchEventId(): string {
   const c = globalThis.crypto;
   if (c && "randomUUID" in c && typeof c.randomUUID === "function") {
