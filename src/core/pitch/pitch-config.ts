@@ -1,9 +1,8 @@
-import { boardLines } from "./board-tokens";
-import { GAELIC_FOOTBALL_FIELD_SPEC } from "./field-spec";
+import { PITCH_STYLE_TOKENS } from "./pitch-style-tokens";
 
 export type PitchSport = "soccer" | "gaelic" | "hurling";
 
-const Lg = boardLines.gaelic;
+const Lg = PITCH_STYLE_TOKENS.lines.gaelic;
 const VB = { w: 160, h: 100 } as const;
 
 type LineSpec = {
@@ -178,9 +177,9 @@ const GAELIC_LARGE_WIDE_M = 19;
 const GAELIC_D_FREE_RADIUS_M = 13;
 const GAELIC_TWO_POINT_RADIUS_M = 40;
 const GAELIC_PENALTY_SPOT_M = 11;
+const GAELIC_CENTRE_CIRCLE_RADIUS_M = 13;
 
 function buildGaelicFootballLandscapeMarkings(): PitchMarking[] {
-  const spec = GAELIC_FOOTBALL_FIELD_SPEC;
   const playW = 156;
   const playH = 96;
   const ix = 2;
@@ -223,7 +222,8 @@ function buildGaelicFootballLandscapeMarkings(): PitchMarking[] {
   const ySmallTop = cy - smallWide / 2;
   const yLargeTop = cy - largeWide / 2;
 
-  const rCentre = (spec.centreCircleRadiusM / GAELIC_LANDSCAPE_LEN_M) * playW;
+  const rCentre =
+    (GAELIC_CENTRE_CIRCLE_RADIUS_M / GAELIC_LANDSCAPE_LEN_M) * playW;
 
   const xPenL = xAt(GAELIC_PENALTY_SPOT_M / GAELIC_LANDSCAPE_LEN_M);
   const xPenR = xAt(1 - GAELIC_PENALTY_SPOT_M / GAELIC_LANDSCAPE_LEN_M);

@@ -1,10 +1,9 @@
-# PitchsideCLUB - Phase 1 Core
+# PitchsideCLUB - Phase 1 Pitch Foundation
 
-This repository contains **Phase 1 only** extraction for PitchsideCLUB:
+Minimal Phase 1 foundation only:
 
-- Clean Pixi board foundation
-- Shared coordinate system
-- Stats event model
-- Simple stats logging flow
+- Clean Pixi pitch renderer
+- Clean pitch config/constants
+- Shared normalized coordinate math (`0..1`)
 
-No simulator playback, no legacy shells/routes, no SVG board system, and no duplicate stats systems are included.
+No stats modules, no simulator systems, no route/shell baggage, and no legacy SVG board code.
