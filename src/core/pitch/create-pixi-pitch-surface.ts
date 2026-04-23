@@ -36,11 +36,7 @@ function fitWorld(host: HTMLElement, app: Application, world: Container): void {
   app.renderer.resolution = dpr;
   app.renderer.resize(width, height);
 
-  const scale = Math.min(
-    width / BOARD_PITCH_VIEWBOX.w,
-    height / BOARD_PITCH_VIEWBOX.h,
-  );
-  const { offsetX, offsetY } = letterboxPitchWorld(width, height);
+  const { scale, offsetX, offsetY } = letterboxPitchWorld(width, height);
   world.scale.set(scale, scale);
   world.position.set(offsetX, offsetY);
 }

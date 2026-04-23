@@ -90,8 +90,9 @@ export default function App() {
       <div
         ref={hostRef}
         style={{
-          width: "100%",
-          maxWidth: "1100px",
+          width: "min(calc(100vw - 32px), calc((100vh - 32px) * (35 / 24)))",
+          maxWidth: "100%",
+          maxHeight: "calc(100vh - 32px)",
           aspectRatio: "35 / 24",
           borderRadius: "12px",
           background: "#0a0f0c",
