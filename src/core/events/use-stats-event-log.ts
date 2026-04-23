@@ -4,7 +4,6 @@ import type { StatsPitchTapPayload } from "./stats-pitch-tap";
 import {
   createStatsLoggedEvent,
   type StatsLoggedEvent,
-  type StatsPeriodPhase,
 } from "./stats-logged-event";
 import type { StatsV1EventKind } from "./stats-v1-event-kind";
 
@@ -18,7 +17,7 @@ type State = {
 type Action =
   | { type: "arm"; kind: StatsV1EventKind }
   | { type: "clearArm" }
-  | { type: "logTap"; payload: StatsPitchTapPayload; periodPhase?: StatsPeriodPhase }
+  | { type: "logTap"; payload: StatsPitchTapPayload }
   | { type: "undoLastEvent" }
   | { type: "resetEvents" };
 
@@ -45,18 +44,13 @@ function reducer(state: State, action: Action): State {
         nx: action.payload.nx,
         ny: action.payload.ny,
         timestampMs: action.payload.atMs,
-        periodPhase: action.periodPhase,
       });
       return { ...state, events: [...state.events, event] };
     }
   }
 }
 
-export type UseStatsEventLogOptions = {
-  resolvePeriodPhase?: () => StatsPeriodPhase;
-};
-
-export function useStatsEventLog(options?: UseStatsEventLogOptions) {
+export function useStatsEventLog() {
   const [state, dispatch] = useReducer(reducer, initialState);
 
   const armKind = useCallback((kind: StatsV1EventKind) => {
@@ -67,16 +61,12 @@ export function useStatsEventLog(options?: UseStatsEventLogOptions) {
     dispatch({ type: "clearArm" });
   }, []);
 
-  const logTap = useCallback(
-    (payload: StatsPitchTapPayload) => {
-      dispatch({
-        type: "logTap",
-        payload,
-        periodPhase: options?.resolvePeriodPhase?.(),
-      });
-    },
-    [options],
-  );
+  const logTap = useCallback((payload: StatsPitchTapPayload) => {
+    dispatch({
+      type: "logTap",
+      payload,
+    });
+  }, []);
 
   const undoLastEvent = useCallback(() => {
     dispatch({ type: "undoLastEvent" });

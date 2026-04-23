@@ -7,8 +7,8 @@ import {
   TilingSprite,
 } from "pixi.js";
 
-import { getPitchConfig, type PitchSport } from "../pitch/pitch-config";
-import { BOARD_PITCH_VIEWBOX } from "../pitch/pitch-space";
+import { getPitchConfig, type PitchSport } from "./pitch-config";
+import { BOARD_PITCH_VIEWBOX } from "./pitch-space";
 import {
   bakeTurfWashTexture,
   gaelicStripeTilingParams,
