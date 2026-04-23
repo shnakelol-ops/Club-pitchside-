@@ -140,8 +140,8 @@ export default function App() {
         ref={floatingControlsRef}
         style={{
           position: "fixed",
-          right: 12,
-          bottom: 12,
+          right: 16,
+          bottom: 16,
           zIndex: 20,
           display: "flex",
           flexDirection: "column",
@@ -152,19 +152,23 @@ export default function App() {
         {isPickerOpen ? (
           <div
             style={{
+              position: "fixed",
+              right: 16,
+              bottom: 90,
               display: "flex",
               flexDirection: "column",
-              gap: 8,
-              padding: 8,
-              borderRadius: 12,
-              border: "1px solid rgba(148,163,184,0.35)",
-              background: "rgba(15,23,42,0.72)",
-              backdropFilter: "blur(6px)",
-              WebkitBackdropFilter: "blur(6px)",
-              width: "min(96vw, 420px)",
+              gap: 7,
+              padding: 7,
+              borderRadius: 10,
+              border: "1px solid rgba(255,255,255,0.08)",
+              background: "rgba(10, 20, 35, 0.75)",
+              backdropFilter: "blur(4px)",
+              WebkitBackdropFilter: "blur(4px)",
+              boxShadow: "0 8px 18px rgba(4, 12, 24, 0.26)",
+              width: "min(calc(100vw - 32px), 420px)",
             }}
           >
-            {EVENT_GROUPS.map((group) => (
+            {EVENT_GROUPS.map((group, groupIndex) => (
               <div
                 key={group.title}
                 style={{
@@ -178,8 +182,10 @@ export default function App() {
                     fontSize: 10,
                     lineHeight: 1.1,
                     color: "#cbd5e1",
-                    opacity: 0.82,
+                    opacity: 0.8,
                     paddingLeft: 2,
+                    letterSpacing: 0.28,
+                    textTransform: "uppercase",
                   }}
                 >
                   {group.title}
@@ -189,6 +195,7 @@ export default function App() {
                     display: "grid",
                     gridTemplateColumns: group.columns,
                     gap: 4,
+                    padding: "1px 0",
                   }}
                 >
                   {group.items.map((item) => {
@@ -202,20 +209,27 @@ export default function App() {
                         }}
                         style={{
                           border: isActive
-                            ? "1px solid rgba(34,197,94,0.82)"
-                            : "1px solid rgba(148,163,184,0.4)",
+                            ? "1px solid rgba(34,197,94,0.96)"
+                            : groupIndex === 0
+                              ? "1px solid rgba(148,163,184,0.5)"
+                              : "1px solid rgba(148,163,184,0.36)",
                           borderRadius: 8,
                           background: isActive
-                            ? "rgba(22,101,52,0.52)"
-                            : "rgba(15,23,42,0.9)",
+                            ? "rgba(22,101,52,0.68)"
+                            : groupIndex === 0
+                              ? "rgba(21, 39, 62, 0.84)"
+                              : "rgba(14, 24, 40, 0.72)",
                           color: "#e2e8f0",
                           fontSize: 10,
                           fontWeight: isActive ? 700 : 600,
                           lineHeight: 1.1,
-                          padding: "7px 4px",
+                          padding: "6px 4px",
                           cursor: "pointer",
                           textAlign: "center",
                           whiteSpace: "nowrap",
+                          minHeight: 30,
+                          letterSpacing: 0.25,
+                          textTransform: "uppercase",
                         }}
                       >
                         {item.label}
@@ -234,7 +248,7 @@ export default function App() {
               }}
             >
               {([
-                { id: "ALL", label: "Show All" },
+                { id: "ALL", label: "SHOW ALL" },
                 { id: "LAST_5", label: "Last 5" },
                 { id: "LAST_10", label: "Last 10" },
               ] as const).map((mode) => (
@@ -258,38 +272,49 @@ export default function App() {
                     fontSize: 10,
                     fontWeight: 600,
                     lineHeight: 1.1,
-                    padding: "5px 8px",
+                    padding: "4px 7px",
                     cursor: "pointer",
                     whiteSpace: "nowrap",
+                    letterSpacing: 0.25,
+                    textTransform: "uppercase",
                   }}
                 >
                   {mode.label}
                 </button>
               ))}
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                handleRef.current?.undoLastEvent();
-                setIsPickerOpen(false);
-              }}
+            <div
               style={{
-                marginTop: 2,
-                border: "1px solid rgba(148,163,184,0.4)",
-                borderRadius: 8,
-                background: "rgba(15,23,42,0.9)",
-                color: "#cbd5e1",
-                fontSize: 11,
-                fontWeight: 600,
-                lineHeight: 1.2,
-                padding: "6px 8px",
-                cursor: "pointer",
-                textAlign: "left",
-                whiteSpace: "nowrap",
+                marginTop: 8,
+                paddingTop: 8,
+                borderTop: "1px solid rgba(255,255,255,0.08)",
               }}
             >
-              Undo last
-            </button>
+              <button
+                type="button"
+                onClick={() => {
+                  handleRef.current?.undoLastEvent();
+                  setIsPickerOpen(false);
+                }}
+                style={{
+                  border: "1px solid rgba(148,163,184,0.4)",
+                  borderRadius: 8,
+                  background: "rgba(15,23,42,0.9)",
+                  color: "#cbd5e1",
+                  fontSize: 11,
+                  fontWeight: 600,
+                  lineHeight: 1.2,
+                  padding: "5px 8px",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  whiteSpace: "nowrap",
+                  letterSpacing: 0.25,
+                  textTransform: "uppercase",
+                }}
+              >
+                UNDO LAST
+              </button>
+            </div>
           </div>
         ) : null}
         <div
