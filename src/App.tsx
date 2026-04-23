@@ -15,6 +15,7 @@ export default function App() {
   const handleRef = useRef<{
     destroy: () => void;
     setActiveEventKind: (kind: MatchEventKind) => void;
+    undoLastEvent: () => void;
   } | null>(null);
 
   const selectEventKind = (kind: MatchEventKind) => {
@@ -32,6 +33,7 @@ export default function App() {
     let handle: {
       destroy: () => void;
       setActiveEventKind: (kind: MatchEventKind) => void;
+      undoLastEvent: () => void;
     } | null = null;
     void createPixiPitchSurface(host, {
       sport: "gaelic",
@@ -139,6 +141,29 @@ export default function App() {
                 {kind === selectedEventKind ? `✓ ${kind}` : kind}
               </button>
             ))}
+            <button
+              type="button"
+              onClick={() => {
+                handleRef.current?.undoLastEvent();
+                setIsPickerOpen(false);
+              }}
+              style={{
+                marginTop: 2,
+                border: "1px solid rgba(148,163,184,0.4)",
+                borderRadius: 8,
+                background: "rgba(15,23,42,0.9)",
+                color: "#cbd5e1",
+                fontSize: 11,
+                fontWeight: 600,
+                lineHeight: 1.2,
+                padding: "6px 8px",
+                cursor: "pointer",
+                textAlign: "left",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Undo last
+            </button>
           </div>
         ) : null}
         <div

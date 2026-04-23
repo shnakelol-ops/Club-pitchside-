@@ -24,6 +24,7 @@ export type CreatePixiPitchSurfaceOptions = {
 export type PixiPitchSurfaceHandle = {
   setEvents: (events: readonly MatchEvent[]) => void;
   setActiveEventKind: (kind: MatchEventKind) => void;
+  undoLastEvent: () => void;
   destroy: () => void;
 };
 
@@ -126,6 +127,11 @@ export async function createPixiPitchSurface(
     },
     setActiveEventKind: (kind) => {
       activeEventKindState = kind;
+    },
+    undoLastEvent: () => {
+      eventStore.removeLast();
+      eventsState = eventStore.getAll();
+      redrawMarkers();
     },
     destroy: () => {
       resizeObserver.disconnect();

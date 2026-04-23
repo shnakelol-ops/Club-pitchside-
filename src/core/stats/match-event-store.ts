@@ -11,6 +11,10 @@ export class MatchEventStore {
     this.events.push(event);
   }
 
+  removeLast(): MatchEvent | undefined {
+    return this.events.pop();
+  }
+
   getAll(): MatchEvent[] {
     return [...this.events];
   }
