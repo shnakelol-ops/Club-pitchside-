@@ -6,6 +6,12 @@ export const MATCH_EVENT_KINDS = [
   "WIDE",
   "TURNOVER_WON",
   "TURNOVER_LOST",
+  "TWO_POINTER",
+  "SHOT",
+  "FREE_WON",
+  "FREE_CONCEDED",
+  "KICKOUT_WON",
+  "KICKOUT_CONCEDED",
 ] as const;
 
 export type MatchEventKind = (typeof MATCH_EVENT_KINDS)[number];

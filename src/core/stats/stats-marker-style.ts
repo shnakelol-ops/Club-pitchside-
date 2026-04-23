@@ -71,6 +71,72 @@ function styleForType(type: MatchEventKind): StatsMarkerStyle {
         centerDot: "rgba(255, 237, 213, 0.9)",
         centerDotRadiusScale: 0.2,
       };
+    case "TWO_POINTER":
+      return {
+        radius: 3.2,
+        fill: "rgba(99, 102, 241, 1)",
+        stroke: "rgba(49, 46, 129, 1)",
+        strokeWidth: 0.86,
+        contrastStroke: "rgba(10, 10, 34, 0.62)",
+        contrastStrokeWidth: 0.6,
+        centerDot: "rgba(232, 236, 255, 0.94)",
+        centerDotRadiusScale: 0.22,
+      };
+    case "SHOT":
+      return {
+        radius: 2.95,
+        fill: "rgba(251, 191, 36, 1)",
+        stroke: "rgba(146, 64, 14, 1)",
+        strokeWidth: 0.8,
+        contrastStroke: "rgba(36, 22, 8, 0.62)",
+        contrastStrokeWidth: 0.56,
+        centerDot: "rgba(255, 249, 230, 0.92)",
+        centerDotRadiusScale: 0.2,
+      };
+    case "FREE_WON":
+      return {
+        radius: 2.9,
+        fill: "rgba(34, 197, 94, 1)",
+        stroke: "rgba(21, 128, 61, 1)",
+        strokeWidth: 0.76,
+        contrastStroke: "rgba(8, 28, 14, 0.58)",
+        contrastStrokeWidth: 0.52,
+        centerDot: "rgba(238, 255, 244, 0.9)",
+        centerDotRadiusScale: 0.2,
+      };
+    case "FREE_CONCEDED":
+      return {
+        radius: 2.9,
+        fill: "rgba(248, 113, 113, 1)",
+        stroke: "rgba(185, 28, 28, 1)",
+        strokeWidth: 0.76,
+        contrastStroke: "rgba(36, 10, 10, 0.62)",
+        contrastStrokeWidth: 0.52,
+        centerDot: "rgba(255, 241, 241, 0.9)",
+        centerDotRadiusScale: 0.2,
+      };
+    case "KICKOUT_WON":
+      return {
+        radius: 3.0,
+        fill: "rgba(45, 212, 191, 1)",
+        stroke: "rgba(15, 118, 110, 1)",
+        strokeWidth: 0.78,
+        contrastStroke: "rgba(6, 30, 28, 0.58)",
+        contrastStrokeWidth: 0.54,
+        centerDot: "rgba(236, 255, 252, 0.9)",
+        centerDotRadiusScale: 0.2,
+      };
+    case "KICKOUT_CONCEDED":
+      return {
+        radius: 3.0,
+        fill: "rgba(168, 85, 247, 1)",
+        stroke: "rgba(107, 33, 168, 1)",
+        strokeWidth: 0.78,
+        contrastStroke: "rgba(24, 9, 40, 0.6)",
+        contrastStrokeWidth: 0.54,
+        centerDot: "rgba(245, 235, 255, 0.9)",
+        centerDotRadiusScale: 0.2,
+      };
     default: {
       const _never: never = type;
       return _never;
