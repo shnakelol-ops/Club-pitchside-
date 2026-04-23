@@ -44,13 +44,16 @@ export default function App() {
   return (
     <main
       style={{
-        minHeight: "100vh",
+        position: "fixed",
+        inset: 0,
+        width: "100dvw",
+        height: "100dvh",
         margin: 0,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "#0f172a",
-        padding: 16,
+        background: "#0a0f0c",
+        overflow: "hidden",
       }}
     >
       <div
@@ -90,11 +93,8 @@ export default function App() {
       <div
         ref={hostRef}
         style={{
-          width: "min(calc(100vw - 32px), calc((100vh - 32px) * (35 / 24)))",
-          maxWidth: "100%",
-          maxHeight: "calc(100vh - 32px)",
-          aspectRatio: "35 / 24",
-          borderRadius: "12px",
+          width: "100%",
+          height: "100%",
           background: "#0a0f0c",
           overflow: "hidden",
         }}
