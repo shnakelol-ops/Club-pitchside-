@@ -63,12 +63,12 @@ function styleForType(type: MatchEventKind): StatsMarkerStyle {
     case "TURNOVER_LOST":
       return {
         radius: 2.85,
-        fill: "rgba(251, 113, 133, 1)",
-        stroke: "rgba(190, 24, 93, 1)",
+        fill: "rgba(194, 65, 12, 1)",
+        stroke: "rgba(124, 45, 18, 1)",
         strokeWidth: 0.74,
-        contrastStroke: "rgba(30, 9, 18, 0.58)",
+        contrastStroke: "rgba(36, 18, 8, 0.62)",
         contrastStrokeWidth: 0.52,
-        centerDot: "rgba(255, 241, 245, 0.9)",
+        centerDot: "rgba(255, 237, 213, 0.9)",
         centerDotRadiusScale: 0.2,
       };
     default: {
