@@ -24,6 +24,7 @@ export type CreatePixiPitchSurfaceOptions = {
 export type PixiPitchSurfaceHandle = {
   setEvents: (events: readonly MatchEvent[]) => void;
   setActiveEventKind: (kind: MatchEventKind) => void;
+  setVisibleEventLimit: (limit: number | null) => void;
   undoLastEvent: () => void;
   destroy: () => void;
 };
@@ -75,10 +76,16 @@ export async function createPixiPitchSurface(
   const eventStore = createMatchEventStore(options.events ?? []);
   let eventsState: readonly MatchEvent[] = eventStore.getAll();
   let activeEventKindState: MatchEventKind = options.activeEventKind ?? "POINT";
+  let visibleEventLimitState: number | null = null;
   const onPitchTapState = options.onPitchTap;
 
+  const getRenderableEvents = (): readonly MatchEvent[] => {
+    if (visibleEventLimitState == null) return eventsState;
+    return eventsState.slice(-visibleEventLimitState);
+  };
+
   const redrawMarkers = () => {
-    drawStatsMarkers(statsMarkers, eventsState);
+    drawStatsMarkers(statsMarkers, getRenderableEvents());
   };
 
   const hitArea = new Graphics();
@@ -127,6 +134,10 @@ export async function createPixiPitchSurface(
     },
     setActiveEventKind: (kind) => {
       activeEventKindState = kind;
+    },
+    setVisibleEventLimit: (limit) => {
+      visibleEventLimitState = limit == null ? null : Math.max(1, Math.floor(limit));
+      redrawMarkers();
     },
     undoLastEvent: () => {
       eventStore.removeLast();

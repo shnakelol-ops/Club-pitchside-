@@ -3,20 +3,35 @@ import { useEffect, useRef, useState } from "react";
 import { createPixiPitchSurface } from "./core/pitch/create-pixi-pitch-surface";
 import {
   MATCH_EVENT_KINDS,
+  type MatchEvent,
   type MatchEventKind,
 } from "./core/stats/stats-event-model";
+
+type VisibilityMode = "ALL" | "LAST_5" | "LAST_10";
 
 export default function App() {
   const hostRef = useRef<HTMLDivElement>(null);
   const floatingControlsRef = useRef<HTMLDivElement>(null);
   const [selectedEventKind, setSelectedEventKind] = useState<MatchEventKind>("POINT");
+  const [visibilityMode, setVisibilityMode] = useState<VisibilityMode>("ALL");
   const selectedEventRef = useRef<MatchEventKind>("POINT");
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const allEventsRef = useRef<MatchEvent[]>([]);
   const handleRef = useRef<{
     destroy: () => void;
     setActiveEventKind: (kind: MatchEventKind) => void;
     undoLastEvent: () => void;
+    setEvents: (events: readonly MatchEvent[]) => void;
   } | null>(null);
+
+  const getVisibleEvents = (
+    events: readonly MatchEvent[],
+    mode: VisibilityMode,
+  ): MatchEvent[] => {
+    if (mode === "LAST_5") return events.slice(-5);
+    if (mode === "LAST_10") return events.slice(-10);
+    return [...events];
+  };
 
   const selectEventKind = (kind: MatchEventKind) => {
     setSelectedEventKind(kind);
@@ -52,6 +67,49 @@ export default function App() {
       handle?.destroy();
     };
   }, []);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+
+    const onPitchTap = (event: PointerEvent) => {
+      const appCanvas = host.querySelector("canvas");
+      if (!appCanvas || event.target !== appCanvas) return;
+      if (floatingControlsRef.current?.contains(event.target as Node)) return;
+
+      const kind = selectedEventRef.current;
+      const nx = 0; // placeholder to satisfy type narrowing if needed
+      void nx;
+      const now = Date.now();
+      const rect = host.getBoundingClientRect();
+      const hostX = event.clientX - rect.left;
+      const hostY = event.clientY - rect.top;
+      const normalizedX = rect.width > 0 ? hostX / rect.width : 0.5;
+      const normalizedY = rect.height > 0 ? hostY / rect.height : 0.5;
+      allEventsRef.current = [
+        ...allEventsRef.current,
+        {
+          id: `evt-${now}-${Math.random().toString(36).slice(2, 8)}`,
+          kind,
+          nx: Math.max(0, Math.min(1, normalizedX)),
+          ny: Math.max(0, Math.min(1, normalizedY)),
+          timestampMs: now,
+        },
+      ];
+      handleRef.current?.setEvents(
+        getVisibleEvents(allEventsRef.current, visibilityMode),
+      );
+    };
+
+    host.addEventListener("pointerdown", onPitchTap);
+    return () => {
+      host.removeEventListener("pointerdown", onPitchTap);
+    };
+  }, [visibilityMode]);
+
+  useEffect(() => {
+    handleRef.current?.setEvents(getVisibleEvents(allEventsRef.current, visibilityMode));
+  }, [visibilityMode]);
 
   useEffect(() => {
     if (!isPickerOpen) return;
@@ -141,10 +199,56 @@ export default function App() {
                 {kind === selectedEventKind ? `✓ ${kind}` : kind}
               </button>
             ))}
+            <div
+              style={{
+                marginTop: 2,
+                display: "flex",
+                gap: 4,
+                flexWrap: "wrap",
+              }}
+            >
+              {([
+                { id: "ALL", label: "Show All" },
+                { id: "LAST_5", label: "Last 5" },
+                { id: "LAST_10", label: "Last 10" },
+              ] as const).map((mode) => (
+                <button
+                  key={mode.id}
+                  type="button"
+                  onClick={() => {
+                    setVisibilityMode(mode.id);
+                  }}
+                  style={{
+                    border:
+                      visibilityMode === mode.id
+                        ? "1px solid rgba(125,211,252,0.9)"
+                        : "1px solid rgba(148,163,184,0.4)",
+                    borderRadius: 999,
+                    background:
+                      visibilityMode === mode.id
+                        ? "rgba(14,116,144,0.42)"
+                        : "rgba(15,23,42,0.9)",
+                    color: "#e2e8f0",
+                    fontSize: 10,
+                    fontWeight: 600,
+                    lineHeight: 1.1,
+                    padding: "5px 8px",
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {mode.label}
+                </button>
+              ))}
+            </div>
             <button
               type="button"
               onClick={() => {
                 handleRef.current?.undoLastEvent();
+                allEventsRef.current = allEventsRef.current.slice(0, -1);
+                handleRef.current?.setEvents(
+                  getVisibleEvents(allEventsRef.current, visibilityMode),
+                );
                 setIsPickerOpen(false);
               }}
               style={{
