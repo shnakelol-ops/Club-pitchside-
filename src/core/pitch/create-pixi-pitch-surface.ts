@@ -4,7 +4,7 @@ import { BOARD_PITCH_VIEWBOX } from "./pitch-space";
 import { createPitchRoot } from "./create-pitch-root";
 import {
   letterboxPitchWorld,
-  viewportCssToBoardNorm,
+  worldToBoardNorm,
 } from "../coordinates/pitch-coordinates";
 import { drawStatsMarkers } from "../stats/draw-stats-markers";
 import {
@@ -63,6 +63,9 @@ export async function createPixiPitchSurface(
   app.canvas.style.display = "block";
   app.canvas.style.touchAction = "none";
   app.canvas.style.userSelect = "none";
+  app.stage.eventMode = "static";
+  app.stage.hitArea = app.screen;
+  (app.stage as { interactive?: boolean }).interactive = true;
 
   const world = new Container();
   app.stage.addChild(world);
@@ -99,10 +102,27 @@ export async function createPixiPitchSurface(
   world.sortChildren();
 
   hitArea.on("pointerdown", (event) => {
-    const rect = host.getBoundingClientRect();
-    const hostX = event.clientX - rect.left;
-    const hostY = event.clientY - rect.top;
-    const { nx, ny } = viewportCssToBoardNorm(hostX, hostY, rect.width, rect.height);
+    const stagePoint = (event as unknown as {
+      data?: { getLocalPosition?: (target: Container) => { x: number; y: number } };
+      getLocalPosition?: (target: Container) => { x: number; y: number };
+    }).data?.getLocalPosition?.(app.stage) ??
+      (event as unknown as {
+        getLocalPosition?: (target: Container) => { x: number; y: number };
+      }).getLocalPosition?.(app.stage);
+    if (!stagePoint) return;
+
+    const worldX = (stagePoint.x - world.position.x) / Math.max(1e-6, world.scale.x);
+    const worldY = (stagePoint.y - world.position.y) / Math.max(1e-6, world.scale.y);
+    const { nx, ny } = worldToBoardNorm(worldX, worldY, BOARD_PITCH_VIEWBOX);
+    // Temporary debug to confirm pointer mapping in QA.
+    console.log("[pitch-tap]", {
+      rawStageX: stagePoint.x,
+      rawStageY: stagePoint.y,
+      worldX,
+      worldY,
+      nx,
+      ny,
+    });
 
     if (onPitchTapState) {
       onPitchTapState(nx, ny);

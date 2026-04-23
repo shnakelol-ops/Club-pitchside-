@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import { createPixiPitchSurface } from "./core/pitch/create-pixi-pitch-surface";
 import {
   MATCH_EVENT_KINDS,
-  type MatchEvent,
   type MatchEventKind,
 } from "./core/stats/stats-event-model";
 
@@ -16,22 +15,12 @@ export default function App() {
   const [visibilityMode, setVisibilityMode] = useState<VisibilityMode>("ALL");
   const selectedEventRef = useRef<MatchEventKind>("POINT");
   const [isPickerOpen, setIsPickerOpen] = useState(false);
-  const allEventsRef = useRef<MatchEvent[]>([]);
   const handleRef = useRef<{
     destroy: () => void;
     setActiveEventKind: (kind: MatchEventKind) => void;
     undoLastEvent: () => void;
-    setEvents: (events: readonly MatchEvent[]) => void;
+    setVisibleEventLimit: (limit: number | null) => void;
   } | null>(null);
-
-  const getVisibleEvents = (
-    events: readonly MatchEvent[],
-    mode: VisibilityMode,
-  ): MatchEvent[] => {
-    if (mode === "LAST_5") return events.slice(-5);
-    if (mode === "LAST_10") return events.slice(-10);
-    return [...events];
-  };
 
   const selectEventKind = (kind: MatchEventKind) => {
     setSelectedEventKind(kind);
@@ -49,6 +38,7 @@ export default function App() {
       destroy: () => void;
       setActiveEventKind: (kind: MatchEventKind) => void;
       undoLastEvent: () => void;
+      setVisibleEventLimit: (limit: number | null) => void;
     } | null = null;
     void createPixiPitchSurface(host, {
       sport: "gaelic",
@@ -69,46 +59,9 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const host = hostRef.current;
-    if (!host) return;
-
-    const onPitchTap = (event: PointerEvent) => {
-      const appCanvas = host.querySelector("canvas");
-      if (!appCanvas || event.target !== appCanvas) return;
-      if (floatingControlsRef.current?.contains(event.target as Node)) return;
-
-      const kind = selectedEventRef.current;
-      const nx = 0; // placeholder to satisfy type narrowing if needed
-      void nx;
-      const now = Date.now();
-      const rect = host.getBoundingClientRect();
-      const hostX = event.clientX - rect.left;
-      const hostY = event.clientY - rect.top;
-      const normalizedX = rect.width > 0 ? hostX / rect.width : 0.5;
-      const normalizedY = rect.height > 0 ? hostY / rect.height : 0.5;
-      allEventsRef.current = [
-        ...allEventsRef.current,
-        {
-          id: `evt-${now}-${Math.random().toString(36).slice(2, 8)}`,
-          kind,
-          nx: Math.max(0, Math.min(1, normalizedX)),
-          ny: Math.max(0, Math.min(1, normalizedY)),
-          timestampMs: now,
-        },
-      ];
-      handleRef.current?.setEvents(
-        getVisibleEvents(allEventsRef.current, visibilityMode),
-      );
-    };
-
-    host.addEventListener("pointerdown", onPitchTap);
-    return () => {
-      host.removeEventListener("pointerdown", onPitchTap);
-    };
-  }, [visibilityMode]);
-
-  useEffect(() => {
-    handleRef.current?.setEvents(getVisibleEvents(allEventsRef.current, visibilityMode));
+    const visibleLimit =
+      visibilityMode === "LAST_5" ? 5 : visibilityMode === "LAST_10" ? 10 : null;
+    handleRef.current?.setVisibleEventLimit(visibleLimit);
   }, [visibilityMode]);
 
   useEffect(() => {
@@ -245,10 +198,6 @@ export default function App() {
               type="button"
               onClick={() => {
                 handleRef.current?.undoLastEvent();
-                allEventsRef.current = allEventsRef.current.slice(0, -1);
-                handleRef.current?.setEvents(
-                  getVisibleEvents(allEventsRef.current, visibilityMode),
-                );
                 setIsPickerOpen(false);
               }}
               style={{
