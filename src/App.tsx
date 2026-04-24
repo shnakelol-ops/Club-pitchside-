@@ -245,15 +245,17 @@ const PANEL_CSS = `
     "state clock"
     "controls controls";
   align-items: center;
-  row-gap: 6px;
-  column-gap: 8px;
+  row-gap: 4px;
+  column-gap: 7px;
   justify-items: start;
-  padding: 6px 9px;
+  padding: 5px 8px;
   border-radius: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.3);
+  border: 1px solid rgba(148, 163, 184, 0.42);
   background: rgba(15, 23, 42, 0.62);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.14), 0 3px 10px rgba(2, 6, 23, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
   color: #cbd5e1;
   font-size: 10px;
   font-weight: 600;
@@ -263,25 +265,29 @@ const PANEL_CSS = `
 
 .match-stopwatch-state {
   grid-area: state;
+  color: rgba(203, 213, 225, 0.84);
+  font-size: 9px;
+  font-weight: 500;
   line-height: 1;
 }
 
 @media (orientation: landscape) {
   .match-stopwatch {
-    top: max(4px, env(safe-area-inset-top));
-    right: max(6px, env(safe-area-inset-right));
+    top: max(2px, env(safe-area-inset-top));
+    right: max(4px, env(safe-area-inset-right));
   }
 }
 
 .match-stopwatch-clock {
   grid-area: clock;
   justify-self: end;
-  color: #f8fafc;
-  font-size: 13px;
+  color: #ffffff;
+  font-size: 14px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.34px;
-  text-shadow: 0 0 6px rgba(148, 163, 184, 0.24);
+  line-height: 1;
+  text-shadow: 0 0 7px rgba(148, 163, 184, 0.3);
 }
 
 .match-stopwatch-controls {
@@ -297,12 +303,12 @@ const PANEL_CSS = `
   border-radius: 999px;
   border: 1px solid rgba(34, 197, 94, 0.62);
   background: rgba(22, 101, 52, 0.88);
-  color: #e2e8f0;
-  font-size: 10px;
+  color: #dbe7f5;
+  font-size: 9.5px;
   font-weight: 700;
   line-height: 1;
   letter-spacing: 0.24px;
-  padding: 0 11px;
+  padding: 0 10px;
   cursor: pointer;
   text-transform: uppercase;
   box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.24), 0 0 10px rgba(34, 197, 94, 0.28);
