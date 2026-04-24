@@ -11,13 +11,22 @@ type RenderableMatchEvent = MatchEvent & {
   team?: "HOME" | "AWAY";
 };
 
-const MARKER_LABEL_STYLE = new TextStyle({
+const MARKER_LABEL_STYLE_ONE_DIGIT = new TextStyle({
   fill: 0xffffff,
   fontSize: 9.5,
   fontWeight: "800",
   align: "center",
-  letterSpacing: 0.2,
-  stroke: { color: 0x07111f, width: 2.5 },
+  letterSpacing: 0,
+  stroke: { color: 0x07111f, width: 2.2 },
+});
+
+const MARKER_LABEL_STYLE_TWO_DIGIT = new TextStyle({
+  fill: 0xffffff,
+  fontSize: 8,
+  fontWeight: "800",
+  align: "center",
+  letterSpacing: 0,
+  stroke: { color: 0x07111f, width: 2 },
 });
 
 function clampByte(n: number): number {
@@ -139,7 +148,10 @@ export function drawStatsMarkers(
     if (shouldShowPlayerNumber) {
       const clampedNumber = Math.min(99, Math.max(1, Math.floor(event.playerNumber)));
       const numberLabel = String(clampedNumber);
-      const numberText = new Text({ text: numberLabel, style: MARKER_LABEL_STYLE });
+      const numberText = new Text({
+        text: numberLabel,
+        style: numberLabel.length === 1 ? MARKER_LABEL_STYLE_ONE_DIGIT : MARKER_LABEL_STYLE_TWO_DIGIT,
+      });
       numberText.anchor.set(0.5);
       numberText.x = 0;
       numberText.y = 0;

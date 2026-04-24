@@ -19,7 +19,9 @@ type TeamScore = { goals: number; points: number; total: number };
 type TeamSide = "HOME" | "AWAY";
 type UtilityPanel = "PLAYERS" | "REVIEW" | null;
 type ReviewMode = "FIRST" | "SECOND" | "FULL";
-type Squad = { id: string; name: string; players: string[] };
+type PlayerRole = "STARTER" | "SUB";
+type SquadPlayer = { id: string; name: string; number: number; role: PlayerRole };
+type Squad = { id: string; name: string; players: SquadPlayer[] };
 type LoggedMatchEvent = MatchEvent & {
   playerName?: string;
   playerNumber?: number;
@@ -61,6 +63,43 @@ function createDefaultSquad(): Squad {
   };
 }
 
+function parseStoredPlayer(input: unknown, idx: number): SquadPlayer | null {
+  if (typeof input === "string") {
+    const trimmedName = input.trim();
+    if (trimmedName.length === 0) return null;
+    return {
+      id: `player-${idx + 1}-${trimmedName.toLowerCase().replace(/\s+/g, "-")}`,
+      name: trimmedName,
+      number: idx + 1,
+      role: idx < 15 ? "STARTER" : "SUB",
+    };
+  }
+  if (!input || typeof input !== "object") return null;
+  const rawName = "name" in input ? input.name : null;
+  if (typeof rawName !== "string") return null;
+  const nextName = rawName.trim().slice(0, 24);
+  if (nextName.length === 0) return null;
+  const rawNumber = "number" in input ? input.number : null;
+  const parsedNumber =
+    typeof rawNumber === "number" && Number.isFinite(rawNumber)
+      ? Math.max(1, Math.min(99, Math.floor(rawNumber)))
+      : idx + 1;
+  const rawRole = "role" in input ? input.role : null;
+  const nextRole: PlayerRole =
+    rawRole === "STARTER" || rawRole === "SUB" ? rawRole : idx < 15 ? "STARTER" : "SUB";
+  const rawId = "id" in input ? input.id : null;
+  const nextId =
+    typeof rawId === "string" && rawId.trim().length > 0
+      ? rawId
+      : `player-${idx + 1}-${nextName.toLowerCase().replace(/\s+/g, "-")}`;
+  return {
+    id: nextId,
+    name: nextName,
+    number: parsedNumber,
+    role: nextRole,
+  };
+}
+
 function parseStoredSquads(input: string | null): Squad[] {
   if (!input) return [];
   try {
@@ -74,7 +113,9 @@ function parseStoredSquads(input: string | null): Squad[] {
         const maybePlayers = "players" in item ? item.players : null;
         if (typeof maybeId !== "string" || typeof maybeName !== "string") return null;
         if (!Array.isArray(maybePlayers)) return null;
-        const players = maybePlayers.filter((player): player is string => typeof player === "string");
+        const players = maybePlayers
+          .map((player, idx) => parseStoredPlayer(player, idx))
+          .filter((player): player is SquadPlayer => player !== null);
         return {
           id: maybeId,
           name: maybeName.slice(0, 24),
@@ -115,16 +156,6 @@ function computeTeamScore(events: readonly MatchEvent[], team: TeamSide): TeamSc
 
 function formatGaelicScore(score: TeamScore): string {
   return `${score.goals}-${String(score.points).padStart(2, "0")}`;
-}
-
-function getPlayerNumberForName(
-  players: readonly string[],
-  playerName: string | null,
-): number | null {
-  if (!playerName) return null;
-  const playerIndex = players.indexOf(playerName);
-  if (playerIndex < 0) return null;
-  return playerIndex + 1;
 }
 
 const PANEL_CSS = `
@@ -1031,6 +1062,13 @@ export default function App() {
   const activeSquad =
     squads.find((squad) => squad.id === activeSquadId) ?? squads[0] ?? createDefaultSquad();
   const activeSquadPlayers = activeSquad.players;
+  const activePlayerEntry = activePlayer
+    ? activeSquadPlayers.find(
+        (player) => player.name === activePlayer && player.number === (activePlayerNumber ?? -1),
+      ) ??
+      activeSquadPlayers.find((player) => player.name === activePlayer) ??
+      null
+    : null;
 
   const setActiveSquadById = (nextSquadId: string) => {
     setActiveSquadId(nextSquadId);
@@ -1040,23 +1078,92 @@ export default function App() {
   };
 
   const updateActiveSquadPlayers = (
-    updater: (prevPlayers: string[]) => string[],
-    nextActivePlayer?: string | null,
+    updater: (prevPlayers: SquadPlayer[]) => SquadPlayer[],
+    nextActivePlayerId?: string | null,
   ) => {
+    const nextPlayersForActiveSquad = updater([...activeSquad.players]);
+    const nextSelectedPlayer =
+      nextActivePlayerId === undefined
+        ? undefined
+        : nextPlayersForActiveSquad.find((player) => player.id === nextActivePlayerId) ?? null;
     setSquads((prevSquads) =>
       prevSquads.map((squad) =>
-        squad.id === activeSquad.id ? { ...squad, players: updater([...squad.players]) } : squad,
+        squad.id === activeSquad.id ? { ...squad, players: nextPlayersForActiveSquad } : squad,
       ),
     );
-    if (nextActivePlayer !== undefined) {
-      setActivePlayer(nextActivePlayer);
-      setActivePlayerNumber(getPlayerNumberForName(activeSquadPlayers, nextActivePlayer));
+    if (nextActivePlayerId !== undefined) {
+      if (nextSelectedPlayer) {
+        setActivePlayer(nextSelectedPlayer.name);
+        setActivePlayerNumber(nextSelectedPlayer.number);
+        activePlayerRef.current = nextSelectedPlayer.name;
+        activePlayerNumberRef.current = nextSelectedPlayer.number;
+      } else {
+        setActivePlayer(null);
+        setActivePlayerNumber(null);
+        activePlayerRef.current = null;
+        activePlayerNumberRef.current = null;
+      }
     }
   };
 
-  const selectActivePlayer = (playerName: string) => {
-    setActivePlayer(playerName);
-    setActivePlayerNumber(getPlayerNumberForName(activeSquadPlayers, playerName));
+  const selectActivePlayerById = (playerId: string | null) => {
+    if (!playerId) {
+      setActivePlayer(null);
+      setActivePlayerNumber(null);
+      activePlayerRef.current = null;
+      activePlayerNumberRef.current = null;
+      return;
+    }
+    const player = activeSquadPlayers.find((entry) => entry.id === playerId);
+    if (!player) {
+      setActivePlayer(null);
+      setActivePlayerNumber(null);
+      activePlayerRef.current = null;
+      activePlayerNumberRef.current = null;
+      return;
+    }
+    setActivePlayer(player.name);
+    setActivePlayerNumber(player.number);
+    activePlayerRef.current = player.name;
+    activePlayerNumberRef.current = player.number;
+  };
+
+  const editPlayer = (playerId: string) => {
+    const targetPlayer = activeSquadPlayers.find((player) => player.id === playerId);
+    if (!targetPlayer) return;
+    const nextNameInput = window.prompt("Player name", targetPlayer.name);
+    if (nextNameInput == null) return;
+    const nextName = nextNameInput.trim();
+    if (nextName.length === 0) return;
+    const nextNumberInput = window.prompt("Jersey number", String(targetPlayer.number));
+    if (nextNumberInput == null) return;
+    const parsedNumber = Number.parseInt(nextNumberInput, 10);
+    if (!Number.isFinite(parsedNumber) || parsedNumber <= 0) return;
+    const nextRoleInput = window.prompt("Role: STARTER or SUB", targetPlayer.role);
+    if (nextRoleInput == null) return;
+    const normalizedRoleInput = nextRoleInput.trim().toUpperCase();
+    const nextRole: PlayerRole = normalizedRoleInput === "SUB" ? "SUB" : "STARTER";
+    updateActiveSquadPlayers(
+      (prevPlayers) =>
+        prevPlayers.map((player) =>
+          player.id === playerId
+            ? {
+                ...player,
+                name: nextName.slice(0, 24),
+                number: Math.max(1, Math.min(99, Math.floor(parsedNumber))),
+                role: nextRole,
+              }
+            : player,
+        ),
+      playerId,
+    );
+  };
+
+  const editActivePlayer = () => {
+    if (!activePlayerEntry) return;
+    const targetPlayer = activeSquadPlayers.find((player) => player.id === activePlayerEntry.id);
+    if (!targetPlayer) return;
+    editPlayer(targetPlayer.id);
   };
 
   const createSquad = () => {
@@ -1158,7 +1265,18 @@ export default function App() {
       setActivePlayerNumber(null);
       return;
     }
-    setActivePlayerNumber(getPlayerNumberForName(activeSquadPlayers, activePlayer));
+    const matchedPlayer =
+      activeSquadPlayers.find(
+        (player) => player.name === activePlayer && player.number === (activePlayerNumber ?? -1),
+      ) ?? activeSquadPlayers.find((player) => player.name === activePlayer);
+    if (!matchedPlayer) {
+      setActivePlayer(null);
+      setActivePlayerNumber(null);
+      return;
+    }
+    if (matchedPlayer.number !== activePlayerNumber) {
+      setActivePlayerNumber(matchedPlayer.number);
+    }
   }, [activePlayer, activeSquadPlayers]);
 
   useEffect(() => {
@@ -1317,9 +1435,22 @@ export default function App() {
   const addPlayer = () => {
     const nextPlayerName = playerDraft.trim();
     if (nextPlayerName.length === 0) return;
+    const starterCount = activeSquadPlayers.filter((player) => player.role === "STARTER").length;
+    const nextPlayerNumber =
+      activeSquadPlayers.reduce((maxNumber, player) => Math.max(maxNumber, player.number), 0) + 1;
+    const nextPlayerRole: PlayerRole = starterCount < 15 ? "STARTER" : "SUB";
+    const nextPlayerId = `player-${newLocalEventId()}`;
     updateActiveSquadPlayers(
-      (prevPlayers) => [...prevPlayers, nextPlayerName],
-      activePlayer ?? nextPlayerName,
+      (prevPlayers) => [
+        ...prevPlayers,
+        {
+          id: nextPlayerId,
+          name: nextPlayerName.slice(0, 24),
+          number: Math.min(99, nextPlayerNumber),
+          role: nextPlayerRole,
+        },
+      ],
+      activePlayerEntry?.id ?? nextPlayerId,
     );
     setPlayerDraft("");
   };
@@ -1662,15 +1793,20 @@ export default function App() {
   const utilityPanelClass = isLandscape
     ? "utility-overlay-panel utility-overlay-panel--landscape"
     : "utility-overlay-panel utility-overlay-panel--portrait";
-  const formationPlayers = activeSquadPlayers.slice(0, 15);
-  const subsPlayers = activeSquadPlayers.slice(15);
-  const formationRows: string[][] = [];
+  const starterPlayers = activeSquadPlayers.filter((player) => player.role === "STARTER");
+  const subPlayers = activeSquadPlayers.filter((player) => player.role === "SUB");
+  const formationPlayers = starterPlayers.slice(0, 15);
+  const subsPlayers = subPlayers;
+  const formationRows: SquadPlayer[][] = [];
   let formationCursor = 0;
   for (const rowSize of FORMATION_ROW_SIZES) {
     formationRows.push(formationPlayers.slice(formationCursor, formationCursor + rowSize));
     formationCursor += rowSize;
   }
-  const activePlayerChipText = activePlayer ? `Active: ${activePlayer}` : null;
+  const activePlayerChipText =
+    activePlayerEntry != null
+      ? `Active: #${activePlayerEntry.number} ${activePlayerEntry.name}`
+      : null;
   const activePlayerChipFloatingStyle =
     keyboardInset > 0
       ? { bottom: `${keyboardInset + 18}px` }
@@ -1751,6 +1887,14 @@ export default function App() {
             >
               Numbers: {showPlayerInitials ? "ON" : "OFF"}
             </button>
+            <button
+              type="button"
+              className="utility-review-btn"
+              disabled={!activePlayerEntry}
+              onClick={editActivePlayer}
+            >
+              Edit Active
+            </button>
           </div>
           <div className="utility-player-add-row">
             <input
@@ -1776,16 +1920,19 @@ export default function App() {
               row.length > 0 ? (
                 <div key={`formation-row-${rowIdx}`} className="utility-formation-row">
                   {row.map((player, playerIdx) => {
-                    const isActive = activePlayer === player;
+                    const isActive = activePlayerEntry?.id === player.id;
                     return (
                       <button
-                        key={`formation-${rowIdx}-${playerIdx}-${player}`}
+                        key={`formation-${rowIdx}-${playerIdx}-${player.id}`}
                         type="button"
                         className="utility-player-pill"
                         onClick={() => {
-                          selectActivePlayer(player);
+                          selectActivePlayerById(player.id);
                           closeUtilityPanel();
                           setIsUtilityOpen(false);
+                        }}
+                        onDoubleClick={() => {
+                          editPlayer(player.id);
                         }}
                         style={
                           isActive
@@ -1797,7 +1944,7 @@ export default function App() {
                         }
                       >
                         {isActive ? "● " : ""}
-                        {player}
+                        #{player.number} {player.name}
                       </button>
                     );
                   })}
@@ -1810,16 +1957,19 @@ export default function App() {
               <div className="utility-subs-title">Subs</div>
               <div className="utility-subs-row" aria-label="Home substitutes">
                 {subsPlayers.map((player, idx) => {
-                  const isActive = activePlayer === player;
+                  const isActive = activePlayerEntry?.id === player.id;
                   return (
                     <button
-                      key={`sub-${idx}-${player}`}
+                      key={`sub-${idx}-${player.id}`}
                       type="button"
                       className="utility-player-pill"
                       onClick={() => {
-                        selectActivePlayer(player);
+                        selectActivePlayerById(player.id);
                         closeUtilityPanel();
                         setIsUtilityOpen(false);
+                      }}
+                      onDoubleClick={() => {
+                        editPlayer(player.id);
                       }}
                       style={
                         isActive
@@ -1831,7 +1981,7 @@ export default function App() {
                       }
                     >
                       {isActive ? "● " : ""}
-                      {player}
+                      #{player.number} {player.name}
                     </button>
                   );
                 })}
