@@ -14,7 +14,11 @@ import {
 } from "../stats/stats-event-model";
 import { createMatchEventStore } from "../stats/match-event-store";
 
-type RenderableMatchEvent = MatchEvent & { playerName?: string };
+type RenderableMatchEvent = MatchEvent & {
+  playerName?: string;
+  playerNumber?: number;
+  team?: "HOME" | "AWAY";
+};
 
 export type CreatePixiPitchSurfaceOptions = {
   sport: "soccer" | "gaelic" | "hurling";
@@ -103,7 +107,7 @@ export async function createPixiPitchSurface(
 
   const redrawMarkers = () => {
     drawStatsMarkers(statsMarkers, getRenderableEvents(), {
-      showPlayerInitials: showPlayerInitialsState,
+      showPlayerLabels: showPlayerInitialsState,
     });
   };
 

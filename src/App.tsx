@@ -22,6 +22,7 @@ type ReviewMode = "FIRST" | "SECOND" | "FULL";
 type Squad = { id: string; name: string; players: string[] };
 type LoggedMatchEvent = MatchEvent & {
   playerName?: string;
+  playerNumber?: number;
   squadId?: string;
   team?: TeamSide;
 };
@@ -114,6 +115,16 @@ function computeTeamScore(events: readonly MatchEvent[], team: TeamSide): TeamSc
 
 function formatGaelicScore(score: TeamScore): string {
   return `${score.goals}-${String(score.points).padStart(2, "0")}`;
+}
+
+function getPlayerNumberForName(
+  players: readonly string[],
+  playerName: string | null,
+): number | null {
+  if (!playerName) return null;
+  const playerIndex = players.indexOf(playerName);
+  if (playerIndex < 0) return null;
+  return playerIndex + 1;
 }
 
 const PANEL_CSS = `
@@ -983,6 +994,7 @@ export default function App() {
   const [activeSquadId, setActiveSquadId] = useState("");
   const [squadDraft, setSquadDraft] = useState("");
   const [activePlayer, setActivePlayer] = useState<string | null>(null);
+  const [activePlayerNumber, setActivePlayerNumber] = useState<number | null>(null);
   const [playerDraft, setPlayerDraft] = useState("");
   const [showPlayerInitials, setShowPlayerInitials] = useState(true);
   const [reviewMode, setReviewMode] = useState<ReviewMode>("FULL");
@@ -1000,6 +1012,7 @@ export default function App() {
   const selectedEventRef = useRef<MatchEventKind>("POINT");
   const activeTeamRef = useRef<TeamSide>("HOME");
   const activePlayerRef = useRef<string | null>(null);
+  const activePlayerNumberRef = useRef<number | null>(null);
   const activeSquadIdRef = useRef("");
   const homeNameInputRef = useRef<HTMLInputElement>(null);
   const awayNameInputRef = useRef<HTMLInputElement>(null);
@@ -1022,6 +1035,7 @@ export default function App() {
   const setActiveSquadById = (nextSquadId: string) => {
     setActiveSquadId(nextSquadId);
     setActivePlayer(null);
+    setActivePlayerNumber(null);
     setPlayerDraft("");
   };
 
@@ -1036,7 +1050,13 @@ export default function App() {
     );
     if (nextActivePlayer !== undefined) {
       setActivePlayer(nextActivePlayer);
+      setActivePlayerNumber(getPlayerNumberForName(activeSquadPlayers, nextActivePlayer));
     }
+  };
+
+  const selectActivePlayer = (playerName: string) => {
+    setActivePlayer(playerName);
+    setActivePlayerNumber(getPlayerNumberForName(activeSquadPlayers, playerName));
   };
 
   const createSquad = () => {
@@ -1130,6 +1150,18 @@ export default function App() {
   }, [activePlayer]);
 
   useEffect(() => {
+    activePlayerNumberRef.current = activePlayerNumber;
+  }, [activePlayerNumber]);
+
+  useEffect(() => {
+    if (!activePlayer) {
+      setActivePlayerNumber(null);
+      return;
+    }
+    setActivePlayerNumber(getPlayerNumberForName(activeSquadPlayers, activePlayer));
+  }, [activePlayer, activeSquadPlayers]);
+
+  useEffect(() => {
     activeSquadIdRef.current = activeSquadId;
   }, [activeSquadId]);
 
@@ -1141,6 +1173,7 @@ export default function App() {
     if (squads.some((squad) => squad.id === activeSquadId)) return;
     setActiveSquadId(squads[0]?.id ?? "");
     setActivePlayer(null);
+    setActivePlayerNumber(null);
   }, [activeSquadId, squads]);
 
   useEffect(() => {
@@ -1188,6 +1221,7 @@ export default function App() {
         };
         if (teamSide === "HOME" && activePlayerRef.current) {
           nextEvent.playerName = activePlayerRef.current;
+          nextEvent.playerNumber = activePlayerNumberRef.current ?? undefined;
           nextEvent.squadId = activeSquadIdRef.current;
         }
         setLoggedEvents((prev) => {
@@ -1295,6 +1329,7 @@ export default function App() {
     setReviewMode("FULL");
     setUtilityPanel(null);
     setActivePlayer(null);
+    setActivePlayerNumber(null);
     setPlayerDraft("");
     setMatchState("PRE_MATCH");
     setCurrentHalf(1);
@@ -1714,7 +1749,7 @@ export default function App() {
                 setShowPlayerInitials((prev) => !prev);
               }}
             >
-              Initials: {showPlayerInitials ? "ON" : "OFF"}
+              Numbers: {showPlayerInitials ? "ON" : "OFF"}
             </button>
           </div>
           <div className="utility-player-add-row">
@@ -1748,7 +1783,7 @@ export default function App() {
                         type="button"
                         className="utility-player-pill"
                         onClick={() => {
-                          setActivePlayer(player);
+                          selectActivePlayer(player);
                           closeUtilityPanel();
                           setIsUtilityOpen(false);
                         }}
@@ -1782,7 +1817,7 @@ export default function App() {
                       type="button"
                       className="utility-player-pill"
                       onClick={() => {
-                        setActivePlayer(player);
+                        selectActivePlayer(player);
                         closeUtilityPanel();
                         setIsUtilityOpen(false);
                       }}

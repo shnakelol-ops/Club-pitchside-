@@ -7,10 +7,11 @@ import { boardNormToWorld } from "../coordinates/pitch-coordinates";
 type ParsedCssColor = { color: number; alpha: number };
 type RenderableMatchEvent = MatchEvent & {
   playerName?: string;
+  playerNumber?: number;
   team?: "HOME" | "AWAY";
 };
 
-const MARKER_INITIALS_STYLE = new TextStyle({
+const MARKER_LABEL_STYLE = new TextStyle({
   fill: 0xffffff,
   fontSize: 9.5,
   fontWeight: "800",
@@ -63,7 +64,7 @@ function parseCssColorForPixi(css: string): ParsedCssColor {
 export function drawStatsMarkers(
   g: Graphics,
   events: readonly RenderableMatchEvent[],
-  opts?: { worldToScreenScale?: number; minScreenRadiusPx?: number; showPlayerInitials?: boolean },
+  opts?: { worldToScreenScale?: number; minScreenRadiusPx?: number; showPlayerLabels?: boolean },
 ): void {
   g.clear();
   const oldChildren = g.removeChildren();
@@ -77,7 +78,7 @@ export function drawStatsMarkers(
   const minRingWidth = 1 / worldToScreenScale;
   const minHaloRadius = 2 / worldToScreenScale;
   const minTwoPointOuterRingWidth = 1.15 / worldToScreenScale;
-  const showPlayerInitials = opts?.showPlayerInitials ?? true;
+  const showPlayerLabels = opts?.showPlayerLabels ?? true;
 
   for (const event of events) {
     const style = getStatsMarkerStyle(event);
@@ -129,27 +130,20 @@ export function drawStatsMarkers(
     markerGraphic.circle(0, 0, Math.max(radius * 0.32, 1.25 / worldToScreenScale))
       .fill({ color: 0xffffff, alpha: 0.9 });
 
-    const shouldShowInitials =
-      showPlayerInitials &&
-      typeof event.playerName === "string" &&
-      event.playerName.trim().length > 0 &&
+    const shouldShowPlayerNumber =
+      showPlayerLabels &&
+      typeof event.playerNumber === "number" &&
+      Number.isFinite(event.playerNumber) &&
+      event.playerNumber > 0 &&
       (event.team == null || event.team === "HOME");
-    if (shouldShowInitials) {
-      const initialsWords = event.playerName
-        .trim()
-        .split(/\s+/)
-        .filter((word) => word.length > 0);
-      const initials =
-        initialsWords.length >= 2
-          ? `${initialsWords[0]![0] ?? ""}${initialsWords[1]![0] ?? ""}`.toUpperCase().slice(0, 2)
-          : (initialsWords[0]?.slice(0, 2) ?? "").toUpperCase();
-      if (initials.length > 0) {
-        const initialsText = new Text({ text: initials, style: MARKER_INITIALS_STYLE });
-        initialsText.anchor.set(0.5);
-        initialsText.x = 0;
-        initialsText.y = 0;
-        markerContainer.addChild(initialsText);
-      }
+    if (shouldShowPlayerNumber) {
+      const clampedNumber = Math.min(99, Math.max(1, Math.floor(event.playerNumber)));
+      const numberLabel = String(clampedNumber);
+      const numberText = new Text({ text: numberLabel, style: MARKER_LABEL_STYLE });
+      numberText.anchor.set(0.5);
+      numberText.x = 0;
+      numberText.y = 0;
+      markerContainer.addChild(numberText);
     }
 
     g.addChild(markerContainer);
