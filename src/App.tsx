@@ -257,8 +257,8 @@ const PANEL_CSS = `
 
 @media (orientation: landscape) {
   .match-stopwatch {
-    top: max(8px, env(safe-area-inset-top));
-    right: max(10px, env(safe-area-inset-right));
+    top: max(4px, env(safe-area-inset-top));
+    right: max(6px, env(safe-area-inset-right));
   }
 }
 
