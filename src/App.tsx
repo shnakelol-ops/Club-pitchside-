@@ -455,33 +455,42 @@ export default function App() {
     };
   }, [isPickerOpen]);
 
+  const matchStateToken =
+    matchState === "FIRST_HALF" || matchState === "SECOND_HALF"
+      ? `H${currentHalf}`
+      : matchState === "HALF_TIME"
+        ? "HT"
+        : matchState === "FULL_TIME"
+          ? "FT"
+          : "PRE";
+
+  const contextualAction: { label: string; onClick: () => void } | null =
+    matchState === "PRE_MATCH"
+      ? { label: "START", onClick: startFirstHalfAction }
+      : matchState === "FIRST_HALF"
+        ? { label: "HT", onClick: goToHalfTimeAction }
+        : matchState === "HALF_TIME"
+          ? { label: "2H", onClick: startSecondHalfAction }
+          : matchState === "SECOND_HALF"
+            ? { label: "FT", onClick: endMatchAction }
+            : null;
+
   return (
     <main className="app-root">
       <style>{PANEL_CSS}</style>
       <div className="match-stopwatch" aria-live="polite">
-        <span>
-          {matchState === "FIRST_HALF" || matchState === "SECOND_HALF"
-            ? `H${currentHalf}`
-            : matchState === "HALF_TIME"
-              ? "HT"
-              : matchState === "FULL_TIME"
-                ? "FT"
-                : "PRE"}
-        </span>
+        <span>{matchStateToken}</span>
         <span className="match-stopwatch-clock">{formatMatchClock(matchTimeSeconds)}</span>
         <div className="match-stopwatch-controls">
-          <button type="button" className="match-stopwatch-btn" onClick={startFirstHalfAction}>
-            START
-          </button>
-          <button type="button" className="match-stopwatch-btn" onClick={goToHalfTimeAction}>
-            HT
-          </button>
-          <button type="button" className="match-stopwatch-btn" onClick={startSecondHalfAction}>
-            2H
-          </button>
-          <button type="button" className="match-stopwatch-btn" onClick={endMatchAction}>
-            FT
-          </button>
+          {contextualAction ? (
+            <button
+              type="button"
+              className="match-stopwatch-btn"
+              onClick={contextualAction.onClick}
+            >
+              {contextualAction.label}
+            </button>
+          ) : null}
         </div>
       </div>
       <div
