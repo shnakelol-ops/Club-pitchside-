@@ -5,25 +5,209 @@ import { type MatchEventKind } from "./core/stats/stats-event-model";
 
 type VisibilityMode = "ALL" | "LAST_5" | "LAST_10";
 
-const EVENT_ROWS: Array<Array<{ label: string; kind: MatchEventKind }>> = [
-  [
-    { label: "GOAL", kind: "GOAL" },
-    { label: "POINT", kind: "POINT" },
-    { label: "2PT", kind: "TWO_POINTER" },
-    { label: "WIDE", kind: "WIDE" },
-  ],
-  [
-    { label: "SHOT", kind: "SHOT" },
-    { label: "T+", kind: "TURNOVER_WON" },
-    { label: "T−", kind: "TURNOVER_LOST" },
-    { label: "K+", kind: "KICKOUT_WON" },
-  ],
-  [
-    { label: "K−", kind: "KICKOUT_CONCEDED" },
-    { label: "F+", kind: "FREE_WON" },
-    { label: "F−", kind: "FREE_CONCEDED" },
-  ],
+const EVENT_BUTTONS: Array<{ label: string; kind: MatchEventKind }> = [
+  { label: "GOAL", kind: "GOAL" },
+  { label: "POINT", kind: "POINT" },
+  { label: "2PT", kind: "TWO_POINTER" },
+  { label: "WIDE", kind: "WIDE" },
+  { label: "SHOT", kind: "SHOT" },
+  { label: "T+", kind: "TURNOVER_WON" },
+  { label: "T−", kind: "TURNOVER_LOST" },
+  { label: "K+", kind: "KICKOUT_WON" },
+  { label: "K−", kind: "KICKOUT_CONCEDED" },
+  { label: "F+", kind: "FREE_WON" },
+  { label: "F−", kind: "FREE_CONCEDED" },
 ];
+
+const PANEL_CSS = `
+.app-root {
+  position: fixed;
+  inset: 0;
+  width: 100dvw;
+  height: 100dvh;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0a0f0c;
+  overflow: hidden;
+}
+
+.floating-controls {
+  position: fixed;
+  right: 16px;
+  bottom: 14px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.event-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 7px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(10, 20, 35, 0.75);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  box-shadow: 0 8px 18px rgba(4, 12, 24, 0.26);
+  width: min(calc(100vw - 32px), 308px);
+  max-width: 95vw;
+}
+
+.event-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.event-btn {
+  border-radius: 8px;
+  color: #e2e8f0;
+  font-size: 10px;
+  line-height: 1.1;
+  padding: 6px 4px;
+  min-height: 30px;
+  cursor: pointer;
+  text-align: center;
+  white-space: nowrap;
+  letter-spacing: 0.25px;
+  text-transform: uppercase;
+}
+
+.visibility-row {
+  margin-top: 1px;
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.visibility-btn {
+  border-radius: 999px;
+  color: #e2e8f0;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.1;
+  padding: 4px 7px;
+  cursor: pointer;
+  white-space: nowrap;
+  letter-spacing: 0.25px;
+  text-transform: uppercase;
+}
+
+.undo-wrap {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.undo-btn {
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.9);
+  color: #cbd5e1;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 5px 8px;
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+  letter-spacing: 0.25px;
+  text-transform: uppercase;
+}
+
+.active-chip {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #cbd5e1;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 8px;
+  line-height: 1;
+  white-space: nowrap;
+  letter-spacing: 0.25px;
+  text-transform: uppercase;
+}
+
+.bubble-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.76);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: #e2e8f0;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (orientation: landscape) {
+  .floating-controls {
+    bottom: 12px;
+    gap: 5px;
+  }
+
+  .event-panel {
+    width: min(calc(100vw - 24px), 352px);
+    padding: 6px;
+    gap: 5px;
+    border-radius: 9px;
+  }
+
+  .event-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 3px;
+  }
+
+  .event-grid .event-btn:nth-child(6) {
+    grid-column: 1;
+  }
+
+  .event-btn {
+    min-height: 28px;
+    padding: 5px 3px;
+    font-size: 9.5px;
+  }
+
+  .visibility-row {
+    gap: 3px;
+  }
+
+  .visibility-btn {
+    font-size: 9px;
+    padding: 3px 6px;
+  }
+
+  .undo-wrap {
+    margin-top: 6px;
+    padding-top: 6px;
+  }
+
+  .undo-btn {
+    font-size: 10px;
+    padding: 4px 7px;
+  }
+
+  .active-chip {
+    font-size: 9px;
+    padding: 3px 7px;
+  }
+
+  .bubble-btn {
+    width: 46px;
+    height: 46px;
+  }
+}
+`;
 
 const EVENT_LABEL_BY_KIND: Record<MatchEventKind, string> = {
   GOAL: "GOAL",
@@ -112,107 +296,46 @@ export default function App() {
   }, [isPickerOpen]);
 
   return (
-    <main
-      style={{
-        position: "fixed",
-        inset: 0,
-        width: "100dvw",
-        height: "100dvh",
-        margin: 0,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "#0a0f0c",
-        overflow: "hidden",
-      }}
-    >
+    <main className="app-root">
+      <style>{PANEL_CSS}</style>
       <div
         ref={floatingControlsRef}
-        style={{
-          position: "fixed",
-          right: 16,
-          bottom: 14,
-          zIndex: 20,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "flex-end",
-          gap: 6,
-        }}
+        className="floating-controls"
       >
         {isPickerOpen ? (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 6,
-              padding: 7,
-              borderRadius: 10,
-              border: "1px solid rgba(255,255,255,0.08)",
-              background: "rgba(10, 20, 35, 0.75)",
-              backdropFilter: "blur(4px)",
-              WebkitBackdropFilter: "blur(4px)",
-              boxShadow: "0 8px 18px rgba(4, 12, 24, 0.26)",
-              width: "min(calc(100vw - 32px), 308px)",
-            }}
-          >
-            {EVENT_ROWS.map((row, rowIndex) => (
-              <div
-                key={`event-row-${rowIndex}`}
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: `repeat(${row.length}, minmax(0, 1fr))`,
-                  gap: 4,
-                }}
-              >
-                {row.map((item) => {
-                  const isActive = item.kind === selectedEventKind;
-                  const isScoringRow = rowIndex === 0;
-                  return (
-                    <button
-                      key={item.label}
-                      type="button"
-                      onClick={() => {
-                        selectEventKind(item.kind);
-                      }}
-                      style={{
-                        border: isActive
-                          ? "1px solid rgba(34,197,94,0.96)"
-                          : isScoringRow
-                            ? "1px solid rgba(148,163,184,0.5)"
-                            : "1px solid rgba(148,163,184,0.36)",
-                        borderRadius: 8,
-                        background: isActive
-                          ? "rgba(22,101,52,0.68)"
-                          : isScoringRow
-                            ? "rgba(21, 39, 62, 0.84)"
-                            : "rgba(14, 24, 40, 0.72)",
-                        color: "#e2e8f0",
-                        fontSize: 10,
-                        fontWeight: isActive ? 700 : 600,
-                        lineHeight: 1.1,
-                        padding: "6px 4px",
-                        cursor: "pointer",
-                        textAlign: "center",
-                        whiteSpace: "nowrap",
-                        minHeight: 30,
-                        letterSpacing: 0.25,
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      {item.label}
-                    </button>
-                  );
-                })}
-              </div>
-            ))}
-            <div
-              style={{
-                marginTop: 1,
-                display: "flex",
-                gap: 4,
-                flexWrap: "wrap",
-              }}
-            >
+          <div className="event-panel">
+            <div className="event-grid">
+              {EVENT_BUTTONS.map((item, idx) => {
+                const isActive = item.kind === selectedEventKind;
+                const isScoring = idx <= 4;
+                return (
+                  <button
+                    key={item.label}
+                    type="button"
+                    className="event-btn"
+                    onClick={() => {
+                      selectEventKind(item.kind);
+                    }}
+                    style={{
+                      border: isActive
+                        ? "1px solid rgba(34,197,94,0.96)"
+                        : isScoring
+                          ? "1px solid rgba(148,163,184,0.52)"
+                          : "1px solid rgba(148,163,184,0.36)",
+                      background: isActive
+                        ? "rgba(22,101,52,0.7)"
+                        : isScoring
+                          ? "rgba(21, 39, 62, 0.84)"
+                          : "rgba(14, 24, 40, 0.72)",
+                      fontWeight: isActive ? 700 : 600,
+                    }}
+                  >
+                    {item.label}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="visibility-row">
               {([
                 { id: "ALL", label: "Show All" },
                 { id: "LAST_5", label: "Last 5" },
@@ -221,6 +344,7 @@ export default function App() {
                 <button
                   key={mode.id}
                   type="button"
+                  className="visibility-btn"
                   onClick={() => {
                     setVisibilityMode(mode.id);
                   }}
@@ -229,52 +353,25 @@ export default function App() {
                       visibilityMode === mode.id
                         ? "1px solid rgba(125,211,252,0.9)"
                         : "1px solid rgba(148,163,184,0.4)",
-                    borderRadius: 999,
                     background:
                       visibilityMode === mode.id
                         ? "rgba(14,116,144,0.42)"
                         : "rgba(15,23,42,0.9)",
-                    color: "#e2e8f0",
-                    fontSize: 10,
-                    fontWeight: 600,
-                    lineHeight: 1.1,
-                    padding: "4px 7px",
-                    cursor: "pointer",
-                    whiteSpace: "nowrap",
-                    letterSpacing: 0.25,
                   }}
                 >
                   {mode.label}
                 </button>
               ))}
             </div>
-            <div
-              style={{
-                marginTop: 8,
-                paddingTop: 8,
-                borderTop: "1px solid rgba(255,255,255,0.08)",
-              }}
-            >
+            <div className="undo-wrap">
               <button
                 type="button"
+                className="undo-btn"
                 onClick={() => {
                   handleRef.current?.undoLastEvent();
                   setIsPickerOpen(false);
                 }}
-                style={{
-                  border: "1px solid rgba(148,163,184,0.4)",
-                  borderRadius: 8,
-                  background: "rgba(15,23,42,0.9)",
-                  color: "#cbd5e1",
-                  fontSize: 11,
-                  fontWeight: 600,
-                  lineHeight: 1.2,
-                  padding: "5px 8px",
-                  cursor: "pointer",
-                  textAlign: "left",
-                  whiteSpace: "nowrap",
-                  letterSpacing: 0.25,
-                }}
+                style={{ border: "1px solid rgba(148,163,184,0.4)" }}
               >
                 Undo last
               </button>
@@ -282,21 +379,7 @@ export default function App() {
           </div>
         ) : null}
         {!isPickerOpen ? (
-          <div
-            aria-live="polite"
-            style={{
-              border: "1px solid rgba(148,163,184,0.35)",
-              borderRadius: 999,
-              background: "rgba(15,23,42,0.72)",
-              color: "#cbd5e1",
-              fontSize: 10,
-              fontWeight: 600,
-              padding: "4px 8px",
-              lineHeight: 1,
-              whiteSpace: "nowrap",
-              letterSpacing: 0.25,
-            }}
-          >
+          <div aria-live="polite" className="active-chip">
             {EVENT_LABEL_BY_KIND[selectedEventKind]}
           </div>
         ) : null}
@@ -307,23 +390,11 @@ export default function App() {
           }}
           aria-label="Toggle event picker"
           aria-expanded={isPickerOpen}
+          className="bubble-btn"
           style={{
-            width: 48,
-            height: 48,
-            borderRadius: "999px",
             border: isPickerOpen
               ? "1px solid rgba(34,197,94,0.78)"
               : "1px solid rgba(148,163,184,0.45)",
-            background: "rgba(15,23,42,0.76)",
-            backdropFilter: "blur(6px)",
-            WebkitBackdropFilter: "blur(6px)",
-            color: "#e2e8f0",
-            fontSize: 18,
-            lineHeight: 1,
-            cursor: "pointer",
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
           }}
         >
           {isPickerOpen ? "×" : "●"}
