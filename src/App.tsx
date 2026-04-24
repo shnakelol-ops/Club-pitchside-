@@ -32,6 +32,16 @@ const EVENT_BUTTONS: Array<{ label: string; kind: MatchEventKind }> = [
   { label: "F−", kind: "FREE_CONCEDED" },
 ];
 
+const AWAY_INSTANT_SCORING_KINDS = new Set<MatchEventKind>(["GOAL", "POINT", "TWO_POINTER"]);
+
+function newLocalEventId(): string {
+  const c = globalThis.crypto;
+  if (c && "randomUUID" in c && typeof c.randomUUID === "function") {
+    return c.randomUUID();
+  }
+  return `evt-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+}
+
 function computeTeamScore(events: readonly MatchEvent[], team: TeamSide): TeamScore {
   let goals = 0;
   let points = 0;
@@ -648,13 +658,20 @@ export default function App() {
     setVisibleEventLimit: (limit: number | null) => void;
     setEventContext: (context: { half: 1 | 2; timestamp: number; canLog: boolean }) => void;
   } | null>(null);
+  const canEditTeamNames = matchState === "PRE_MATCH";
 
   const undoLastEventAction = () => {
-    handleRef.current?.undoLastEvent();
+    const lastEvent = loggedEvents.at(-1);
+    if (!lastEvent) return;
+    const isInstantAwayScore = lastEvent.id.includes("-instant-score-");
+    if (!isInstantAwayScore) {
+      handleRef.current?.undoLastEvent();
+    }
     setLoggedEvents((prev) => prev.slice(0, -1));
   };
 
   const startTeamNameEdit = (team: TeamSide) => {
+    if (!canEditTeamNames) return;
     setEditingTeam(team);
     setTeamNameDraft(teamNames[team]);
   };
@@ -676,9 +693,37 @@ export default function App() {
     setIsPickerOpen(false);
   };
 
+  const logAwayInstantScore = (kind: MatchEventKind) => {
+    setLoggedEvents((prev) => [
+      ...prev,
+      {
+        id: `team-away-instant-score-${newLocalEventId()}`,
+        kind,
+        nx: 0,
+        ny: 0,
+        half: matchEngineStateRef.current.currentHalf,
+        timestamp: matchEngineStateRef.current.matchTimeSeconds,
+      },
+    ]);
+  };
+
+  const handleEventButtonPress = (kind: MatchEventKind) => {
+    if (!isLoggingActive(matchState)) return;
+    selectEventKind(kind);
+    if (activeTeam === "AWAY" && AWAY_INSTANT_SCORING_KINDS.has(kind)) {
+      logAwayInstantScore(kind);
+    }
+  };
+
   useEffect(() => {
     activeTeamRef.current = activeTeam;
   }, [activeTeam]);
+
+  useEffect(() => {
+    if (canEditTeamNames) return;
+    setEditingTeam(null);
+    setTeamNameDraft("");
+  }, [canEditTeamNames]);
 
   useEffect(() => {
     if (!editingTeam) return;
@@ -880,14 +925,16 @@ export default function App() {
         ) : (
           <span className="scoreboard-rail-name-line">
             <span className="scoreboard-rail-team-name">{teamNames.HOME}</span>
-            <button
-              type="button"
-              className="scoreboard-name-edit-btn"
-              aria-label="Edit home team name"
-              onClick={() => startTeamNameEdit("HOME")}
-            >
-              ✏️
-            </button>
+            {canEditTeamNames ? (
+              <button
+                type="button"
+                className="scoreboard-name-edit-btn"
+                aria-label="Edit home team name"
+                onClick={() => startTeamNameEdit("HOME")}
+              >
+                ✏️
+              </button>
+            ) : null}
           </span>
         )}
       </div>
@@ -936,14 +983,16 @@ export default function App() {
         ) : (
           <span className="scoreboard-rail-name-line">
             <span className="scoreboard-rail-team-name">{teamNames.AWAY}</span>
-            <button
-              type="button"
-              className="scoreboard-name-edit-btn"
-              aria-label="Edit away team name"
-              onClick={() => startTeamNameEdit("AWAY")}
-            >
-              ✏️
-            </button>
+            {canEditTeamNames ? (
+              <button
+                type="button"
+                className="scoreboard-name-edit-btn"
+                aria-label="Edit away team name"
+                onClick={() => startTeamNameEdit("AWAY")}
+              >
+                ✏️
+              </button>
+            ) : null}
           </span>
         )}
       </div>
@@ -972,14 +1021,16 @@ export default function App() {
           ) : (
             <span className="scoreboard-side-label-wrap">
               <span className="scoreboard-side-label">{teamNames.HOME}</span>
-              <button
-                type="button"
-                className="scoreboard-name-edit-btn"
-                aria-label="Edit home team name"
-                onClick={() => startTeamNameEdit("HOME")}
-              >
-                ✏️
-              </button>
+              {canEditTeamNames ? (
+                <button
+                  type="button"
+                  className="scoreboard-name-edit-btn"
+                  aria-label="Edit home team name"
+                  onClick={() => startTeamNameEdit("HOME")}
+                >
+                  ✏️
+                </button>
+              ) : null}
             </span>
           )}
           <span className="scoreboard-side-score">
@@ -1008,14 +1059,16 @@ export default function App() {
           ) : (
             <span className="scoreboard-side-label-wrap">
               <span className="scoreboard-side-label">{teamNames.AWAY}</span>
-              <button
-                type="button"
-                className="scoreboard-name-edit-btn"
-                aria-label="Edit away team name"
-                onClick={() => startTeamNameEdit("AWAY")}
-              >
-                ✏️
-              </button>
+              {canEditTeamNames ? (
+                <button
+                  type="button"
+                  className="scoreboard-name-edit-btn"
+                  aria-label="Edit away team name"
+                  onClick={() => startTeamNameEdit("AWAY")}
+                >
+                  ✏️
+                </button>
+              ) : null}
             </span>
           )}
           <span className="scoreboard-side-score">
@@ -1094,8 +1147,7 @@ export default function App() {
                       type="button"
                       className="event-btn"
                       onClick={() => {
-                        if (!isLoggingActive(matchState)) return;
-                        selectEventKind(item.kind);
+                        handleEventButtonPress(item.kind);
                       }}
                       style={{
                         border: isActive
@@ -1170,8 +1222,7 @@ export default function App() {
                       type="button"
                       className="landscape-toolbar-btn"
                       onClick={() => {
-                        if (!isLoggingActive(matchState)) return;
-                        selectEventKind(item.kind);
+                        handleEventButtonPress(item.kind);
                       }}
                       style={
                         isActive
@@ -1196,8 +1247,7 @@ export default function App() {
                       type="button"
                       className="landscape-toolbar-btn"
                       onClick={() => {
-                        if (!isLoggingActive(matchState)) return;
-                        selectEventKind(item.kind);
+                        handleEventButtonPress(item.kind);
                       }}
                       style={
                         isActive
