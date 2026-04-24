@@ -309,6 +309,35 @@ const PANEL_CSS = `
   text-transform: uppercase;
 }
 
+.scoreboard-name-edit-btn {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+  text-transform: uppercase;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.scoreboard-name-input {
+  width: 100%;
+  min-width: 0;
+  height: 18px;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.44);
+  background: rgba(15, 23, 42, 0.88);
+  color: #e2e8f0;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0 5px;
+  letter-spacing: 0.18px;
+  text-transform: uppercase;
+}
+
 .scoreboard-side-score {
   color: #f8fafc;
   font-size: 11px;
@@ -524,6 +553,12 @@ export default function App() {
   const floatingControlsRef = useRef<HTMLDivElement>(null);
   const [selectedEventKind, setSelectedEventKind] = useState<MatchEventKind>("POINT");
   const [activeTeam, setActiveTeam] = useState<TeamSide>("HOME");
+  const [teamNames, setTeamNames] = useState<{ HOME: string; AWAY: string }>({
+    HOME: "HOME",
+    AWAY: "AWAY",
+  });
+  const [editingTeam, setEditingTeam] = useState<TeamSide | null>(null);
+  const [teamNameDraft, setTeamNameDraft] = useState("");
   const [loggedEvents, setLoggedEvents] = useState<readonly MatchEvent[]>([]);
   const [visibilityMode, setVisibilityMode] = useState<VisibilityMode>("ALL");
   const [matchState, setMatchState] = useState<MatchState>("PRE_MATCH");
@@ -536,6 +571,8 @@ export default function App() {
   );
   const selectedEventRef = useRef<MatchEventKind>("POINT");
   const activeTeamRef = useRef<TeamSide>("HOME");
+  const homeNameInputRef = useRef<HTMLInputElement>(null);
+  const awayNameInputRef = useRef<HTMLInputElement>(null);
   const matchEngineStateRef = useRef(createInitialMatchEngineState());
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const handleRef = useRef<{
@@ -552,6 +589,21 @@ export default function App() {
     setLoggedEvents((prev) => prev.slice(0, -1));
   };
 
+  const startTeamNameEdit = (team: TeamSide) => {
+    setEditingTeam(team);
+    setTeamNameDraft(teamNames[team]);
+  };
+
+  const commitTeamNameEdit = () => {
+    if (!editingTeam) return;
+    const nextName = teamNameDraft.trim();
+    if (nextName.length > 0) {
+      setTeamNames((prev) => ({ ...prev, [editingTeam]: nextName.slice(0, 15) }));
+    }
+    setEditingTeam(null);
+    setTeamNameDraft("");
+  };
+
   const selectEventKind = (kind: MatchEventKind) => {
     setSelectedEventKind(kind);
     selectedEventRef.current = kind;
@@ -562,6 +614,13 @@ export default function App() {
   useEffect(() => {
     activeTeamRef.current = activeTeam;
   }, [activeTeam]);
+
+  useEffect(() => {
+    if (!editingTeam) return;
+    const target = editingTeam === "HOME" ? homeNameInputRef.current : awayNameInputRef.current;
+    target?.focus();
+    target?.select();
+  }, [editingTeam]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -733,7 +792,34 @@ export default function App() {
             : undefined
         }
       >
-        HOME
+        {editingTeam === "HOME" ? (
+          <input
+            ref={homeNameInputRef}
+            className="scoreboard-rail-name-input"
+            value={teamNameDraft}
+            onChange={(event) => {
+              setTeamNameDraft(event.target.value.slice(0, 15));
+            }}
+            onBlur={commitTeamNameEdit}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                commitTeamNameEdit();
+              }
+            }}
+            maxLength={15}
+            aria-label="Edit home team name"
+          />
+        ) : (
+          <span
+            className="scoreboard-name-edit-btn"
+            onClick={(event) => {
+              event.stopPropagation();
+              startTeamNameEdit("HOME");
+            }}
+          >
+            {teamNames.HOME}
+          </span>
+        )}
       </button>
       <div className="scoreboard-rail-score">
         {formatGaelicScore(homeScore)}
@@ -757,21 +843,112 @@ export default function App() {
             : undefined
         }
       >
-        AWAY
+        {editingTeam === "AWAY" ? (
+          <input
+            ref={awayNameInputRef}
+            className="scoreboard-rail-name-input"
+            value={teamNameDraft}
+            onChange={(event) => {
+              setTeamNameDraft(event.target.value.slice(0, 15));
+            }}
+            onBlur={commitTeamNameEdit}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                commitTeamNameEdit();
+              }
+            }}
+            maxLength={15}
+            aria-label="Edit away team name"
+          />
+        ) : (
+          <span
+            className="scoreboard-name-edit-btn"
+            onClick={(event) => {
+              event.stopPropagation();
+              startTeamNameEdit("AWAY");
+            }}
+          >
+            {teamNames.AWAY}
+          </span>
+        )}
       </button>
     </div>
   ) : (
     <div className="scoreboard-strip" aria-label="Match scoreboard">
       <div className="scoreboard-strip-line">
         <span className="scoreboard-side">
-          <span className="scoreboard-side-label">HOME</span>
+          {editingTeam === "HOME" ? (
+            <input
+              ref={homeNameInputRef}
+              className="scoreboard-name-input"
+              value={teamNameDraft}
+              onChange={(event) => {
+                setTeamNameDraft(event.target.value.slice(0, 15));
+              }}
+              onBlur={commitTeamNameEdit}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  commitTeamNameEdit();
+                }
+              }}
+              maxLength={15}
+              aria-label="Edit home team name"
+            />
+          ) : (
+            <span
+              role="button"
+              tabIndex={0}
+              className="scoreboard-side-label scoreboard-name-edit-btn"
+              onClick={() => startTeamNameEdit("HOME")}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  startTeamNameEdit("HOME");
+                }
+              }}
+            >
+              {teamNames.HOME}
+            </span>
+          )}
           <span className="scoreboard-side-score">
             {formatGaelicScore(homeScore)}
             <span className="scoreboard-total">({homeScore.total})</span>
           </span>
         </span>
         <span className="scoreboard-side">
-          <span className="scoreboard-side-label">AWAY</span>
+          {editingTeam === "AWAY" ? (
+            <input
+              ref={awayNameInputRef}
+              className="scoreboard-name-input"
+              value={teamNameDraft}
+              onChange={(event) => {
+                setTeamNameDraft(event.target.value.slice(0, 15));
+              }}
+              onBlur={commitTeamNameEdit}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  commitTeamNameEdit();
+                }
+              }}
+              maxLength={15}
+              aria-label="Edit away team name"
+            />
+          ) : (
+            <span
+              role="button"
+              tabIndex={0}
+              className="scoreboard-side-label scoreboard-name-edit-btn"
+              onClick={() => startTeamNameEdit("AWAY")}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  startTeamNameEdit("AWAY");
+                }
+              }}
+            >
+              {teamNames.AWAY}
+            </span>
+          )}
           <span className="scoreboard-side-score">
             {formatGaelicScore(awayScore)}
             <span className="scoreboard-total">({awayScore.total})</span>
