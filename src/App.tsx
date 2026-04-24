@@ -18,7 +18,7 @@ type VisibilityMode = "ALL" | "LAST_5" | "LAST_10";
 type TeamScore = { goals: number; points: number; total: number };
 type TeamSide = "HOME" | "AWAY";
 type UtilityPanel = "PLAYERS" | "REVIEW" | null;
-type ReviewFilter = "FIRST_HALF" | "SECOND_HALF" | "FULL_MATCH";
+type ReviewMode = "FIRST" | "SECOND" | "FULL";
 
 const EVENT_BUTTONS: Array<{ label: string; kind: MatchEventKind }> = [
   { label: "GOAL", kind: "GOAL" },
@@ -35,14 +35,6 @@ const EVENT_BUTTONS: Array<{ label: string; kind: MatchEventKind }> = [
 ];
 
 const AWAY_INSTANT_SCORING_KINDS = new Set<MatchEventKind>(["GOAL", "POINT", "TWO_POINTER"]);
-const HOME_PLAYERS = [
-  "1. Murphy",
-  "2. Byrne",
-  "3. Doyle",
-  "4. Walsh",
-  "5. Kelly",
-  "6. Ryan",
-] as const;
 
 function newLocalEventId(): string {
   const c = globalThis.crypto;
@@ -788,8 +780,10 @@ export default function App() {
   const [teamNameDraft, setTeamNameDraft] = useState("");
   const [isUtilityOpen, setIsUtilityOpen] = useState(false);
   const [utilityPanel, setUtilityPanel] = useState<UtilityPanel>(null);
-  const [activePlayer, setActivePlayer] = useState<string>(HOME_PLAYERS[0]);
-  const [reviewFilter, setReviewFilter] = useState<ReviewFilter>("FULL_MATCH");
+  const [players, setPlayers] = useState<string[]>([]);
+  const [activePlayer, setActivePlayer] = useState<string | null>(null);
+  const [playerDraft, setPlayerDraft] = useState("");
+  const [reviewMode, setReviewMode] = useState<ReviewMode>("FULL");
   const [loggedEvents, setLoggedEvents] = useState<readonly MatchEvent[]>([]);
   const [visibilityMode, setVisibilityMode] = useState<VisibilityMode>("ALL");
   const [matchState, setMatchState] = useState<MatchState>("PRE_MATCH");
@@ -815,7 +809,6 @@ export default function App() {
     setEventContext: (context: { half: 1 | 2; timestamp: number; canLog: boolean }) => void;
   } | null>(null);
   const canEditTeamNames = matchState === "PRE_MATCH";
-  const allLoggedEventsRef = useRef<readonly MatchEvent[]>([]);
 
   const undoLastEventAction = () => {
     const lastEvent = loggedEvents.at(-1);
@@ -864,20 +857,6 @@ export default function App() {
     ]);
   };
 
-  const applyReviewFilter = (
-    events: readonly MatchEvent[],
-    filter: ReviewFilter,
-    clockSeconds: number,
-  ) => {
-    const filtered =
-      filter === "FULL_MATCH"
-        ? events
-        : filter === "FIRST_HALF"
-          ? events.filter((event) => event.half === 1)
-          : events.filter((event) => event.half === 2 && event.timestamp <= clockSeconds);
-    handleRef.current?.setEvents(filtered);
-  };
-
   const handleEventButtonPress = (kind: MatchEventKind) => {
     if (!isLoggingActive(matchState)) return;
     if (activeTeam === "AWAY" && AWAY_INSTANT_SCORING_KINDS.has(kind)) {
@@ -892,11 +871,6 @@ export default function App() {
   useEffect(() => {
     activeTeamRef.current = activeTeam;
   }, [activeTeam]);
-
-  useEffect(() => {
-    allLoggedEventsRef.current = loggedEvents;
-    applyReviewFilter(loggedEvents, reviewFilter, matchTimeSeconds);
-  }, [loggedEvents, matchTimeSeconds, reviewFilter]);
 
   useEffect(() => {
     if (canEditTeamNames) return;
@@ -1014,17 +988,23 @@ export default function App() {
 
   const closeUtilityPanel = () => {
     setUtilityPanel(null);
-    setReviewFilter("FULL_MATCH");
-    applyReviewFilter(allLoggedEventsRef.current, "FULL_MATCH", matchTimeSeconds);
   };
 
-  const handleResetMatch = () => {
-    const confirmed = window.confirm("Reset match? This clears events, score, and timer.");
-    if (!confirmed) return;
-    allLoggedEventsRef.current = [];
+  const addPlayer = () => {
+    const nextPlayerName = playerDraft.trim();
+    if (nextPlayerName.length === 0) return;
+    setPlayers((prev) => [...prev, nextPlayerName]);
+    setActivePlayer((prev) => prev ?? nextPlayerName);
+    setPlayerDraft("");
+  };
+
+  const resetMatch = () => {
     setLoggedEvents([]);
-    setReviewFilter("FULL_MATCH");
+    setReviewMode("FULL");
     setUtilityPanel(null);
+    setPlayers([]);
+    setActivePlayer(null);
+    setPlayerDraft("");
     setMatchState("PRE_MATCH");
     setCurrentHalf(1);
     setMatchTimeSeconds(0);
@@ -1343,7 +1323,25 @@ export default function App() {
       {utilityPanel === "PLAYERS" ? (
         <div className={utilityPanelClass} role="dialog" aria-label="Home players">
           <div className="utility-panel-title">HOME Players</div>
-          {HOME_PLAYERS.map((player) => {
+          <div>
+            <input
+              type="text"
+              value={playerDraft}
+              onChange={(event) => {
+                setPlayerDraft(event.target.value);
+              }}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter") return;
+                event.preventDefault();
+                addPlayer();
+              }}
+              placeholder="Add player"
+            />
+            <button type="button" className="utility-review-btn" onClick={addPlayer}>
+              Add
+            </button>
+          </div>
+          {players.map((player) => {
             const isActive = activePlayer === player;
             return (
               <button
@@ -1375,20 +1373,19 @@ export default function App() {
         <div className={utilityPanelClass} role="dialog" aria-label="Review mode">
           <div className="utility-panel-title">Review</div>
           {([
-            { id: "FIRST_HALF", label: "First Half" },
-            { id: "SECOND_HALF", label: "Second Half" },
-            { id: "FULL_MATCH", label: "Full Match" },
+            { id: "FIRST", label: "H1" },
+            { id: "SECOND", label: "H2" },
+            { id: "FULL", label: "FULL" },
           ] as const).map((option) => (
             <button
               key={option.id}
               type="button"
               className="utility-review-btn"
               onClick={() => {
-                setReviewFilter(option.id);
-                applyReviewFilter(allLoggedEventsRef.current, option.id, matchTimeSeconds);
+                setReviewMode(option.id);
               }}
               style={
-                reviewFilter === option.id
+                reviewMode === option.id
                   ? {
                       border: "1px solid rgba(125,211,252,0.9)",
                       background: "rgba(14,116,144,0.38)",
@@ -1653,7 +1650,7 @@ export default function App() {
             <button type="button" className="utility-menu-btn" onClick={openReviewPanel}>
               Review
             </button>
-            <button type="button" className="utility-menu-btn" onClick={handleResetMatch}>
+            <button type="button" className="utility-menu-btn" onClick={resetMatch}>
               Reset Match
             </button>
           </div>
