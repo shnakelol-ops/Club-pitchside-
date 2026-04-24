@@ -789,6 +789,7 @@ export default function App() {
   const [matchState, setMatchState] = useState<MatchState>("PRE_MATCH");
   const [currentHalf, setCurrentHalf] = useState<1 | 2>(1);
   const [matchTimeSeconds, setMatchTimeSeconds] = useState(0);
+  const [keyboardInset, setKeyboardInset] = useState(0);
   const [isLandscape, setIsLandscape] = useState(
     () =>
       typeof window !== "undefined" &&
@@ -1041,6 +1042,24 @@ export default function App() {
     window.addEventListener("resize", updateLandscape);
     return () => {
       window.removeEventListener("resize", updateLandscape);
+    };
+  }, []);
+
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+
+    const updateKeyboardInset = () => {
+      const inset = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
+      setKeyboardInset(Math.round(inset));
+    };
+
+    updateKeyboardInset();
+    viewport.addEventListener("resize", updateKeyboardInset);
+    viewport.addEventListener("scroll", updateKeyboardInset);
+    return () => {
+      viewport.removeEventListener("resize", updateKeyboardInset);
+      viewport.removeEventListener("scroll", updateKeyboardInset);
     };
   }, []);
 
@@ -1314,6 +1333,20 @@ export default function App() {
   const utilityPanelClass = isLandscape
     ? "utility-overlay-panel utility-overlay-panel--landscape"
     : "utility-overlay-panel utility-overlay-panel--portrait";
+  const playersPanelStyle = isLandscape
+    ? { zIndex: 10001 }
+    : keyboardInset > 0
+      ? {
+          zIndex: 10001,
+          left: "14px",
+          top: "max(10px, env(safe-area-inset-top))",
+          bottom: "auto",
+        }
+      : {
+          zIndex: 10001,
+          left: "14px",
+          bottom: "max(142px, calc(env(safe-area-inset-bottom) + 120px))",
+        };
 
   return (
     <>
@@ -1321,7 +1354,12 @@ export default function App() {
         <style>{PANEL_CSS}</style>
         {scoreboard}
       {utilityPanel === "PLAYERS" ? (
-        <div className={utilityPanelClass} role="dialog" aria-label="Home players">
+        <div
+          className={utilityPanelClass}
+          role="dialog"
+          aria-label="Home players"
+          style={playersPanelStyle}
+        >
           <div className="utility-panel-title">HOME Players</div>
           <div>
             <input
@@ -1350,6 +1388,8 @@ export default function App() {
                 className="utility-player-btn"
                 onClick={() => {
                   setActivePlayer(player);
+                  closeUtilityPanel();
+                  setIsUtilityOpen(false);
                 }}
                 style={
                   isActive
