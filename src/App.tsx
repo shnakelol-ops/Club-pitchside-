@@ -709,10 +709,13 @@ export default function App() {
 
   const handleEventButtonPress = (kind: MatchEventKind) => {
     if (!isLoggingActive(matchState)) return;
-    selectEventKind(kind);
     if (activeTeam === "AWAY" && AWAY_INSTANT_SCORING_KINDS.has(kind)) {
+      selectEventKind(kind);
       logAwayInstantScore(kind);
+      return;
     }
+    if (activeTeam === "AWAY") return;
+    selectEventKind(kind);
   };
 
   useEffect(() => {
@@ -765,7 +768,9 @@ export default function App() {
       nextHandle.setEventContext({
         half: matchEngineStateRef.current.currentHalf,
         timestamp: matchEngineStateRef.current.matchTimeSeconds,
-        canLog: isLoggingActive(matchEngineStateRef.current.matchState),
+        canLog:
+          isLoggingActive(matchEngineStateRef.current.matchState) &&
+          activeTeamRef.current === "HOME",
       });
     });
     return () => {
@@ -825,9 +830,9 @@ export default function App() {
     handleRef.current?.setEventContext({
       half: currentHalf,
       timestamp: matchTimeSeconds,
-      canLog: isLoggingActive(matchState),
+      canLog: isLoggingActive(matchState) && activeTeam === "HOME",
     });
-  }, [currentHalf, matchTimeSeconds, matchState]);
+  }, [activeTeam, currentHalf, matchTimeSeconds, matchState]);
 
   useEffect(() => {
     const visibleLimit =
@@ -1140,11 +1145,14 @@ export default function App() {
                 {EVENT_BUTTONS.map((item, idx) => {
                   const isActive = item.kind === selectedEventKind;
                   const isScoring = idx <= 4;
+                  const isDisabledForAway =
+                    activeTeam === "AWAY" && !AWAY_INSTANT_SCORING_KINDS.has(item.kind);
                   return (
                     <button
                       key={item.label}
                       type="button"
                       className="event-btn"
+                      disabled={isDisabledForAway}
                       onClick={() => {
                         handleEventButtonPress(item.kind);
                       }}
@@ -1160,6 +1168,7 @@ export default function App() {
                             ? "rgba(21, 39, 62, 0.84)"
                             : "rgba(14, 24, 40, 0.72)",
                         fontWeight: isActive ? 700 : 600,
+                        opacity: isDisabledForAway ? 0.46 : 1,
                       }}
                     >
                       {item.label}
@@ -1215,19 +1224,27 @@ export default function App() {
               <div className="landscape-toolbar-row">
                 {EVENT_BUTTONS.slice(0, 5).map((item) => {
                   const isActive = item.kind === selectedEventKind;
+                  const isDisabledForAway =
+                    activeTeam === "AWAY" && !AWAY_INSTANT_SCORING_KINDS.has(item.kind);
                   return (
                     <button
                       key={item.label}
                       type="button"
                       className="landscape-toolbar-btn"
+                      disabled={isDisabledForAway}
                       onClick={() => {
                         handleEventButtonPress(item.kind);
                       }}
                       style={
-                        isActive
+                        isActive || isDisabledForAway
                           ? {
-                              border: "1px solid rgba(34,197,94,0.96)",
-                              background: "rgba(22,101,52,0.7)",
+                              ...(isActive
+                                ? {
+                                    border: "1px solid rgba(34,197,94,0.96)",
+                                    background: "rgba(22,101,52,0.7)",
+                                  }
+                                : {}),
+                              ...(isDisabledForAway ? { opacity: 0.46 } : {}),
                             }
                           : undefined
                       }
@@ -1240,19 +1257,27 @@ export default function App() {
               <div className="landscape-toolbar-row">
                 {EVENT_BUTTONS.slice(5).map((item) => {
                   const isActive = item.kind === selectedEventKind;
+                  const isDisabledForAway =
+                    activeTeam === "AWAY" && !AWAY_INSTANT_SCORING_KINDS.has(item.kind);
                   return (
                     <button
                       key={item.label}
                       type="button"
                       className="landscape-toolbar-btn"
+                      disabled={isDisabledForAway}
                       onClick={() => {
                         handleEventButtonPress(item.kind);
                       }}
                       style={
-                        isActive
+                        isActive || isDisabledForAway
                           ? {
-                              border: "1px solid rgba(34,197,94,0.96)",
-                              background: "rgba(22,101,52,0.7)",
+                              ...(isActive
+                                ? {
+                                    border: "1px solid rgba(34,197,94,0.96)",
+                                    background: "rgba(22,101,52,0.7)",
+                                  }
+                                : {}),
+                              ...(isDisabledForAway ? { opacity: 0.46 } : {}),
                             }
                           : undefined
                       }
