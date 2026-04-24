@@ -14,21 +14,25 @@ import {
 } from "../stats/stats-event-model";
 import { createMatchEventStore } from "../stats/match-event-store";
 
+type RenderableMatchEvent = MatchEvent & { playerName?: string };
+
 export type CreatePixiPitchSurfaceOptions = {
   sport: "soccer" | "gaelic" | "hurling";
-  events?: readonly MatchEvent[];
+  events?: readonly RenderableMatchEvent[];
   activeEventKind?: MatchEventKind;
   eventHalf?: 1 | 2;
   eventTimestampSeconds?: number;
   canLogEvents?: boolean;
+  showPlayerInitials?: boolean;
   onEventLogged?: (event: MatchEvent) => void;
   onPitchTap?: (nx: number, ny: number) => void;
 };
 
 export type PixiPitchSurfaceHandle = {
-  setEvents: (events: readonly MatchEvent[]) => void;
+  setEvents: (events: readonly RenderableMatchEvent[]) => void;
   setActiveEventKind: (kind: MatchEventKind) => void;
   setEventContext: (context: { half: 1 | 2; timestamp: number; canLog: boolean }) => void;
+  setShowPlayerInitials: (show: boolean) => void;
   setVisibleEventLimit: (limit: number | null) => void;
   undoLastEvent: () => void;
   destroy: () => void;
@@ -82,22 +86,25 @@ export async function createPixiPitchSurface(
   world.addChild(statsMarkers);
 
   const eventStore = createMatchEventStore(options.events ?? []);
-  let eventsState: readonly MatchEvent[] = eventStore.getAll();
+  let eventsState: readonly RenderableMatchEvent[] = eventStore.getAll();
   let activeEventKindState: MatchEventKind = options.activeEventKind ?? "POINT";
   let eventHalfState: 1 | 2 = options.eventHalf ?? 1;
   let eventTimestampSecondsState = Math.max(0, Math.floor(options.eventTimestampSeconds ?? 0));
   let canLogEventsState = options.canLogEvents ?? true;
+  let showPlayerInitialsState = options.showPlayerInitials ?? true;
   let visibleEventLimitState: number | null = null;
   const onEventLoggedState = options.onEventLogged;
   const onPitchTapState = options.onPitchTap;
 
-  const getRenderableEvents = (): readonly MatchEvent[] => {
+  const getRenderableEvents = (): readonly RenderableMatchEvent[] => {
     if (visibleEventLimitState == null) return eventsState;
     return eventsState.slice(-visibleEventLimitState);
   };
 
   const redrawMarkers = () => {
-    drawStatsMarkers(statsMarkers, getRenderableEvents());
+    drawStatsMarkers(statsMarkers, getRenderableEvents(), {
+      showPlayerInitials: showPlayerInitialsState,
+    });
   };
 
   const hitArea = new Graphics();
@@ -172,6 +179,10 @@ export async function createPixiPitchSurface(
       eventHalfState = context.half;
       eventTimestampSecondsState = Math.max(0, Math.floor(context.timestamp));
       canLogEventsState = context.canLog;
+    },
+    setShowPlayerInitials: (show) => {
+      showPlayerInitialsState = show;
+      redrawMarkers();
     },
     setVisibleEventLimit: (limit) => {
       visibleEventLimitState = limit == null ? null : Math.max(1, Math.floor(limit));

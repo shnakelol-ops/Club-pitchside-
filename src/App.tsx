@@ -13,7 +13,6 @@ import {
 } from "./core/match/match-state-store";
 import { createPixiPitchSurface } from "./core/pitch/create-pixi-pitch-surface";
 import { type MatchEvent, type MatchEventKind } from "./core/stats/stats-event-model";
-import { boardNormToWorld, letterboxPitchWorld } from "./core/coordinates/pitch-coordinates";
 
 type VisibilityMode = "ALL" | "LAST_5" | "LAST_10";
 type TeamScore = { goals: number; points: number; total: number };
@@ -113,17 +112,6 @@ function formatGaelicScore(score: TeamScore): string {
   return `${score.goals}-${String(score.points).padStart(2, "0")}`;
 }
 
-function getPlayerInitials(playerName: string): string {
-  const words = playerName
-    .trim()
-    .split(/\s+/)
-    .filter((word) => word.length > 0);
-  if (words.length >= 2) {
-    return `${words[0]![0] ?? ""}${words[1]![0] ?? ""}`.toUpperCase().slice(0, 2);
-  }
-  return (words[0]?.slice(0, 2) ?? "").toUpperCase();
-}
-
 const PANEL_CSS = `
 .app-root {
   position: fixed;
@@ -147,25 +135,6 @@ const PANEL_CSS = `
   flex-direction: column;
   align-items: flex-end;
   gap: 6px;
-}
-
-.marker-initials-layer {
-  position: absolute;
-  inset: 0;
-  z-index: 18;
-  pointer-events: none;
-}
-
-.marker-initials-label {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  color: #ffffff;
-  font-size: 8px;
-  font-weight: 800;
-  line-height: 1;
-  letter-spacing: 0.16px;
-  text-transform: uppercase;
-  text-shadow: 0 0 2px rgba(2, 6, 23, 0.96), 0 0 4px rgba(2, 6, 23, 0.9);
 }
 
 .event-panel {
@@ -1035,6 +1004,7 @@ export default function App() {
     setEvents: (events: readonly import("./core/stats/stats-event-model").MatchEvent[]) => void;
     setActiveEventKind: (kind: MatchEventKind) => void;
     undoLastEvent: () => void;
+    setShowPlayerInitials: (show: boolean) => void;
     setVisibleEventLimit: (limit: number | null) => void;
     setEventContext: (context: { half: 1 | 2; timestamp: number; canLog: boolean }) => void;
   } | null>(null);
@@ -1195,12 +1165,14 @@ export default function App() {
       setEvents: (events: readonly import("./core/stats/stats-event-model").MatchEvent[]) => void;
       setActiveEventKind: (kind: MatchEventKind) => void;
       undoLastEvent: () => void;
+      setShowPlayerInitials: (show: boolean) => void;
       setVisibleEventLimit: (limit: number | null) => void;
       setEventContext: (context: { half: 1 | 2; timestamp: number; canLog: boolean }) => void;
     } | null = null;
     void createPixiPitchSurface(host, {
       sport: "gaelic",
       activeEventKind: selectedEventRef.current,
+      showPlayerInitials,
       onEventLogged: (event) => {
         const teamSide = activeTeamRef.current;
         const nextEvent: LoggedMatchEvent = {
@@ -1337,6 +1309,10 @@ export default function App() {
       visibilityMode === "LAST_5" ? 5 : visibilityMode === "LAST_10" ? 10 : null;
     handleRef.current?.setVisibleEventLimit(visibleLimit);
   }, [visibilityMode]);
+
+  useEffect(() => {
+    handleRef.current?.setShowPlayerInitials(showPlayerInitials);
+  }, [showPlayerInitials]);
 
   useEffect(() => {
     const updateLandscape = () => {
@@ -1638,37 +1614,6 @@ export default function App() {
   const utilityPanelClass = isLandscape
     ? "utility-overlay-panel utility-overlay-panel--landscape"
     : "utility-overlay-panel utility-overlay-panel--portrait";
-  const visibleEvents =
-    visibilityMode === "LAST_5"
-      ? loggedEvents.slice(-5)
-      : visibilityMode === "LAST_10"
-        ? loggedEvents.slice(-10)
-        : loggedEvents;
-  const markerInitialsOverlay = useMemo(() => {
-    if (!showPlayerInitials) return [];
-    const host = hostRef.current;
-    if (!host) return [];
-    const width = host.clientWidth;
-    const height = host.clientHeight;
-    if (width <= 0 || height <= 0) return [];
-    const { scale, offsetX, offsetY } = letterboxPitchWorld(width, height);
-    return visibleEvents
-      .filter(
-        (event) => event.id.startsWith("team-home-") && typeof event.playerName === "string",
-      )
-      .map((event) => {
-        const initials = getPlayerInitials(event.playerName ?? "");
-        if (initials.length === 0) return null;
-        const point = boardNormToWorld(event.nx, event.ny);
-        return {
-          id: event.id,
-          initials,
-          x: offsetX + point.x * scale,
-          y: offsetY + point.y * scale,
-        };
-      })
-      .filter((item): item is { id: string; initials: string; x: number; y: number } => item !== null);
-  }, [showPlayerInitials, visibleEvents]);
   const formationPlayers = activeSquadPlayers.slice(0, 15);
   const subsPlayers = activeSquadPlayers.slice(15);
   const formationRows: string[][] = [];
@@ -2121,17 +2066,6 @@ export default function App() {
           aria-label="PitchsideCLUB Pixi pitch"
           role="img"
         />
-        <div className="marker-initials-layer" aria-hidden="true">
-          {markerInitialsOverlay.map((item) => (
-            <span
-              key={item.id}
-              className="marker-initials-label"
-              style={{ left: `${item.x}px`, top: `${item.y}px` }}
-            >
-              {item.initials}
-            </span>
-          ))}
-        </div>
       </main>
       {activePlayerChipText ? (
         <div
