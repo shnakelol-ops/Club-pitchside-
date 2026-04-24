@@ -5,15 +5,18 @@ import { getStatsMarkerStyle } from "./stats-marker-style";
 import { boardNormToWorld } from "../coordinates/pitch-coordinates";
 
 type ParsedCssColor = { color: number; alpha: number };
-type RenderableMatchEvent = MatchEvent & { playerName?: string };
+type RenderableMatchEvent = MatchEvent & {
+  playerName?: string;
+  team?: "HOME" | "AWAY";
+};
 
 const MARKER_INITIALS_STYLE = new TextStyle({
   fill: 0xffffff,
-  fontSize: 8,
-  fontWeight: "700",
+  fontSize: 9.5,
+  fontWeight: "800",
   align: "center",
   letterSpacing: 0.2,
-  stroke: { color: 0x020617, width: 2.3 },
+  stroke: { color: 0x07111f, width: 2.5 },
 });
 
 function clampByte(n: number): number {
@@ -126,7 +129,12 @@ export function drawStatsMarkers(
     markerGraphic.circle(0, 0, Math.max(radius * 0.32, 1.25 / worldToScreenScale))
       .fill({ color: 0xffffff, alpha: 0.9 });
 
-    if (showPlayerInitials && typeof event.playerName === "string") {
+    const shouldShowInitials =
+      showPlayerInitials &&
+      typeof event.playerName === "string" &&
+      event.playerName.trim().length > 0 &&
+      (event.team == null || event.team === "HOME");
+    if (shouldShowInitials) {
       const initialsWords = event.playerName
         .trim()
         .split(/\s+/)

@@ -20,7 +20,11 @@ type TeamSide = "HOME" | "AWAY";
 type UtilityPanel = "PLAYERS" | "REVIEW" | null;
 type ReviewMode = "FIRST" | "SECOND" | "FULL";
 type Squad = { id: string; name: string; players: string[] };
-type LoggedMatchEvent = MatchEvent & { playerName?: string; squadId?: string };
+type LoggedMatchEvent = MatchEvent & {
+  playerName?: string;
+  squadId?: string;
+  team?: TeamSide;
+};
 
 const EVENT_BUTTONS: Array<{ label: string; kind: MatchEventKind }> = [
   { label: "GOAL", kind: "GOAL" },
@@ -312,6 +316,8 @@ const PANEL_CSS = `
   box-shadow: 0 8px 18px rgba(4, 12, 24, 0.26);
   min-width: 110px;
   pointer-events: auto;
+  margin-left: 44px;
+  margin-bottom: 8px;
 }
 
 .utility-menu-btn {
@@ -1178,12 +1184,19 @@ export default function App() {
         const nextEvent: LoggedMatchEvent = {
           ...event,
           id: `team-${teamSide.toLowerCase()}-${event.id}`,
+          team: teamSide,
         };
         if (teamSide === "HOME" && activePlayerRef.current) {
           nextEvent.playerName = activePlayerRef.current;
           nextEvent.squadId = activeSquadIdRef.current;
         }
-        setLoggedEvents((prev) => [...prev, nextEvent]);
+        setLoggedEvents((prev) => {
+          const nextLoggedEvents = [...prev, nextEvent];
+          handleRef.current?.setEvents(
+            nextLoggedEvents.filter((loggedEvent) => !loggedEvent.id.includes("-instant-score-")),
+          );
+          return nextLoggedEvents;
+        });
       },
     }).then((nextHandle) => {
       if (disposed) {
