@@ -224,7 +224,7 @@ const PANEL_CSS = `
 
 .utility-controls {
   position: fixed;
-  z-index: 20;
+  z-index: 9999;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -233,24 +233,27 @@ const PANEL_CSS = `
 }
 
 .utility-controls--portrait {
-  left: 16px;
-  bottom: 14px;
+  left: max(14px, env(safe-area-inset-left));
+  bottom: max(14px, env(safe-area-inset-bottom));
+  align-items: flex-start;
 }
 
 .utility-controls--landscape {
-  right: 16px;
-  bottom: 68px;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: calc(max(14px, env(safe-area-inset-bottom)) + 56px);
+  align-items: flex-end;
 }
 
 .utility-bubble-btn {
-  position: fixed;
-  bottom: 120px;
-  right: 20px;
-  width: 40px;
-  height: 40px;
-  background: red !important;
+  width: 39px;
+  height: 39px;
+  border-radius: 999px;
+  border: 1px solid rgba(125, 211, 252, 0.42);
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.2), 0 0 10px rgba(96, 165, 250, 0.24);
   z-index: 9999;
-  border-radius: 50%;
   color: #dbeafe;
   font-size: 15px;
   line-height: 1;
