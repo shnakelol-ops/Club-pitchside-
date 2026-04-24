@@ -385,6 +385,30 @@ const PANEL_CSS = `
 }
 
 @media (orientation: landscape) {
+  .scoreboard-panel {
+    top: max(2px, env(safe-area-inset-top));
+    left: max(3px, env(safe-area-inset-left));
+    min-width: 180px;
+    max-width: 220px;
+    width: min(220px, calc(100vw - 12px));
+    padding: 5px 7px;
+    gap: 3px;
+  }
+
+  .scoreboard-team-row {
+    gap: 5px;
+  }
+
+  .scoreboard-team-toggle {
+    grid-template-columns: 1fr;
+    gap: 3px;
+    margin-top: 1px;
+  }
+
+  .scoreboard-team-btn {
+    min-height: 30px;
+  }
+
   .match-stopwatch {
     top: max(2px, env(safe-area-inset-top));
     right: max(4px, env(safe-area-inset-right));
