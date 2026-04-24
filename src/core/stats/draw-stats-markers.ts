@@ -130,9 +130,9 @@ export function drawStatsMarkers(
     if (shouldShowPlayerNumber) {
       const clampedNumber = Math.min(99, Math.max(1, Math.floor(event.playerNumber)));
       const numberLabel = String(clampedNumber);
-      const targetFontPx = numberLabel.length === 1 ? 7 : 6;
+      const targetFontPx = numberLabel.length === 1 ? 7.5 : 6.5;
       const numberFontSize = targetFontPx / worldToScreenScale;
-      const backingRadius = Math.min(innerDotRadius * 0.95, 5 / worldToScreenScale);
+      const backingRadius = Math.min(innerDotRadius * 0.9, 5 / worldToScreenScale);
       const numberBacking = new Graphics();
       numberBacking.circle(0, 0, backingRadius).fill({ color: 0x0f172a, alpha: 0.42 });
       markerContainer.addChild(numberBacking);
@@ -144,7 +144,7 @@ export function drawStatsMarkers(
           fontWeight: "700",
           align: "center",
           letterSpacing: 0,
-          stroke: { color: 0x000000, width: 2 / worldToScreenScale },
+          stroke: { color: 0x000000, width: 1.9 / worldToScreenScale },
           dropShadow: {
             color: 0x000000,
             alpha: 0.4,

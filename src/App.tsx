@@ -158,6 +158,16 @@ function formatGaelicScore(score: TeamScore): string {
   return `${score.goals}-${String(score.points).padStart(2, "0")}`;
 }
 
+function getRenderablePitchEvents(
+  events: readonly LoggedMatchEvent[],
+  reviewMode: ReviewMode,
+): LoggedMatchEvent[] {
+  const nonInstantEvents = events.filter((event) => !event.id.includes("-instant-score-"));
+  if (reviewMode === "FULL") return nonInstantEvents;
+  const targetHalf = reviewMode === "FIRST" ? 1 : 2;
+  return nonInstantEvents.filter((event) => event.half === targetHalf);
+}
+
 const PANEL_CSS = `
 .app-root {
   position: fixed;
@@ -1044,6 +1054,7 @@ export default function App() {
   const activeTeamRef = useRef<TeamSide>("HOME");
   const activePlayerRef = useRef<string | null>(null);
   const activePlayerNumberRef = useRef<number | null>(null);
+  const reviewModeRef = useRef<ReviewMode>("FULL");
   const activeSquadIdRef = useRef("");
   const homeNameInputRef = useRef<HTMLInputElement>(null);
   const awayNameInputRef = useRef<HTMLInputElement>(null);
@@ -1261,6 +1272,10 @@ export default function App() {
   }, [activePlayerNumber]);
 
   useEffect(() => {
+    reviewModeRef.current = reviewMode;
+  }, [reviewMode]);
+
+  useEffect(() => {
     if (!activePlayer) {
       setActivePlayerNumber(null);
       return;
@@ -1345,7 +1360,7 @@ export default function App() {
         setLoggedEvents((prev) => {
           const nextLoggedEvents = [...prev, nextEvent];
           handleRef.current?.setEvents(
-            nextLoggedEvents.filter((loggedEvent) => !loggedEvent.id.includes("-instant-score-")),
+            getRenderablePitchEvents(nextLoggedEvents, reviewModeRef.current),
           );
           return nextLoggedEvents;
         });
@@ -1402,6 +1417,8 @@ export default function App() {
   };
 
   const startSecondHalfAction = () => {
+    reviewModeRef.current = "SECOND";
+    setReviewMode("SECOND");
     handleRef.current?.setEvents([]);
     const next = startSecondHalf(matchEngineStateRef.current);
     matchEngineStateRef.current = next;
@@ -1457,6 +1474,7 @@ export default function App() {
 
   const resetMatch = () => {
     setLoggedEvents([]);
+    reviewModeRef.current = "FULL";
     setReviewMode("FULL");
     setUtilityPanel(null);
     setActivePlayer(null);
@@ -1492,6 +1510,10 @@ export default function App() {
   useEffect(() => {
     handleRef.current?.setShowPlayerInitials(showPlayerInitials);
   }, [showPlayerInitials]);
+
+  useEffect(() => {
+    handleRef.current?.setEvents(getRenderablePitchEvents(loggedEvents, reviewMode));
+  }, [loggedEvents, reviewMode]);
 
   useEffect(() => {
     const updateLandscape = () => {
