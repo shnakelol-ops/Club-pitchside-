@@ -809,7 +809,6 @@ export default function App() {
     setEventContext: (context: { half: 1 | 2; timestamp: number; canLog: boolean }) => void;
   } | null>(null);
   const canEditTeamNames = matchState === "PRE_MATCH";
-  const allLoggedEventsRef = useRef<readonly MatchEvent[]>([]);
 
   const undoLastEventAction = () => {
     const lastEvent = loggedEvents.at(-1);
@@ -858,17 +857,6 @@ export default function App() {
     ]);
   };
 
-  const applyReviewMode = (events: readonly MatchEvent[], mode: ReviewMode) => {
-    const splitIndex = Math.ceil(events.length / 2);
-    const filtered =
-      mode === "FULL"
-        ? events
-        : mode === "FIRST"
-          ? events.slice(0, splitIndex)
-          : events.slice(splitIndex);
-    handleRef.current?.setEvents(filtered);
-  };
-
   const handleEventButtonPress = (kind: MatchEventKind) => {
     if (!isLoggingActive(matchState)) return;
     if (activeTeam === "AWAY" && AWAY_INSTANT_SCORING_KINDS.has(kind)) {
@@ -883,11 +871,6 @@ export default function App() {
   useEffect(() => {
     activeTeamRef.current = activeTeam;
   }, [activeTeam]);
-
-  useEffect(() => {
-    allLoggedEventsRef.current = loggedEvents;
-    applyReviewMode(loggedEvents, reviewMode);
-  }, [loggedEvents, reviewMode]);
 
   useEffect(() => {
     if (canEditTeamNames) return;
@@ -1016,7 +999,6 @@ export default function App() {
   };
 
   const resetMatch = () => {
-    allLoggedEventsRef.current = [];
     setLoggedEvents([]);
     setReviewMode("FULL");
     setUtilityPanel(null);
@@ -1391,9 +1373,9 @@ export default function App() {
         <div className={utilityPanelClass} role="dialog" aria-label="Review mode">
           <div className="utility-panel-title">Review</div>
           {([
-            { id: "FIRST", label: "First Half" },
-            { id: "SECOND", label: "Second Half" },
-            { id: "FULL", label: "Full Match" },
+            { id: "FIRST", label: "H1" },
+            { id: "SECOND", label: "H2" },
+            { id: "FULL", label: "FULL" },
           ] as const).map((option) => (
             <button
               key={option.id}
@@ -1401,7 +1383,6 @@ export default function App() {
               className="utility-review-btn"
               onClick={() => {
                 setReviewMode(option.id);
-                applyReviewMode(allLoggedEventsRef.current, option.id);
               }}
               style={
                 reviewMode === option.id
