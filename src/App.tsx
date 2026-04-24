@@ -309,16 +309,26 @@ const PANEL_CSS = `
   text-transform: uppercase;
 }
 
+.scoreboard-side-label-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
 .scoreboard-name-edit-btn {
-  border: none;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  line-height: inherit;
-  letter-spacing: inherit;
-  text-transform: uppercase;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(148, 163, 184, 0.42);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.86);
+  color: #cbd5e1;
+  font-size: 9px;
+  line-height: 1;
   padding: 0;
-  margin: 0;
+  margin: 0 0 0 1px;
   cursor: pointer;
 }
 
@@ -441,6 +451,61 @@ const PANEL_CSS = `
   letter-spacing: 0.18px;
   text-transform: uppercase;
   cursor: pointer;
+}
+
+.scoreboard-rail-team-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+}
+
+.scoreboard-rail-name-line {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.scoreboard-rail-team-name {
+  color: rgba(203, 213, 225, 0.9);
+  font-size: 8.5px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.16px;
+  text-transform: uppercase;
+}
+
+.scoreboard-team-btn-inner {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.scoreboard-team-btn-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scoreboard-rail-name-input {
+  width: 100%;
+  min-width: 0;
+  height: 20px;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.46);
+  background: rgba(15, 23, 42, 0.9);
+  color: #e2e8f0;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0 4px;
+  letter-spacing: 0.16px;
+  text-transform: uppercase;
+  text-align: center;
 }
 
 .match-stopwatch {
@@ -779,19 +844,22 @@ export default function App() {
 
   const scoreboard = isLandscape ? (
     <div className="scoreboard-rail" aria-label="Match scoreboard">
-      <button
-        type="button"
-        className="scoreboard-rail-team-btn"
-        onClick={() => setActiveTeam("HOME")}
-        style={
-          activeTeam === "HOME"
-            ? {
-                border: "1px solid rgba(34,197,94,0.9)",
-                background: "rgba(22,101,52,0.72)",
-              }
-            : undefined
-        }
-      >
+      <div className="scoreboard-rail-team-wrap">
+        <button
+          type="button"
+          className="scoreboard-rail-team-btn"
+          onClick={() => setActiveTeam("HOME")}
+          style={
+            activeTeam === "HOME"
+              ? {
+                  border: "1px solid rgba(34,197,94,0.9)",
+                  background: "rgba(22,101,52,0.72)",
+                }
+              : undefined
+          }
+        >
+          HOME
+        </button>
         {editingTeam === "HOME" ? (
           <input
             ref={homeNameInputRef}
@@ -810,17 +878,19 @@ export default function App() {
             aria-label="Edit home team name"
           />
         ) : (
-          <span
-            className="scoreboard-name-edit-btn"
-            onClick={(event) => {
-              event.stopPropagation();
-              startTeamNameEdit("HOME");
-            }}
-          >
-            {teamNames.HOME}
+          <span className="scoreboard-rail-name-line">
+            <span className="scoreboard-rail-team-name">{teamNames.HOME}</span>
+            <button
+              type="button"
+              className="scoreboard-name-edit-btn"
+              aria-label="Edit home team name"
+              onClick={() => startTeamNameEdit("HOME")}
+            >
+              ✏️
+            </button>
           </span>
         )}
-      </button>
+      </div>
       <div className="scoreboard-rail-score">
         {formatGaelicScore(homeScore)}
         <span className="scoreboard-rail-total">({homeScore.total})</span>
@@ -830,19 +900,22 @@ export default function App() {
         {formatGaelicScore(awayScore)}
         <span className="scoreboard-rail-total">({awayScore.total})</span>
       </div>
-      <button
-        type="button"
-        className="scoreboard-rail-team-btn"
-        onClick={() => setActiveTeam("AWAY")}
-        style={
-          activeTeam === "AWAY"
-            ? {
-                border: "1px solid rgba(34,197,94,0.9)",
-                background: "rgba(22,101,52,0.72)",
-              }
-            : undefined
-        }
-      >
+      <div className="scoreboard-rail-team-wrap">
+        <button
+          type="button"
+          className="scoreboard-rail-team-btn"
+          onClick={() => setActiveTeam("AWAY")}
+          style={
+            activeTeam === "AWAY"
+              ? {
+                  border: "1px solid rgba(34,197,94,0.9)",
+                  background: "rgba(22,101,52,0.72)",
+                }
+              : undefined
+          }
+        >
+          AWAY
+        </button>
         {editingTeam === "AWAY" ? (
           <input
             ref={awayNameInputRef}
@@ -861,17 +934,19 @@ export default function App() {
             aria-label="Edit away team name"
           />
         ) : (
-          <span
-            className="scoreboard-name-edit-btn"
-            onClick={(event) => {
-              event.stopPropagation();
-              startTeamNameEdit("AWAY");
-            }}
-          >
-            {teamNames.AWAY}
+          <span className="scoreboard-rail-name-line">
+            <span className="scoreboard-rail-team-name">{teamNames.AWAY}</span>
+            <button
+              type="button"
+              className="scoreboard-name-edit-btn"
+              aria-label="Edit away team name"
+              onClick={() => startTeamNameEdit("AWAY")}
+            >
+              ✏️
+            </button>
           </span>
         )}
-      </button>
+      </div>
     </div>
   ) : (
     <div className="scoreboard-strip" aria-label="Match scoreboard">
@@ -895,19 +970,16 @@ export default function App() {
               aria-label="Edit home team name"
             />
           ) : (
-            <span
-              role="button"
-              tabIndex={0}
-              className="scoreboard-side-label scoreboard-name-edit-btn"
-              onClick={() => startTeamNameEdit("HOME")}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  startTeamNameEdit("HOME");
-                }
-              }}
-            >
-              {teamNames.HOME}
+            <span className="scoreboard-side-label-wrap">
+              <span className="scoreboard-side-label">{teamNames.HOME}</span>
+              <button
+                type="button"
+                className="scoreboard-name-edit-btn"
+                aria-label="Edit home team name"
+                onClick={() => startTeamNameEdit("HOME")}
+              >
+                ✏️
+              </button>
             </span>
           )}
           <span className="scoreboard-side-score">
@@ -934,19 +1006,16 @@ export default function App() {
               aria-label="Edit away team name"
             />
           ) : (
-            <span
-              role="button"
-              tabIndex={0}
-              className="scoreboard-side-label scoreboard-name-edit-btn"
-              onClick={() => startTeamNameEdit("AWAY")}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  startTeamNameEdit("AWAY");
-                }
-              }}
-            >
-              {teamNames.AWAY}
+            <span className="scoreboard-side-label-wrap">
+              <span className="scoreboard-side-label">{teamNames.AWAY}</span>
+              <button
+                type="button"
+                className="scoreboard-name-edit-btn"
+                aria-label="Edit away team name"
+                onClick={() => startTeamNameEdit("AWAY")}
+              >
+                ✏️
+              </button>
             </span>
           )}
           <span className="scoreboard-side-score">
