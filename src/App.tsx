@@ -1336,35 +1336,10 @@ export default function App() {
     : "utility-overlay-panel utility-overlay-panel--portrait";
 
   return (
-    <main className="app-root">
-      <style>{PANEL_CSS}</style>
-      {scoreboard}
-      <div className={utilityControlsClass}>
-        {isUtilityOpen ? (
-          <div className="utility-menu">
-            <button type="button" className="utility-menu-btn" onClick={openPlayersPanel}>
-              Players
-            </button>
-            <button type="button" className="utility-menu-btn" onClick={openReviewPanel}>
-              Review
-            </button>
-            <button type="button" className="utility-menu-btn" onClick={handleResetMatch}>
-              Reset Match
-            </button>
-          </div>
-        ) : null}
-        <button
-          type="button"
-          className="utility-bubble-btn"
-          aria-label="Toggle utility menu"
-          aria-expanded={isUtilityOpen}
-          onClick={() => {
-            setIsUtilityOpen((prev) => !prev);
-          }}
-        >
-          ⋮
-        </button>
-      </div>
+    <>
+      <main className="app-root">
+        <style>{PANEL_CSS}</style>
+        {scoreboard}
       {utilityPanel === "PLAYERS" ? (
         <div className={utilityPanelClass} role="dialog" aria-label="Home players">
           <div className="utility-panel-title">HOME Players</div>
@@ -1657,17 +1632,44 @@ export default function App() {
             {isPickerOpen ? "×" : "●"}
           </button>
       </div>
-      <div
-        ref={hostRef}
-        style={{
-          width: "100%",
-          height: "100%",
-          background: "#0a0f0c",
-          overflow: "hidden",
-        }}
-        aria-label="PitchsideCLUB Pixi pitch"
-        role="img"
-      />
-    </main>
+        <div
+          ref={hostRef}
+          style={{
+            width: "100%",
+            height: "100%",
+            background: "#0a0f0c",
+            overflow: "hidden",
+          }}
+          aria-label="PitchsideCLUB Pixi pitch"
+          role="img"
+        />
+      </main>
+      <div className={utilityControlsClass}>
+        {isUtilityOpen ? (
+          <div className="utility-menu">
+            <button type="button" className="utility-menu-btn" onClick={openPlayersPanel}>
+              Players
+            </button>
+            <button type="button" className="utility-menu-btn" onClick={openReviewPanel}>
+              Review
+            </button>
+            <button type="button" className="utility-menu-btn" onClick={handleResetMatch}>
+              Reset Match
+            </button>
+          </div>
+        ) : null}
+        <button
+          type="button"
+          className="utility-bubble-btn"
+          aria-label="Toggle utility menu"
+          aria-expanded={isUtilityOpen}
+          onClick={() => {
+            setIsUtilityOpen((prev) => !prev);
+          }}
+        >
+          ⋮
+        </button>
+      </div>
+    </>
   );
 }
