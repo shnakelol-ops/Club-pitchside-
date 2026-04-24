@@ -144,10 +144,18 @@ export function drawStatsMarkers(
           fontWeight: "700",
           align: "center",
           letterSpacing: 0,
-          stroke: { color: 0x000000, width: 0 },
+          stroke: { color: 0x000000, width: 2 / worldToScreenScale },
+          dropShadow: {
+            color: 0x000000,
+            alpha: 0.4,
+            blur: 2 / worldToScreenScale,
+            angle: Math.PI / 2,
+            distance: 1 / worldToScreenScale,
+          },
         }),
       });
       numberText.anchor.set(0.5);
+      numberText.roundPixels = true;
       numberText.x = 0;
       numberText.y = 0;
       const maxLabelSize = innerDotRadius * 2 * 0.8;
