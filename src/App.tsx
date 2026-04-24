@@ -1618,7 +1618,7 @@ export default function App() {
   const activePlayerChipFloatingStyle =
     keyboardInset > 0
       ? { bottom: `${keyboardInset + 18}px` }
-      : { bottom: "max(76px, calc(env(safe-area-inset-bottom) + 72px))" };
+      : { bottom: "max(88px, calc(env(safe-area-inset-bottom) + 84px))" };
   const playersPanelStyle = isLandscape
     ? { zIndex: 10001 }
     : keyboardInset > 0
