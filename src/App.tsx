@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from "react";
 
 import {
   createInitialMatchEngineState,
+  goToHalfTime,
   endMatch,
   formatMatchClock,
   isLoggingActive,
   startFirstHalf,
+  startSecondHalf,
   tickMatchClock,
   type MatchState,
 } from "./core/match/match-state-store";
@@ -232,18 +234,20 @@ const PANEL_CSS = `
   text-transform: uppercase;
 }
 
-.match-timer-chip {
+.match-stopwatch {
   position: fixed;
   top: 10px;
   right: 10px;
   z-index: 19;
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 8px;
-  border-radius: 999px;
+  padding: 6px 8px;
+  border-radius: 12px;
   border: 1px solid rgba(148, 163, 184, 0.3);
   background: rgba(15, 23, 42, 0.62);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   color: #cbd5e1;
   font-size: 10px;
   font-weight: 600;
@@ -251,10 +255,33 @@ const PANEL_CSS = `
   text-transform: uppercase;
 }
 
-.match-timer-clock {
+.match-stopwatch-clock {
   color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.32px;
+}
+
+.match-stopwatch-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.match-stopwatch-btn {
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  background: rgba(15, 23, 42, 0.82);
+  color: #e2e8f0;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.22px;
+  padding: 0 7px;
+  cursor: pointer;
+  text-transform: uppercase;
 }
 `;
 
@@ -290,6 +317,7 @@ export default function App() {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const handleRef = useRef<{
     destroy: () => void;
+    setEvents: (events: readonly import("./core/stats/stats-event-model").MatchEvent[]) => void;
     setActiveEventKind: (kind: MatchEventKind) => void;
     undoLastEvent: () => void;
     setVisibleEventLimit: (limit: number | null) => void;
@@ -310,6 +338,7 @@ export default function App() {
     let disposed = false;
     let handle: {
       destroy: () => void;
+      setEvents: (events: readonly import("./core/stats/stats-event-model").MatchEvent[]) => void;
       setActiveEventKind: (kind: MatchEventKind) => void;
       undoLastEvent: () => void;
       setVisibleEventLimit: (limit: number | null) => void;
@@ -339,12 +368,6 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const initial = startFirstHalf(matchEngineStateRef.current);
-    matchEngineStateRef.current = initial;
-    setMatchState(initial.matchState);
-    setCurrentHalf(initial.currentHalf);
-    setMatchTimeSeconds(initial.matchTimeSeconds);
-
     const timerId = window.setInterval(() => {
       const next = tickMatchClock(matchEngineStateRef.current);
       if (next === matchEngineStateRef.current) return;
@@ -354,13 +377,41 @@ export default function App() {
 
     return () => {
       window.clearInterval(timerId);
-      const ended = endMatch(matchEngineStateRef.current);
-      matchEngineStateRef.current = ended;
-      setMatchState(ended.matchState);
-      setCurrentHalf(ended.currentHalf);
-      setMatchTimeSeconds(ended.matchTimeSeconds);
     };
   }, []);
+
+  const startFirstHalfAction = () => {
+    const next = startFirstHalf(matchEngineStateRef.current);
+    matchEngineStateRef.current = next;
+    setMatchState(next.matchState);
+    setCurrentHalf(next.currentHalf);
+    setMatchTimeSeconds(next.matchTimeSeconds);
+  };
+
+  const goToHalfTimeAction = () => {
+    const next = goToHalfTime(matchEngineStateRef.current);
+    matchEngineStateRef.current = next;
+    setMatchState(next.matchState);
+    setCurrentHalf(next.currentHalf);
+    setMatchTimeSeconds(next.matchTimeSeconds);
+  };
+
+  const startSecondHalfAction = () => {
+    handleRef.current?.setEvents([]);
+    const next = startSecondHalf(matchEngineStateRef.current);
+    matchEngineStateRef.current = next;
+    setMatchState(next.matchState);
+    setCurrentHalf(next.currentHalf);
+    setMatchTimeSeconds(next.matchTimeSeconds);
+  };
+
+  const endMatchAction = () => {
+    const next = endMatch(matchEngineStateRef.current);
+    matchEngineStateRef.current = next;
+    setMatchState(next.matchState);
+    setCurrentHalf(next.currentHalf);
+    setMatchTimeSeconds(next.matchTimeSeconds);
+  };
 
   useEffect(() => {
     handleRef.current?.setEventContext({
@@ -407,7 +458,7 @@ export default function App() {
   return (
     <main className="app-root">
       <style>{PANEL_CSS}</style>
-      <div className="match-timer-chip" aria-live="polite">
+      <div className="match-stopwatch" aria-live="polite">
         <span>
           {matchState === "FIRST_HALF" || matchState === "SECOND_HALF"
             ? `H${currentHalf}`
@@ -417,7 +468,21 @@ export default function App() {
                 ? "FT"
                 : "PRE"}
         </span>
-        <span className="match-timer-clock">{formatMatchClock(matchTimeSeconds)}</span>
+        <span className="match-stopwatch-clock">{formatMatchClock(matchTimeSeconds)}</span>
+        <div className="match-stopwatch-controls">
+          <button type="button" className="match-stopwatch-btn" onClick={startFirstHalfAction}>
+            START
+          </button>
+          <button type="button" className="match-stopwatch-btn" onClick={goToHalfTimeAction}>
+            HT
+          </button>
+          <button type="button" className="match-stopwatch-btn" onClick={startSecondHalfAction}>
+            2H
+          </button>
+          <button type="button" className="match-stopwatch-btn" onClick={endMatchAction}>
+            FT
+          </button>
+        </div>
       </div>
       <div
         ref={floatingControlsRef}
