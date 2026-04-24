@@ -35,6 +35,7 @@ const EVENT_BUTTONS: Array<{ label: string; kind: MatchEventKind }> = [
 ];
 
 const AWAY_INSTANT_SCORING_KINDS = new Set<MatchEventKind>(["GOAL", "POINT", "TWO_POINTER"]);
+const FORMATION_ROW_SIZES = [1, 3, 3, 2, 3, 3] as const;
 
 function newLocalEventId(): string {
   const c = globalThis.crypto;
@@ -339,6 +340,62 @@ const PANEL_CSS = `
   padding: 0 9px;
   letter-spacing: 0.2px;
   cursor: pointer;
+}
+
+.utility-formation {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.utility-formation-row {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+}
+
+.utility-player-pill {
+  min-height: 24px;
+  max-width: 98px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.36);
+  background: rgba(15, 23, 42, 0.86);
+  color: #dbe7f5;
+  font-size: 9.5px;
+  font-weight: 600;
+  line-height: 1;
+  text-align: center;
+  padding: 0 8px;
+  letter-spacing: 0.18px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.utility-subs-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.utility-subs-title {
+  color: rgba(219, 231, 245, 0.84);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+}
+
+.utility-subs-row {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .utility-panel-close {
@@ -1333,6 +1390,14 @@ export default function App() {
   const utilityPanelClass = isLandscape
     ? "utility-overlay-panel utility-overlay-panel--landscape"
     : "utility-overlay-panel utility-overlay-panel--portrait";
+  const formationPlayers = players.slice(0, 15);
+  const subsPlayers = players.slice(15);
+  const formationRows: string[][] = [];
+  let formationCursor = 0;
+  for (const rowSize of FORMATION_ROW_SIZES) {
+    formationRows.push(formationPlayers.slice(formationCursor, formationCursor + rowSize));
+    formationCursor += rowSize;
+  }
   const playersPanelStyle = isLandscape
     ? { zIndex: 10001 }
     : keyboardInset > 0
@@ -1379,31 +1444,73 @@ export default function App() {
               Add
             </button>
           </div>
-          {players.map((player) => {
-            const isActive = activePlayer === player;
-            return (
-              <button
-                key={player}
-                type="button"
-                className="utility-player-btn"
-                onClick={() => {
-                  setActivePlayer(player);
-                  closeUtilityPanel();
-                  setIsUtilityOpen(false);
-                }}
-                style={
-                  isActive
-                    ? {
-                        border: "1px solid rgba(125,211,252,0.9)",
-                        background: "rgba(14,116,144,0.38)",
+          <div className="utility-formation" aria-label="Home formation">
+            {formationRows.map((row, rowIdx) =>
+              row.length > 0 ? (
+                <div key={`formation-row-${rowIdx}`} className="utility-formation-row">
+                  {row.map((player, playerIdx) => {
+                    const isActive = activePlayer === player;
+                    return (
+                      <button
+                        key={`formation-${rowIdx}-${playerIdx}-${player}`}
+                        type="button"
+                        className="utility-player-pill"
+                        onClick={() => {
+                          setActivePlayer(player);
+                          closeUtilityPanel();
+                          setIsUtilityOpen(false);
+                        }}
+                        style={
+                          isActive
+                            ? {
+                                border: "1px solid rgba(125,211,252,0.9)",
+                                background: "rgba(14,116,144,0.38)",
+                              }
+                            : undefined
+                        }
+                      >
+                        {isActive ? "● " : ""}
+                        {player}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null,
+            )}
+          </div>
+          {subsPlayers.length > 0 ? (
+            <div className="utility-subs-wrap">
+              <div className="utility-subs-title">Subs</div>
+              <div className="utility-subs-row" aria-label="Home substitutes">
+                {subsPlayers.map((player, idx) => {
+                  const isActive = activePlayer === player;
+                  return (
+                    <button
+                      key={`sub-${idx}-${player}`}
+                      type="button"
+                      className="utility-player-pill"
+                      onClick={() => {
+                        setActivePlayer(player);
+                        closeUtilityPanel();
+                        setIsUtilityOpen(false);
+                      }}
+                      style={
+                        isActive
+                          ? {
+                              border: "1px solid rgba(125,211,252,0.9)",
+                              background: "rgba(14,116,144,0.38)",
+                            }
+                          : undefined
                       }
-                    : undefined
-                }
-              >
-                {isActive ? "● " : ""}{player}
-              </button>
-            );
-          })}
+                    >
+                      {isActive ? "● " : ""}
+                      {player}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
           <button type="button" className="utility-panel-close" onClick={closeUtilityPanel}>
             Close
           </button>
