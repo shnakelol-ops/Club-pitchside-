@@ -17,6 +17,8 @@ import { type MatchEvent, type MatchEventKind } from "./core/stats/stats-event-m
 type VisibilityMode = "ALL" | "LAST_5" | "LAST_10";
 type TeamScore = { goals: number; points: number; total: number };
 type TeamSide = "HOME" | "AWAY";
+type UtilityPanel = "PLAYERS" | "REVIEW" | null;
+type ReviewFilter = "FIRST_HALF" | "SECOND_HALF" | "FULL_MATCH";
 
 const EVENT_BUTTONS: Array<{ label: string; kind: MatchEventKind }> = [
   { label: "GOAL", kind: "GOAL" },
@@ -33,6 +35,14 @@ const EVENT_BUTTONS: Array<{ label: string; kind: MatchEventKind }> = [
 ];
 
 const AWAY_INSTANT_SCORING_KINDS = new Set<MatchEventKind>(["GOAL", "POINT", "TWO_POINTER"]);
+const HOME_PLAYERS = [
+  "1. Murphy",
+  "2. Byrne",
+  "3. Doyle",
+  "4. Walsh",
+  "5. Kelly",
+  "6. Ryan",
+] as const;
 
 function newLocalEventId(): string {
   const c = globalThis.crypto;
@@ -210,6 +220,148 @@ const PANEL_CSS = `
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+.utility-controls {
+  position: fixed;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  pointer-events: none;
+  left: 16px;
+  bottom: 90px;
+}
+
+.utility-controls--portrait {
+  left: 16px;
+  bottom: 90px;
+  align-items: flex-start;
+}
+
+.utility-controls--landscape {
+  left: 16px;
+  bottom: 90px;
+  align-items: flex-start;
+}
+
+.utility-bubble-btn {
+  position: fixed;
+  left: 16px;
+  bottom: 90px;
+  width: 39px;
+  height: 39px;
+  border-radius: 999px;
+  border: 1px solid rgba(125, 211, 252, 0.42);
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.2), 0 0 10px rgba(96, 165, 250, 0.24);
+  z-index: 9999;
+  color: #dbeafe;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+}
+
+.utility-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(10, 20, 35, 0.74);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 8px 18px rgba(4, 12, 24, 0.26);
+  min-width: 110px;
+  pointer-events: auto;
+}
+
+.utility-menu-btn {
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.36);
+  background: rgba(15, 23, 42, 0.86);
+  color: #dbe7f5;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.utility-overlay-panel {
+  position: fixed;
+  z-index: 21;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 208px;
+  max-width: 86vw;
+  padding: 8px;
+  border-radius: 11px;
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  background: rgba(10, 20, 35, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 10px 22px rgba(4, 12, 24, 0.3);
+}
+
+.utility-overlay-panel--portrait {
+  left: 14px;
+  bottom: 66px;
+}
+
+.utility-overlay-panel--landscape {
+  right: 16px;
+  bottom: 126px;
+}
+
+.utility-panel-title {
+  color: #dbe7f5;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.22px;
+  text-transform: uppercase;
+}
+
+.utility-player-btn,
+.utility-review-btn {
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.36);
+  background: rgba(15, 23, 42, 0.86);
+  color: #dbe7f5;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  text-align: left;
+  padding: 0 9px;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+}
+
+.utility-panel-close {
+  align-self: flex-end;
+  min-height: 26px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.38);
+  background: rgba(15, 23, 42, 0.86);
+  color: #dbe7f5;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.18px;
+  text-transform: uppercase;
+  padding: 0 8px;
+  cursor: pointer;
 }
 
 .landscape-toolbar {
@@ -634,6 +786,10 @@ export default function App() {
   });
   const [editingTeam, setEditingTeam] = useState<TeamSide | null>(null);
   const [teamNameDraft, setTeamNameDraft] = useState("");
+  const [isUtilityOpen, setIsUtilityOpen] = useState(false);
+  const [utilityPanel, setUtilityPanel] = useState<UtilityPanel>(null);
+  const [activePlayer, setActivePlayer] = useState<string>(HOME_PLAYERS[0]);
+  const [reviewFilter, setReviewFilter] = useState<ReviewFilter>("FULL_MATCH");
   const [loggedEvents, setLoggedEvents] = useState<readonly MatchEvent[]>([]);
   const [visibilityMode, setVisibilityMode] = useState<VisibilityMode>("ALL");
   const [matchState, setMatchState] = useState<MatchState>("PRE_MATCH");
@@ -659,6 +815,7 @@ export default function App() {
     setEventContext: (context: { half: 1 | 2; timestamp: number; canLog: boolean }) => void;
   } | null>(null);
   const canEditTeamNames = matchState === "PRE_MATCH";
+  const allLoggedEventsRef = useRef<readonly MatchEvent[]>([]);
 
   const undoLastEventAction = () => {
     const lastEvent = loggedEvents.at(-1);
@@ -707,6 +864,20 @@ export default function App() {
     ]);
   };
 
+  const applyReviewFilter = (
+    events: readonly MatchEvent[],
+    filter: ReviewFilter,
+    clockSeconds: number,
+  ) => {
+    const filtered =
+      filter === "FULL_MATCH"
+        ? events
+        : filter === "FIRST_HALF"
+          ? events.filter((event) => event.half === 1)
+          : events.filter((event) => event.half === 2 && event.timestamp <= clockSeconds);
+    handleRef.current?.setEvents(filtered);
+  };
+
   const handleEventButtonPress = (kind: MatchEventKind) => {
     if (!isLoggingActive(matchState)) return;
     if (activeTeam === "AWAY" && AWAY_INSTANT_SCORING_KINDS.has(kind)) {
@@ -721,6 +892,11 @@ export default function App() {
   useEffect(() => {
     activeTeamRef.current = activeTeam;
   }, [activeTeam]);
+
+  useEffect(() => {
+    allLoggedEventsRef.current = loggedEvents;
+    applyReviewFilter(loggedEvents, reviewFilter, matchTimeSeconds);
+  }, [loggedEvents, matchTimeSeconds, reviewFilter]);
 
   useEffect(() => {
     if (canEditTeamNames) return;
@@ -824,6 +1000,42 @@ export default function App() {
     setMatchState(next.matchState);
     setCurrentHalf(next.currentHalf);
     setMatchTimeSeconds(next.matchTimeSeconds);
+  };
+
+  const openPlayersPanel = () => {
+    setUtilityPanel("PLAYERS");
+    setIsUtilityOpen(false);
+  };
+
+  const openReviewPanel = () => {
+    setUtilityPanel("REVIEW");
+    setIsUtilityOpen(false);
+  };
+
+  const closeUtilityPanel = () => {
+    setUtilityPanel(null);
+    setReviewFilter("FULL_MATCH");
+    applyReviewFilter(allLoggedEventsRef.current, "FULL_MATCH", matchTimeSeconds);
+  };
+
+  const handleResetMatch = () => {
+    const confirmed = window.confirm("Reset match? This clears events, score, and timer.");
+    if (!confirmed) return;
+    allLoggedEventsRef.current = [];
+    setLoggedEvents([]);
+    setReviewFilter("FULL_MATCH");
+    setUtilityPanel(null);
+    setMatchState("PRE_MATCH");
+    setCurrentHalf(1);
+    setMatchTimeSeconds(0);
+    matchEngineStateRef.current = createInitialMatchEngineState();
+    handleRef.current?.setEvents([]);
+    handleRef.current?.setEventContext({
+      half: 1,
+      timestamp: 0,
+      canLog: false,
+    });
+    setIsUtilityOpen(false);
   };
 
   useEffect(() => {
@@ -1116,10 +1328,82 @@ export default function App() {
     </div>
   );
 
+  const utilityControlsClass = isLandscape
+    ? "utility-controls utility-controls--landscape"
+    : "utility-controls utility-controls--portrait";
+  const utilityPanelClass = isLandscape
+    ? "utility-overlay-panel utility-overlay-panel--landscape"
+    : "utility-overlay-panel utility-overlay-panel--portrait";
+
   return (
-    <main className="app-root">
-      <style>{PANEL_CSS}</style>
-      {scoreboard}
+    <>
+      <main className="app-root">
+        <style>{PANEL_CSS}</style>
+        {scoreboard}
+      {utilityPanel === "PLAYERS" ? (
+        <div className={utilityPanelClass} role="dialog" aria-label="Home players">
+          <div className="utility-panel-title">HOME Players</div>
+          {HOME_PLAYERS.map((player) => {
+            const isActive = activePlayer === player;
+            return (
+              <button
+                key={player}
+                type="button"
+                className="utility-player-btn"
+                onClick={() => {
+                  setActivePlayer(player);
+                }}
+                style={
+                  isActive
+                    ? {
+                        border: "1px solid rgba(125,211,252,0.9)",
+                        background: "rgba(14,116,144,0.38)",
+                      }
+                    : undefined
+                }
+              >
+                {isActive ? "● " : ""}{player}
+              </button>
+            );
+          })}
+          <button type="button" className="utility-panel-close" onClick={closeUtilityPanel}>
+            Close
+          </button>
+        </div>
+      ) : null}
+      {utilityPanel === "REVIEW" ? (
+        <div className={utilityPanelClass} role="dialog" aria-label="Review mode">
+          <div className="utility-panel-title">Review</div>
+          {([
+            { id: "FIRST_HALF", label: "First Half" },
+            { id: "SECOND_HALF", label: "Second Half" },
+            { id: "FULL_MATCH", label: "Full Match" },
+          ] as const).map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              className="utility-review-btn"
+              onClick={() => {
+                setReviewFilter(option.id);
+                applyReviewFilter(allLoggedEventsRef.current, option.id, matchTimeSeconds);
+              }}
+              style={
+                reviewFilter === option.id
+                  ? {
+                      border: "1px solid rgba(125,211,252,0.9)",
+                      background: "rgba(14,116,144,0.38)",
+                    }
+                  : undefined
+              }
+            >
+              {option.label}
+            </button>
+          ))}
+          <button type="button" className="utility-panel-close" onClick={closeUtilityPanel}>
+            Close
+          </button>
+        </div>
+      ) : null}
       <div className="match-stopwatch" aria-live="polite">
         <span className="match-stopwatch-state">{matchStateToken}</span>
         <span className="match-stopwatch-clock">{formatMatchClock(matchTimeSeconds)}</span>
@@ -1348,17 +1632,44 @@ export default function App() {
             {isPickerOpen ? "×" : "●"}
           </button>
       </div>
-      <div
-        ref={hostRef}
-        style={{
-          width: "100%",
-          height: "100%",
-          background: "#0a0f0c",
-          overflow: "hidden",
-        }}
-        aria-label="PitchsideCLUB Pixi pitch"
-        role="img"
-      />
-    </main>
+        <div
+          ref={hostRef}
+          style={{
+            width: "100%",
+            height: "100%",
+            background: "#0a0f0c",
+            overflow: "hidden",
+          }}
+          aria-label="PitchsideCLUB Pixi pitch"
+          role="img"
+        />
+      </main>
+      <div className={utilityControlsClass}>
+        {isUtilityOpen ? (
+          <div className="utility-menu">
+            <button type="button" className="utility-menu-btn" onClick={openPlayersPanel}>
+              Players
+            </button>
+            <button type="button" className="utility-menu-btn" onClick={openReviewPanel}>
+              Review
+            </button>
+            <button type="button" className="utility-menu-btn" onClick={handleResetMatch}>
+              Reset Match
+            </button>
+          </div>
+        ) : null}
+        <button
+          type="button"
+          className="utility-bubble-btn"
+          aria-label="Toggle utility menu"
+          aria-expanded={isUtilityOpen}
+          onClick={() => {
+            setIsUtilityOpen((prev) => !prev);
+          }}
+        >
+          ⋮
+        </button>
+      </div>
+    </>
   );
 }
