@@ -118,8 +118,8 @@ export function drawStatsMarkers(
     }
 
     // Bright center dot helps identify stacked/overlapping markers quickly.
-    markerGraphic.circle(0, 0, Math.max(radius * 0.32, 1.25 / worldToScreenScale))
-      .fill({ color: 0xffffff, alpha: 0.9 });
+    const innerDotRadius = Math.max(radius * 0.32, 1.25 / worldToScreenScale);
+    markerGraphic.circle(0, 0, innerDotRadius).fill({ color: 0xffffff, alpha: 0.9 });
 
     const shouldShowPlayerNumber =
       showPlayerLabels &&
@@ -130,26 +130,31 @@ export function drawStatsMarkers(
     if (shouldShowPlayerNumber) {
       const clampedNumber = Math.min(99, Math.max(1, Math.floor(event.playerNumber)));
       const numberLabel = String(clampedNumber);
-      const numberFontSize = radius * (numberLabel.length === 1 ? 0.9 : 0.65);
+      const targetFontPx = numberLabel.length === 1 ? 7 : 6;
+      const numberFontSize = targetFontPx / worldToScreenScale;
+      const backingRadius = Math.min(innerDotRadius * 0.95, 5 / worldToScreenScale);
+      const numberBacking = new Graphics();
+      numberBacking.circle(0, 0, backingRadius).fill({ color: 0x0f172a, alpha: 0.42 });
+      markerContainer.addChild(numberBacking);
       const numberText = new Text({
         text: numberLabel,
         style: new TextStyle({
           fill: 0xffffff,
           fontSize: numberFontSize,
-          fontWeight: "bold",
+          fontWeight: "700",
           align: "center",
           letterSpacing: 0,
-          stroke: { color: 0x000000, width: 2 },
+          stroke: { color: 0x000000, width: 0 },
         }),
       });
       numberText.anchor.set(0.5);
       numberText.x = 0;
       numberText.y = 0;
-      const markerDiameter = radius * 2;
-      const maxLabelWidth = markerDiameter * 0.8;
-      if (numberText.width > maxLabelWidth && numberText.width > 0) {
-        const downscaleFactor = maxLabelWidth / numberText.width;
-        numberText.scale.set(downscaleFactor);
+      const maxLabelSize = innerDotRadius * 2 * 0.8;
+      if ((numberText.width > maxLabelSize || numberText.height > maxLabelSize) && numberText.width > 0) {
+        const widthScale = maxLabelSize / numberText.width;
+        const heightScale = maxLabelSize / Math.max(numberText.height, 1e-6);
+        numberText.scale.set(Math.min(widthScale, heightScale));
       }
       markerContainer.addChild(numberText);
     }
