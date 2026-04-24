@@ -150,62 +150,48 @@ const PANEL_CSS = `
   justify-content: center;
 }
 
-@media (orientation: landscape) {
-  .floating-controls {
-    bottom: 12px;
-    gap: 5px;
-  }
+.bottom-strip {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100px;
+  max-height: 110px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background: rgba(10, 20, 30, 0.6);
+  z-index: 10;
+  pointer-events: none;
+}
 
-  .event-panel {
-    width: min(calc(100vw - 24px), 352px);
-    padding: 6px;
-    gap: 5px;
-    border-radius: 9px;
-  }
+.strip-row {
+  display: flex;
+  justify-content: space-around;
+  gap: 6px;
+}
 
-  .event-grid {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 3px;
-  }
+.strip-btn {
+  flex: 1;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(20, 30, 40, 0.8);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  pointer-events: auto;
+  cursor: pointer;
+}
 
-  .event-grid .event-btn:nth-child(6) {
-    grid-column: 1;
-  }
-
-  .event-btn {
-    min-height: 28px;
-    padding: 5px 3px;
-    font-size: 9.5px;
-  }
-
-  .visibility-row {
-    gap: 3px;
-  }
-
-  .visibility-btn {
-    font-size: 9px;
-    padding: 3px 6px;
-  }
-
-  .undo-wrap {
-    margin-top: 6px;
-    padding-top: 6px;
-  }
-
-  .undo-btn {
-    font-size: 10px;
-    padding: 4px 7px;
-  }
-
-  .active-chip {
-    font-size: 9px;
-    padding: 3px 7px;
-  }
-
-  .bubble-btn {
-    width: 46px;
-    height: 46px;
-  }
+.strip-btn-active {
+  border: 1px solid rgba(34, 197, 94, 0.9);
+  background: rgba(22, 101, 52, 0.72);
 }
 `;
 
@@ -230,6 +216,7 @@ export default function App() {
   const [visibilityMode, setVisibilityMode] = useState<VisibilityMode>("ALL");
   const selectedEventRef = useRef<MatchEventKind>("POINT");
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [isLandscape, setIsLandscape] = useState(window.innerWidth > window.innerHeight);
   const handleRef = useRef<{
     destroy: () => void;
     setActiveEventKind: (kind: MatchEventKind) => void;
@@ -242,6 +229,12 @@ export default function App() {
     selectedEventRef.current = kind;
     handleRef.current?.setActiveEventKind(kind);
     setIsPickerOpen(false);
+  };
+
+  const handleLogEvent = (kind: MatchEventKind) => {
+    setSelectedEventKind(kind);
+    selectedEventRef.current = kind;
+    handleRef.current?.setActiveEventKind(kind);
   };
 
   useEffect(() => {
@@ -280,6 +273,16 @@ export default function App() {
   }, [visibilityMode]);
 
   useEffect(() => {
+    const handleResize = () => {
+      setIsLandscape(window.innerWidth > window.innerHeight);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!isPickerOpen) return;
 
     const onPointerDownOutside = (event: PointerEvent) => {
@@ -298,108 +301,148 @@ export default function App() {
   return (
     <main className="app-root">
       <style>{PANEL_CSS}</style>
-      <div
-        ref={floatingControlsRef}
-        className="floating-controls"
-      >
-        {isPickerOpen ? (
-          <div className="event-panel">
-            <div className="event-grid">
-              {EVENT_BUTTONS.map((item, idx) => {
-                const isActive = item.kind === selectedEventKind;
-                const isScoring = idx <= 4;
-                return (
+      {!isLandscape ? (
+        <div
+          ref={floatingControlsRef}
+          className="floating-controls"
+        >
+          {isPickerOpen ? (
+            <div className="event-panel">
+              <div className="event-grid">
+                {EVENT_BUTTONS.map((item, idx) => {
+                  const isActive = item.kind === selectedEventKind;
+                  const isScoring = idx <= 4;
+                  return (
+                    <button
+                      key={item.label}
+                      type="button"
+                      className="event-btn"
+                      onClick={() => {
+                        selectEventKind(item.kind);
+                      }}
+                      style={{
+                        border: isActive
+                          ? "1px solid rgba(34,197,94,0.96)"
+                          : isScoring
+                            ? "1px solid rgba(148,163,184,0.52)"
+                            : "1px solid rgba(148,163,184,0.36)",
+                        background: isActive
+                          ? "rgba(22,101,52,0.7)"
+                          : isScoring
+                            ? "rgba(21, 39, 62, 0.84)"
+                            : "rgba(14, 24, 40, 0.72)",
+                        fontWeight: isActive ? 700 : 600,
+                      }}
+                    >
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="visibility-row">
+                {([
+                  { id: "ALL", label: "Show All" },
+                  { id: "LAST_5", label: "Last 5" },
+                  { id: "LAST_10", label: "Last 10" },
+                ] as const).map((mode) => (
                   <button
-                    key={item.label}
+                    key={mode.id}
                     type="button"
-                    className="event-btn"
+                    className="visibility-btn"
                     onClick={() => {
-                      selectEventKind(item.kind);
+                      setVisibilityMode(mode.id);
                     }}
                     style={{
-                      border: isActive
-                        ? "1px solid rgba(34,197,94,0.96)"
-                        : isScoring
-                          ? "1px solid rgba(148,163,184,0.52)"
-                          : "1px solid rgba(148,163,184,0.36)",
-                      background: isActive
-                        ? "rgba(22,101,52,0.7)"
-                        : isScoring
-                          ? "rgba(21, 39, 62, 0.84)"
-                          : "rgba(14, 24, 40, 0.72)",
-                      fontWeight: isActive ? 700 : 600,
+                      border:
+                        visibilityMode === mode.id
+                          ? "1px solid rgba(125,211,252,0.9)"
+                          : "1px solid rgba(148,163,184,0.4)",
+                      background:
+                        visibilityMode === mode.id
+                          ? "rgba(14,116,144,0.42)"
+                          : "rgba(15,23,42,0.9)",
                     }}
                   >
-                    {item.label}
+                    {mode.label}
                   </button>
-                );
-              })}
-            </div>
-            <div className="visibility-row">
-              {([
-                { id: "ALL", label: "Show All" },
-                { id: "LAST_5", label: "Last 5" },
-                { id: "LAST_10", label: "Last 10" },
-              ] as const).map((mode) => (
+                ))}
+              </div>
+              <div className="undo-wrap">
                 <button
-                  key={mode.id}
                   type="button"
-                  className="visibility-btn"
+                  className="undo-btn"
                   onClick={() => {
-                    setVisibilityMode(mode.id);
+                    handleRef.current?.undoLastEvent();
+                    setIsPickerOpen(false);
                   }}
-                  style={{
-                    border:
-                      visibilityMode === mode.id
-                        ? "1px solid rgba(125,211,252,0.9)"
-                        : "1px solid rgba(148,163,184,0.4)",
-                    background:
-                      visibilityMode === mode.id
-                        ? "rgba(14,116,144,0.42)"
-                        : "rgba(15,23,42,0.9)",
+                  style={{ border: "1px solid rgba(148,163,184,0.4)" }}
+                >
+                  Undo last
+                </button>
+              </div>
+            </div>
+          ) : null}
+          {!isPickerOpen ? (
+            <div aria-live="polite" className="active-chip">
+              {EVENT_LABEL_BY_KIND[selectedEventKind]}
+            </div>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => {
+              setIsPickerOpen((prev) => !prev);
+            }}
+            aria-label="Toggle event picker"
+            aria-expanded={isPickerOpen}
+            className="bubble-btn"
+            style={{
+              border: isPickerOpen
+                ? "1px solid rgba(34,197,94,0.78)"
+                : "1px solid rgba(148,163,184,0.45)",
+            }}
+          >
+            {isPickerOpen ? "×" : "●"}
+          </button>
+        </div>
+      ) : null}
+      {isLandscape ? (
+        <div className="bottom-strip" aria-label="Landscape event action strip">
+          <div className="strip-row">
+            {EVENT_BUTTONS.slice(0, 5).map((item) => {
+              const isActive = item.kind === selectedEventKind;
+              return (
+                <button
+                  key={item.label}
+                  type="button"
+                  className={`strip-btn${isActive ? " strip-btn-active" : ""}`}
+                  onClick={() => {
+                    handleLogEvent(item.kind);
                   }}
                 >
-                  {mode.label}
+                  {item.label}
                 </button>
-              ))}
-            </div>
-            <div className="undo-wrap">
-              <button
-                type="button"
-                className="undo-btn"
-                onClick={() => {
-                  handleRef.current?.undoLastEvent();
-                  setIsPickerOpen(false);
-                }}
-                style={{ border: "1px solid rgba(148,163,184,0.4)" }}
-              >
-                Undo last
-              </button>
-            </div>
+              );
+            })}
           </div>
-        ) : null}
-        {!isPickerOpen ? (
-          <div aria-live="polite" className="active-chip">
-            {EVENT_LABEL_BY_KIND[selectedEventKind]}
+          <div className="strip-row">
+            {EVENT_BUTTONS.slice(5).map((item) => {
+              const isActive = item.kind === selectedEventKind;
+              return (
+                <button
+                  key={item.label}
+                  type="button"
+                  className={`strip-btn${isActive ? " strip-btn-active" : ""}`}
+                  onClick={() => {
+                    handleLogEvent(item.kind);
+                  }}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
           </div>
-        ) : null}
-        <button
-          type="button"
-          onClick={() => {
-            setIsPickerOpen((prev) => !prev);
-          }}
-          aria-label="Toggle event picker"
-          aria-expanded={isPickerOpen}
-          className="bubble-btn"
-          style={{
-            border: isPickerOpen
-              ? "1px solid rgba(34,197,94,0.78)"
-              : "1px solid rgba(148,163,184,0.45)",
-          }}
-        >
-          {isPickerOpen ? "×" : "●"}
-        </button>
-      </div>
+        </div>
+      ) : null}
       <div
         ref={hostRef}
         style={{
