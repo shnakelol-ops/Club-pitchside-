@@ -149,50 +149,6 @@ const PANEL_CSS = `
   align-items: center;
   justify-content: center;
 }
-
-.bottom-strip {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 100px;
-  max-height: 110px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 6px;
-  padding: 8px;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  background: rgba(10, 20, 30, 0.6);
-  z-index: 10;
-  pointer-events: none;
-}
-
-.strip-row {
-  display: flex;
-  justify-content: space-around;
-  gap: 6px;
-}
-
-.strip-btn {
-  flex: 1;
-  height: 40px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(20, 30, 40, 0.8);
-  color: #ffffff;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.2px;
-  pointer-events: auto;
-  cursor: pointer;
-}
-
-.strip-btn-active {
-  border: 1px solid rgba(34, 197, 94, 0.9);
-  background: rgba(22, 101, 52, 0.72);
-}
 `;
 
 const EVENT_LABEL_BY_KIND: Record<MatchEventKind, string> = {
@@ -216,7 +172,6 @@ export default function App() {
   const [visibilityMode, setVisibilityMode] = useState<VisibilityMode>("ALL");
   const selectedEventRef = useRef<MatchEventKind>("POINT");
   const [isPickerOpen, setIsPickerOpen] = useState(false);
-  const [isLandscape, setIsLandscape] = useState(window.innerWidth > window.innerHeight);
   const handleRef = useRef<{
     destroy: () => void;
     setActiveEventKind: (kind: MatchEventKind) => void;
@@ -229,12 +184,6 @@ export default function App() {
     selectedEventRef.current = kind;
     handleRef.current?.setActiveEventKind(kind);
     setIsPickerOpen(false);
-  };
-
-  const handleLogEvent = (kind: MatchEventKind) => {
-    setSelectedEventKind(kind);
-    selectedEventRef.current = kind;
-    handleRef.current?.setActiveEventKind(kind);
   };
 
   useEffect(() => {
@@ -273,16 +222,6 @@ export default function App() {
   }, [visibilityMode]);
 
   useEffect(() => {
-    const handleResize = () => {
-      setIsLandscape(window.innerWidth > window.innerHeight);
-    };
-    window.addEventListener("resize", handleResize);
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
-  }, []);
-
-  useEffect(() => {
     if (!isPickerOpen) return;
 
     const onPointerDownOutside = (event: PointerEvent) => {
@@ -301,11 +240,10 @@ export default function App() {
   return (
     <main className="app-root">
       <style>{PANEL_CSS}</style>
-      {!isLandscape ? (
-        <div
-          ref={floatingControlsRef}
-          className="floating-controls"
-        >
+      <div
+        ref={floatingControlsRef}
+        className="floating-controls"
+      >
           {isPickerOpen ? (
             <div className="event-panel">
               <div className="event-grid">
@@ -403,46 +341,7 @@ export default function App() {
           >
             {isPickerOpen ? "×" : "●"}
           </button>
-        </div>
-      ) : null}
-      {isLandscape ? (
-        <div className="bottom-strip" aria-label="Landscape event action strip">
-          <div className="strip-row">
-            {EVENT_BUTTONS.slice(0, 5).map((item) => {
-              const isActive = item.kind === selectedEventKind;
-              return (
-                <button
-                  key={item.label}
-                  type="button"
-                  className={`strip-btn${isActive ? " strip-btn-active" : ""}`}
-                  onClick={() => {
-                    handleLogEvent(item.kind);
-                  }}
-                >
-                  {item.label}
-                </button>
-              );
-            })}
-          </div>
-          <div className="strip-row">
-            {EVENT_BUTTONS.slice(5).map((item) => {
-              const isActive = item.kind === selectedEventKind;
-              return (
-                <button
-                  key={item.label}
-                  type="button"
-                  className={`strip-btn${isActive ? " strip-btn-active" : ""}`}
-                  onClick={() => {
-                    handleLogEvent(item.kind);
-                  }}
-                >
-                  {item.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      ) : null}
+      </div>
       <div
         ref={hostRef}
         style={{
