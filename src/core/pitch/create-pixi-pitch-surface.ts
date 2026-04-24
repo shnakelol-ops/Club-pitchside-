@@ -18,12 +18,16 @@ export type CreatePixiPitchSurfaceOptions = {
   sport: "soccer" | "gaelic" | "hurling";
   events?: readonly MatchEvent[];
   activeEventKind?: MatchEventKind;
+  eventHalf?: 1 | 2;
+  eventTimestampSeconds?: number;
+  canLogEvents?: boolean;
   onPitchTap?: (nx: number, ny: number) => void;
 };
 
 export type PixiPitchSurfaceHandle = {
   setEvents: (events: readonly MatchEvent[]) => void;
   setActiveEventKind: (kind: MatchEventKind) => void;
+  setEventContext: (context: { half: 1 | 2; timestamp: number; canLog: boolean }) => void;
   setVisibleEventLimit: (limit: number | null) => void;
   undoLastEvent: () => void;
   destroy: () => void;
@@ -79,6 +83,9 @@ export async function createPixiPitchSurface(
   const eventStore = createMatchEventStore(options.events ?? []);
   let eventsState: readonly MatchEvent[] = eventStore.getAll();
   let activeEventKindState: MatchEventKind = options.activeEventKind ?? "POINT";
+  let eventHalfState: 1 | 2 = options.eventHalf ?? 1;
+  let eventTimestampSecondsState = Math.max(0, Math.floor(options.eventTimestampSeconds ?? 0));
+  let canLogEventsState = options.canLogEvents ?? true;
   let visibleEventLimitState: number | null = null;
   const onPitchTapState = options.onPitchTap;
 
@@ -124,6 +131,8 @@ export async function createPixiPitchSurface(
       ny,
     });
 
+    if (!canLogEventsState) return;
+
     if (onPitchTapState) {
       onPitchTapState(nx, ny);
       return;
@@ -133,7 +142,8 @@ export async function createPixiPitchSurface(
       kind: activeEventKindState,
       nx,
       ny,
-      timestampMs: Date.now(),
+      half: eventHalfState,
+      timestamp: eventTimestampSecondsState,
     });
     eventStore.add(nextEvent);
     eventsState = eventStore.getAll();
@@ -154,6 +164,11 @@ export async function createPixiPitchSurface(
     },
     setActiveEventKind: (kind) => {
       activeEventKindState = kind;
+    },
+    setEventContext: (context) => {
+      eventHalfState = context.half;
+      eventTimestampSecondsState = Math.max(0, Math.floor(context.timestamp));
+      canLogEventsState = context.canLog;
     },
     setVisibleEventLimit: (limit) => {
       visibleEventLimitState = limit == null ? null : Math.max(1, Math.floor(limit));

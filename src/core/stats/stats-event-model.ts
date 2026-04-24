@@ -21,14 +21,16 @@ export type MatchEvent = {
   kind: MatchEventKind;
   nx: number;
   ny: number;
-  timestampMs: number;
+  half: 1 | 2;
+  timestamp: number;
 };
 
 export type CreateMatchEventInput = {
   kind: MatchEventKind;
   nx: number;
   ny: number;
-  timestampMs: number;
+  half: 1 | 2;
+  timestamp: number;
   id?: string;
 };
 
@@ -46,6 +48,7 @@ export function createMatchEvent(input: CreateMatchEventInput): MatchEvent {
     kind: input.kind,
     nx: clamp01(input.nx),
     ny: clamp01(input.ny),
-    timestampMs: input.timestampMs,
+    half: input.half,
+    timestamp: input.timestamp,
   };
 }

@@ -1,5 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 
+import {
+  createInitialMatchEngineState,
+  endMatch,
+  formatMatchClock,
+  isLoggingActive,
+  startFirstHalf,
+  tickMatchClock,
+  type MatchState,
+} from "./core/match/match-state-store";
 import { createPixiPitchSurface } from "./core/pitch/create-pixi-pitch-surface";
 import { type MatchEventKind } from "./core/stats/stats-event-model";
 
@@ -222,6 +231,31 @@ const PANEL_CSS = `
   letter-spacing: 0.18px;
   text-transform: uppercase;
 }
+
+.match-timer-chip {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 19;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(15, 23, 42, 0.62);
+  color: #cbd5e1;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.22px;
+  text-transform: uppercase;
+}
+
+.match-timer-clock {
+  color: #e2e8f0;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.32px;
+}
 `;
 
 const EVENT_LABEL_BY_KIND: Record<MatchEventKind, string> = {
@@ -243,18 +277,23 @@ export default function App() {
   const floatingControlsRef = useRef<HTMLDivElement>(null);
   const [selectedEventKind, setSelectedEventKind] = useState<MatchEventKind>("POINT");
   const [visibilityMode, setVisibilityMode] = useState<VisibilityMode>("ALL");
+  const [matchState, setMatchState] = useState<MatchState>("PRE_MATCH");
+  const [currentHalf, setCurrentHalf] = useState<1 | 2>(1);
+  const [matchTimeSeconds, setMatchTimeSeconds] = useState(0);
   const [isLandscape, setIsLandscape] = useState(
     () =>
       typeof window !== "undefined" &&
       window.matchMedia("(orientation: landscape)").matches,
   );
   const selectedEventRef = useRef<MatchEventKind>("POINT");
+  const matchEngineStateRef = useRef(createInitialMatchEngineState());
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const handleRef = useRef<{
     destroy: () => void;
     setActiveEventKind: (kind: MatchEventKind) => void;
     undoLastEvent: () => void;
     setVisibleEventLimit: (limit: number | null) => void;
+    setEventContext: (context: { half: 1 | 2; timestamp: number; canLog: boolean }) => void;
   } | null>(null);
 
   const selectEventKind = (kind: MatchEventKind) => {
@@ -274,6 +313,7 @@ export default function App() {
       setActiveEventKind: (kind: MatchEventKind) => void;
       undoLastEvent: () => void;
       setVisibleEventLimit: (limit: number | null) => void;
+      setEventContext: (context: { half: 1 | 2; timestamp: number; canLog: boolean }) => void;
     } | null = null;
     void createPixiPitchSurface(host, {
       sport: "gaelic",
@@ -285,6 +325,11 @@ export default function App() {
       }
       handle = nextHandle;
       handleRef.current = nextHandle;
+      nextHandle.setEventContext({
+        half: matchEngineStateRef.current.currentHalf,
+        timestamp: matchEngineStateRef.current.matchTimeSeconds,
+        canLog: isLoggingActive(matchEngineStateRef.current.matchState),
+      });
     });
     return () => {
       disposed = true;
@@ -292,6 +337,38 @@ export default function App() {
       handle?.destroy();
     };
   }, []);
+
+  useEffect(() => {
+    const initial = startFirstHalf(matchEngineStateRef.current);
+    matchEngineStateRef.current = initial;
+    setMatchState(initial.matchState);
+    setCurrentHalf(initial.currentHalf);
+    setMatchTimeSeconds(initial.matchTimeSeconds);
+
+    const timerId = window.setInterval(() => {
+      const next = tickMatchClock(matchEngineStateRef.current);
+      if (next === matchEngineStateRef.current) return;
+      matchEngineStateRef.current = next;
+      setMatchTimeSeconds(next.matchTimeSeconds);
+    }, 1000);
+
+    return () => {
+      window.clearInterval(timerId);
+      const ended = endMatch(matchEngineStateRef.current);
+      matchEngineStateRef.current = ended;
+      setMatchState(ended.matchState);
+      setCurrentHalf(ended.currentHalf);
+      setMatchTimeSeconds(ended.matchTimeSeconds);
+    };
+  }, []);
+
+  useEffect(() => {
+    handleRef.current?.setEventContext({
+      half: currentHalf,
+      timestamp: matchTimeSeconds,
+      canLog: isLoggingActive(matchState),
+    });
+  }, [currentHalf, matchTimeSeconds, matchState]);
 
   useEffect(() => {
     const visibleLimit =
@@ -330,6 +407,18 @@ export default function App() {
   return (
     <main className="app-root">
       <style>{PANEL_CSS}</style>
+      <div className="match-timer-chip" aria-live="polite">
+        <span>
+          {matchState === "FIRST_HALF" || matchState === "SECOND_HALF"
+            ? `H${currentHalf}`
+            : matchState === "HALF_TIME"
+              ? "HT"
+              : matchState === "FULL_TIME"
+                ? "FT"
+                : "PRE"}
+        </span>
+        <span className="match-timer-clock">{formatMatchClock(matchTimeSeconds)}</span>
+      </div>
       <div
         ref={floatingControlsRef}
         className="floating-controls"
@@ -346,6 +435,7 @@ export default function App() {
                       type="button"
                       className="event-btn"
                       onClick={() => {
+                        if (!isLoggingActive(matchState)) return;
                         selectEventKind(item.kind);
                       }}
                       style={{
@@ -421,6 +511,7 @@ export default function App() {
                       type="button"
                       className="landscape-toolbar-btn"
                       onClick={() => {
+                        if (!isLoggingActive(matchState)) return;
                         selectEventKind(item.kind);
                       }}
                       style={
@@ -446,6 +537,7 @@ export default function App() {
                       type="button"
                       className="landscape-toolbar-btn"
                       onClick={() => {
+                        if (!isLoggingActive(matchState)) return;
                         selectEventKind(item.kind);
                       }}
                       style={
