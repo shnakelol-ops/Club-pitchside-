@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   createInitialMatchEngineState,
@@ -12,9 +12,10 @@ import {
   type MatchState,
 } from "./core/match/match-state-store";
 import { createPixiPitchSurface } from "./core/pitch/create-pixi-pitch-surface";
-import { type MatchEventKind } from "./core/stats/stats-event-model";
+import { type MatchEvent, type MatchEventKind, type MatchTeam } from "./core/stats/stats-event-model";
 
 type VisibilityMode = "ALL" | "LAST_5" | "LAST_10";
+type TeamScore = { goals: number; points: number; total: number };
 
 const EVENT_BUTTONS: Array<{ label: string; kind: MatchEventKind }> = [
   { label: "GOAL", kind: "GOAL" },
@@ -29,6 +30,36 @@ const EVENT_BUTTONS: Array<{ label: string; kind: MatchEventKind }> = [
   { label: "F+", kind: "FREE_WON" },
   { label: "F−", kind: "FREE_CONCEDED" },
 ];
+
+function computeTeamScore(events: readonly MatchEvent[], team: MatchTeam): TeamScore {
+  let goals = 0;
+  let points = 0;
+
+  for (const event of events) {
+    if (event.team !== team) continue;
+    if (event.kind === "GOAL") {
+      goals += 1;
+      continue;
+    }
+    if (event.kind === "POINT") {
+      points += 1;
+      continue;
+    }
+    if (event.kind === "TWO_POINTER") {
+      points += 2;
+    }
+  }
+
+  return {
+    goals,
+    points,
+    total: goals * 3 + points,
+  };
+}
+
+function formatGaelicScore(score: TeamScore): string {
+  return `${score.goals}-${String(score.points).padStart(2, "0")}`;
+}
 
 const PANEL_CSS = `
 .app-root {
@@ -234,6 +265,87 @@ const PANEL_CSS = `
   text-transform: uppercase;
 }
 
+.scoreboard-panel {
+  position: fixed;
+  top: max(2px, env(safe-area-inset-top));
+  left: max(4px, env(safe-area-inset-left));
+  z-index: 19;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 172px;
+  max-width: min(46vw, 228px);
+  padding: 6px 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.38);
+  background: rgba(15, 23, 42, 0.66);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 3px 10px rgba(2, 6, 23, 0.32);
+}
+
+.scoreboard-team-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+}
+
+.scoreboard-name-input {
+  width: 100%;
+  min-width: 0;
+  height: 24px;
+  border-radius: 7px;
+  border: 1px solid rgba(148, 163, 184, 0.36);
+  background: rgba(15, 23, 42, 0.72);
+  color: #e2e8f0;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0 7px;
+  letter-spacing: 0.22px;
+  text-transform: uppercase;
+}
+
+.scoreboard-score {
+  color: #f8fafc;
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: 0.32px;
+}
+
+.scoreboard-total {
+  color: rgba(203, 213, 225, 0.9);
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.2px;
+  margin-left: 4px;
+}
+
+.scoreboard-team-toggle {
+  margin-top: 2px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.scoreboard-team-btn {
+  min-height: 32px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.42);
+  background: rgba(15, 23, 42, 0.84);
+  color: #dbe7f5;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.22px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
 .match-stopwatch {
   position: fixed;
   top: 10px;
@@ -339,6 +451,10 @@ export default function App() {
   const hostRef = useRef<HTMLDivElement>(null);
   const floatingControlsRef = useRef<HTMLDivElement>(null);
   const [selectedEventKind, setSelectedEventKind] = useState<MatchEventKind>("POINT");
+  const [activeTeam, setActiveTeam] = useState<MatchTeam>("HOME");
+  const [homeTeamName, setHomeTeamName] = useState("HOME");
+  const [awayTeamName, setAwayTeamName] = useState("AWAY");
+  const [loggedEvents, setLoggedEvents] = useState<readonly MatchEvent[]>([]);
   const [visibilityMode, setVisibilityMode] = useState<VisibilityMode>("ALL");
   const [matchState, setMatchState] = useState<MatchState>("PRE_MATCH");
   const [currentHalf, setCurrentHalf] = useState<1 | 2>(1);
@@ -357,7 +473,12 @@ export default function App() {
     setActiveEventKind: (kind: MatchEventKind) => void;
     undoLastEvent: () => void;
     setVisibleEventLimit: (limit: number | null) => void;
-    setEventContext: (context: { half: 1 | 2; timestamp: number; canLog: boolean }) => void;
+    setEventContext: (context: {
+      half: 1 | 2;
+      timestamp: number;
+      canLog: boolean;
+      team: MatchTeam;
+    }) => void;
   } | null>(null);
 
   const selectEventKind = (kind: MatchEventKind) => {
@@ -378,11 +499,18 @@ export default function App() {
       setActiveEventKind: (kind: MatchEventKind) => void;
       undoLastEvent: () => void;
       setVisibleEventLimit: (limit: number | null) => void;
-      setEventContext: (context: { half: 1 | 2; timestamp: number; canLog: boolean }) => void;
+      setEventContext: (context: {
+        half: 1 | 2;
+        timestamp: number;
+        canLog: boolean;
+        team: MatchTeam;
+      }) => void;
     } | null = null;
     void createPixiPitchSurface(host, {
       sport: "gaelic",
       activeEventKind: selectedEventRef.current,
+      eventTeam: activeTeam,
+      onEventsChange: setLoggedEvents,
     }).then((nextHandle) => {
       if (disposed) {
         nextHandle.destroy();
@@ -394,6 +522,7 @@ export default function App() {
         half: matchEngineStateRef.current.currentHalf,
         timestamp: matchEngineStateRef.current.matchTimeSeconds,
         canLog: isLoggingActive(matchEngineStateRef.current.matchState),
+        team: activeTeam,
       });
     });
     return () => {
@@ -454,8 +583,9 @@ export default function App() {
       half: currentHalf,
       timestamp: matchTimeSeconds,
       canLog: isLoggingActive(matchState),
+      team: activeTeam,
     });
-  }, [currentHalf, matchTimeSeconds, matchState]);
+  }, [activeTeam, currentHalf, matchTimeSeconds, matchState]);
 
   useEffect(() => {
     const visibleLimit =
@@ -511,9 +641,76 @@ export default function App() {
             ? { label: "FT", onClick: endMatchAction }
             : null;
 
+  const homeScore = useMemo(() => computeTeamScore(loggedEvents, "HOME"), [loggedEvents]);
+  const awayScore = useMemo(() => computeTeamScore(loggedEvents, "AWAY"), [loggedEvents]);
+
   return (
     <main className="app-root">
       <style>{PANEL_CSS}</style>
+      <div className="scoreboard-panel" aria-label="Match scoreboard">
+        <div className="scoreboard-team-row">
+          <input
+            className="scoreboard-name-input"
+            value={homeTeamName}
+            onChange={(event) => {
+              setHomeTeamName(event.target.value || "HOME");
+            }}
+            maxLength={14}
+            aria-label="Home team name"
+          />
+          <div className="scoreboard-score">
+            {formatGaelicScore(homeScore)}
+            <span className="scoreboard-total">({homeScore.total})</span>
+          </div>
+        </div>
+        <div className="scoreboard-team-row">
+          <input
+            className="scoreboard-name-input"
+            value={awayTeamName}
+            onChange={(event) => {
+              setAwayTeamName(event.target.value || "AWAY");
+            }}
+            maxLength={14}
+            aria-label="Away team name"
+          />
+          <div className="scoreboard-score">
+            {formatGaelicScore(awayScore)}
+            <span className="scoreboard-total">({awayScore.total})</span>
+          </div>
+        </div>
+        <div className="scoreboard-team-toggle">
+          <button
+            type="button"
+            className="scoreboard-team-btn"
+            onClick={() => setActiveTeam("HOME")}
+            style={
+              activeTeam === "HOME"
+                ? {
+                    border: "1px solid rgba(34,197,94,0.9)",
+                    background: "rgba(22,101,52,0.72)",
+                  }
+                : undefined
+            }
+          >
+            Home
+          </button>
+          <button
+            type="button"
+            className="scoreboard-team-btn"
+            onClick={() => setActiveTeam("AWAY")}
+            style={
+              activeTeam === "AWAY"
+                ? {
+                    border: "1px solid rgba(34,197,94,0.9)",
+                    background: "rgba(22,101,52,0.72)",
+                  }
+                : undefined
+            }
+          >
+            Away
+          </button>
+        </div>
+      </div>
       <div className="match-stopwatch" aria-live="polite">
         <span className="match-stopwatch-state">{matchStateToken}</span>
         <span className="match-stopwatch-clock">{formatMatchClock(matchTimeSeconds)}</span>
