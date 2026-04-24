@@ -19,6 +19,8 @@ type TeamScore = { goals: number; points: number; total: number };
 type TeamSide = "HOME" | "AWAY";
 type UtilityPanel = "PLAYERS" | "REVIEW" | null;
 type ReviewMode = "FIRST" | "SECOND" | "FULL";
+type Squad = { id: string; name: string; players: string[] };
+type LoggedMatchEvent = MatchEvent & { playerName?: string; squadId?: string };
 
 const EVENT_BUTTONS: Array<{ label: string; kind: MatchEventKind }> = [
   { label: "GOAL", kind: "GOAL" },
@@ -36,6 +38,7 @@ const EVENT_BUTTONS: Array<{ label: string; kind: MatchEventKind }> = [
 
 const AWAY_INSTANT_SCORING_KINDS = new Set<MatchEventKind>(["GOAL", "POINT", "TWO_POINTER"]);
 const FORMATION_ROW_SIZES = [1, 3, 3, 2, 3, 3] as const;
+const SQUADS_STORAGE_KEY = "pitchsideclub.squads";
 
 function newLocalEventId(): string {
   const c = globalThis.crypto;
@@ -43,6 +46,40 @@ function newLocalEventId(): string {
     return c.randomUUID();
   }
   return `evt-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+}
+
+function createDefaultSquad(): Squad {
+  return {
+    id: `squad-${newLocalEventId()}`,
+    name: "HOME",
+    players: [],
+  };
+}
+
+function parseStoredSquads(input: string | null): Squad[] {
+  if (!input) return [];
+  try {
+    const parsed = JSON.parse(input);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((item) => {
+        if (!item || typeof item !== "object") return null;
+        const maybeId = "id" in item ? item.id : null;
+        const maybeName = "name" in item ? item.name : null;
+        const maybePlayers = "players" in item ? item.players : null;
+        if (typeof maybeId !== "string" || typeof maybeName !== "string") return null;
+        if (!Array.isArray(maybePlayers)) return null;
+        const players = maybePlayers.filter((player): player is string => typeof player === "string");
+        return {
+          id: maybeId,
+          name: maybeName.slice(0, 24),
+          players,
+        };
+      })
+      .filter((squad): squad is Squad => squad !== null);
+  } catch {
+    return [];
+  }
 }
 
 function computeTeamScore(events: readonly MatchEvent[], team: TeamSide): TeamScore {
@@ -291,6 +328,20 @@ const PANEL_CSS = `
   cursor: pointer;
 }
 
+.active-player-chip {
+  border: 1px solid rgba(125, 211, 252, 0.42);
+  border-radius: 999px;
+  background: rgba(14, 24, 40, 0.8);
+  color: #dbeafe;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.18px;
+  padding: 5px 9px;
+  white-space: nowrap;
+  pointer-events: auto;
+}
+
 .utility-overlay-panel {
   position: fixed;
   z-index: 21;
@@ -324,6 +375,75 @@ const PANEL_CSS = `
   font-weight: 700;
   letter-spacing: 0.22px;
   text-transform: uppercase;
+}
+
+.utility-squad-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.utility-squad-select {
+  flex: 1;
+  min-height: 28px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.38);
+  background: rgba(15, 23, 42, 0.86);
+  color: #dbe7f5;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0 8px;
+}
+
+.utility-squad-create {
+  display: flex;
+  gap: 6px;
+}
+
+.utility-squad-input {
+  flex: 1;
+  min-height: 28px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.38);
+  background: rgba(15, 23, 42, 0.84);
+  color: #dbe7f5;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0 8px;
+}
+
+.utility-player-add-row {
+  display: flex;
+  gap: 6px;
+}
+
+.utility-player-input {
+  flex: 1;
+  min-height: 28px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.38);
+  background: rgba(15, 23, 42, 0.84);
+  color: #dbe7f5;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0 8px;
+}
+
+.utility-active-player-chip {
+  border: 1px solid rgba(125, 211, 252, 0.42);
+  border-radius: 999px;
+  background: rgba(14, 116, 144, 0.28);
+  color: #dbeafe;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.16px;
+  padding: 5px 8px;
+  text-transform: uppercase;
+  pointer-events: auto;
 }
 
 .utility-player-btn,
@@ -837,11 +957,19 @@ export default function App() {
   const [teamNameDraft, setTeamNameDraft] = useState("");
   const [isUtilityOpen, setIsUtilityOpen] = useState(false);
   const [utilityPanel, setUtilityPanel] = useState<UtilityPanel>(null);
-  const [players, setPlayers] = useState<string[]>([]);
+  const [squads, setSquads] = useState<Squad[]>(() => {
+    if (typeof window === "undefined") {
+      return [createDefaultSquad()];
+    }
+    const parsed = parseStoredSquads(window.localStorage.getItem(SQUADS_STORAGE_KEY));
+    return parsed.length > 0 ? parsed : [createDefaultSquad()];
+  });
+  const [activeSquadId, setActiveSquadId] = useState("");
+  const [squadDraft, setSquadDraft] = useState("");
   const [activePlayer, setActivePlayer] = useState<string | null>(null);
   const [playerDraft, setPlayerDraft] = useState("");
   const [reviewMode, setReviewMode] = useState<ReviewMode>("FULL");
-  const [loggedEvents, setLoggedEvents] = useState<readonly MatchEvent[]>([]);
+  const [loggedEvents, setLoggedEvents] = useState<readonly LoggedMatchEvent[]>([]);
   const [visibilityMode, setVisibilityMode] = useState<VisibilityMode>("ALL");
   const [matchState, setMatchState] = useState<MatchState>("PRE_MATCH");
   const [currentHalf, setCurrentHalf] = useState<1 | 2>(1);
@@ -854,6 +982,8 @@ export default function App() {
   );
   const selectedEventRef = useRef<MatchEventKind>("POINT");
   const activeTeamRef = useRef<TeamSide>("HOME");
+  const activePlayerRef = useRef<string | null>(null);
+  const activeSquadIdRef = useRef("");
   const homeNameInputRef = useRef<HTMLInputElement>(null);
   const awayNameInputRef = useRef<HTMLInputElement>(null);
   const matchEngineStateRef = useRef(createInitialMatchEngineState());
@@ -867,6 +997,53 @@ export default function App() {
     setEventContext: (context: { half: 1 | 2; timestamp: number; canLog: boolean }) => void;
   } | null>(null);
   const canEditTeamNames = matchState === "PRE_MATCH";
+  const activeSquad =
+    squads.find((squad) => squad.id === activeSquadId) ?? squads[0] ?? createDefaultSquad();
+  const activeSquadPlayers = activeSquad.players;
+
+  const setActiveSquadById = (nextSquadId: string) => {
+    setActiveSquadId(nextSquadId);
+    setActivePlayer(null);
+    setPlayerDraft("");
+  };
+
+  const updateActiveSquadPlayers = (
+    updater: (prevPlayers: string[]) => string[],
+    nextActivePlayer?: string | null,
+  ) => {
+    setSquads((prevSquads) =>
+      prevSquads.map((squad) =>
+        squad.id === activeSquad.id ? { ...squad, players: updater([...squad.players]) } : squad,
+      ),
+    );
+    if (nextActivePlayer !== undefined) {
+      setActivePlayer(nextActivePlayer);
+    }
+  };
+
+  const createSquad = () => {
+    const nextName = squadDraft.trim();
+    if (nextName.length === 0) return;
+    const nextSquad: Squad = {
+      id: `squad-${newLocalEventId()}`,
+      name: nextName.slice(0, 24),
+      players: [],
+    };
+    setSquads((prev) => [...prev, nextSquad]);
+    setActiveSquadById(nextSquad.id);
+    setSquadDraft("");
+  };
+
+  const saveActiveSquadName = () => {
+    const nextName = squadDraft.trim();
+    if (nextName.length === 0) return;
+    setSquads((prevSquads) =>
+      prevSquads.map((squad) =>
+        squad.id === activeSquad.id ? { ...squad, name: nextName.slice(0, 24) } : squad,
+      ),
+    );
+    setSquadDraft("");
+  };
 
   const undoLastEventAction = () => {
     const lastEvent = loggedEvents.at(-1);
@@ -931,6 +1108,29 @@ export default function App() {
   }, [activeTeam]);
 
   useEffect(() => {
+    activePlayerRef.current = activePlayer;
+  }, [activePlayer]);
+
+  useEffect(() => {
+    activeSquadIdRef.current = activeSquadId;
+  }, [activeSquadId]);
+
+  useEffect(() => {
+    if (activeSquadId === "") {
+      setActiveSquadId(squads[0]?.id ?? "");
+      return;
+    }
+    if (squads.some((squad) => squad.id === activeSquadId)) return;
+    setActiveSquadId(squads[0]?.id ?? "");
+    setActivePlayer(null);
+  }, [activeSquadId, squads]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(SQUADS_STORAGE_KEY, JSON.stringify(squads));
+  }, [squads]);
+
+  useEffect(() => {
     if (canEditTeamNames) return;
     setEditingTeam(null);
     setTeamNameDraft("");
@@ -961,10 +1161,15 @@ export default function App() {
       activeEventKind: selectedEventRef.current,
       onEventLogged: (event) => {
         const teamSide = activeTeamRef.current;
-        setLoggedEvents((prev) => [
-          ...prev,
-          { ...event, id: `team-${teamSide.toLowerCase()}-${event.id}` },
-        ]);
+        const nextEvent: LoggedMatchEvent = {
+          ...event,
+          id: `team-${teamSide.toLowerCase()}-${event.id}`,
+        };
+        if (teamSide === "HOME" && activePlayerRef.current) {
+          nextEvent.playerName = activePlayerRef.current;
+          nextEvent.squadId = activeSquadIdRef.current;
+        }
+        setLoggedEvents((prev) => [...prev, nextEvent]);
       },
     }).then((nextHandle) => {
       if (disposed) {
@@ -1051,8 +1256,10 @@ export default function App() {
   const addPlayer = () => {
     const nextPlayerName = playerDraft.trim();
     if (nextPlayerName.length === 0) return;
-    setPlayers((prev) => [...prev, nextPlayerName]);
-    setActivePlayer((prev) => prev ?? nextPlayerName);
+    updateActiveSquadPlayers(
+      (prevPlayers) => [...prevPlayers, nextPlayerName],
+      activePlayer ?? nextPlayerName,
+    );
     setPlayerDraft("");
   };
 
@@ -1060,7 +1267,6 @@ export default function App() {
     setLoggedEvents([]);
     setReviewMode("FULL");
     setUtilityPanel(null);
-    setPlayers([]);
     setActivePlayer(null);
     setPlayerDraft("");
     setMatchState("PRE_MATCH");
@@ -1390,14 +1596,15 @@ export default function App() {
   const utilityPanelClass = isLandscape
     ? "utility-overlay-panel utility-overlay-panel--landscape"
     : "utility-overlay-panel utility-overlay-panel--portrait";
-  const formationPlayers = players.slice(0, 15);
-  const subsPlayers = players.slice(15);
+  const formationPlayers = activeSquadPlayers.slice(0, 15);
+  const subsPlayers = activeSquadPlayers.slice(15);
   const formationRows: string[][] = [];
   let formationCursor = 0;
   for (const rowSize of FORMATION_ROW_SIZES) {
     formationRows.push(formationPlayers.slice(formationCursor, formationCursor + rowSize));
     formationCursor += rowSize;
   }
+  const activePlayerChipText = activePlayer ? `Active: ${activePlayer}` : null;
   const playersPanelStyle = isLandscape
     ? { zIndex: 10001 }
     : keyboardInset > 0
@@ -1426,9 +1633,48 @@ export default function App() {
           style={playersPanelStyle}
         >
           <div className="utility-panel-title">HOME Players</div>
-          <div>
+          <div className="utility-squad-row">
+            <select
+              className="utility-squad-select"
+              value={activeSquad.id}
+              onChange={(event) => {
+                setActiveSquadById(event.target.value);
+              }}
+              aria-label="Select home squad"
+            >
+              {squads.map((squad) => (
+                <option key={squad.id} value={squad.id}>
+                  {squad.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="utility-squad-create">
             <input
               type="text"
+              className="utility-squad-input"
+              value={squadDraft}
+              onChange={(event) => {
+                setSquadDraft(event.target.value);
+              }}
+              placeholder="New or rename squad"
+            />
+            <button type="button" className="utility-review-btn" onClick={createSquad}>
+              New
+            </button>
+            <button type="button" className="utility-review-btn" onClick={saveActiveSquadName}>
+              Rename
+            </button>
+          </div>
+          {activePlayerChipText ? (
+            <div className="utility-active-player-chip" aria-live="polite">
+              {activePlayerChipText}
+            </div>
+          ) : null}
+          <div className="utility-player-add-row">
+            <input
+              type="text"
+              className="utility-player-input"
               value={playerDraft}
               onChange={(event) => {
                 setPlayerDraft(event.target.value);
@@ -1789,6 +2035,11 @@ export default function App() {
         />
       </main>
       <div className={utilityControlsClass}>
+        {activePlayerChipText ? (
+          <div className="utility-active-player-chip" aria-live="polite">
+            {activePlayerChipText}
+          </div>
+        ) : null}
         {isUtilityOpen ? (
           <div className="utility-menu">
             <button type="button" className="utility-menu-btn" onClick={openPlayersPanel}>
