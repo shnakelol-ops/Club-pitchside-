@@ -239,9 +239,15 @@ const PANEL_CSS = `
   top: 10px;
   right: 10px;
   z-index: 19;
-  display: flex;
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-areas:
+    "state clock"
+    "controls controls";
   align-items: center;
-  gap: 8px;
+  row-gap: 6px;
+  column-gap: 8px;
+  justify-items: start;
   padding: 6px 9px;
   border-radius: 12px;
   border: 1px solid rgba(148, 163, 184, 0.3);
@@ -255,6 +261,11 @@ const PANEL_CSS = `
   text-transform: uppercase;
 }
 
+.match-stopwatch-state {
+  grid-area: state;
+  line-height: 1;
+}
+
 @media (orientation: landscape) {
   .match-stopwatch {
     top: max(4px, env(safe-area-inset-top));
@@ -263,6 +274,8 @@ const PANEL_CSS = `
 }
 
 .match-stopwatch-clock {
+  grid-area: clock;
+  justify-self: end;
   color: #f8fafc;
   font-size: 13px;
   font-weight: 800;
@@ -272,13 +285,14 @@ const PANEL_CSS = `
 }
 
 .match-stopwatch-controls {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  grid-area: controls;
+  width: 100%;
+  display: flex;
 }
 
 .match-stopwatch-btn {
   position: relative;
+  width: 100%;
   min-height: 44px;
   border-radius: 999px;
   border: 1px solid rgba(34, 197, 94, 0.62);
@@ -495,7 +509,7 @@ export default function App() {
     <main className="app-root">
       <style>{PANEL_CSS}</style>
       <div className="match-stopwatch" aria-live="polite">
-        <span>{matchStateToken}</span>
+        <span className="match-stopwatch-state">{matchStateToken}</span>
         <span className="match-stopwatch-clock">{formatMatchClock(matchTimeSeconds)}</span>
         <div className="match-stopwatch-controls">
           {contextualAction ? (
