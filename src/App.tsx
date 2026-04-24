@@ -32,6 +32,16 @@ const EVENT_BUTTONS: Array<{ label: string; kind: MatchEventKind }> = [
   { label: "F−", kind: "FREE_CONCEDED" },
 ];
 
+const AWAY_INSTANT_SCORING_KINDS = new Set<MatchEventKind>(["GOAL", "POINT", "TWO_POINTER"]);
+
+function newLocalEventId(): string {
+  const c = globalThis.crypto;
+  if (c && "randomUUID" in c && typeof c.randomUUID === "function") {
+    return c.randomUUID();
+  }
+  return `evt-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+}
+
 function computeTeamScore(events: readonly MatchEvent[], team: TeamSide): TeamScore {
   let goals = 0;
   let points = 0;
@@ -309,6 +319,45 @@ const PANEL_CSS = `
   text-transform: uppercase;
 }
 
+.scoreboard-side-label-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.scoreboard-name-edit-btn {
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(148, 163, 184, 0.42);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.86);
+  color: #cbd5e1;
+  font-size: 9px;
+  line-height: 1;
+  padding: 0;
+  margin: 0 0 0 1px;
+  cursor: pointer;
+}
+
+.scoreboard-name-input {
+  width: 100%;
+  min-width: 0;
+  height: 18px;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.44);
+  background: rgba(15, 23, 42, 0.88);
+  color: #e2e8f0;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0 5px;
+  letter-spacing: 0.18px;
+  text-transform: uppercase;
+}
+
 .scoreboard-side-score {
   color: #f8fafc;
   font-size: 11px;
@@ -412,6 +461,61 @@ const PANEL_CSS = `
   letter-spacing: 0.18px;
   text-transform: uppercase;
   cursor: pointer;
+}
+
+.scoreboard-rail-team-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+}
+
+.scoreboard-rail-name-line {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.scoreboard-rail-team-name {
+  color: rgba(203, 213, 225, 0.9);
+  font-size: 8.5px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.16px;
+  text-transform: uppercase;
+}
+
+.scoreboard-team-btn-inner {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.scoreboard-team-btn-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scoreboard-rail-name-input {
+  width: 100%;
+  min-width: 0;
+  height: 20px;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.46);
+  background: rgba(15, 23, 42, 0.9);
+  color: #e2e8f0;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0 4px;
+  letter-spacing: 0.16px;
+  text-transform: uppercase;
+  text-align: center;
 }
 
 .match-stopwatch {
@@ -524,6 +628,12 @@ export default function App() {
   const floatingControlsRef = useRef<HTMLDivElement>(null);
   const [selectedEventKind, setSelectedEventKind] = useState<MatchEventKind>("POINT");
   const [activeTeam, setActiveTeam] = useState<TeamSide>("HOME");
+  const [teamNames, setTeamNames] = useState<{ HOME: string; AWAY: string }>({
+    HOME: "HOME",
+    AWAY: "AWAY",
+  });
+  const [editingTeam, setEditingTeam] = useState<TeamSide | null>(null);
+  const [teamNameDraft, setTeamNameDraft] = useState("");
   const [loggedEvents, setLoggedEvents] = useState<readonly MatchEvent[]>([]);
   const [visibilityMode, setVisibilityMode] = useState<VisibilityMode>("ALL");
   const [matchState, setMatchState] = useState<MatchState>("PRE_MATCH");
@@ -536,6 +646,8 @@ export default function App() {
   );
   const selectedEventRef = useRef<MatchEventKind>("POINT");
   const activeTeamRef = useRef<TeamSide>("HOME");
+  const homeNameInputRef = useRef<HTMLInputElement>(null);
+  const awayNameInputRef = useRef<HTMLInputElement>(null);
   const matchEngineStateRef = useRef(createInitialMatchEngineState());
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const handleRef = useRef<{
@@ -546,10 +658,32 @@ export default function App() {
     setVisibleEventLimit: (limit: number | null) => void;
     setEventContext: (context: { half: 1 | 2; timestamp: number; canLog: boolean }) => void;
   } | null>(null);
+  const canEditTeamNames = matchState === "PRE_MATCH";
 
   const undoLastEventAction = () => {
-    handleRef.current?.undoLastEvent();
+    const lastEvent = loggedEvents.at(-1);
+    if (!lastEvent) return;
+    const isInstantAwayScore = lastEvent.id.includes("-instant-score-");
+    if (!isInstantAwayScore) {
+      handleRef.current?.undoLastEvent();
+    }
     setLoggedEvents((prev) => prev.slice(0, -1));
+  };
+
+  const startTeamNameEdit = (team: TeamSide) => {
+    if (!canEditTeamNames) return;
+    setEditingTeam(team);
+    setTeamNameDraft(teamNames[team]);
+  };
+
+  const commitTeamNameEdit = () => {
+    if (!editingTeam) return;
+    const nextName = teamNameDraft.trim();
+    if (nextName.length > 0) {
+      setTeamNames((prev) => ({ ...prev, [editingTeam]: nextName.slice(0, 15) }));
+    }
+    setEditingTeam(null);
+    setTeamNameDraft("");
   };
 
   const selectEventKind = (kind: MatchEventKind) => {
@@ -559,9 +693,47 @@ export default function App() {
     setIsPickerOpen(false);
   };
 
+  const logAwayInstantScore = (kind: MatchEventKind) => {
+    setLoggedEvents((prev) => [
+      ...prev,
+      {
+        id: `team-away-instant-score-${newLocalEventId()}`,
+        kind,
+        nx: 0,
+        ny: 0,
+        half: matchEngineStateRef.current.currentHalf,
+        timestamp: matchEngineStateRef.current.matchTimeSeconds,
+      },
+    ]);
+  };
+
+  const handleEventButtonPress = (kind: MatchEventKind) => {
+    if (!isLoggingActive(matchState)) return;
+    if (activeTeam === "AWAY" && AWAY_INSTANT_SCORING_KINDS.has(kind)) {
+      selectEventKind(kind);
+      logAwayInstantScore(kind);
+      return;
+    }
+    if (activeTeam === "AWAY") return;
+    selectEventKind(kind);
+  };
+
   useEffect(() => {
     activeTeamRef.current = activeTeam;
   }, [activeTeam]);
+
+  useEffect(() => {
+    if (canEditTeamNames) return;
+    setEditingTeam(null);
+    setTeamNameDraft("");
+  }, [canEditTeamNames]);
+
+  useEffect(() => {
+    if (!editingTeam) return;
+    const target = editingTeam === "HOME" ? homeNameInputRef.current : awayNameInputRef.current;
+    target?.focus();
+    target?.select();
+  }, [editingTeam]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -596,7 +768,9 @@ export default function App() {
       nextHandle.setEventContext({
         half: matchEngineStateRef.current.currentHalf,
         timestamp: matchEngineStateRef.current.matchTimeSeconds,
-        canLog: isLoggingActive(matchEngineStateRef.current.matchState),
+        canLog:
+          isLoggingActive(matchEngineStateRef.current.matchState) &&
+          activeTeamRef.current === "HOME",
       });
     });
     return () => {
@@ -636,7 +810,6 @@ export default function App() {
   };
 
   const startSecondHalfAction = () => {
-    setLoggedEvents([]);
     handleRef.current?.setEvents([]);
     const next = startSecondHalf(matchEngineStateRef.current);
     matchEngineStateRef.current = next;
@@ -657,9 +830,9 @@ export default function App() {
     handleRef.current?.setEventContext({
       half: currentHalf,
       timestamp: matchTimeSeconds,
-      canLog: isLoggingActive(matchState),
+      canLog: isLoggingActive(matchState) && activeTeam === "HOME",
     });
-  }, [currentHalf, matchTimeSeconds, matchState]);
+  }, [activeTeam, currentHalf, matchTimeSeconds, matchState]);
 
   useEffect(() => {
     const visibleLimit =
@@ -720,21 +893,55 @@ export default function App() {
 
   const scoreboard = isLandscape ? (
     <div className="scoreboard-rail" aria-label="Match scoreboard">
-      <button
-        type="button"
-        className="scoreboard-rail-team-btn"
-        onClick={() => setActiveTeam("HOME")}
-        style={
-          activeTeam === "HOME"
-            ? {
-                border: "1px solid rgba(34,197,94,0.9)",
-                background: "rgba(22,101,52,0.72)",
+      <div className="scoreboard-rail-team-wrap">
+        <button
+          type="button"
+          className="scoreboard-rail-team-btn"
+          onClick={() => setActiveTeam("HOME")}
+          style={
+            activeTeam === "HOME"
+              ? {
+                  border: "1px solid rgba(34,197,94,0.9)",
+                  background: "rgba(22,101,52,0.72)",
+                }
+              : undefined
+          }
+        >
+          HOME
+        </button>
+        {editingTeam === "HOME" ? (
+          <input
+            ref={homeNameInputRef}
+            className="scoreboard-rail-name-input"
+            value={teamNameDraft}
+            onChange={(event) => {
+              setTeamNameDraft(event.target.value.slice(0, 15));
+            }}
+            onBlur={commitTeamNameEdit}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                commitTeamNameEdit();
               }
-            : undefined
-        }
-      >
-        HOME
-      </button>
+            }}
+            maxLength={15}
+            aria-label="Edit home team name"
+          />
+        ) : (
+          <span className="scoreboard-rail-name-line">
+            <span className="scoreboard-rail-team-name">{teamNames.HOME}</span>
+            {canEditTeamNames ? (
+              <button
+                type="button"
+                className="scoreboard-name-edit-btn"
+                aria-label="Edit home team name"
+                onClick={() => startTeamNameEdit("HOME")}
+              >
+                ✏️
+              </button>
+            ) : null}
+          </span>
+        )}
+      </div>
       <div className="scoreboard-rail-score">
         {formatGaelicScore(homeScore)}
         <span className="scoreboard-rail-total">({homeScore.total})</span>
@@ -744,34 +951,130 @@ export default function App() {
         {formatGaelicScore(awayScore)}
         <span className="scoreboard-rail-total">({awayScore.total})</span>
       </div>
-      <button
-        type="button"
-        className="scoreboard-rail-team-btn"
-        onClick={() => setActiveTeam("AWAY")}
-        style={
-          activeTeam === "AWAY"
-            ? {
-                border: "1px solid rgba(34,197,94,0.9)",
-                background: "rgba(22,101,52,0.72)",
+      <div className="scoreboard-rail-team-wrap">
+        <button
+          type="button"
+          className="scoreboard-rail-team-btn"
+          onClick={() => setActiveTeam("AWAY")}
+          style={
+            activeTeam === "AWAY"
+              ? {
+                  border: "1px solid rgba(34,197,94,0.9)",
+                  background: "rgba(22,101,52,0.72)",
+                }
+              : undefined
+          }
+        >
+          AWAY
+        </button>
+        {editingTeam === "AWAY" ? (
+          <input
+            ref={awayNameInputRef}
+            className="scoreboard-rail-name-input"
+            value={teamNameDraft}
+            onChange={(event) => {
+              setTeamNameDraft(event.target.value.slice(0, 15));
+            }}
+            onBlur={commitTeamNameEdit}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                commitTeamNameEdit();
               }
-            : undefined
-        }
-      >
-        AWAY
-      </button>
+            }}
+            maxLength={15}
+            aria-label="Edit away team name"
+          />
+        ) : (
+          <span className="scoreboard-rail-name-line">
+            <span className="scoreboard-rail-team-name">{teamNames.AWAY}</span>
+            {canEditTeamNames ? (
+              <button
+                type="button"
+                className="scoreboard-name-edit-btn"
+                aria-label="Edit away team name"
+                onClick={() => startTeamNameEdit("AWAY")}
+              >
+                ✏️
+              </button>
+            ) : null}
+          </span>
+        )}
+      </div>
     </div>
   ) : (
     <div className="scoreboard-strip" aria-label="Match scoreboard">
       <div className="scoreboard-strip-line">
         <span className="scoreboard-side">
-          <span className="scoreboard-side-label">HOME</span>
+          {editingTeam === "HOME" ? (
+            <input
+              ref={homeNameInputRef}
+              className="scoreboard-name-input"
+              value={teamNameDraft}
+              onChange={(event) => {
+                setTeamNameDraft(event.target.value.slice(0, 15));
+              }}
+              onBlur={commitTeamNameEdit}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  commitTeamNameEdit();
+                }
+              }}
+              maxLength={15}
+              aria-label="Edit home team name"
+            />
+          ) : (
+            <span className="scoreboard-side-label-wrap">
+              <span className="scoreboard-side-label">{teamNames.HOME}</span>
+              {canEditTeamNames ? (
+                <button
+                  type="button"
+                  className="scoreboard-name-edit-btn"
+                  aria-label="Edit home team name"
+                  onClick={() => startTeamNameEdit("HOME")}
+                >
+                  ✏️
+                </button>
+              ) : null}
+            </span>
+          )}
           <span className="scoreboard-side-score">
             {formatGaelicScore(homeScore)}
             <span className="scoreboard-total">({homeScore.total})</span>
           </span>
         </span>
         <span className="scoreboard-side">
-          <span className="scoreboard-side-label">AWAY</span>
+          {editingTeam === "AWAY" ? (
+            <input
+              ref={awayNameInputRef}
+              className="scoreboard-name-input"
+              value={teamNameDraft}
+              onChange={(event) => {
+                setTeamNameDraft(event.target.value.slice(0, 15));
+              }}
+              onBlur={commitTeamNameEdit}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  commitTeamNameEdit();
+                }
+              }}
+              maxLength={15}
+              aria-label="Edit away team name"
+            />
+          ) : (
+            <span className="scoreboard-side-label-wrap">
+              <span className="scoreboard-side-label">{teamNames.AWAY}</span>
+              {canEditTeamNames ? (
+                <button
+                  type="button"
+                  className="scoreboard-name-edit-btn"
+                  aria-label="Edit away team name"
+                  onClick={() => startTeamNameEdit("AWAY")}
+                >
+                  ✏️
+                </button>
+              ) : null}
+            </span>
+          )}
           <span className="scoreboard-side-score">
             {formatGaelicScore(awayScore)}
             <span className="scoreboard-total">({awayScore.total})</span>
@@ -842,14 +1145,16 @@ export default function App() {
                 {EVENT_BUTTONS.map((item, idx) => {
                   const isActive = item.kind === selectedEventKind;
                   const isScoring = idx <= 4;
+                  const isDisabledForAway =
+                    activeTeam === "AWAY" && !AWAY_INSTANT_SCORING_KINDS.has(item.kind);
                   return (
                     <button
                       key={item.label}
                       type="button"
                       className="event-btn"
+                      disabled={isDisabledForAway}
                       onClick={() => {
-                        if (!isLoggingActive(matchState)) return;
-                        selectEventKind(item.kind);
+                        handleEventButtonPress(item.kind);
                       }}
                       style={{
                         border: isActive
@@ -863,6 +1168,7 @@ export default function App() {
                             ? "rgba(21, 39, 62, 0.84)"
                             : "rgba(14, 24, 40, 0.72)",
                         fontWeight: isActive ? 700 : 600,
+                        opacity: isDisabledForAway ? 0.46 : 1,
                       }}
                     >
                       {item.label}
@@ -918,20 +1224,27 @@ export default function App() {
               <div className="landscape-toolbar-row">
                 {EVENT_BUTTONS.slice(0, 5).map((item) => {
                   const isActive = item.kind === selectedEventKind;
+                  const isDisabledForAway =
+                    activeTeam === "AWAY" && !AWAY_INSTANT_SCORING_KINDS.has(item.kind);
                   return (
                     <button
                       key={item.label}
                       type="button"
                       className="landscape-toolbar-btn"
+                      disabled={isDisabledForAway}
                       onClick={() => {
-                        if (!isLoggingActive(matchState)) return;
-                        selectEventKind(item.kind);
+                        handleEventButtonPress(item.kind);
                       }}
                       style={
-                        isActive
+                        isActive || isDisabledForAway
                           ? {
-                              border: "1px solid rgba(34,197,94,0.96)",
-                              background: "rgba(22,101,52,0.7)",
+                              ...(isActive
+                                ? {
+                                    border: "1px solid rgba(34,197,94,0.96)",
+                                    background: "rgba(22,101,52,0.7)",
+                                  }
+                                : {}),
+                              ...(isDisabledForAway ? { opacity: 0.46 } : {}),
                             }
                           : undefined
                       }
@@ -944,20 +1257,27 @@ export default function App() {
               <div className="landscape-toolbar-row">
                 {EVENT_BUTTONS.slice(5).map((item) => {
                   const isActive = item.kind === selectedEventKind;
+                  const isDisabledForAway =
+                    activeTeam === "AWAY" && !AWAY_INSTANT_SCORING_KINDS.has(item.kind);
                   return (
                     <button
                       key={item.label}
                       type="button"
                       className="landscape-toolbar-btn"
+                      disabled={isDisabledForAway}
                       onClick={() => {
-                        if (!isLoggingActive(matchState)) return;
-                        selectEventKind(item.kind);
+                        handleEventButtonPress(item.kind);
                       }}
                       style={
-                        isActive
+                        isActive || isDisabledForAway
                           ? {
-                              border: "1px solid rgba(34,197,94,0.96)",
-                              background: "rgba(22,101,52,0.7)",
+                              ...(isActive
+                                ? {
+                                    border: "1px solid rgba(34,197,94,0.96)",
+                                    background: "rgba(22,101,52,0.7)",
+                                  }
+                                : {}),
+                              ...(isDisabledForAway ? { opacity: 0.46 } : {}),
                             }
                           : undefined
                       }
