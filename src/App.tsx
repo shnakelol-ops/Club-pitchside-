@@ -12,10 +12,11 @@ import {
   type MatchState,
 } from "./core/match/match-state-store";
 import { createPixiPitchSurface } from "./core/pitch/create-pixi-pitch-surface";
-import { type MatchEvent, type MatchEventKind, type MatchTeam } from "./core/stats/stats-event-model";
+import { type MatchEvent, type MatchEventKind } from "./core/stats/stats-event-model";
 
 type VisibilityMode = "ALL" | "LAST_5" | "LAST_10";
 type TeamScore = { goals: number; points: number; total: number };
+type TeamSide = "HOME" | "AWAY";
 
 const EVENT_BUTTONS: Array<{ label: string; kind: MatchEventKind }> = [
   { label: "GOAL", kind: "GOAL" },
@@ -31,12 +32,12 @@ const EVENT_BUTTONS: Array<{ label: string; kind: MatchEventKind }> = [
   { label: "F−", kind: "FREE_CONCEDED" },
 ];
 
-function computeTeamScore(events: readonly MatchEvent[], team: MatchTeam): TeamScore {
+function computeTeamScore(events: readonly MatchEvent[], team: TeamSide): TeamScore {
   let goals = 0;
   let points = 0;
 
   for (const event of events) {
-    if (event.team !== team) continue;
+    if (event.id.startsWith(`team-${team.toLowerCase()}-`) === false) continue;
     if (event.kind === "GOAL") {
       goals += 1;
       continue;
@@ -451,7 +452,7 @@ export default function App() {
   const hostRef = useRef<HTMLDivElement>(null);
   const floatingControlsRef = useRef<HTMLDivElement>(null);
   const [selectedEventKind, setSelectedEventKind] = useState<MatchEventKind>("POINT");
-  const [activeTeam, setActiveTeam] = useState<MatchTeam>("HOME");
+  const [activeTeam, setActiveTeam] = useState<TeamSide>("HOME");
   const [homeTeamName, setHomeTeamName] = useState("HOME");
   const [awayTeamName, setAwayTeamName] = useState("AWAY");
   const [loggedEvents, setLoggedEvents] = useState<readonly MatchEvent[]>([]);
@@ -465,6 +466,7 @@ export default function App() {
       window.matchMedia("(orientation: landscape)").matches,
   );
   const selectedEventRef = useRef<MatchEventKind>("POINT");
+  const activeTeamRef = useRef<TeamSide>("HOME");
   const matchEngineStateRef = useRef(createInitialMatchEngineState());
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const handleRef = useRef<{
@@ -473,13 +475,13 @@ export default function App() {
     setActiveEventKind: (kind: MatchEventKind) => void;
     undoLastEvent: () => void;
     setVisibleEventLimit: (limit: number | null) => void;
-    setEventContext: (context: {
-      half: 1 | 2;
-      timestamp: number;
-      canLog: boolean;
-      team: MatchTeam;
-    }) => void;
+    setEventContext: (context: { half: 1 | 2; timestamp: number; canLog: boolean }) => void;
   } | null>(null);
+
+  const undoLastEventAction = () => {
+    handleRef.current?.undoLastEvent();
+    setLoggedEvents((prev) => prev.slice(0, -1));
+  };
 
   const selectEventKind = (kind: MatchEventKind) => {
     setSelectedEventKind(kind);
@@ -487,6 +489,10 @@ export default function App() {
     handleRef.current?.setActiveEventKind(kind);
     setIsPickerOpen(false);
   };
+
+  useEffect(() => {
+    activeTeamRef.current = activeTeam;
+  }, [activeTeam]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -499,18 +505,18 @@ export default function App() {
       setActiveEventKind: (kind: MatchEventKind) => void;
       undoLastEvent: () => void;
       setVisibleEventLimit: (limit: number | null) => void;
-      setEventContext: (context: {
-        half: 1 | 2;
-        timestamp: number;
-        canLog: boolean;
-        team: MatchTeam;
-      }) => void;
+      setEventContext: (context: { half: 1 | 2; timestamp: number; canLog: boolean }) => void;
     } | null = null;
     void createPixiPitchSurface(host, {
       sport: "gaelic",
       activeEventKind: selectedEventRef.current,
-      eventTeam: activeTeam,
-      onEventsChange: setLoggedEvents,
+      onEventLogged: (event) => {
+        const teamSide = activeTeamRef.current;
+        setLoggedEvents((prev) => [
+          ...prev,
+          { ...event, id: `team-${teamSide.toLowerCase()}-${event.id}` },
+        ]);
+      },
     }).then((nextHandle) => {
       if (disposed) {
         nextHandle.destroy();
@@ -522,7 +528,6 @@ export default function App() {
         half: matchEngineStateRef.current.currentHalf,
         timestamp: matchEngineStateRef.current.matchTimeSeconds,
         canLog: isLoggingActive(matchEngineStateRef.current.matchState),
-        team: activeTeam,
       });
     });
     return () => {
@@ -562,6 +567,7 @@ export default function App() {
   };
 
   const startSecondHalfAction = () => {
+    setLoggedEvents([]);
     handleRef.current?.setEvents([]);
     const next = startSecondHalf(matchEngineStateRef.current);
     matchEngineStateRef.current = next;
@@ -583,9 +589,8 @@ export default function App() {
       half: currentHalf,
       timestamp: matchTimeSeconds,
       canLog: isLoggingActive(matchState),
-      team: activeTeam,
     });
-  }, [activeTeam, currentHalf, matchTimeSeconds, matchState]);
+  }, [currentHalf, matchTimeSeconds, matchState]);
 
   useEffect(() => {
     const visibleLimit =
@@ -797,7 +802,7 @@ export default function App() {
                   type="button"
                   className="undo-btn"
                   onClick={() => {
-                    handleRef.current?.undoLastEvent();
+                    undoLastEventAction();
                     setIsPickerOpen(false);
                   }}
                   style={{ border: "1px solid rgba(148,163,184,0.4)" }}
@@ -892,7 +897,7 @@ export default function App() {
                   type="button"
                   className="landscape-toolbar-secondary-btn"
                   onClick={() => {
-                    handleRef.current?.undoLastEvent();
+                    undoLastEventAction();
                   }}
                 >
                   Undo

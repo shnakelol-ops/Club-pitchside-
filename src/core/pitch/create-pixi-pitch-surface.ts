@@ -11,7 +11,6 @@ import {
   createMatchEvent,
   type MatchEvent,
   type MatchEventKind,
-  type MatchTeam,
 } from "../stats/stats-event-model";
 import { createMatchEventStore } from "../stats/match-event-store";
 
@@ -21,21 +20,15 @@ export type CreatePixiPitchSurfaceOptions = {
   activeEventKind?: MatchEventKind;
   eventHalf?: 1 | 2;
   eventTimestampSeconds?: number;
-  eventTeam?: MatchTeam;
   canLogEvents?: boolean;
-  onEventsChange?: (events: readonly MatchEvent[]) => void;
+  onEventLogged?: (event: MatchEvent) => void;
   onPitchTap?: (nx: number, ny: number) => void;
 };
 
 export type PixiPitchSurfaceHandle = {
   setEvents: (events: readonly MatchEvent[]) => void;
   setActiveEventKind: (kind: MatchEventKind) => void;
-  setEventContext: (context: {
-    half: 1 | 2;
-    timestamp: number;
-    canLog: boolean;
-    team: MatchTeam;
-  }) => void;
+  setEventContext: (context: { half: 1 | 2; timestamp: number; canLog: boolean }) => void;
   setVisibleEventLimit: (limit: number | null) => void;
   undoLastEvent: () => void;
   destroy: () => void;
@@ -93,10 +86,9 @@ export async function createPixiPitchSurface(
   let activeEventKindState: MatchEventKind = options.activeEventKind ?? "POINT";
   let eventHalfState: 1 | 2 = options.eventHalf ?? 1;
   let eventTimestampSecondsState = Math.max(0, Math.floor(options.eventTimestampSeconds ?? 0));
-  let eventTeamState: MatchTeam = options.eventTeam ?? "HOME";
   let canLogEventsState = options.canLogEvents ?? true;
   let visibleEventLimitState: number | null = null;
-  const onEventsChangeState = options.onEventsChange;
+  const onEventLoggedState = options.onEventLogged;
   const onPitchTapState = options.onPitchTap;
 
   const getRenderableEvents = (): readonly MatchEvent[] => {
@@ -154,11 +146,10 @@ export async function createPixiPitchSurface(
       ny,
       half: eventHalfState,
       timestamp: eventTimestampSecondsState,
-      team: eventTeamState,
     });
     eventStore.add(nextEvent);
     eventsState = eventStore.getAll();
-    onEventsChangeState?.(eventsState);
+    onEventLoggedState?.(nextEvent);
     redrawMarkers();
   });
 
@@ -172,7 +163,6 @@ export async function createPixiPitchSurface(
       eventStore.clear();
       for (const event of events) eventStore.add(event);
       eventsState = eventStore.getAll();
-      onEventsChangeState?.(eventsState);
       redrawMarkers();
     },
     setActiveEventKind: (kind) => {
@@ -182,7 +172,6 @@ export async function createPixiPitchSurface(
       eventHalfState = context.half;
       eventTimestampSecondsState = Math.max(0, Math.floor(context.timestamp));
       canLogEventsState = context.canLog;
-      eventTeamState = context.team;
     },
     setVisibleEventLimit: (limit) => {
       visibleEventLimitState = limit == null ? null : Math.max(1, Math.floor(limit));
@@ -191,7 +180,6 @@ export async function createPixiPitchSurface(
     undoLastEvent: () => {
       eventStore.removeLast();
       eventsState = eventStore.getAll();
-      onEventsChangeState?.(eventsState);
       redrawMarkers();
     },
     destroy: () => {

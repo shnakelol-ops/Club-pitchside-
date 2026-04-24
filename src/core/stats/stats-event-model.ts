@@ -16,12 +16,9 @@ export const MATCH_EVENT_KINDS = [
 
 export type MatchEventKind = (typeof MATCH_EVENT_KINDS)[number];
 
-export type MatchTeam = "HOME" | "AWAY";
-
 export type MatchEvent = {
   id: string;
   kind: MatchEventKind;
-  team: MatchTeam;
   nx: number;
   ny: number;
   half: 1 | 2;
@@ -30,7 +27,6 @@ export type MatchEvent = {
 
 export type CreateMatchEventInput = {
   kind: MatchEventKind;
-  team: MatchTeam;
   nx: number;
   ny: number;
   half: 1 | 2;
@@ -50,7 +46,6 @@ export function createMatchEvent(input: CreateMatchEventInput): MatchEvent {
   return {
     id: input.id ?? newMatchEventId(),
     kind: input.kind,
-    team: input.team,
     nx: clamp01(input.nx),
     ny: clamp01(input.ny),
     half: input.half,
