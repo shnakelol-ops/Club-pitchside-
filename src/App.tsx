@@ -47,9 +47,9 @@ const PANEL_CSS = `
 .event-panel {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 7px;
-  border-radius: 10px;
+  gap: 5px;
+  padding: 6px;
+  border-radius: 9px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(10, 20, 35, 0.75);
   backdrop-filter: blur(4px);
@@ -62,46 +62,55 @@ const PANEL_CSS = `
 .event-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 4px;
+  gap: 3px;
 }
 
 .event-btn {
   border-radius: 8px;
   color: #e2e8f0;
-  font-size: 10px;
+  font-size: 9.5px;
   line-height: 1.1;
-  padding: 6px 4px;
-  min-height: 30px;
+  padding: 5px 4px;
+  min-height: 27px;
   cursor: pointer;
   text-align: center;
   white-space: nowrap;
-  letter-spacing: 0.25px;
+  letter-spacing: 0.32px;
   text-transform: uppercase;
+  transition: box-shadow 140ms ease, transform 120ms ease;
+}
+
+.event-btn:hover {
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.16), 0 0 10px rgba(148, 163, 184, 0.14);
+}
+
+.event-btn:active {
+  transform: translateY(0.5px);
 }
 
 .visibility-row {
   margin-top: 1px;
   display: flex;
-  gap: 4px;
+  gap: 3px;
   flex-wrap: wrap;
 }
 
 .visibility-btn {
   border-radius: 999px;
   color: #e2e8f0;
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 600;
   line-height: 1.1;
-  padding: 4px 7px;
+  padding: 3px 7px;
   cursor: pointer;
   white-space: nowrap;
-  letter-spacing: 0.25px;
+  letter-spacing: 0.3px;
   text-transform: uppercase;
 }
 
 .undo-wrap {
-  margin-top: 8px;
-  padding-top: 8px;
+  margin-top: 7px;
+  padding-top: 7px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
