@@ -243,12 +243,14 @@ const PANEL_CSS = `
 }
 
 .utility-bubble-btn {
-  width: 38px;
-  height: 38px;
-  border-radius: 999px;
-  background: rgba(15, 23, 42, 0.78);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  position: fixed;
+  bottom: 120px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  background: red !important;
+  z-index: 9999;
+  border-radius: 50%;
   color: #dbeafe;
   font-size: 15px;
   line-height: 1;
@@ -257,7 +259,6 @@ const PANEL_CSS = `
   align-items: center;
   justify-content: center;
   pointer-events: auto;
-  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.22), 0 0 12px rgba(59, 130, 246, 0.2);
 }
 
 .utility-menu {
