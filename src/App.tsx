@@ -230,21 +230,26 @@ const PANEL_CSS = `
   align-items: flex-start;
   gap: 6px;
   pointer-events: none;
+  left: 16px;
+  bottom: 90px;
 }
 
 .utility-controls--portrait {
-  left: max(14px, env(safe-area-inset-left));
-  bottom: max(14px, env(safe-area-inset-bottom));
+  left: 16px;
+  bottom: 90px;
   align-items: flex-start;
 }
 
 .utility-controls--landscape {
-  right: max(16px, env(safe-area-inset-right));
-  bottom: calc(max(14px, env(safe-area-inset-bottom)) + 56px);
-  align-items: flex-end;
+  left: 16px;
+  bottom: 90px;
+  align-items: flex-start;
 }
 
 .utility-bubble-btn {
+  position: fixed;
+  left: 16px;
+  bottom: 90px;
   width: 39px;
   height: 39px;
   border-radius: 999px;
