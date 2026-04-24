@@ -446,6 +446,16 @@ const PANEL_CSS = `
   pointer-events: auto;
 }
 
+.utility-active-player-chip-floating {
+  position: fixed;
+  right: 16px;
+  z-index: 22;
+  pointer-events: none;
+  max-width: min(62vw, 228px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .utility-player-btn,
 .utility-review-btn {
   height: 30px;
@@ -1605,6 +1615,10 @@ export default function App() {
     formationCursor += rowSize;
   }
   const activePlayerChipText = activePlayer ? `Active: ${activePlayer}` : null;
+  const activePlayerChipFloatingStyle =
+    keyboardInset > 0
+      ? { bottom: `${keyboardInset + 18}px` }
+      : { bottom: "max(76px, calc(env(safe-area-inset-bottom) + 72px))" };
   const playersPanelStyle = isLandscape
     ? { zIndex: 10001 }
     : keyboardInset > 0
@@ -2034,12 +2048,16 @@ export default function App() {
           role="img"
         />
       </main>
+      {activePlayerChipText ? (
+        <div
+          className="utility-active-player-chip utility-active-player-chip-floating"
+          aria-live="polite"
+          style={activePlayerChipFloatingStyle}
+        >
+          {activePlayerChipText}
+        </div>
+      ) : null}
       <div className={utilityControlsClass}>
-        {activePlayerChipText ? (
-          <div className="utility-active-player-chip" aria-live="polite">
-            {activePlayerChipText}
-          </div>
-        ) : null}
         {isUtilityOpen ? (
           <div className="utility-menu">
             <button type="button" className="utility-menu-btn" onClick={openPlayersPanel}>
