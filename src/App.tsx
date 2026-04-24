@@ -149,6 +149,48 @@ const PANEL_CSS = `
   align-items: center;
   justify-content: center;
 }
+
+.landscape-toolbar {
+  position: fixed;
+  right: 92px;
+  bottom: 30px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: fit-content;
+  max-width: min(620px, calc(100vw - 154px));
+  max-height: 120px;
+  padding: 6px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(10, 20, 35, 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 8px 16px rgba(4, 12, 24, 0.24);
+}
+
+.landscape-toolbar-row {
+  display: flex;
+  gap: 4px;
+}
+
+.landscape-toolbar-btn {
+  min-width: 44px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.86);
+  color: #e2e8f0;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  letter-spacing: 0.22px;
+  text-transform: uppercase;
+}
 `;
 
 const EVENT_LABEL_BY_KIND: Record<MatchEventKind, string> = {
@@ -170,6 +212,11 @@ export default function App() {
   const floatingControlsRef = useRef<HTMLDivElement>(null);
   const [selectedEventKind, setSelectedEventKind] = useState<MatchEventKind>("POINT");
   const [visibilityMode, setVisibilityMode] = useState<VisibilityMode>("ALL");
+  const [isLandscape, setIsLandscape] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(orientation: landscape)").matches,
+  );
   const selectedEventRef = useRef<MatchEventKind>("POINT");
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const handleRef = useRef<{
@@ -222,6 +269,18 @@ export default function App() {
   }, [visibilityMode]);
 
   useEffect(() => {
+    const updateLandscape = () => {
+      setIsLandscape(window.matchMedia("(orientation: landscape)").matches);
+    };
+    updateLandscape();
+
+    window.addEventListener("resize", updateLandscape);
+    return () => {
+      window.removeEventListener("resize", updateLandscape);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!isPickerOpen) return;
 
     const onPointerDownOutside = (event: PointerEvent) => {
@@ -244,7 +303,7 @@ export default function App() {
         ref={floatingControlsRef}
         className="floating-controls"
       >
-          {isPickerOpen ? (
+          {!isLandscape && isPickerOpen ? (
             <div className="event-panel">
               <div className="event-grid">
                 {EVENT_BUTTONS.map((item, idx) => {
@@ -320,7 +379,61 @@ export default function App() {
               </div>
             </div>
           ) : null}
-          {!isPickerOpen ? (
+          {isLandscape && isPickerOpen ? (
+            <div className="landscape-toolbar">
+              <div className="landscape-toolbar-row">
+                {EVENT_BUTTONS.slice(0, 5).map((item) => {
+                  const isActive = item.kind === selectedEventKind;
+                  return (
+                    <button
+                      key={item.label}
+                      type="button"
+                      className="landscape-toolbar-btn"
+                      onClick={() => {
+                        selectEventKind(item.kind);
+                      }}
+                      style={
+                        isActive
+                          ? {
+                              border: "1px solid rgba(34,197,94,0.96)",
+                              background: "rgba(22,101,52,0.7)",
+                            }
+                          : undefined
+                      }
+                    >
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="landscape-toolbar-row">
+                {EVENT_BUTTONS.slice(5).map((item) => {
+                  const isActive = item.kind === selectedEventKind;
+                  return (
+                    <button
+                      key={item.label}
+                      type="button"
+                      className="landscape-toolbar-btn"
+                      onClick={() => {
+                        selectEventKind(item.kind);
+                      }}
+                      style={
+                        isActive
+                          ? {
+                              border: "1px solid rgba(34,197,94,0.96)",
+                              background: "rgba(22,101,52,0.7)",
+                            }
+                          : undefined
+                      }
+                    >
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+          {!isPickerOpen && !isLandscape ? (
             <div aria-live="polite" className="active-chip">
               {EVENT_LABEL_BY_KIND[selectedEventKind]}
             </div>
