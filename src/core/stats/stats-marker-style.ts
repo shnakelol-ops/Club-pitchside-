@@ -30,12 +30,12 @@ function styleForType(type: MatchEventKind): StatsMarkerStyle {
     case "POINT":
       return {
         radius: 3.0,
-        fill: "rgba(167, 243, 208, 1)",
-        stroke: "rgba(5, 150, 105, 1)",
-        strokeWidth: 0.78,
-        contrastStroke: "rgba(3, 18, 14, 0.58)",
-        contrastStrokeWidth: 0.56,
-        centerDot: "rgba(248, 255, 252, 0.92)",
+        fill: "rgba(134, 239, 172, 1)",
+        stroke: "rgba(203, 213, 225, 1)",
+        strokeWidth: 0.82,
+        contrastStroke: "rgba(30, 41, 59, 0.62)",
+        contrastStrokeWidth: 0.58,
+        centerDot: "rgba(248, 250, 252, 0.92)",
         centerDotRadiusScale: 0.24,
       };
     case "WIDE":
