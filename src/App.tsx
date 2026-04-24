@@ -805,7 +805,6 @@ export default function App() {
   };
 
   const startSecondHalfAction = () => {
-    setLoggedEvents([]);
     handleRef.current?.setEvents([]);
     const next = startSecondHalf(matchEngineStateRef.current);
     matchEngineStateRef.current = next;
