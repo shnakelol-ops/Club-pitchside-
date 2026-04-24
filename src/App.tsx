@@ -241,8 +241,8 @@ const PANEL_CSS = `
   z-index: 19;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
+  gap: 8px;
+  padding: 6px 9px;
   border-radius: 12px;
   border: 1px solid rgba(148, 163, 184, 0.3);
   background: rgba(15, 23, 42, 0.62);
@@ -256,32 +256,41 @@ const PANEL_CSS = `
 }
 
 .match-stopwatch-clock {
-  color: #e2e8f0;
-  font-size: 12px;
-  font-weight: 700;
+  color: #f8fafc;
+  font-size: 13px;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.32px;
+  letter-spacing: 0.34px;
+  text-shadow: 0 0 6px rgba(148, 163, 184, 0.24);
 }
 
 .match-stopwatch-controls {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
 .match-stopwatch-btn {
-  height: 22px;
+  position: relative;
+  min-height: 44px;
   border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.34);
-  background: rgba(15, 23, 42, 0.82);
+  border: 1px solid rgba(34, 197, 94, 0.62);
+  background: rgba(22, 101, 52, 0.88);
   color: #e2e8f0;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   line-height: 1;
-  letter-spacing: 0.22px;
-  padding: 0 7px;
+  letter-spacing: 0.24px;
+  padding: 0 11px;
   cursor: pointer;
   text-transform: uppercase;
+  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.24), 0 0 10px rgba(34, 197, 94, 0.28);
+}
+
+.match-stopwatch-btn::before {
+  content: "";
+  position: absolute;
+  inset: -5px;
 }
 `;
 
