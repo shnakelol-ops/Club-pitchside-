@@ -175,6 +175,12 @@ const PANEL_CSS = `
   gap: 4px;
 }
 
+.landscape-toolbar-secondary {
+  display: flex;
+  gap: 3px;
+  margin-top: 2px;
+}
+
 .landscape-toolbar-btn {
   min-width: 44px;
   height: 26px;
@@ -189,6 +195,22 @@ const PANEL_CSS = `
   cursor: pointer;
   white-space: nowrap;
   letter-spacing: 0.22px;
+  text-transform: uppercase;
+}
+
+.landscape-toolbar-secondary-btn {
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.36);
+  background: rgba(15, 23, 42, 0.84);
+  color: #dbe7f5;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0 7px;
+  cursor: pointer;
+  white-space: nowrap;
+  letter-spacing: 0.18px;
   text-transform: uppercase;
 }
 `;
@@ -430,6 +452,43 @@ export default function App() {
                     </button>
                   );
                 })}
+              </div>
+              <div className="landscape-toolbar-secondary">
+                {([
+                  { id: "ALL", label: "Show All" },
+                  { id: "LAST_5", label: "Last 5" },
+                  { id: "LAST_10", label: "Last 10" },
+                ] as const).map((mode) => (
+                  <button
+                    key={mode.id}
+                    type="button"
+                    className="landscape-toolbar-secondary-btn"
+                    onClick={() => {
+                      setVisibilityMode(mode.id);
+                    }}
+                    style={{
+                      border:
+                        visibilityMode === mode.id
+                          ? "1px solid rgba(125,211,252,0.9)"
+                          : "1px solid rgba(148,163,184,0.36)",
+                      background:
+                        visibilityMode === mode.id
+                          ? "rgba(14,116,144,0.4)"
+                          : "rgba(15,23,42,0.84)",
+                    }}
+                  >
+                    {mode.label}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  className="landscape-toolbar-secondary-btn"
+                  onClick={() => {
+                    handleRef.current?.undoLastEvent();
+                  }}
+                >
+                  Undo
+                </button>
               </div>
             </div>
           ) : null}
