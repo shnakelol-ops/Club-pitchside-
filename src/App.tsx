@@ -30,8 +30,6 @@ const EVENT_BUTTONS: Array<{ label: string; kind: MatchEventKind }> = [
   { label: "F−", kind: "FREE_CONCEDED" },
 ];
 
-const LANDSCAPE_TOP_BAR_HEIGHT_PX = 60;
-
 const PANEL_CSS = `
 .app-root {
   position: fixed;
@@ -40,23 +38,10 @@ const PANEL_CSS = `
   height: 100dvh;
   margin: 0;
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: flex-start;
+  align-items: center;
+  justify-content: center;
   background: #0a0f0c;
   overflow: hidden;
-}
-
-.landscape-top-ui {
-  width: 100%;
-  min-height: 60px;
-  height: 60px;
-  max-height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding: 0 10px;
-  box-sizing: border-box;
 }
 
 .floating-controls {
@@ -270,12 +255,11 @@ const PANEL_CSS = `
   text-transform: uppercase;
 }
 
-.match-stopwatch--docked {
-  position: static;
-  top: auto;
-  right: auto;
-  margin-left: auto;
-  z-index: auto;
+@media (orientation: landscape) {
+  .match-stopwatch {
+    top: max(8px, env(safe-area-inset-top));
+    right: max(10px, env(safe-area-inset-right));
+  }
 }
 
 .match-stopwatch-clock {
@@ -507,31 +491,24 @@ export default function App() {
             ? { label: "FT", onClick: endMatchAction }
             : null;
 
-  const matchStopwatch = (
-    <div
-      className={`match-stopwatch${isLandscape ? " match-stopwatch--docked" : ""}`}
-      aria-live="polite"
-    >
-      <span>{matchStateToken}</span>
-      <span className="match-stopwatch-clock">{formatMatchClock(matchTimeSeconds)}</span>
-      <div className="match-stopwatch-controls">
-        {contextualAction ? (
-          <button
-            type="button"
-            className="match-stopwatch-btn"
-            onClick={contextualAction.onClick}
-          >
-            {contextualAction.label}
-          </button>
-        ) : null}
-      </div>
-    </div>
-  );
-
   return (
     <main className="app-root">
       <style>{PANEL_CSS}</style>
-      {isLandscape ? <div className="landscape-top-ui">{matchStopwatch}</div> : matchStopwatch}
+      <div className="match-stopwatch" aria-live="polite">
+        <span>{matchStateToken}</span>
+        <span className="match-stopwatch-clock">{formatMatchClock(matchTimeSeconds)}</span>
+        <div className="match-stopwatch-controls">
+          {contextualAction ? (
+            <button
+              type="button"
+              className="match-stopwatch-btn"
+              onClick={contextualAction.onClick}
+            >
+              {contextualAction.label}
+            </button>
+          ) : null}
+        </div>
+      </div>
       <div
         ref={floatingControlsRef}
         className="floating-controls"
@@ -732,7 +709,7 @@ export default function App() {
         ref={hostRef}
         style={{
           width: "100%",
-          height: isLandscape ? `calc(100% - ${LANDSCAPE_TOP_BAR_HEIGHT_PX}px)` : "100%",
+          height: "100%",
           background: "#0a0f0c",
           overflow: "hidden",
         }}
