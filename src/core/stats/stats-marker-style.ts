@@ -73,14 +73,14 @@ function styleForType(type: MatchEventKind): StatsMarkerStyle {
       };
     case "TWO_POINTER":
       return {
-        radius: 3.3,
-        fill: "rgba(139, 92, 246, 1)",
-        stroke: "rgba(76, 29, 149, 1)",
-        strokeWidth: 0.86,
-        contrastStroke: "rgba(20, 10, 40, 0.62)",
-        contrastStrokeWidth: 0.6,
-        centerDot: "rgba(241, 232, 255, 0.95)",
-        centerDotRadiusScale: 0.22,
+        radius: 3.2,
+        fill: "rgba(167, 243, 208, 1)",
+        stroke: "rgba(5, 150, 105, 1)",
+        strokeWidth: 0.94,
+        contrastStroke: "rgba(2, 26, 20, 0.66)",
+        contrastStrokeWidth: 0.64,
+        centerDot: "rgba(250, 255, 253, 0.96)",
+        centerDotRadiusScale: 0.24,
       };
     case "SHOT":
       return {

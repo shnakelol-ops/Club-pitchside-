@@ -59,17 +59,18 @@ export function drawStatsMarkers(
   const minWorldRadius = minPx / worldToScreenScale;
   const minRingWidth = 1 / worldToScreenScale;
   const minHaloRadius = 2 / worldToScreenScale;
+  const minTwoPointOuterRingWidth = 1.15 / worldToScreenScale;
 
   for (const event of events) {
     const style = getStatsMarkerStyle(event);
     const worldPoint = boardNormToWorld(event.nx, event.ny);
     const isTwoPointer = event.kind === "TWO_POINTER";
-    const styleRadius = isTwoPointer ? style.radius * 1.1 : style.radius;
+    const styleRadius = isTwoPointer ? style.radius * 1.06 : style.radius;
     const radius = Math.max(styleRadius, minWorldRadius);
     const fill = parseCssColorForPixi(style.fill);
     const stroke = parseCssColorForPixi(style.stroke);
     const ringWidth = Math.max(style.strokeWidth, minRingWidth);
-    const haloRadius = radius + minHaloRadius + (isTwoPointer ? 0.45 : 0);
+    const haloRadius = radius + minHaloRadius + (isTwoPointer ? 0.42 : 0);
 
     // Subtle dark halo improves readability against bright turf stripes.
     g.circle(worldPoint.x, worldPoint.y, haloRadius).fill({
@@ -78,10 +79,10 @@ export function drawStatsMarkers(
     });
 
     if (isTwoPointer) {
-      // Give 2PT a light purple aura so it reads as higher-impact.
+      // Give 2PT a subtle mint aura to increase priority without GOAL-level intensity.
       g.circle(worldPoint.x, worldPoint.y, haloRadius + 0.8).fill({
-        color: 0x8b5cf6,
-        alpha: 0.12,
+        color: 0x6ee7b7,
+        alpha: 0.13,
       });
     }
 
@@ -92,6 +93,14 @@ export function drawStatsMarkers(
         color: stroke.color,
         alpha: stroke.alpha,
       });
+
+    if (isTwoPointer) {
+      g.circle(worldPoint.x, worldPoint.y, radius + 0.62).stroke({
+        width: Math.max(1.02, minTwoPointOuterRingWidth),
+        color: 0xecfdf5,
+        alpha: 0.92,
+      });
+    }
 
     // Bright center dot helps identify stacked/overlapping markers quickly.
     g.circle(worldPoint.x, worldPoint.y, Math.max(radius * 0.32, 1.25 / worldToScreenScale))
