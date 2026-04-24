@@ -11,24 +11,6 @@ type RenderableMatchEvent = MatchEvent & {
   team?: "HOME" | "AWAY";
 };
 
-const MARKER_LABEL_STYLE_ONE_DIGIT = new TextStyle({
-  fill: 0xffffff,
-  fontSize: 9.5,
-  fontWeight: "800",
-  align: "center",
-  letterSpacing: 0,
-  stroke: { color: 0x07111f, width: 2.2 },
-});
-
-const MARKER_LABEL_STYLE_TWO_DIGIT = new TextStyle({
-  fill: 0xffffff,
-  fontSize: 8,
-  fontWeight: "800",
-  align: "center",
-  letterSpacing: 0,
-  stroke: { color: 0x07111f, width: 2 },
-});
-
 function clampByte(n: number): number {
   return Math.max(0, Math.min(255, Math.round(n)));
 }
@@ -148,13 +130,27 @@ export function drawStatsMarkers(
     if (shouldShowPlayerNumber) {
       const clampedNumber = Math.min(99, Math.max(1, Math.floor(event.playerNumber)));
       const numberLabel = String(clampedNumber);
+      const numberFontSize = radius * (numberLabel.length === 1 ? 0.9 : 0.65);
       const numberText = new Text({
         text: numberLabel,
-        style: numberLabel.length === 1 ? MARKER_LABEL_STYLE_ONE_DIGIT : MARKER_LABEL_STYLE_TWO_DIGIT,
+        style: new TextStyle({
+          fill: 0xffffff,
+          fontSize: numberFontSize,
+          fontWeight: "bold",
+          align: "center",
+          letterSpacing: 0,
+          stroke: { color: 0x000000, width: 2 },
+        }),
       });
       numberText.anchor.set(0.5);
       numberText.x = 0;
       numberText.y = 0;
+      const markerDiameter = radius * 2;
+      const maxLabelWidth = markerDiameter * 0.8;
+      if (numberText.width > maxLabelWidth && numberText.width > 0) {
+        const downscaleFactor = maxLabelWidth / numberText.width;
+        numberText.scale.set(downscaleFactor);
+      }
       markerContainer.addChild(numberText);
     }
 
