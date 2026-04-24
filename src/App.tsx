@@ -349,6 +349,71 @@ const PANEL_CSS = `
   cursor: pointer;
 }
 
+.scoreboard-rail {
+  position: fixed;
+  top: 50%;
+  left: max(4px, env(safe-area-inset-left));
+  transform: translateY(-50%);
+  z-index: 19;
+  width: clamp(72px, 11vw, 96px);
+  min-height: clamp(220px, 52vh, 420px);
+  max-height: min(80vh, 520px);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 5px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.38);
+  background: rgba(15, 23, 42, 0.66);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 2px 8px rgba(2, 6, 23, 0.3);
+}
+
+.scoreboard-rail-score {
+  color: #f8fafc;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: 0.22px;
+}
+
+.scoreboard-rail-separator {
+  color: rgba(203, 213, 225, 0.84);
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.scoreboard-rail-total {
+  color: rgba(203, 213, 225, 0.88);
+  font-size: 8px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.18px;
+  margin-left: 2px;
+}
+
+.scoreboard-rail-team-btn {
+  min-height: 36px;
+  width: 100%;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.42);
+  background: rgba(15, 23, 42, 0.84);
+  color: #dbe7f5;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.18px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
 .match-stopwatch {
   position: fixed;
   top: 10px;
@@ -387,10 +452,8 @@ const PANEL_CSS = `
 }
 
 @media (orientation: landscape) {
-  .scoreboard-strip {
-    top: max(2px, env(safe-area-inset-top));
+  .scoreboard-rail {
     left: max(3px, env(safe-area-inset-left));
-    width: min(220px, calc(100vw - 12px));
   }
 
   .match-stopwatch {
@@ -655,59 +718,105 @@ export default function App() {
   const homeScore = useMemo(() => computeTeamScore(loggedEvents, "HOME"), [loggedEvents]);
   const awayScore = useMemo(() => computeTeamScore(loggedEvents, "AWAY"), [loggedEvents]);
 
+  const scoreboard = isLandscape ? (
+    <div className="scoreboard-rail" aria-label="Match scoreboard">
+      <button
+        type="button"
+        className="scoreboard-rail-team-btn"
+        onClick={() => setActiveTeam("HOME")}
+        style={
+          activeTeam === "HOME"
+            ? {
+                border: "1px solid rgba(34,197,94,0.9)",
+                background: "rgba(22,101,52,0.72)",
+              }
+            : undefined
+        }
+      >
+        HOME
+      </button>
+      <div className="scoreboard-rail-score">
+        {formatGaelicScore(homeScore)}
+        <span className="scoreboard-rail-total">({homeScore.total})</span>
+      </div>
+      <div className="scoreboard-rail-separator">v</div>
+      <div className="scoreboard-rail-score">
+        {formatGaelicScore(awayScore)}
+        <span className="scoreboard-rail-total">({awayScore.total})</span>
+      </div>
+      <button
+        type="button"
+        className="scoreboard-rail-team-btn"
+        onClick={() => setActiveTeam("AWAY")}
+        style={
+          activeTeam === "AWAY"
+            ? {
+                border: "1px solid rgba(34,197,94,0.9)",
+                background: "rgba(22,101,52,0.72)",
+              }
+            : undefined
+        }
+      >
+        AWAY
+      </button>
+    </div>
+  ) : (
+    <div className="scoreboard-strip" aria-label="Match scoreboard">
+      <div className="scoreboard-strip-line">
+        <span className="scoreboard-side">
+          <span className="scoreboard-side-label">HOME</span>
+          <span className="scoreboard-side-score">
+            {formatGaelicScore(homeScore)}
+            <span className="scoreboard-total">({homeScore.total})</span>
+          </span>
+        </span>
+        <span className="scoreboard-side">
+          <span className="scoreboard-side-label">AWAY</span>
+          <span className="scoreboard-side-score">
+            {formatGaelicScore(awayScore)}
+            <span className="scoreboard-total">({awayScore.total})</span>
+          </span>
+        </span>
+      </div>
+      <div className="scoreboard-team-toggle">
+        <button
+          type="button"
+          className="scoreboard-team-btn"
+          onClick={() => setActiveTeam("HOME")}
+          style={
+            activeTeam === "HOME"
+              ? {
+                  border: "1px solid rgba(34,197,94,0.9)",
+                  background: "rgba(22,101,52,0.72)",
+                }
+              : undefined
+          }
+        >
+          HOME
+        </button>
+        <button
+          type="button"
+          className="scoreboard-team-btn"
+          onClick={() => setActiveTeam("AWAY")}
+          style={
+            activeTeam === "AWAY"
+              ? {
+                  border: "1px solid rgba(34,197,94,0.9)",
+                  background: "rgba(22,101,52,0.72)",
+                }
+              : undefined
+          }
+        >
+          AWAY
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <main className="app-root">
       <style>{PANEL_CSS}</style>
-      <div className="scoreboard-strip" aria-label="Match scoreboard">
-        <div className="scoreboard-strip-line">
-          <span className="scoreboard-side">
-            <span className="scoreboard-side-label">HOME</span>
-            <span className="scoreboard-side-score">
-              {formatGaelicScore(homeScore)}
-              <span className="scoreboard-total">({homeScore.total})</span>
-            </span>
-          </span>
-          <span className="scoreboard-side">
-            <span className="scoreboard-side-label">AWAY</span>
-            <span className="scoreboard-side-score">
-              {formatGaelicScore(awayScore)}
-              <span className="scoreboard-total">({awayScore.total})</span>
-            </span>
-          </span>
-        </div>
-        <div className="scoreboard-team-toggle">
-          <button
-            type="button"
-            className="scoreboard-team-btn"
-            onClick={() => setActiveTeam("HOME")}
-            style={
-              activeTeam === "HOME"
-                ? {
-                    border: "1px solid rgba(34,197,94,0.9)",
-                    background: "rgba(22,101,52,0.72)",
-                  }
-                : undefined
-            }
-          >
-            HOME
-          </button>
-          <button
-            type="button"
-            className="scoreboard-team-btn"
-            onClick={() => setActiveTeam("AWAY")}
-            style={
-              activeTeam === "AWAY"
-                ? {
-                    border: "1px solid rgba(34,197,94,0.9)",
-                    background: "rgba(22,101,52,0.72)",
-                  }
-                : undefined
-            }
-          >
-            AWAY
-          </button>
-        </div>
-      </div>
+      {scoreboard}
       <div className="match-stopwatch" aria-live="polite">
         <span className="match-stopwatch-state">{matchStateToken}</span>
         <span className="match-stopwatch-clock">{formatMatchClock(matchTimeSeconds)}</span>
