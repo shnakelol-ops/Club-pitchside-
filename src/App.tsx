@@ -1616,7 +1616,8 @@ export default function App() {
     setReviewHalf("H2");
     setReviewEventGroup("ALL");
     setReviewZone("FULL");
-    setShowReviewStrip(true);
+    setShowReviewStrip(false);
+    setUtilityPanel(null);
     handleRef.current?.setEvents([]);
     const next = startSecondHalf(matchEngineStateRef.current);
     matchEngineStateRef.current = next;
