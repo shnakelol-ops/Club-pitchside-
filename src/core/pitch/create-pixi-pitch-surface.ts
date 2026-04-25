@@ -88,7 +88,8 @@ export async function createPixiPitchSurface(
   const pitchRoot = createPitchRoot(options.sport);
   world.addChild(pitchRoot.root);
   const statsMarkers = new Graphics();
-  statsMarkers.eventMode = "none";
+  statsMarkers.eventMode = "passive";
+  statsMarkers.zIndex = 110;
   world.addChild(statsMarkers);
 
   const eventStore = createMatchEventStore(options.events ?? []);
