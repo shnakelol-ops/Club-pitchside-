@@ -18,7 +18,9 @@ type VisibilityMode = "ALL" | "LAST_5" | "LAST_10";
 type TeamScore = { goals: number; points: number; total: number };
 type TeamSide = "HOME" | "AWAY";
 type UtilityPanel = "PLAYERS" | "REVIEW" | null;
-type ReviewMode = "FIRST" | "SECOND" | "FULL";
+type ReviewHalf = "H1" | "H2" | "FULL";
+type ReviewEventGroup = "ALL" | "SCORES" | "WIDES" | "SHOTS" | "TURNOVERS" | "KICKOUTS" | "FREES";
+type ReviewZone = "FULL" | "OWN_HALF" | "OPPOSITION_HALF";
 type PlayerRole = "STARTER" | "SUB";
 type SquadPlayer = { id: string; name: string; number: number; role: PlayerRole };
 type Squad = { id: string; name: string; players: SquadPlayer[] };
@@ -46,6 +48,14 @@ const EVENT_BUTTONS: Array<{ label: string; kind: MatchEventKind }> = [
 const AWAY_INSTANT_SCORING_KINDS = new Set<MatchEventKind>(["GOAL", "POINT", "TWO_POINTER"]);
 const FORMATION_ROW_SIZES = [1, 3, 3, 2, 3, 3] as const;
 const SQUADS_STORAGE_KEY = "pitchsideclub.squads";
+const REVIEW_EVENT_GROUP_KINDS: Record<Exclude<ReviewEventGroup, "ALL">, readonly MatchEventKind[]> = {
+  SCORES: ["GOAL", "POINT", "TWO_POINTER"],
+  WIDES: ["WIDE"],
+  SHOTS: ["SHOT"],
+  TURNOVERS: ["TURNOVER_WON", "TURNOVER_LOST"],
+  KICKOUTS: ["KICKOUT_WON", "KICKOUT_CONCEDED"],
+  FREES: ["FREE_WON", "FREE_CONCEDED"],
+};
 
 function newLocalEventId(): string {
   const c = globalThis.crypto;
@@ -160,12 +170,27 @@ function formatGaelicScore(score: TeamScore): string {
 
 function getRenderablePitchEvents(
   events: readonly LoggedMatchEvent[],
-  reviewMode: ReviewMode,
+  reviewHalf: ReviewHalf,
+  reviewEventGroup: ReviewEventGroup,
+  reviewZone: ReviewZone,
 ): LoggedMatchEvent[] {
-  const nonInstantEvents = events.filter((event) => !event.id.includes("-instant-score-"));
-  if (reviewMode === "FULL") return nonInstantEvents;
-  const targetHalf = reviewMode === "FIRST" ? 1 : 2;
-  return nonInstantEvents.filter((event) => event.half === targetHalf);
+  const groupKinds =
+    reviewEventGroup === "ALL"
+      ? null
+      : new Set<MatchEventKind>(REVIEW_EVENT_GROUP_KINDS[reviewEventGroup]);
+  return events.filter((event) => {
+    if (event.id.includes("-instant-score-")) return false;
+
+    if (reviewHalf === "H1" && event.half !== 1) return false;
+    if (reviewHalf === "H2" && event.half !== 2) return false;
+
+    if (groupKinds && !groupKinds.has(event.kind)) return false;
+
+    if (reviewZone === "OWN_HALF" && event.nx > 0.5) return false;
+    if (reviewZone === "OPPOSITION_HALF" && event.nx <= 0.5) return false;
+
+    return true;
+  });
 }
 
 const PANEL_CSS = `
@@ -1038,7 +1063,9 @@ export default function App() {
   const [activePlayerNumber, setActivePlayerNumber] = useState<number | null>(null);
   const [playerDraft, setPlayerDraft] = useState("");
   const [showPlayerInitials, setShowPlayerInitials] = useState(true);
-  const [reviewMode, setReviewMode] = useState<ReviewMode>("FULL");
+  const [reviewHalf, setReviewHalf] = useState<ReviewHalf>("FULL");
+  const [reviewEventGroup, setReviewEventGroup] = useState<ReviewEventGroup>("ALL");
+  const [reviewZone, setReviewZone] = useState<ReviewZone>("FULL");
   const [loggedEvents, setLoggedEvents] = useState<readonly LoggedMatchEvent[]>([]);
   const [visibilityMode, setVisibilityMode] = useState<VisibilityMode>("ALL");
   const [matchState, setMatchState] = useState<MatchState>("PRE_MATCH");
@@ -1054,7 +1081,9 @@ export default function App() {
   const activeTeamRef = useRef<TeamSide>("HOME");
   const activePlayerRef = useRef<string | null>(null);
   const activePlayerNumberRef = useRef<number | null>(null);
-  const reviewModeRef = useRef<ReviewMode>("FULL");
+  const reviewHalfRef = useRef<ReviewHalf>("FULL");
+  const reviewEventGroupRef = useRef<ReviewEventGroup>("ALL");
+  const reviewZoneRef = useRef<ReviewZone>("FULL");
   const activeSquadIdRef = useRef("");
   const homeNameInputRef = useRef<HTMLInputElement>(null);
   const awayNameInputRef = useRef<HTMLInputElement>(null);
@@ -1280,8 +1309,16 @@ export default function App() {
   }, [activePlayerNumber]);
 
   useEffect(() => {
-    reviewModeRef.current = reviewMode;
-  }, [reviewMode]);
+    reviewHalfRef.current = reviewHalf;
+  }, [reviewHalf]);
+
+  useEffect(() => {
+    reviewEventGroupRef.current = reviewEventGroup;
+  }, [reviewEventGroup]);
+
+  useEffect(() => {
+    reviewZoneRef.current = reviewZone;
+  }, [reviewZone]);
 
   useEffect(() => {
     if (!activePlayer) {
@@ -1368,7 +1405,12 @@ export default function App() {
         setLoggedEvents((prev) => {
           const nextLoggedEvents = [...prev, nextEvent];
           handleRef.current?.setEvents(
-            getRenderablePitchEvents(nextLoggedEvents, reviewModeRef.current),
+            getRenderablePitchEvents(
+              nextLoggedEvents,
+              reviewHalfRef.current,
+              reviewEventGroupRef.current,
+              reviewZoneRef.current,
+            ),
           );
           return nextLoggedEvents;
         });
@@ -1425,8 +1467,8 @@ export default function App() {
   };
 
   const startSecondHalfAction = () => {
-    reviewModeRef.current = "SECOND";
-    setReviewMode("SECOND");
+    reviewHalfRef.current = "H2";
+    setReviewHalf("H2");
     handleRef.current?.setEvents([]);
     const next = startSecondHalf(matchEngineStateRef.current);
     matchEngineStateRef.current = next;
@@ -1482,8 +1524,12 @@ export default function App() {
 
   const resetMatch = () => {
     setLoggedEvents([]);
-    reviewModeRef.current = "FULL";
-    setReviewMode("FULL");
+    reviewHalfRef.current = "FULL";
+    reviewEventGroupRef.current = "ALL";
+    reviewZoneRef.current = "FULL";
+    setReviewHalf("FULL");
+    setReviewEventGroup("ALL");
+    setReviewZone("FULL");
     setUtilityPanel(null);
     setActivePlayer(null);
     setActivePlayerNumber(null);
@@ -1520,8 +1566,10 @@ export default function App() {
   }, [showPlayerInitials]);
 
   useEffect(() => {
-    handleRef.current?.setEvents(getRenderablePitchEvents(loggedEvents, reviewMode));
-  }, [loggedEvents, reviewMode]);
+    handleRef.current?.setEvents(
+      getRenderablePitchEvents(loggedEvents, reviewHalf, reviewEventGroup, reviewZone),
+    );
+  }, [loggedEvents, reviewHalf, reviewEventGroup, reviewZone]);
 
   useEffect(() => {
     const updateLandscape = () => {
@@ -1588,6 +1636,11 @@ export default function App() {
           : matchState === "SECOND_HALF"
             ? { label: "FT", onClick: endMatchAction }
             : null;
+
+  const renderableLoggedEvents = useMemo(
+    () => getRenderablePitchEvents(loggedEvents, reviewHalf, reviewEventGroup, reviewZone),
+    [loggedEvents, reviewHalf, reviewEventGroup, reviewZone],
+  );
 
   const homeScore = useMemo(() => computeTeamScore(loggedEvents, "HOME"), [loggedEvents]);
   const awayScore = useMemo(() => computeTeamScore(loggedEvents, "AWAY"), [loggedEvents]);
@@ -2036,9 +2089,12 @@ export default function App() {
       {utilityPanel === "REVIEW" ? (
         <div className={utilityPanelClass} role="dialog" aria-label="Review mode">
           <div className="utility-panel-title">Review</div>
+          <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.86 }}>
+            Half
+          </div>
           {([
-            { id: "FIRST", label: "H1" },
-            { id: "SECOND", label: "H2" },
+            { id: "H1", label: "H1" },
+            { id: "H2", label: "H2" },
             { id: "FULL", label: "FULL" },
           ] as const).map((option) => (
             <button
@@ -2046,10 +2102,10 @@ export default function App() {
               type="button"
               className="utility-review-btn"
               onClick={() => {
-                setReviewMode(option.id);
+                setReviewHalf(option.id);
               }}
               style={
-                reviewMode === option.id
+                reviewHalf === option.id
                   ? {
                       border: "1px solid rgba(125,211,252,0.9)",
                       background: "rgba(14,116,144,0.38)",
@@ -2060,6 +2116,70 @@ export default function App() {
               {option.label}
             </button>
           ))}
+          <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.86 }}>
+            Event Group
+          </div>
+          {([
+            { id: "ALL", label: "ALL" },
+            { id: "SCORES", label: "SCORES" },
+            { id: "WIDES", label: "WIDES" },
+            { id: "SHOTS", label: "SHOTS" },
+            { id: "TURNOVERS", label: "TURNOVERS" },
+            { id: "KICKOUTS", label: "KICKOUTS" },
+            { id: "FREES", label: "FREES" },
+          ] as const).map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              className="utility-review-btn"
+              onClick={() => {
+                setReviewEventGroup(option.id);
+              }}
+              style={
+                reviewEventGroup === option.id
+                  ? {
+                      border: "1px solid rgba(125,211,252,0.9)",
+                      background: "rgba(14,116,144,0.38)",
+                    }
+                  : undefined
+              }
+            >
+              {option.label}
+            </button>
+          ))}
+          <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.86 }}>
+            Zone
+          </div>
+          {([
+            { id: "FULL", label: "FULL" },
+            { id: "OWN_HALF", label: "OWN HALF" },
+            { id: "OPPOSITION_HALF", label: "OPP HALF" },
+          ] as const).map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              className="utility-review-btn"
+              onClick={() => {
+                setReviewZone(option.id);
+              }}
+              style={
+                reviewZone === option.id
+                  ? {
+                      border: "1px solid rgba(125,211,252,0.9)",
+                      background: "rgba(14,116,144,0.38)",
+                    }
+                  : undefined
+              }
+            >
+              {option.label}
+            </button>
+          ))}
+          <div
+            className="utility-panel-title"
+            style={{ fontSize: "9px", opacity: 0.9, textTransform: "none" }}
+          >
+            {renderableLoggedEvents.length} events shown
+          </div>
           <button type="button" className="utility-panel-close" onClick={closeUtilityPanel}>
             Close
           </button>
