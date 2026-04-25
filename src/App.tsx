@@ -1468,7 +1468,11 @@ export default function App() {
 
   const startSecondHalfAction = () => {
     reviewHalfRef.current = "H2";
+    reviewEventGroupRef.current = "ALL";
+    reviewZoneRef.current = "FULL";
     setReviewHalf("H2");
+    setReviewEventGroup("ALL");
+    setReviewZone("FULL");
     handleRef.current?.setEvents([]);
     const next = startSecondHalf(matchEngineStateRef.current);
     matchEngineStateRef.current = next;
