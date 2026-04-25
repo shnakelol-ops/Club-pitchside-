@@ -1295,16 +1295,6 @@ export default function App() {
   };
 
   const handlePlayerPick = (player: SquadPlayer) => {
-    if (SCORE_EVENT_KINDS.has(selectedEventRef.current)) {
-      pendingScorerRef.current = {
-        name: player.name,
-        number: player.number,
-        squadId: activeSquadIdRef.current,
-      };
-      closeUtilityPanel();
-      setIsUtilityOpen(false);
-      return;
-    }
     toggleActivePlayerById(player.id);
     closeUtilityPanel();
     setIsUtilityOpen(false);
@@ -2126,35 +2116,6 @@ export default function App() {
               {activePlayerChipText}
             </div>
           ) : null}
-          <div className="utility-squad-row">
-            <button
-              type="button"
-              className="utility-review-btn"
-              onClick={() => {
-                setShowPlayerInitials((prev) => !prev);
-              }}
-            >
-              Numbers: {showPlayerInitials ? "ON" : "OFF"}
-            </button>
-            <button
-              type="button"
-              className="utility-review-btn"
-              disabled={!activePlayerEntry}
-              onClick={editActivePlayer}
-            >
-              Edit Active
-            </button>
-            <button
-              type="button"
-              className="utility-review-btn"
-              disabled={!activePlayerEntry}
-              onClick={() => {
-                selectActivePlayerById(null);
-              }}
-            >
-              Clear
-            </button>
-          </div>
           <div className="utility-player-add-row">
             <input
               type="text"
