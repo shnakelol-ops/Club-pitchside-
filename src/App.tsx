@@ -2172,6 +2172,7 @@ export default function App() {
                 className="utility-review-btn"
                 onClick={() => {
                   setReviewHalf(option.id);
+                closeUtilityPanel();
                 }}
                 style={
                   reviewHalf === option.id
@@ -2203,6 +2204,7 @@ export default function App() {
                 className="utility-review-btn"
                 onClick={() => {
                   setReviewEventGroup(option.id);
+                closeUtilityPanel();
                 }}
                 style={
                   reviewEventGroup === option.id
@@ -2230,6 +2232,7 @@ export default function App() {
                 className="utility-review-btn"
                 onClick={() => {
                   setReviewZone(option.id);
+                closeUtilityPanel();
                 }}
                 style={
                   reviewZone === option.id
