@@ -18,7 +18,19 @@ type VisibilityMode = "ALL" | "LAST_5" | "LAST_10";
 type TeamScore = { goals: number; points: number; total: number };
 type TeamSide = "HOME" | "AWAY";
 type UtilityPanel = "PLAYERS" | "REVIEW" | null;
-type ReviewMode = "FIRST" | "SECOND" | "FULL";
+type ReviewHalf = "H1" | "H2" | "FULL";
+type ReviewEventGroup = "ALL" | "SCORES" | "WIDES" | "SHOTS" | "TURNOVERS" | "KICKOUTS" | "FREES";
+type ReviewZone = "FULL" | "OWN_HALF" | "OPPOSITION_HALF";
+type PlayerRole = "STARTER" | "SUB";
+type SquadPlayer = { id: string; name: string; number: number; role: PlayerRole };
+type Squad = { id: string; name: string; players: SquadPlayer[] };
+type LoggedMatchEvent = MatchEvent & {
+  playerId?: string;
+  playerName?: string;
+  playerNumber?: number;
+  squadId?: string;
+  team?: TeamSide;
+};
 
 const EVENT_BUTTONS: Array<{ label: string; kind: MatchEventKind }> = [
   { label: "GOAL", kind: "GOAL" },
@@ -35,13 +47,96 @@ const EVENT_BUTTONS: Array<{ label: string; kind: MatchEventKind }> = [
 ];
 
 const AWAY_INSTANT_SCORING_KINDS = new Set<MatchEventKind>(["GOAL", "POINT", "TWO_POINTER"]);
-
+const SCORE_EVENT_KINDS = new Set<MatchEventKind>(["GOAL", "POINT", "TWO_POINTER"]);
+const FORMATION_ROW_SIZES = [1, 3, 3, 2, 3, 3] as const;
+const SQUADS_STORAGE_KEY = "pitchsideclub.squads";
+const REVIEW_EVENT_GROUP_KINDS: Record<Exclude<ReviewEventGroup, "ALL">, readonly MatchEventKind[]> = {
+  SCORES: ["GOAL", "POINT", "TWO_POINTER"],
+  WIDES: ["WIDE"],
+  SHOTS: ["SHOT"],
+  TURNOVERS: ["TURNOVER_WON", "TURNOVER_LOST"],
+  KICKOUTS: ["KICKOUT_WON", "KICKOUT_CONCEDED"],
+  FREES: ["FREE_WON", "FREE_CONCEDED"],
+};
 function newLocalEventId(): string {
   const c = globalThis.crypto;
   if (c && "randomUUID" in c && typeof c.randomUUID === "function") {
     return c.randomUUID();
   }
   return `evt-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+}
+
+function createDefaultSquad(): Squad {
+  return {
+    id: `squad-${newLocalEventId()}`,
+    name: "HOME",
+    players: [],
+  };
+}
+
+function parseStoredPlayer(input: unknown, idx: number): SquadPlayer | null {
+  if (typeof input === "string") {
+    const trimmedName = input.trim();
+    if (trimmedName.length === 0) return null;
+    return {
+      id: `player-${idx + 1}-${trimmedName.toLowerCase().replace(/\s+/g, "-")}`,
+      name: trimmedName,
+      number: idx + 1,
+      role: idx < 15 ? "STARTER" : "SUB",
+    };
+  }
+  if (!input || typeof input !== "object") return null;
+  const rawName = "name" in input ? input.name : null;
+  if (typeof rawName !== "string") return null;
+  const nextName = rawName.trim().slice(0, 24);
+  if (nextName.length === 0) return null;
+  const rawNumber = "number" in input ? input.number : null;
+  const parsedNumber =
+    typeof rawNumber === "number" && Number.isFinite(rawNumber)
+      ? Math.max(1, Math.min(99, Math.floor(rawNumber)))
+      : idx + 1;
+  const rawRole = "role" in input ? input.role : null;
+  const nextRole: PlayerRole =
+    rawRole === "STARTER" || rawRole === "SUB" ? rawRole : idx < 15 ? "STARTER" : "SUB";
+  const rawId = "id" in input ? input.id : null;
+  const nextId =
+    typeof rawId === "string" && rawId.trim().length > 0
+      ? rawId
+      : `player-${idx + 1}-${nextName.toLowerCase().replace(/\s+/g, "-")}`;
+  return {
+    id: nextId,
+    name: nextName,
+    number: parsedNumber,
+    role: nextRole,
+  };
+}
+
+function parseStoredSquads(input: string | null): Squad[] {
+  if (!input) return [];
+  try {
+    const parsed = JSON.parse(input);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((item) => {
+        if (!item || typeof item !== "object") return null;
+        const maybeId = "id" in item ? item.id : null;
+        const maybeName = "name" in item ? item.name : null;
+        const maybePlayers = "players" in item ? item.players : null;
+        if (typeof maybeId !== "string" || typeof maybeName !== "string") return null;
+        if (!Array.isArray(maybePlayers)) return null;
+        const players = maybePlayers
+          .map((player, idx) => parseStoredPlayer(player, idx))
+          .filter((player): player is SquadPlayer => player !== null);
+        return {
+          id: maybeId,
+          name: maybeName.slice(0, 24),
+          players,
+        };
+      })
+      .filter((squad): squad is Squad => squad !== null);
+  } catch {
+    return [];
+  }
 }
 
 function computeTeamScore(events: readonly MatchEvent[], team: TeamSide): TeamScore {
@@ -72,6 +167,31 @@ function computeTeamScore(events: readonly MatchEvent[], team: TeamSide): TeamSc
 
 function formatGaelicScore(score: TeamScore): string {
   return `${score.goals}-${String(score.points).padStart(2, "0")}`;
+}
+
+function getRenderablePitchEvents(
+  events: readonly LoggedMatchEvent[],
+  reviewHalf: ReviewHalf,
+  reviewEventGroup: ReviewEventGroup,
+  reviewZone: ReviewZone,
+): LoggedMatchEvent[] {
+  const groupKinds =
+    reviewEventGroup === "ALL"
+      ? null
+      : new Set<MatchEventKind>(REVIEW_EVENT_GROUP_KINDS[reviewEventGroup]);
+  return events.filter((event) => {
+    if (event.id.includes("-instant-score-")) return false;
+
+    if (reviewHalf === "H1" && event.half !== 1) return false;
+    if (reviewHalf === "H2" && event.half !== 2) return false;
+
+    if (groupKinds && !groupKinds.has(event.kind)) return false;
+
+    if (reviewZone === "OWN_HALF" && event.nx > 0.5) return false;
+    if (reviewZone === "OPPOSITION_HALF" && event.nx <= 0.5) return false;
+
+    return true;
+  });
 }
 
 const PANEL_CSS = `
@@ -274,6 +394,8 @@ const PANEL_CSS = `
   box-shadow: 0 8px 18px rgba(4, 12, 24, 0.26);
   min-width: 110px;
   pointer-events: auto;
+  margin-left: 44px;
+  margin-bottom: 8px;
 }
 
 .utility-menu-btn {
@@ -288,6 +410,20 @@ const PANEL_CSS = `
   letter-spacing: 0.2px;
   text-transform: uppercase;
   cursor: pointer;
+}
+
+.active-player-chip {
+  border: 1px solid rgba(125, 211, 252, 0.42);
+  border-radius: 999px;
+  background: rgba(14, 24, 40, 0.8);
+  color: #dbeafe;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.18px;
+  padding: 5px 9px;
+  white-space: nowrap;
+  pointer-events: auto;
 }
 
 .utility-overlay-panel {
@@ -314,7 +450,199 @@ const PANEL_CSS = `
 
 .utility-overlay-panel--landscape {
   right: 16px;
-  bottom: 126px;
+  bottom: 142px;
+  max-height: calc(100dvh - 24px);
+  overflow: hidden;
+}
+
+.utility-overlay-panel--review-landscape {
+  right: 16px;
+  bottom: 142px;
+  max-height: calc(100dvh - 24px);
+  min-width: 198px;
+  max-width: min(70vw, 320px);
+  padding: 6px;
+  gap: 4px;
+}
+
+.utility-overlay-panel--review-landscape .utility-review-btn {
+  min-height: 26px;
+  height: 26px;
+  font-size: 9px;
+  padding: 0 8px;
+}
+
+.utility-review-scroll {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 4px;
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 2px;
+}
+
+.utility-panel-close--sticky {
+  position: sticky;
+  bottom: 0;
+  margin-top: 4px;
+  background: rgba(15, 23, 42, 0.95);
+  z-index: 1;
+}
+
+.review-strip {
+  position: fixed;
+  z-index: 23;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(10, 20, 35, 0.82);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 8px 16px rgba(4, 12, 24, 0.28);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  white-space: nowrap;
+}
+
+.review-strip--portrait {
+  top: max(56px, calc(env(safe-area-inset-top) + 52px));
+}
+
+.review-strip--landscape {
+  top: max(8px, env(safe-area-inset-top));
+}
+
+.review-strip-chip {
+  min-height: 24px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.36);
+  background: rgba(15, 23, 42, 0.88);
+  color: #dbe7f5;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.16px;
+  text-transform: uppercase;
+  padding: 0 8px;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.review-event-card {
+  position: fixed;
+  z-index: 22;
+  left: 12px;
+  min-width: 170px;
+  max-width: min(58vw, 260px);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  background: rgba(10, 20, 35, 0.9);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 8px 16px rgba(4, 12, 24, 0.28);
+}
+
+.review-event-card--portrait {
+  top: max(96px, calc(env(safe-area-inset-top) + 92px));
+}
+
+.review-event-card--landscape {
+  top: max(48px, calc(env(safe-area-inset-top) + 44px));
+}
+
+.review-event-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.review-event-card-title {
+  color: #dbe7f5;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.18px;
+  text-transform: uppercase;
+}
+
+.review-event-card-close {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  background: rgba(15, 23, 42, 0.86);
+  color: #dbe7f5;
+  font-size: 11px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.review-event-card-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: #dbe7f5;
+  font-size: 9px;
+  letter-spacing: 0.16px;
+}
+
+.review-event-card-row-label {
+  opacity: 0.84;
+  text-transform: uppercase;
+}
+
+.review-event-card-row-value {
+  font-weight: 700;
+  text-align: right;
+}
+
+.review-quick-strip {
+  position: fixed;
+  left: 8px;
+  right: 8px;
+  z-index: 23;
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding: 5px 6px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(10, 20, 35, 0.76);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 8px 14px rgba(4, 12, 24, 0.24);
+  -webkit-overflow-scrolling: touch;
+}
+
+.review-quick-btn {
+  height: 24px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.36);
+  background: rgba(15, 23, 42, 0.86);
+  color: #dbe7f5;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.16px;
+  text-transform: uppercase;
+  padding: 0 8px;
+  white-space: nowrap;
+  cursor: pointer;
+  flex: 0 0 auto;
 }
 
 .utility-panel-title {
@@ -323,6 +651,85 @@ const PANEL_CSS = `
   font-weight: 700;
   letter-spacing: 0.22px;
   text-transform: uppercase;
+}
+
+.utility-squad-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.utility-squad-select {
+  flex: 1;
+  min-height: 28px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.38);
+  background: rgba(15, 23, 42, 0.86);
+  color: #dbe7f5;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0 8px;
+}
+
+.utility-squad-create {
+  display: flex;
+  gap: 6px;
+}
+
+.utility-squad-input {
+  flex: 1;
+  min-height: 28px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.38);
+  background: rgba(15, 23, 42, 0.84);
+  color: #dbe7f5;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0 8px;
+}
+
+.utility-player-add-row {
+  display: flex;
+  gap: 6px;
+}
+
+.utility-player-input {
+  flex: 1;
+  min-height: 28px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.38);
+  background: rgba(15, 23, 42, 0.84);
+  color: #dbe7f5;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0 8px;
+}
+
+.utility-active-player-chip {
+  border: 1px solid rgba(125, 211, 252, 0.42);
+  border-radius: 999px;
+  background: rgba(14, 116, 144, 0.28);
+  color: #dbeafe;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.16px;
+  padding: 5px 8px;
+  text-transform: uppercase;
+  pointer-events: auto;
+}
+
+.utility-active-player-chip-floating {
+  position: fixed;
+  right: 16px;
+  z-index: 22;
+  pointer-events: none;
+  max-width: min(62vw, 228px);
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .utility-player-btn,
@@ -339,6 +746,62 @@ const PANEL_CSS = `
   padding: 0 9px;
   letter-spacing: 0.2px;
   cursor: pointer;
+}
+
+.utility-formation {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.utility-formation-row {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+}
+
+.utility-player-pill {
+  min-height: 24px;
+  max-width: 98px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.36);
+  background: rgba(15, 23, 42, 0.86);
+  color: #dbe7f5;
+  font-size: 9.5px;
+  font-weight: 600;
+  line-height: 1;
+  text-align: center;
+  padding: 0 8px;
+  letter-spacing: 0.18px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.utility-subs-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.utility-subs-title {
+  color: rgba(219, 231, 245, 0.84);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+}
+
+.utility-subs-row {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .utility-panel-close {
@@ -780,15 +1243,30 @@ export default function App() {
   const [teamNameDraft, setTeamNameDraft] = useState("");
   const [isUtilityOpen, setIsUtilityOpen] = useState(false);
   const [utilityPanel, setUtilityPanel] = useState<UtilityPanel>(null);
-  const [players, setPlayers] = useState<string[]>([]);
+  const [squads, setSquads] = useState<Squad[]>(() => {
+    if (typeof window === "undefined") {
+      return [createDefaultSquad()];
+    }
+    const parsed = parseStoredSquads(window.localStorage.getItem(SQUADS_STORAGE_KEY));
+    return parsed.length > 0 ? parsed : [createDefaultSquad()];
+  });
+  const [activeSquadId, setActiveSquadId] = useState("");
+  const [squadDraft, setSquadDraft] = useState("");
   const [activePlayer, setActivePlayer] = useState<string | null>(null);
+  const [activePlayerNumber, setActivePlayerNumber] = useState<number | null>(null);
   const [playerDraft, setPlayerDraft] = useState("");
-  const [reviewMode, setReviewMode] = useState<ReviewMode>("FULL");
-  const [loggedEvents, setLoggedEvents] = useState<readonly MatchEvent[]>([]);
+  const [showPlayerInitials] = useState(true);
+  const [reviewHalf, setReviewHalf] = useState<ReviewHalf>("FULL");
+  const [reviewEventGroup, setReviewEventGroup] = useState<ReviewEventGroup>("ALL");
+  const [reviewZone, setReviewZone] = useState<ReviewZone>("FULL");
+  const [showReviewStrip, setShowReviewStrip] = useState(false);
+  const [selectedReviewEventId, setSelectedReviewEventId] = useState<string | null>(null);
+  const [loggedEvents, setLoggedEvents] = useState<readonly LoggedMatchEvent[]>([]);
   const [visibilityMode, setVisibilityMode] = useState<VisibilityMode>("ALL");
   const [matchState, setMatchState] = useState<MatchState>("PRE_MATCH");
   const [currentHalf, setCurrentHalf] = useState<1 | 2>(1);
   const [matchTimeSeconds, setMatchTimeSeconds] = useState(0);
+  const [keyboardInset, setKeyboardInset] = useState(0);
   const [isLandscape, setIsLandscape] = useState(
     () =>
       typeof window !== "undefined" &&
@@ -796,6 +1274,13 @@ export default function App() {
   );
   const selectedEventRef = useRef<MatchEventKind>("POINT");
   const activeTeamRef = useRef<TeamSide>("HOME");
+  const activePlayerRef = useRef<string | null>(null);
+  const activePlayerNumberRef = useRef<number | null>(null);
+  const reviewHalfRef = useRef<ReviewHalf>("FULL");
+  const reviewEventGroupRef = useRef<ReviewEventGroup>("ALL");
+  const reviewZoneRef = useRef<ReviewZone>("FULL");
+  const pendingScorerRef = useRef<{ name: string; number: number; squadId: string } | null>(null);
+  const activeSquadIdRef = useRef("");
   const homeNameInputRef = useRef<HTMLInputElement>(null);
   const awayNameInputRef = useRef<HTMLInputElement>(null);
   const matchEngineStateRef = useRef(createInitialMatchEngineState());
@@ -805,10 +1290,149 @@ export default function App() {
     setEvents: (events: readonly import("./core/stats/stats-event-model").MatchEvent[]) => void;
     setActiveEventKind: (kind: MatchEventKind) => void;
     undoLastEvent: () => void;
+    setShowPlayerInitials: (show: boolean) => void;
+    setOnMarkerTap: (handler: ((eventId: string) => void) | null) => void;
     setVisibleEventLimit: (limit: number | null) => void;
     setEventContext: (context: { half: 1 | 2; timestamp: number; canLog: boolean }) => void;
   } | null>(null);
   const canEditTeamNames = matchState === "PRE_MATCH";
+  const activeSquad =
+    squads.find((squad) => squad.id === activeSquadId) ?? squads[0] ?? createDefaultSquad();
+  const activeSquadPlayers = activeSquad.players;
+  const activePlayerEntry = activePlayer
+    ? activeSquadPlayers.find(
+        (player) => player.name === activePlayer && player.number === (activePlayerNumber ?? -1),
+      ) ??
+      activeSquadPlayers.find((player) => player.name === activePlayer) ??
+      null
+    : null;
+
+  const setActiveSquadById = (nextSquadId: string) => {
+    setActiveSquadId(nextSquadId);
+    setActivePlayer(null);
+    setActivePlayerNumber(null);
+    setPlayerDraft("");
+  };
+
+  const updateActiveSquadPlayers = (
+    updater: (prevPlayers: SquadPlayer[]) => SquadPlayer[],
+    nextActivePlayerId?: string | null,
+  ) => {
+    const nextPlayersForActiveSquad = updater([...activeSquad.players]);
+    const nextSelectedPlayer =
+      nextActivePlayerId === undefined
+        ? undefined
+        : nextPlayersForActiveSquad.find((player) => player.id === nextActivePlayerId) ?? null;
+    setSquads((prevSquads) =>
+      prevSquads.map((squad) =>
+        squad.id === activeSquad.id ? { ...squad, players: nextPlayersForActiveSquad } : squad,
+      ),
+    );
+    if (nextActivePlayerId !== undefined) {
+      if (nextSelectedPlayer) {
+        setActivePlayer(nextSelectedPlayer.name);
+        setActivePlayerNumber(nextSelectedPlayer.number);
+        activePlayerRef.current = nextSelectedPlayer.name;
+        activePlayerNumberRef.current = nextSelectedPlayer.number;
+      } else {
+        setActivePlayer(null);
+        setActivePlayerNumber(null);
+        activePlayerRef.current = null;
+        activePlayerNumberRef.current = null;
+      }
+    }
+  };
+
+  const selectActivePlayerById = (playerId: string | null) => {
+    if (!playerId) {
+      setActivePlayer(null);
+      setActivePlayerNumber(null);
+      activePlayerRef.current = null;
+      activePlayerNumberRef.current = null;
+      return;
+    }
+    const player = activeSquadPlayers.find((entry) => entry.id === playerId);
+    if (!player) {
+      setActivePlayer(null);
+      setActivePlayerNumber(null);
+      activePlayerRef.current = null;
+      activePlayerNumberRef.current = null;
+      return;
+    }
+    setActivePlayer(player.name);
+    setActivePlayerNumber(player.number);
+    activePlayerRef.current = player.name;
+    activePlayerNumberRef.current = player.number;
+  };
+
+  const toggleActivePlayerById = (playerId: string) => {
+    if (activePlayerEntry?.id === playerId) {
+      selectActivePlayerById(null);
+      return;
+    }
+    selectActivePlayerById(playerId);
+  };
+
+  const handlePlayerPick = (player: SquadPlayer) => {
+    toggleActivePlayerById(player.id);
+    closeUtilityPanel();
+    setIsUtilityOpen(false);
+  };
+
+  const editPlayer = (playerId: string) => {
+    const targetPlayer = activeSquadPlayers.find((player) => player.id === playerId);
+    if (!targetPlayer) return;
+    const nextNameInput = window.prompt("Player name", targetPlayer.name);
+    if (nextNameInput == null) return;
+    const nextName = nextNameInput.trim();
+    if (nextName.length === 0) return;
+    const nextNumberInput = window.prompt("Jersey number", String(targetPlayer.number));
+    if (nextNumberInput == null) return;
+    const parsedNumber = Number.parseInt(nextNumberInput, 10);
+    if (!Number.isFinite(parsedNumber) || parsedNumber <= 0) return;
+    const nextRoleInput = window.prompt("Role: STARTER or SUB", targetPlayer.role);
+    if (nextRoleInput == null) return;
+    const normalizedRoleInput = nextRoleInput.trim().toUpperCase();
+    const nextRole: PlayerRole = normalizedRoleInput === "SUB" ? "SUB" : "STARTER";
+    updateActiveSquadPlayers(
+      (prevPlayers) =>
+        prevPlayers.map((player) =>
+          player.id === playerId
+            ? {
+                ...player,
+                name: nextName.slice(0, 24),
+                number: Math.max(1, Math.min(99, Math.floor(parsedNumber))),
+                role: nextRole,
+              }
+            : player,
+        ),
+      playerId,
+    );
+  };
+
+  const createSquad = () => {
+    const nextName = squadDraft.trim();
+    if (nextName.length === 0) return;
+    const nextSquad: Squad = {
+      id: `squad-${newLocalEventId()}`,
+      name: nextName.slice(0, 24),
+      players: [],
+    };
+    setSquads((prev) => [...prev, nextSquad]);
+    setActiveSquadById(nextSquad.id);
+    setSquadDraft("");
+  };
+
+  const saveActiveSquadName = () => {
+    const nextName = squadDraft.trim();
+    if (nextName.length === 0) return;
+    setSquads((prevSquads) =>
+      prevSquads.map((squad) =>
+        squad.id === activeSquad.id ? { ...squad, name: nextName.slice(0, 24) } : squad,
+      ),
+    );
+    setSquadDraft("");
+  };
 
   const undoLastEventAction = () => {
     const lastEvent = loggedEvents.at(-1);
@@ -873,6 +1497,65 @@ export default function App() {
   }, [activeTeam]);
 
   useEffect(() => {
+    activePlayerRef.current = activePlayer;
+  }, [activePlayer]);
+
+  useEffect(() => {
+    activePlayerNumberRef.current = activePlayerNumber;
+  }, [activePlayerNumber]);
+
+  useEffect(() => {
+    reviewHalfRef.current = reviewHalf;
+  }, [reviewHalf]);
+
+  useEffect(() => {
+    reviewEventGroupRef.current = reviewEventGroup;
+  }, [reviewEventGroup]);
+
+  useEffect(() => {
+    reviewZoneRef.current = reviewZone;
+  }, [reviewZone]);
+
+  useEffect(() => {
+    if (!activePlayer) {
+      setActivePlayerNumber(null);
+      return;
+    }
+    const matchedPlayer =
+      activeSquadPlayers.find(
+        (player) => player.name === activePlayer && player.number === (activePlayerNumber ?? -1),
+      ) ?? activeSquadPlayers.find((player) => player.name === activePlayer);
+    if (!matchedPlayer) {
+      setActivePlayer(null);
+      setActivePlayerNumber(null);
+      return;
+    }
+    if (matchedPlayer.number !== activePlayerNumber) {
+      setActivePlayerNumber(matchedPlayer.number);
+    }
+  }, [activePlayer, activeSquadPlayers]);
+
+  useEffect(() => {
+    activeSquadIdRef.current = activeSquadId;
+  }, [activeSquadId]);
+
+  useEffect(() => {
+    if (activeSquadId === "") {
+      setActiveSquadId(squads[0]?.id ?? "");
+      return;
+    }
+    if (squads.some((squad) => squad.id === activeSquadId)) return;
+    setActiveSquadId(squads[0]?.id ?? "");
+    setActivePlayer(null);
+    setActivePlayerNumber(null);
+  }, [activeSquadId, squads]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(SQUADS_STORAGE_KEY, JSON.stringify(squads));
+  }, [squads]);
+
+  useEffect(() => {
     if (canEditTeamNames) return;
     setEditingTeam(null);
     setTeamNameDraft("");
@@ -895,18 +1578,48 @@ export default function App() {
       setEvents: (events: readonly import("./core/stats/stats-event-model").MatchEvent[]) => void;
       setActiveEventKind: (kind: MatchEventKind) => void;
       undoLastEvent: () => void;
+      setShowPlayerInitials: (show: boolean) => void;
+      setOnMarkerTap: (handler: ((eventId: string) => void) | null) => void;
       setVisibleEventLimit: (limit: number | null) => void;
       setEventContext: (context: { half: 1 | 2; timestamp: number; canLog: boolean }) => void;
     } | null = null;
     void createPixiPitchSurface(host, {
       sport: "gaelic",
       activeEventKind: selectedEventRef.current,
+      showPlayerInitials,
       onEventLogged: (event) => {
         const teamSide = activeTeamRef.current;
-        setLoggedEvents((prev) => [
-          ...prev,
-          { ...event, id: `team-${teamSide.toLowerCase()}-${event.id}` },
-        ]);
+        const nextEvent: LoggedMatchEvent = {
+          ...event,
+          id: `team-${teamSide.toLowerCase()}-${event.id}`,
+          team: teamSide,
+        };
+        if (teamSide === "HOME") {
+          if (SCORE_EVENT_KINDS.has(event.kind) && pendingScorerRef.current) {
+            nextEvent.playerName = pendingScorerRef.current.name;
+            nextEvent.playerNumber = pendingScorerRef.current.number;
+            nextEvent.squadId = pendingScorerRef.current.squadId;
+            pendingScorerRef.current = null;
+          } else if (activePlayerRef.current) {
+            nextEvent.playerName = activePlayerRef.current;
+            nextEvent.playerNumber = activePlayerNumberRef.current ?? undefined;
+            nextEvent.squadId = activeSquadIdRef.current;
+          } else {
+            pendingScorerRef.current = null;
+          }
+        }
+        setLoggedEvents((prev) => {
+          const nextLoggedEvents = [...prev, nextEvent];
+          handleRef.current?.setEvents(
+            getRenderablePitchEvents(
+              nextLoggedEvents,
+              reviewHalfRef.current,
+              reviewEventGroupRef.current,
+              reviewZoneRef.current,
+            ),
+          );
+          return nextLoggedEvents;
+        });
       },
     }).then((nextHandle) => {
       if (disposed) {
@@ -960,6 +1673,14 @@ export default function App() {
   };
 
   const startSecondHalfAction = () => {
+    reviewHalfRef.current = "H2";
+    reviewEventGroupRef.current = "ALL";
+    reviewZoneRef.current = "FULL";
+    setReviewHalf("H2");
+    setReviewEventGroup("ALL");
+    setReviewZone("FULL");
+    setShowReviewStrip(false);
+    setUtilityPanel(null);
     handleRef.current?.setEvents([]);
     const next = startSecondHalf(matchEngineStateRef.current);
     matchEngineStateRef.current = next;
@@ -982,6 +1703,7 @@ export default function App() {
   };
 
   const openReviewPanel = () => {
+    setShowReviewStrip(false);
     setUtilityPanel("REVIEW");
     setIsUtilityOpen(false);
   };
@@ -990,20 +1712,53 @@ export default function App() {
     setUtilityPanel(null);
   };
 
+  const exitReviewMode = () => {
+    reviewHalfRef.current = "FULL";
+    reviewEventGroupRef.current = "ALL";
+    reviewZoneRef.current = "FULL";
+    setReviewHalf("FULL");
+    setReviewEventGroup("ALL");
+    setReviewZone("FULL");
+    setShowReviewStrip(false);
+    setSelectedReviewEventId(null);
+    setUtilityPanel(null);
+  };
+
   const addPlayer = () => {
     const nextPlayerName = playerDraft.trim();
     if (nextPlayerName.length === 0) return;
-    setPlayers((prev) => [...prev, nextPlayerName]);
-    setActivePlayer((prev) => prev ?? nextPlayerName);
+    const starterCount = activeSquadPlayers.filter((player) => player.role === "STARTER").length;
+    const nextPlayerNumber =
+      activeSquadPlayers.reduce((maxNumber, player) => Math.max(maxNumber, player.number), 0) + 1;
+    const nextPlayerRole: PlayerRole = starterCount < 15 ? "STARTER" : "SUB";
+    const nextPlayerId = `player-${newLocalEventId()}`;
+    updateActiveSquadPlayers(
+      (prevPlayers) => [
+        ...prevPlayers,
+        {
+          id: nextPlayerId,
+          name: nextPlayerName.slice(0, 24),
+          number: Math.min(99, nextPlayerNumber),
+          role: nextPlayerRole,
+        },
+      ],
+      activePlayerEntry?.id ?? nextPlayerId,
+    );
     setPlayerDraft("");
   };
 
   const resetMatch = () => {
     setLoggedEvents([]);
-    setReviewMode("FULL");
+    reviewHalfRef.current = "FULL";
+    reviewEventGroupRef.current = "ALL";
+    reviewZoneRef.current = "FULL";
+    setReviewHalf("FULL");
+    setReviewEventGroup("ALL");
+    setReviewZone("FULL");
+    setShowReviewStrip(false);
     setUtilityPanel(null);
-    setPlayers([]);
     setActivePlayer(null);
+    setActivePlayerNumber(null);
     setPlayerDraft("");
     setMatchState("PRE_MATCH");
     setCurrentHalf(1);
@@ -1033,6 +1788,36 @@ export default function App() {
   }, [visibilityMode]);
 
   useEffect(() => {
+    handleRef.current?.setShowPlayerInitials(showPlayerInitials);
+  }, [showPlayerInitials]);
+
+  useEffect(() => {
+    const isReviewModeActive = showReviewStrip || utilityPanel === "REVIEW";
+    handleRef.current?.setOnMarkerTap(
+      isReviewModeActive
+        ? (eventId) => {
+            setSelectedReviewEventId(eventId);
+          }
+        : null,
+    );
+    if (!isReviewModeActive) {
+      setSelectedReviewEventId(null);
+    }
+  }, [showReviewStrip, utilityPanel]);
+
+  useEffect(() => {
+    handleRef.current?.setEvents(
+      getRenderablePitchEvents(loggedEvents, reviewHalf, reviewEventGroup, reviewZone),
+    );
+  }, [loggedEvents, reviewHalf, reviewEventGroup, reviewZone]);
+
+  useEffect(() => {
+    if (!selectedReviewEventId) return;
+    if (loggedEvents.some((event) => event.id === selectedReviewEventId)) return;
+    setSelectedReviewEventId(null);
+  }, [loggedEvents, selectedReviewEventId]);
+
+  useEffect(() => {
     const updateLandscape = () => {
       setIsLandscape(window.matchMedia("(orientation: landscape)").matches);
     };
@@ -1041,6 +1826,24 @@ export default function App() {
     window.addEventListener("resize", updateLandscape);
     return () => {
       window.removeEventListener("resize", updateLandscape);
+    };
+  }, []);
+
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+
+    const updateKeyboardInset = () => {
+      const inset = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
+      setKeyboardInset(Math.round(inset));
+    };
+
+    updateKeyboardInset();
+    viewport.addEventListener("resize", updateKeyboardInset);
+    viewport.addEventListener("scroll", updateKeyboardInset);
+    return () => {
+      viewport.removeEventListener("resize", updateKeyboardInset);
+      viewport.removeEventListener("scroll", updateKeyboardInset);
     };
   }, []);
 
@@ -1079,6 +1882,35 @@ export default function App() {
           : matchState === "SECOND_HALF"
             ? { label: "FT", onClick: endMatchAction }
             : null;
+
+  const renderableLoggedEvents = useMemo(
+    () => getRenderablePitchEvents(loggedEvents, reviewHalf, reviewEventGroup, reviewZone),
+    [loggedEvents, reviewHalf, reviewEventGroup, reviewZone],
+  );
+  const isReviewModeActive = showReviewStrip || utilityPanel === "REVIEW";
+  const playerById = useMemo(() => {
+    const next = new Map<string, SquadPlayer>();
+    for (const squad of squads) {
+      for (const player of squad.players) {
+        next.set(player.id, player);
+      }
+    }
+    return next;
+  }, [squads]);
+  const selectedReviewEvent =
+    selectedReviewEventId == null
+      ? null
+      : loggedEvents.find((event) => event.id === selectedReviewEventId) ?? null;
+  const selectedReviewPlayerLabel =
+    selectedReviewEvent == null
+      ? null
+      : selectedReviewEvent.playerId == null
+        ? "No player"
+        : (() => {
+            const matchedPlayer = playerById.get(selectedReviewEvent.playerId);
+            if (!matchedPlayer) return "Unknown player";
+            return `#${matchedPlayer.number} ${matchedPlayer.name}`;
+          })();
 
   const homeScore = useMemo(() => computeTeamScore(loggedEvents, "HOME"), [loggedEvents]);
   const awayScore = useMemo(() => computeTeamScore(loggedEvents, "AWAY"), [loggedEvents]);
@@ -1314,6 +2146,42 @@ export default function App() {
   const utilityPanelClass = isLandscape
     ? "utility-overlay-panel utility-overlay-panel--landscape"
     : "utility-overlay-panel utility-overlay-panel--portrait";
+  const reviewPanelClass =
+    isLandscape && utilityPanel === "REVIEW"
+      ? `${utilityPanelClass} utility-overlay-panel--review-landscape`
+      : utilityPanelClass;
+  const starterPlayers = activeSquadPlayers.filter((player) => player.role === "STARTER");
+  const subPlayers = activeSquadPlayers.filter((player) => player.role === "SUB");
+  const formationPlayers = starterPlayers.slice(0, 15);
+  const subsPlayers = subPlayers;
+  const formationRows: SquadPlayer[][] = [];
+  let formationCursor = 0;
+  for (const rowSize of FORMATION_ROW_SIZES) {
+    formationRows.push(formationPlayers.slice(formationCursor, formationCursor + rowSize));
+    formationCursor += rowSize;
+  }
+  const activePlayerChipText =
+    activePlayerEntry != null
+      ? `Active: #${activePlayerEntry.number} ${activePlayerEntry.name}`
+      : null;
+  const activePlayerChipFloatingStyle =
+    keyboardInset > 0
+      ? { bottom: `${keyboardInset + 18}px` }
+      : { bottom: "max(88px, calc(env(safe-area-inset-bottom) + 84px))" };
+  const playersPanelStyle = isLandscape
+    ? { zIndex: 10001 }
+    : keyboardInset > 0
+      ? {
+          zIndex: 10001,
+          left: "14px",
+          top: "max(10px, env(safe-area-inset-top))",
+          bottom: "auto",
+        }
+      : {
+          zIndex: 10001,
+          left: "14px",
+          bottom: "max(142px, calc(env(safe-area-inset-bottom) + 120px))",
+        };
 
   return (
     <>
@@ -1321,11 +2189,55 @@ export default function App() {
         <style>{PANEL_CSS}</style>
         {scoreboard}
       {utilityPanel === "PLAYERS" ? (
-        <div className={utilityPanelClass} role="dialog" aria-label="Home players">
+        <div
+          className={utilityPanelClass}
+          role="dialog"
+          aria-label="Home players"
+          style={playersPanelStyle}
+        >
           <div className="utility-panel-title">HOME Players</div>
-          <div>
+          <div className="utility-squad-row">
+            <select
+              className="utility-squad-select"
+              value={activeSquad.id}
+              onChange={(event) => {
+                setActiveSquadById(event.target.value);
+              }}
+              aria-label="Select home squad"
+            >
+              {squads.map((squad) => (
+                <option key={squad.id} value={squad.id}>
+                  {squad.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="utility-squad-create">
             <input
               type="text"
+              className="utility-squad-input"
+              value={squadDraft}
+              onChange={(event) => {
+                setSquadDraft(event.target.value);
+              }}
+              placeholder="New or rename squad"
+            />
+            <button type="button" className="utility-review-btn" onClick={createSquad}>
+              New
+            </button>
+            <button type="button" className="utility-review-btn" onClick={saveActiveSquadName}>
+              Rename
+            </button>
+          </div>
+          {activePlayerChipText ? (
+            <div className="utility-active-player-chip" aria-live="polite">
+              {activePlayerChipText}
+            </div>
+          ) : null}
+          <div className="utility-player-add-row">
+            <input
+              type="text"
+              className="utility-player-input"
               value={playerDraft}
               onChange={(event) => {
                 setPlayerDraft(event.target.value);
@@ -1341,18 +2253,103 @@ export default function App() {
               Add
             </button>
           </div>
-          {players.map((player) => {
-            const isActive = activePlayer === player;
-            return (
+          <div className="utility-formation" aria-label="Home formation">
+            {formationRows.map((row, rowIdx) =>
+              row.length > 0 ? (
+                <div key={`formation-row-${rowIdx}`} className="utility-formation-row">
+                  {row.map((player, playerIdx) => {
+                    const isActive = activePlayerEntry?.id === player.id;
+                    return (
+                      <button
+                        key={`formation-${rowIdx}-${playerIdx}-${player.id}`}
+                        type="button"
+                        className="utility-player-pill"
+                        onClick={() => {
+                          handlePlayerPick(player);
+                        }}
+                        onDoubleClick={() => {
+                          editPlayer(player.id);
+                        }}
+                        style={
+                          isActive
+                            ? {
+                                border: "1px solid rgba(125,211,252,0.9)",
+                                background: "rgba(14,116,144,0.38)",
+                              }
+                            : undefined
+                        }
+                      >
+                        {isActive ? "● " : ""}
+                        #{player.number} {player.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null,
+            )}
+          </div>
+          {subsPlayers.length > 0 ? (
+            <div className="utility-subs-wrap">
+              <div className="utility-subs-title">Subs</div>
+              <div className="utility-subs-row" aria-label="Home substitutes">
+                {subsPlayers.map((player, idx) => {
+                  const isActive = activePlayerEntry?.id === player.id;
+                  return (
+                    <button
+                      key={`sub-${idx}-${player.id}`}
+                      type="button"
+                      className="utility-player-pill"
+                      onClick={() => {
+                        handlePlayerPick(player);
+                      }}
+                      onDoubleClick={() => {
+                        editPlayer(player.id);
+                      }}
+                      style={
+                        isActive
+                          ? {
+                              border: "1px solid rgba(125,211,252,0.9)",
+                              background: "rgba(14,116,144,0.38)",
+                            }
+                          : undefined
+                      }
+                    >
+                      {isActive ? "● " : ""}
+                      #{player.number} {player.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+          <button type="button" className="utility-panel-close" onClick={closeUtilityPanel}>
+            Close
+          </button>
+        </div>
+      ) : null}
+      {utilityPanel === "REVIEW" ? (
+        <div className={reviewPanelClass} role="dialog" aria-label="Review mode">
+          <div className="utility-review-scroll">
+            <div className="utility-panel-title">Review</div>
+            <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.86 }}>
+              Half
+            </div>
+            {([
+              { id: "H1", label: "H1" },
+              { id: "H2", label: "H2" },
+              { id: "FULL", label: "FULL" },
+            ] as const).map((option) => (
               <button
-                key={player}
+                key={option.id}
                 type="button"
-                className="utility-player-btn"
+                className="utility-review-btn"
                 onClick={() => {
-                  setActivePlayer(player);
+                  setReviewHalf(option.id);
+                  setShowReviewStrip(true);
+                  closeUtilityPanel();
                 }}
                 style={
-                  isActive
+                  reviewHalf === option.id
                     ? {
                         border: "1px solid rgba(125,211,252,0.9)",
                         background: "rgba(14,116,144,0.38)",
@@ -1360,32 +2357,107 @@ export default function App() {
                     : undefined
                 }
               >
-                {isActive ? "● " : ""}{player}
+                {option.label}
               </button>
-            );
-          })}
-          <button type="button" className="utility-panel-close" onClick={closeUtilityPanel}>
+            ))}
+            <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.86 }}>
+              Event Group
+            </div>
+            {([
+              { id: "ALL", label: "ALL" },
+              { id: "SCORES", label: "SCORES" },
+              { id: "WIDES", label: "WIDES" },
+              { id: "SHOTS", label: "SHOTS" },
+              { id: "TURNOVERS", label: "TURNOVERS" },
+              { id: "KICKOUTS", label: "KICKOUTS" },
+              { id: "FREES", label: "FREES" },
+            ] as const).map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                className="utility-review-btn"
+                onClick={() => {
+                  setReviewEventGroup(option.id);
+                  setShowReviewStrip(true);
+                  closeUtilityPanel();
+                }}
+                style={
+                  reviewEventGroup === option.id
+                    ? {
+                        border: "1px solid rgba(125,211,252,0.9)",
+                        background: "rgba(14,116,144,0.38)",
+                      }
+                    : undefined
+                }
+              >
+                {option.label}
+              </button>
+            ))}
+            <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.86 }}>
+              Zone
+            </div>
+            {([
+              { id: "FULL", label: "FULL" },
+              { id: "OWN_HALF", label: "OWN HALF" },
+              { id: "OPPOSITION_HALF", label: "OPP HALF" },
+            ] as const).map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                className="utility-review-btn"
+                onClick={() => {
+                  setReviewZone(option.id);
+                  setShowReviewStrip(true);
+                  closeUtilityPanel();
+                }}
+                style={
+                  reviewZone === option.id
+                    ? {
+                        border: "1px solid rgba(125,211,252,0.9)",
+                        background: "rgba(14,116,144,0.38)",
+                      }
+                    : undefined
+                }
+              >
+                {option.label}
+              </button>
+            ))}
+            <div
+              className="utility-panel-title"
+              style={{ fontSize: "9px", opacity: 0.9, textTransform: "none" }}
+            >
+              {renderableLoggedEvents.length} events shown
+            </div>
+          </div>
+          <button
+            type="button"
+            className="utility-panel-close utility-panel-close--sticky"
+            onClick={closeUtilityPanel}
+          >
             Close
           </button>
         </div>
       ) : null}
-      {utilityPanel === "REVIEW" ? (
-        <div className={utilityPanelClass} role="dialog" aria-label="Review mode">
-          <div className="utility-panel-title">Review</div>
+      {showReviewStrip && utilityPanel !== "REVIEW" ? (
+        <div
+          className={`review-strip ${isLandscape ? "review-strip--landscape" : "review-strip--portrait"}`}
+          role="toolbar"
+          aria-label="Review quick controls"
+        >
           {([
-            { id: "FIRST", label: "H1" },
-            { id: "SECOND", label: "H2" },
+            { id: "H1", label: "H1" },
+            { id: "H2", label: "H2" },
             { id: "FULL", label: "FULL" },
           ] as const).map((option) => (
             <button
-              key={option.id}
+              key={`strip-half-${option.id}`}
               type="button"
-              className="utility-review-btn"
+              className="review-strip-chip"
               onClick={() => {
-                setReviewMode(option.id);
+                setReviewHalf(option.id);
               }}
               style={
-                reviewMode === option.id
+                reviewHalf === option.id
                   ? {
                       border: "1px solid rgba(125,211,252,0.9)",
                       background: "rgba(14,116,144,0.38)",
@@ -1396,9 +2468,104 @@ export default function App() {
               {option.label}
             </button>
           ))}
-          <button type="button" className="utility-panel-close" onClick={closeUtilityPanel}>
-            Close
+          {([
+            { id: "ALL", label: "ALL" },
+            { id: "SCORES", label: "SCORES" },
+            { id: "WIDES", label: "WIDES" },
+            { id: "SHOTS", label: "SHOTS" },
+            { id: "TURNOVERS", label: "TURNOVERS" },
+            { id: "KICKOUTS", label: "KICKOUTS" },
+            { id: "FREES", label: "FREES" },
+          ] as const).map((option) => (
+            <button
+              key={`strip-group-${option.id}`}
+              type="button"
+              className="review-strip-chip"
+              onClick={() => {
+                setReviewEventGroup(option.id);
+              }}
+              style={
+                reviewEventGroup === option.id
+                  ? {
+                      border: "1px solid rgba(125,211,252,0.9)",
+                      background: "rgba(14,116,144,0.38)",
+                    }
+                  : undefined
+              }
+            >
+              {option.label}
+            </button>
+          ))}
+          {([
+            { id: "OWN_HALF", label: "OWN" },
+            { id: "OPPOSITION_HALF", label: "OPP" },
+          ] as const).map((option) => (
+            <button
+              key={`strip-zone-${option.id}`}
+              type="button"
+              className="review-strip-chip"
+              onClick={() => {
+                setReviewZone(option.id);
+              }}
+              style={
+                reviewZone === option.id
+                  ? {
+                      border: "1px solid rgba(125,211,252,0.9)",
+                      background: "rgba(14,116,144,0.38)",
+                    }
+                  : undefined
+              }
+            >
+              {option.label}
+            </button>
+          ))}
+          <button
+            type="button"
+            className="review-strip-chip"
+            onClick={exitReviewMode}
+            style={{ border: "1px solid rgba(248,113,113,0.68)", background: "rgba(127,29,29,0.35)" }}
+          >
+            Exit
           </button>
+        </div>
+      ) : null}
+      {isReviewModeActive && selectedReviewEvent ? (
+        <div
+          className={`review-event-card ${isLandscape ? "review-event-card--landscape" : "review-event-card--portrait"}`}
+          role="status"
+          aria-live="polite"
+        >
+          <div className="review-event-card-head">
+            <div className="review-event-card-title">Event detail</div>
+            <button
+              type="button"
+              className="review-event-card-close"
+              aria-label="Close event detail"
+              onClick={() => {
+                setSelectedReviewEventId(null);
+              }}
+            >
+              ×
+            </button>
+          </div>
+          <div className="review-event-card-row">
+            <span className="review-event-card-row-label">Type</span>
+            <span className="review-event-card-row-value">{selectedReviewEvent.kind}</span>
+          </div>
+          <div className="review-event-card-row">
+            <span className="review-event-card-row-label">Player</span>
+            <span className="review-event-card-row-value">{selectedReviewPlayerLabel}</span>
+          </div>
+          <div className="review-event-card-row">
+            <span className="review-event-card-row-label">Half</span>
+            <span className="review-event-card-row-value">H{selectedReviewEvent.half}</span>
+          </div>
+          <div className="review-event-card-row">
+            <span className="review-event-card-row-label">Time</span>
+            <span className="review-event-card-row-value">
+              {formatMatchClock(selectedReviewEvent.timestamp)}
+            </span>
+          </div>
         </div>
       ) : null}
       <div className="match-stopwatch" aria-live="polite">
@@ -1641,6 +2808,15 @@ export default function App() {
           role="img"
         />
       </main>
+      {activePlayerChipText ? (
+        <div
+          className="utility-active-player-chip utility-active-player-chip-floating"
+          aria-live="polite"
+          style={activePlayerChipFloatingStyle}
+        >
+          {activePlayerChipText}
+        </div>
+      ) : null}
       <div className={utilityControlsClass}>
         {isUtilityOpen ? (
           <div className="utility-menu">
