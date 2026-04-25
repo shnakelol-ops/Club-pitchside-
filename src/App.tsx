@@ -197,6 +197,17 @@ function getRenderablePitchEvents(
   });
 }
 
+function oppositeAttackingDirection(direction: AttackingDirection): AttackingDirection {
+  return direction === "RIGHT" ? "LEFT" : "RIGHT";
+}
+
+function getEffectiveAttackingDirection(
+  firstHalfAttackingDirection: AttackingDirection,
+  half: 1 | 2,
+): AttackingDirection {
+  return half === 2 ? oppositeAttackingDirection(firstHalfAttackingDirection) : firstHalfAttackingDirection;
+}
+
 const PANEL_CSS = `
 .app-root {
   position: fixed;
@@ -1029,6 +1040,10 @@ const PANEL_CSS = `
   box-shadow: 0 0 0 1px rgba(12, 74, 110, 0.36), 0 1px 4px rgba(2, 6, 23, 0.35);
 }
 
+.scoreboard-attack-btn:disabled {
+  cursor: default;
+}
+
 .scoreboard-attack-btn--rail {
   width: 100%;
 }
@@ -1291,7 +1306,8 @@ export default function App() {
   const [reviewHalf, setReviewHalf] = useState<ReviewHalf>("FULL");
   const [reviewEventGroup, setReviewEventGroup] = useState<ReviewEventGroup>("ALL");
   const [reviewZone, setReviewZone] = useState<ReviewZone>("FULL");
-  const [attackingDirection, setAttackingDirection] = useState<AttackingDirection>("RIGHT");
+  const [firstHalfAttackingDirection, setFirstHalfAttackingDirection] =
+    useState<AttackingDirection>("RIGHT");
   const [showReviewStrip, setShowReviewStrip] = useState(false);
   const [selectedReviewEventId, setSelectedReviewEventId] = useState<string | null>(null);
   const [loggedEvents, setLoggedEvents] = useState<readonly LoggedMatchEvent[]>([]);
@@ -1312,7 +1328,7 @@ export default function App() {
   const reviewHalfRef = useRef<ReviewHalf>("FULL");
   const reviewEventGroupRef = useRef<ReviewEventGroup>("ALL");
   const reviewZoneRef = useRef<ReviewZone>("FULL");
-  const attackingDirectionRef = useRef<AttackingDirection>("RIGHT");
+  const firstHalfAttackingDirectionRef = useRef<AttackingDirection>("RIGHT");
   const pendingScorerRef = useRef<{ name: string; number: number; squadId: string } | null>(null);
   const activeSquadIdRef = useRef("");
   const homeNameInputRef = useRef<HTMLInputElement>(null);
@@ -1551,8 +1567,8 @@ export default function App() {
   }, [reviewZone]);
 
   useEffect(() => {
-    attackingDirectionRef.current = attackingDirection;
-  }, [attackingDirection]);
+    firstHalfAttackingDirectionRef.current = firstHalfAttackingDirection;
+  }, [firstHalfAttackingDirection]);
 
   useEffect(() => {
     if (!activePlayer) {
@@ -1654,7 +1670,10 @@ export default function App() {
               reviewHalfRef.current,
               reviewEventGroupRef.current,
               reviewZoneRef.current,
-              attackingDirectionRef.current,
+              getEffectiveAttackingDirection(
+                firstHalfAttackingDirectionRef.current,
+                matchEngineStateRef.current.currentHalf,
+              ),
             ),
           );
           return nextLoggedEvents;
@@ -1846,9 +1865,15 @@ export default function App() {
 
   useEffect(() => {
     handleRef.current?.setEvents(
-      getRenderablePitchEvents(loggedEvents, reviewHalf, reviewEventGroup, reviewZone, attackingDirection),
+      getRenderablePitchEvents(
+        loggedEvents,
+        reviewHalf,
+        reviewEventGroup,
+        reviewZone,
+        getEffectiveAttackingDirection(firstHalfAttackingDirection, currentHalf),
+      ),
     );
-  }, [loggedEvents, reviewHalf, reviewEventGroup, reviewZone, attackingDirection]);
+  }, [loggedEvents, reviewHalf, reviewEventGroup, reviewZone, firstHalfAttackingDirection, currentHalf]);
 
   useEffect(() => {
     if (!selectedReviewEventId) return;
@@ -1922,14 +1947,30 @@ export default function App() {
             ? { label: "FT", onClick: endMatchAction }
             : null;
 
+  const effectiveAttackingDirection = getEffectiveAttackingDirection(
+    firstHalfAttackingDirection,
+    currentHalf,
+  );
   const renderableLoggedEvents = useMemo(
     () =>
-      getRenderablePitchEvents(loggedEvents, reviewHalf, reviewEventGroup, reviewZone, attackingDirection),
-    [loggedEvents, reviewHalf, reviewEventGroup, reviewZone, attackingDirection],
+      getRenderablePitchEvents(
+        loggedEvents,
+        reviewHalf,
+        reviewEventGroup,
+        reviewZone,
+        effectiveAttackingDirection,
+      ),
+    [loggedEvents, reviewHalf, reviewEventGroup, reviewZone, effectiveAttackingDirection],
   );
-  const attackingDirectionLabel = attackingDirection === "RIGHT" ? "ATTACKING →" : "ATTACKING ←";
-  const toggleAttackingDirection = () => {
-    setAttackingDirection((prev) => (prev === "RIGHT" ? "LEFT" : "RIGHT"));
+  const attackingDirectionHalfLabel = currentHalf === 2 ? "2H" : "1H";
+  const attackingDirectionLabel =
+    effectiveAttackingDirection === "RIGHT"
+      ? `${attackingDirectionHalfLabel} ATTACKING →`
+      : `← ${attackingDirectionHalfLabel} ATTACKING`;
+  const canSetFirstHalfAttackingDirection = matchState === "PRE_MATCH";
+  const toggleFirstHalfAttackingDirection = () => {
+    if (!canSetFirstHalfAttackingDirection) return;
+    setFirstHalfAttackingDirection((prev) => oppositeAttackingDirection(prev));
   };
   const isReviewModeActive = showReviewStrip || utilityPanel === "REVIEW";
   const playerById = useMemo(() => {
@@ -2071,10 +2112,11 @@ export default function App() {
       <button
         type="button"
         className="scoreboard-attack-btn scoreboard-attack-btn--rail"
-        onClick={toggleAttackingDirection}
+        onClick={toggleFirstHalfAttackingDirection}
+        disabled={!canSetFirstHalfAttackingDirection}
         aria-label={`Tracked team attacking ${
-          attackingDirection === "RIGHT" ? "right" : "left"
-        }. Tap to toggle`}
+          effectiveAttackingDirection === "RIGHT" ? "right" : "left"
+        }`}
       >
         {attackingDirectionLabel}
       </button>
@@ -2195,10 +2237,11 @@ export default function App() {
         <button
           type="button"
           className="scoreboard-attack-btn scoreboard-attack-btn--strip"
-          onClick={toggleAttackingDirection}
+          onClick={toggleFirstHalfAttackingDirection}
+          disabled={!canSetFirstHalfAttackingDirection}
           aria-label={`Tracked team attacking ${
-            attackingDirection === "RIGHT" ? "right" : "left"
-          }. Tap to toggle`}
+            effectiveAttackingDirection === "RIGHT" ? "right" : "left"
+          }`}
         >
           {attackingDirectionLabel}
         </button>
