@@ -1703,8 +1703,8 @@ export default function App() {
   };
 
   const openReviewPanel = () => {
-    setShowReviewStrip(false);
-    setUtilityPanel("REVIEW");
+    setShowReviewStrip(true);
+    setUtilityPanel(null);
     setIsUtilityOpen(false);
   };
 
@@ -2327,7 +2327,7 @@ export default function App() {
           </button>
         </div>
       ) : null}
-      {utilityPanel === "REVIEW" ? (
+      {utilityPanel === "REVIEW" && !showReviewStrip ? (
         <div className={reviewPanelClass} role="dialog" aria-label="Review mode">
           <div className="utility-review-scroll">
             <div className="utility-panel-title">Review</div>
@@ -2438,7 +2438,7 @@ export default function App() {
           </button>
         </div>
       ) : null}
-      {showReviewStrip && utilityPanel !== "REVIEW" ? (
+      {showReviewStrip ? (
         <div
           className={`review-strip ${isLandscape ? "review-strip--landscape" : "review-strip--portrait"}`}
           role="toolbar"
