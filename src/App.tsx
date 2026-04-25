@@ -21,6 +21,7 @@ type UtilityPanel = "PLAYERS" | "REVIEW" | null;
 type ReviewHalf = "H1" | "H2" | "FULL";
 type ReviewEventGroup = "ALL" | "SCORES" | "WIDES" | "SHOTS" | "TURNOVERS" | "KICKOUTS" | "FREES";
 type ReviewZone = "FULL" | "OWN_HALF" | "OPPOSITION_HALF";
+type AttackingDirection = "LEFT" | "RIGHT";
 type PlayerRole = "STARTER" | "SUB";
 type SquadPlayer = { id: string; name: string; number: number; role: PlayerRole };
 type Squad = { id: string; name: string; players: SquadPlayer[] };
@@ -174,6 +175,7 @@ function getRenderablePitchEvents(
   reviewHalf: ReviewHalf,
   reviewEventGroup: ReviewEventGroup,
   reviewZone: ReviewZone,
+  attackingDirection: AttackingDirection,
 ): LoggedMatchEvent[] {
   const groupKinds =
     reviewEventGroup === "ALL"
@@ -187,8 +189,9 @@ function getRenderablePitchEvents(
 
     if (groupKinds && !groupKinds.has(event.kind)) return false;
 
-    if (reviewZone === "OWN_HALF" && event.nx > 0.5) return false;
-    if (reviewZone === "OPPOSITION_HALF" && event.nx <= 0.5) return false;
+    const isAttackingHalf = attackingDirection === "RIGHT" ? event.nx >= 0.5 : event.nx < 0.5;
+    if (reviewZone === "OWN_HALF" && isAttackingHalf) return false;
+    if (reviewZone === "OPPOSITION_HALF" && !isAttackingHalf) return false;
 
     return true;
   });
@@ -1005,6 +1008,26 @@ const PANEL_CSS = `
   cursor: pointer;
 }
 
+.scoreboard-attack-btn {
+  min-height: 24px;
+  min-width: 54px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(125, 211, 252, 0.5);
+  background: rgba(12, 74, 110, 0.42);
+  color: #bae6fd;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.18px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.scoreboard-attack-btn--rail {
+  width: 100%;
+}
+
 .scoreboard-rail {
   position: fixed;
   top: 50%;
@@ -1259,6 +1282,7 @@ export default function App() {
   const [reviewHalf, setReviewHalf] = useState<ReviewHalf>("FULL");
   const [reviewEventGroup, setReviewEventGroup] = useState<ReviewEventGroup>("ALL");
   const [reviewZone, setReviewZone] = useState<ReviewZone>("FULL");
+  const [attackingDirection, setAttackingDirection] = useState<AttackingDirection>("RIGHT");
   const [showReviewStrip, setShowReviewStrip] = useState(false);
   const [selectedReviewEventId, setSelectedReviewEventId] = useState<string | null>(null);
   const [loggedEvents, setLoggedEvents] = useState<readonly LoggedMatchEvent[]>([]);
@@ -1279,6 +1303,7 @@ export default function App() {
   const reviewHalfRef = useRef<ReviewHalf>("FULL");
   const reviewEventGroupRef = useRef<ReviewEventGroup>("ALL");
   const reviewZoneRef = useRef<ReviewZone>("FULL");
+  const attackingDirectionRef = useRef<AttackingDirection>("RIGHT");
   const pendingScorerRef = useRef<{ name: string; number: number; squadId: string } | null>(null);
   const activeSquadIdRef = useRef("");
   const homeNameInputRef = useRef<HTMLInputElement>(null);
@@ -1517,6 +1542,10 @@ export default function App() {
   }, [reviewZone]);
 
   useEffect(() => {
+    attackingDirectionRef.current = attackingDirection;
+  }, [attackingDirection]);
+
+  useEffect(() => {
     if (!activePlayer) {
       setActivePlayerNumber(null);
       return;
@@ -1616,6 +1645,7 @@ export default function App() {
               reviewHalfRef.current,
               reviewEventGroupRef.current,
               reviewZoneRef.current,
+              attackingDirectionRef.current,
             ),
           );
           return nextLoggedEvents;
@@ -1807,9 +1837,9 @@ export default function App() {
 
   useEffect(() => {
     handleRef.current?.setEvents(
-      getRenderablePitchEvents(loggedEvents, reviewHalf, reviewEventGroup, reviewZone),
+      getRenderablePitchEvents(loggedEvents, reviewHalf, reviewEventGroup, reviewZone, attackingDirection),
     );
-  }, [loggedEvents, reviewHalf, reviewEventGroup, reviewZone]);
+  }, [loggedEvents, reviewHalf, reviewEventGroup, reviewZone, attackingDirection]);
 
   useEffect(() => {
     if (!selectedReviewEventId) return;
@@ -1884,9 +1914,14 @@ export default function App() {
             : null;
 
   const renderableLoggedEvents = useMemo(
-    () => getRenderablePitchEvents(loggedEvents, reviewHalf, reviewEventGroup, reviewZone),
-    [loggedEvents, reviewHalf, reviewEventGroup, reviewZone],
+    () =>
+      getRenderablePitchEvents(loggedEvents, reviewHalf, reviewEventGroup, reviewZone, attackingDirection),
+    [loggedEvents, reviewHalf, reviewEventGroup, reviewZone, attackingDirection],
   );
+  const attackingDirectionLabel = attackingDirection === "RIGHT" ? "ATT →" : "ATT ←";
+  const toggleAttackingDirection = () => {
+    setAttackingDirection((prev) => (prev === "RIGHT" ? "LEFT" : "RIGHT"));
+  };
   const isReviewModeActive = showReviewStrip || utilityPanel === "REVIEW";
   const playerById = useMemo(() => {
     const next = new Map<string, SquadPlayer>();
@@ -2024,6 +2059,16 @@ export default function App() {
           </span>
         )}
       </div>
+      <button
+        type="button"
+        className="scoreboard-attack-btn scoreboard-attack-btn--rail"
+        onClick={toggleAttackingDirection}
+        aria-label={`Tracked team attacking ${
+          attackingDirection === "RIGHT" ? "right" : "left"
+        }. Tap to toggle`}
+      >
+        {attackingDirectionLabel}
+      </button>
     </div>
   ) : (
     <div className="scoreboard-strip" aria-label="Match scoreboard">
@@ -2135,6 +2180,16 @@ export default function App() {
           }
         >
           AWAY
+        </button>
+        <button
+          type="button"
+          className="scoreboard-attack-btn"
+          onClick={toggleAttackingDirection}
+          aria-label={`Tracked team attacking ${
+            attackingDirection === "RIGHT" ? "right" : "left"
+          }. Tap to toggle`}
+        >
+          {attackingDirectionLabel}
         </button>
       </div>
     </div>
