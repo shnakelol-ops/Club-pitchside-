@@ -57,7 +57,6 @@ const REVIEW_EVENT_GROUP_KINDS: Record<Exclude<ReviewEventGroup, "ALL">, readonl
   KICKOUTS: ["KICKOUT_WON", "KICKOUT_CONCEDED"],
   FREES: ["FREE_WON", "FREE_CONCEDED"],
 };
-
 function newLocalEventId(): string {
   const c = globalThis.crypto;
   if (c && "randomUUID" in c && typeof c.randomUUID === "function") {
@@ -488,6 +487,85 @@ const PANEL_CSS = `
   margin-top: 4px;
   background: rgba(15, 23, 42, 0.95);
   z-index: 1;
+}
+
+.review-strip {
+  position: fixed;
+  z-index: 23;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(10, 20, 35, 0.82);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 8px 16px rgba(4, 12, 24, 0.28);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  white-space: nowrap;
+}
+
+.review-strip--portrait {
+  top: max(8px, env(safe-area-inset-top));
+}
+
+.review-strip--landscape {
+  top: max(8px, env(safe-area-inset-top));
+}
+
+.review-strip-chip {
+  min-height: 24px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.36);
+  background: rgba(15, 23, 42, 0.88);
+  color: #dbe7f5;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.16px;
+  text-transform: uppercase;
+  padding: 0 8px;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.review-quick-strip {
+  position: fixed;
+  left: 8px;
+  right: 8px;
+  z-index: 23;
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding: 5px 6px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(10, 20, 35, 0.76);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 8px 14px rgba(4, 12, 24, 0.24);
+  -webkit-overflow-scrolling: touch;
+}
+
+.review-quick-btn {
+  height: 24px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.36);
+  background: rgba(15, 23, 42, 0.86);
+  color: #dbe7f5;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.16px;
+  text-transform: uppercase;
+  padding: 0 8px;
+  white-space: nowrap;
+  cursor: pointer;
+  flex: 0 0 auto;
 }
 
 .utility-panel-title {
@@ -1104,6 +1182,7 @@ export default function App() {
   const [reviewHalf, setReviewHalf] = useState<ReviewHalf>("FULL");
   const [reviewEventGroup, setReviewEventGroup] = useState<ReviewEventGroup>("ALL");
   const [reviewZone, setReviewZone] = useState<ReviewZone>("FULL");
+  const [showReviewStrip, setShowReviewStrip] = useState(false);
   const [loggedEvents, setLoggedEvents] = useState<readonly LoggedMatchEvent[]>([]);
   const [visibilityMode, setVisibilityMode] = useState<VisibilityMode>("ALL");
   const [matchState, setMatchState] = useState<MatchState>("PRE_MATCH");
@@ -1537,6 +1616,7 @@ export default function App() {
     setReviewHalf("H2");
     setReviewEventGroup("ALL");
     setReviewZone("FULL");
+    setShowReviewStrip(true);
     handleRef.current?.setEvents([]);
     const next = startSecondHalf(matchEngineStateRef.current);
     matchEngineStateRef.current = next;
@@ -1559,11 +1639,23 @@ export default function App() {
   };
 
   const openReviewPanel = () => {
+    setShowReviewStrip(false);
     setUtilityPanel("REVIEW");
     setIsUtilityOpen(false);
   };
 
   const closeUtilityPanel = () => {
+    setUtilityPanel(null);
+  };
+
+  const exitReviewMode = () => {
+    reviewHalfRef.current = "FULL";
+    reviewEventGroupRef.current = "ALL";
+    reviewZoneRef.current = "FULL";
+    setReviewHalf("FULL");
+    setReviewEventGroup("ALL");
+    setReviewZone("FULL");
+    setShowReviewStrip(false);
     setUtilityPanel(null);
   };
 
@@ -1598,6 +1690,7 @@ export default function App() {
     setReviewHalf("FULL");
     setReviewEventGroup("ALL");
     setReviewZone("FULL");
+    setShowReviewStrip(false);
     setUtilityPanel(null);
     setActivePlayer(null);
     setActivePlayerNumber(null);
@@ -2172,7 +2265,8 @@ export default function App() {
                 className="utility-review-btn"
                 onClick={() => {
                   setReviewHalf(option.id);
-                closeUtilityPanel();
+                  setShowReviewStrip(true);
+                  closeUtilityPanel();
                 }}
                 style={
                   reviewHalf === option.id
@@ -2204,7 +2298,8 @@ export default function App() {
                 className="utility-review-btn"
                 onClick={() => {
                   setReviewEventGroup(option.id);
-                closeUtilityPanel();
+                  setShowReviewStrip(true);
+                  closeUtilityPanel();
                 }}
                 style={
                   reviewEventGroup === option.id
@@ -2232,7 +2327,8 @@ export default function App() {
                 className="utility-review-btn"
                 onClick={() => {
                   setReviewZone(option.id);
-                closeUtilityPanel();
+                  setShowReviewStrip(true);
+                  closeUtilityPanel();
                 }}
                 style={
                   reviewZone === option.id
@@ -2259,6 +2355,97 @@ export default function App() {
             onClick={closeUtilityPanel}
           >
             Close
+          </button>
+        </div>
+      ) : null}
+      {showReviewStrip && utilityPanel !== "REVIEW" ? (
+        <div
+          className={`review-strip ${isLandscape ? "review-strip--landscape" : "review-strip--portrait"}`}
+          role="toolbar"
+          aria-label="Review quick controls"
+        >
+          {([
+            { id: "H1", label: "H1" },
+            { id: "H2", label: "H2" },
+            { id: "FULL", label: "FULL" },
+          ] as const).map((option) => (
+            <button
+              key={`strip-half-${option.id}`}
+              type="button"
+              className="review-strip-chip"
+              onClick={() => {
+                setReviewHalf(option.id);
+              }}
+              style={
+                reviewHalf === option.id
+                  ? {
+                      border: "1px solid rgba(125,211,252,0.9)",
+                      background: "rgba(14,116,144,0.38)",
+                    }
+                  : undefined
+              }
+            >
+              {option.label}
+            </button>
+          ))}
+          {([
+            { id: "ALL", label: "ALL" },
+            { id: "SCORES", label: "SCORES" },
+            { id: "WIDES", label: "WIDES" },
+            { id: "SHOTS", label: "SHOTS" },
+            { id: "TURNOVERS", label: "TURNOVERS" },
+            { id: "KICKOUTS", label: "KICKOUTS" },
+            { id: "FREES", label: "FREES" },
+          ] as const).map((option) => (
+            <button
+              key={`strip-group-${option.id}`}
+              type="button"
+              className="review-strip-chip"
+              onClick={() => {
+                setReviewEventGroup(option.id);
+              }}
+              style={
+                reviewEventGroup === option.id
+                  ? {
+                      border: "1px solid rgba(125,211,252,0.9)",
+                      background: "rgba(14,116,144,0.38)",
+                    }
+                  : undefined
+              }
+            >
+              {option.label}
+            </button>
+          ))}
+          {([
+            { id: "OWN_HALF", label: "OWN" },
+            { id: "OPPOSITION_HALF", label: "OPP" },
+          ] as const).map((option) => (
+            <button
+              key={`strip-zone-${option.id}`}
+              type="button"
+              className="review-strip-chip"
+              onClick={() => {
+                setReviewZone(option.id);
+              }}
+              style={
+                reviewZone === option.id
+                  ? {
+                      border: "1px solid rgba(125,211,252,0.9)",
+                      background: "rgba(14,116,144,0.38)",
+                    }
+                  : undefined
+              }
+            >
+              {option.label}
+            </button>
+          ))}
+          <button
+            type="button"
+            className="review-strip-chip"
+            onClick={exitReviewMode}
+            style={{ border: "1px solid rgba(248,113,113,0.68)", background: "rgba(127,29,29,0.35)" }}
+          >
+            Exit
           </button>
         </div>
       ) : null}
