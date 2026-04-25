@@ -46,6 +46,7 @@ const EVENT_BUTTONS: Array<{ label: string; kind: MatchEventKind }> = [
 ];
 
 const AWAY_INSTANT_SCORING_KINDS = new Set<MatchEventKind>(["GOAL", "POINT", "TWO_POINTER"]);
+const SCORE_EVENT_KINDS = new Set<MatchEventKind>(["GOAL", "POINT", "TWO_POINTER"]);
 const FORMATION_ROW_SIZES = [1, 3, 3, 2, 3, 3] as const;
 const SQUADS_STORAGE_KEY = "pitchsideclub.squads";
 const REVIEW_EVENT_GROUP_KINDS: Record<Exclude<ReviewEventGroup, "ALL">, readonly MatchEventKind[]> = {
@@ -449,7 +450,44 @@ const PANEL_CSS = `
 
 .utility-overlay-panel--landscape {
   right: 16px;
-  bottom: 126px;
+  bottom: 142px;
+  max-height: calc(100dvh - 24px);
+  overflow: hidden;
+}
+
+.utility-overlay-panel--review-landscape {
+  right: 16px;
+  bottom: 142px;
+  max-height: calc(100dvh - 24px);
+  min-width: 198px;
+  max-width: min(70vw, 320px);
+  padding: 6px;
+  gap: 4px;
+}
+
+.utility-overlay-panel--review-landscape .utility-review-btn {
+  min-height: 26px;
+  height: 26px;
+  font-size: 9px;
+  padding: 0 8px;
+}
+
+.utility-review-scroll {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 4px;
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 2px;
+}
+
+.utility-panel-close--sticky {
+  position: sticky;
+  bottom: 0;
+  margin-top: 4px;
+  background: rgba(15, 23, 42, 0.95);
+  z-index: 1;
 }
 
 .utility-panel-title {
@@ -1084,6 +1122,7 @@ export default function App() {
   const reviewHalfRef = useRef<ReviewHalf>("FULL");
   const reviewEventGroupRef = useRef<ReviewEventGroup>("ALL");
   const reviewZoneRef = useRef<ReviewZone>("FULL");
+  const pendingScorerRef = useRef<{ name: string; number: number; squadId: string } | null>(null);
   const activeSquadIdRef = useRef("");
   const homeNameInputRef = useRef<HTMLInputElement>(null);
   const awayNameInputRef = useRef<HTMLInputElement>(null);
@@ -1174,6 +1213,22 @@ export default function App() {
       return;
     }
     selectActivePlayerById(playerId);
+  };
+
+  const handlePlayerPick = (player: SquadPlayer) => {
+    if (SCORE_EVENT_KINDS.has(selectedEventRef.current)) {
+      pendingScorerRef.current = {
+        name: player.name,
+        number: player.number,
+        squadId: activeSquadIdRef.current,
+      };
+      closeUtilityPanel();
+      setIsUtilityOpen(false);
+      return;
+    }
+    toggleActivePlayerById(player.id);
+    closeUtilityPanel();
+    setIsUtilityOpen(false);
   };
 
   const editPlayer = (playerId: string) => {
@@ -1397,10 +1452,19 @@ export default function App() {
           id: `team-${teamSide.toLowerCase()}-${event.id}`,
           team: teamSide,
         };
-        if (teamSide === "HOME" && activePlayerRef.current) {
-          nextEvent.playerName = activePlayerRef.current;
-          nextEvent.playerNumber = activePlayerNumberRef.current ?? undefined;
-          nextEvent.squadId = activeSquadIdRef.current;
+        if (teamSide === "HOME") {
+          if (SCORE_EVENT_KINDS.has(event.kind) && pendingScorerRef.current) {
+            nextEvent.playerName = pendingScorerRef.current.name;
+            nextEvent.playerNumber = pendingScorerRef.current.number;
+            nextEvent.squadId = pendingScorerRef.current.squadId;
+            pendingScorerRef.current = null;
+          } else if (activePlayerRef.current) {
+            nextEvent.playerName = activePlayerRef.current;
+            nextEvent.playerNumber = activePlayerNumberRef.current ?? undefined;
+            nextEvent.squadId = activeSquadIdRef.current;
+          } else {
+            pendingScorerRef.current = null;
+          }
         }
         setLoggedEvents((prev) => {
           const nextLoggedEvents = [...prev, nextEvent];
@@ -1880,6 +1944,10 @@ export default function App() {
   const utilityPanelClass = isLandscape
     ? "utility-overlay-panel utility-overlay-panel--landscape"
     : "utility-overlay-panel utility-overlay-panel--portrait";
+  const reviewPanelClass =
+    isLandscape && utilityPanel === "REVIEW"
+      ? `${utilityPanelClass} utility-overlay-panel--review-landscape`
+      : utilityPanelClass;
   const starterPlayers = activeSquadPlayers.filter((player) => player.role === "STARTER");
   const subPlayers = activeSquadPlayers.filter((player) => player.role === "SUB");
   const formationPlayers = starterPlayers.slice(0, 15);
@@ -2024,9 +2092,7 @@ export default function App() {
                         type="button"
                         className="utility-player-pill"
                         onClick={() => {
-                          toggleActivePlayerById(player.id);
-                          closeUtilityPanel();
-                          setIsUtilityOpen(false);
+                          handlePlayerPick(player);
                         }}
                         onDoubleClick={() => {
                           editPlayer(player.id);
@@ -2061,9 +2127,7 @@ export default function App() {
                       type="button"
                       className="utility-player-pill"
                       onClick={() => {
-                        toggleActivePlayerById(player.id);
-                        closeUtilityPanel();
-                        setIsUtilityOpen(false);
+                        handlePlayerPick(player);
                       }}
                       onDoubleClick={() => {
                         editPlayer(player.id);
@@ -2091,100 +2155,106 @@ export default function App() {
         </div>
       ) : null}
       {utilityPanel === "REVIEW" ? (
-        <div className={utilityPanelClass} role="dialog" aria-label="Review mode">
-          <div className="utility-panel-title">Review</div>
-          <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.86 }}>
-            Half
-          </div>
-          {([
-            { id: "H1", label: "H1" },
-            { id: "H2", label: "H2" },
-            { id: "FULL", label: "FULL" },
-          ] as const).map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              className="utility-review-btn"
-              onClick={() => {
-                setReviewHalf(option.id);
-              }}
-              style={
-                reviewHalf === option.id
-                  ? {
-                      border: "1px solid rgba(125,211,252,0.9)",
-                      background: "rgba(14,116,144,0.38)",
-                    }
-                  : undefined
-              }
+        <div className={reviewPanelClass} role="dialog" aria-label="Review mode">
+          <div className="utility-review-scroll">
+            <div className="utility-panel-title">Review</div>
+            <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.86 }}>
+              Half
+            </div>
+            {([
+              { id: "H1", label: "H1" },
+              { id: "H2", label: "H2" },
+              { id: "FULL", label: "FULL" },
+            ] as const).map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                className="utility-review-btn"
+                onClick={() => {
+                  setReviewHalf(option.id);
+                }}
+                style={
+                  reviewHalf === option.id
+                    ? {
+                        border: "1px solid rgba(125,211,252,0.9)",
+                        background: "rgba(14,116,144,0.38)",
+                      }
+                    : undefined
+                }
+              >
+                {option.label}
+              </button>
+            ))}
+            <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.86 }}>
+              Event Group
+            </div>
+            {([
+              { id: "ALL", label: "ALL" },
+              { id: "SCORES", label: "SCORES" },
+              { id: "WIDES", label: "WIDES" },
+              { id: "SHOTS", label: "SHOTS" },
+              { id: "TURNOVERS", label: "TURNOVERS" },
+              { id: "KICKOUTS", label: "KICKOUTS" },
+              { id: "FREES", label: "FREES" },
+            ] as const).map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                className="utility-review-btn"
+                onClick={() => {
+                  setReviewEventGroup(option.id);
+                }}
+                style={
+                  reviewEventGroup === option.id
+                    ? {
+                        border: "1px solid rgba(125,211,252,0.9)",
+                        background: "rgba(14,116,144,0.38)",
+                      }
+                    : undefined
+                }
+              >
+                {option.label}
+              </button>
+            ))}
+            <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.86 }}>
+              Zone
+            </div>
+            {([
+              { id: "FULL", label: "FULL" },
+              { id: "OWN_HALF", label: "OWN HALF" },
+              { id: "OPPOSITION_HALF", label: "OPP HALF" },
+            ] as const).map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                className="utility-review-btn"
+                onClick={() => {
+                  setReviewZone(option.id);
+                }}
+                style={
+                  reviewZone === option.id
+                    ? {
+                        border: "1px solid rgba(125,211,252,0.9)",
+                        background: "rgba(14,116,144,0.38)",
+                      }
+                    : undefined
+                }
+              >
+                {option.label}
+              </button>
+            ))}
+            <div
+              className="utility-panel-title"
+              style={{ fontSize: "9px", opacity: 0.9, textTransform: "none" }}
             >
-              {option.label}
-            </button>
-          ))}
-          <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.86 }}>
-            Event Group
+              {renderableLoggedEvents.length} events shown
+            </div>
           </div>
-          {([
-            { id: "ALL", label: "ALL" },
-            { id: "SCORES", label: "SCORES" },
-            { id: "WIDES", label: "WIDES" },
-            { id: "SHOTS", label: "SHOTS" },
-            { id: "TURNOVERS", label: "TURNOVERS" },
-            { id: "KICKOUTS", label: "KICKOUTS" },
-            { id: "FREES", label: "FREES" },
-          ] as const).map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              className="utility-review-btn"
-              onClick={() => {
-                setReviewEventGroup(option.id);
-              }}
-              style={
-                reviewEventGroup === option.id
-                  ? {
-                      border: "1px solid rgba(125,211,252,0.9)",
-                      background: "rgba(14,116,144,0.38)",
-                    }
-                  : undefined
-              }
-            >
-              {option.label}
-            </button>
-          ))}
-          <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.86 }}>
-            Zone
-          </div>
-          {([
-            { id: "FULL", label: "FULL" },
-            { id: "OWN_HALF", label: "OWN HALF" },
-            { id: "OPPOSITION_HALF", label: "OPP HALF" },
-          ] as const).map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              className="utility-review-btn"
-              onClick={() => {
-                setReviewZone(option.id);
-              }}
-              style={
-                reviewZone === option.id
-                  ? {
-                      border: "1px solid rgba(125,211,252,0.9)",
-                      background: "rgba(14,116,144,0.38)",
-                    }
-                  : undefined
-              }
-            >
-              {option.label}
-            </button>
-          ))}
-          <div
-            className="utility-panel-title"
-            style={{ fontSize: "9px", opacity: 0.9, textTransform: "none" }}
+          <button
+            type="button"
+            className="utility-panel-close utility-panel-close--sticky"
+            onClick={closeUtilityPanel}
           >
-            {renderableLoggedEvents.length} events shown
-          </div>
-          <button type="button" className="utility-panel-close" onClick={closeUtilityPanel}>
             Close
           </button>
         </div>
