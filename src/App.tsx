@@ -1178,7 +1178,7 @@ export default function App() {
   const [activePlayer, setActivePlayer] = useState<string | null>(null);
   const [activePlayerNumber, setActivePlayerNumber] = useState<number | null>(null);
   const [playerDraft, setPlayerDraft] = useState("");
-  const [showPlayerInitials, setShowPlayerInitials] = useState(true);
+  const [showPlayerInitials] = useState(true);
   const [reviewHalf, setReviewHalf] = useState<ReviewHalf>("FULL");
   const [reviewEventGroup, setReviewEventGroup] = useState<ReviewEventGroup>("ALL");
   const [reviewZone, setReviewZone] = useState<ReviewZone>("FULL");
@@ -1329,13 +1329,6 @@ export default function App() {
         ),
       playerId,
     );
-  };
-
-  const editActivePlayer = () => {
-    if (!activePlayerEntry) return;
-    const targetPlayer = activeSquadPlayers.find((player) => player.id === activePlayerEntry.id);
-    if (!targetPlayer) return;
-    editPlayer(targetPlayer.id);
   };
 
   const createSquad = () => {
