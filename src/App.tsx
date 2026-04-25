@@ -25,6 +25,7 @@ type PlayerRole = "STARTER" | "SUB";
 type SquadPlayer = { id: string; name: string; number: number; role: PlayerRole };
 type Squad = { id: string; name: string; players: SquadPlayer[] };
 type LoggedMatchEvent = MatchEvent & {
+  playerId?: string;
   playerName?: string;
   playerNumber?: number;
   squadId?: string;
@@ -531,6 +532,82 @@ const PANEL_CSS = `
   padding: 0 8px;
   cursor: pointer;
   flex: 0 0 auto;
+}
+
+.review-event-card {
+  position: fixed;
+  z-index: 22;
+  left: 12px;
+  min-width: 170px;
+  max-width: min(58vw, 260px);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  background: rgba(10, 20, 35, 0.9);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 8px 16px rgba(4, 12, 24, 0.28);
+}
+
+.review-event-card--portrait {
+  top: max(96px, calc(env(safe-area-inset-top) + 92px));
+}
+
+.review-event-card--landscape {
+  top: max(48px, calc(env(safe-area-inset-top) + 44px));
+}
+
+.review-event-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.review-event-card-title {
+  color: #dbe7f5;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.18px;
+  text-transform: uppercase;
+}
+
+.review-event-card-close {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  background: rgba(15, 23, 42, 0.86);
+  color: #dbe7f5;
+  font-size: 11px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.review-event-card-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: #dbe7f5;
+  font-size: 9px;
+  letter-spacing: 0.16px;
+}
+
+.review-event-card-row-label {
+  opacity: 0.84;
+  text-transform: uppercase;
+}
+
+.review-event-card-row-value {
+  font-weight: 700;
+  text-align: right;
 }
 
 .review-quick-strip {
@@ -1183,6 +1260,7 @@ export default function App() {
   const [reviewEventGroup, setReviewEventGroup] = useState<ReviewEventGroup>("ALL");
   const [reviewZone, setReviewZone] = useState<ReviewZone>("FULL");
   const [showReviewStrip, setShowReviewStrip] = useState(false);
+  const [selectedReviewEventId, setSelectedReviewEventId] = useState<string | null>(null);
   const [loggedEvents, setLoggedEvents] = useState<readonly LoggedMatchEvent[]>([]);
   const [visibilityMode, setVisibilityMode] = useState<VisibilityMode>("ALL");
   const [matchState, setMatchState] = useState<MatchState>("PRE_MATCH");
@@ -1213,6 +1291,7 @@ export default function App() {
     setActiveEventKind: (kind: MatchEventKind) => void;
     undoLastEvent: () => void;
     setShowPlayerInitials: (show: boolean) => void;
+    setOnMarkerTap: (handler: ((eventId: string) => void) | null) => void;
     setVisibleEventLimit: (limit: number | null) => void;
     setEventContext: (context: { half: 1 | 2; timestamp: number; canLog: boolean }) => void;
   } | null>(null);
@@ -1500,6 +1579,7 @@ export default function App() {
       setActiveEventKind: (kind: MatchEventKind) => void;
       undoLastEvent: () => void;
       setShowPlayerInitials: (show: boolean) => void;
+      setOnMarkerTap: (handler: ((eventId: string) => void) | null) => void;
       setVisibleEventLimit: (limit: number | null) => void;
       setEventContext: (context: { half: 1 | 2; timestamp: number; canLog: boolean }) => void;
     } | null = null;
@@ -1640,6 +1720,7 @@ export default function App() {
     setReviewEventGroup("ALL");
     setReviewZone("FULL");
     setShowReviewStrip(false);
+    setSelectedReviewEventId(null);
     setUtilityPanel(null);
   };
 
@@ -1711,10 +1792,30 @@ export default function App() {
   }, [showPlayerInitials]);
 
   useEffect(() => {
+    const isReviewModeActive = showReviewStrip || utilityPanel === "REVIEW";
+    handleRef.current?.setOnMarkerTap(
+      isReviewModeActive
+        ? (eventId) => {
+            setSelectedReviewEventId(eventId);
+          }
+        : null,
+    );
+    if (!isReviewModeActive) {
+      setSelectedReviewEventId(null);
+    }
+  }, [showReviewStrip, utilityPanel]);
+
+  useEffect(() => {
     handleRef.current?.setEvents(
       getRenderablePitchEvents(loggedEvents, reviewHalf, reviewEventGroup, reviewZone),
     );
   }, [loggedEvents, reviewHalf, reviewEventGroup, reviewZone]);
+
+  useEffect(() => {
+    if (!selectedReviewEventId) return;
+    if (loggedEvents.some((event) => event.id === selectedReviewEventId)) return;
+    setSelectedReviewEventId(null);
+  }, [loggedEvents, selectedReviewEventId]);
 
   useEffect(() => {
     const updateLandscape = () => {
@@ -1786,6 +1887,30 @@ export default function App() {
     () => getRenderablePitchEvents(loggedEvents, reviewHalf, reviewEventGroup, reviewZone),
     [loggedEvents, reviewHalf, reviewEventGroup, reviewZone],
   );
+  const isReviewModeActive = showReviewStrip || utilityPanel === "REVIEW";
+  const playerById = useMemo(() => {
+    const next = new Map<string, SquadPlayer>();
+    for (const squad of squads) {
+      for (const player of squad.players) {
+        next.set(player.id, player);
+      }
+    }
+    return next;
+  }, [squads]);
+  const selectedReviewEvent =
+    selectedReviewEventId == null
+      ? null
+      : loggedEvents.find((event) => event.id === selectedReviewEventId) ?? null;
+  const selectedReviewPlayerLabel =
+    selectedReviewEvent == null
+      ? null
+      : selectedReviewEvent.playerId == null
+        ? "No player"
+        : (() => {
+            const matchedPlayer = playerById.get(selectedReviewEvent.playerId);
+            if (!matchedPlayer) return "Unknown player";
+            return `#${matchedPlayer.number} ${matchedPlayer.name}`;
+          })();
 
   const homeScore = useMemo(() => computeTeamScore(loggedEvents, "HOME"), [loggedEvents]);
   const awayScore = useMemo(() => computeTeamScore(loggedEvents, "AWAY"), [loggedEvents]);
@@ -2402,6 +2527,45 @@ export default function App() {
           >
             Exit
           </button>
+        </div>
+      ) : null}
+      {isReviewModeActive && selectedReviewEvent ? (
+        <div
+          className={`review-event-card ${isLandscape ? "review-event-card--landscape" : "review-event-card--portrait"}`}
+          role="status"
+          aria-live="polite"
+        >
+          <div className="review-event-card-head">
+            <div className="review-event-card-title">Event detail</div>
+            <button
+              type="button"
+              className="review-event-card-close"
+              aria-label="Close event detail"
+              onClick={() => {
+                setSelectedReviewEventId(null);
+              }}
+            >
+              ×
+            </button>
+          </div>
+          <div className="review-event-card-row">
+            <span className="review-event-card-row-label">Type</span>
+            <span className="review-event-card-row-value">{selectedReviewEvent.kind}</span>
+          </div>
+          <div className="review-event-card-row">
+            <span className="review-event-card-row-label">Player</span>
+            <span className="review-event-card-row-value">{selectedReviewPlayerLabel}</span>
+          </div>
+          <div className="review-event-card-row">
+            <span className="review-event-card-row-label">Half</span>
+            <span className="review-event-card-row-value">H{selectedReviewEvent.half}</span>
+          </div>
+          <div className="review-event-card-row">
+            <span className="review-event-card-row-label">Time</span>
+            <span className="review-event-card-row-value">
+              {formatMatchClock(selectedReviewEvent.timestamp)}
+            </span>
+          </div>
         </div>
       ) : null}
       <div className="match-stopwatch" aria-live="polite">

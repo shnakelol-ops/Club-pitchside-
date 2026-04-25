@@ -55,7 +55,12 @@ function parseCssColorForPixi(css: string): ParsedCssColor {
 export function drawStatsMarkers(
   g: Graphics,
   events: readonly RenderableMatchEvent[],
-  opts?: { worldToScreenScale?: number; minScreenRadiusPx?: number; showPlayerLabels?: boolean },
+  opts?: {
+    worldToScreenScale?: number;
+    minScreenRadiusPx?: number;
+    showPlayerLabels?: boolean;
+    onMarkerTap?: (eventId: string) => void;
+  },
 ): void {
   g.clear();
   const oldChildren = g.removeChildren();
@@ -70,6 +75,7 @@ export function drawStatsMarkers(
   const minHaloRadius = 2 / worldToScreenScale;
   const minTwoPointOuterRingWidth = 1.15 / worldToScreenScale;
   const showPlayerLabels = opts?.showPlayerLabels ?? true;
+  const onMarkerTap = opts?.onMarkerTap;
 
   for (const event of events) {
     const style = getStatsMarkerStyle(event);
@@ -84,6 +90,17 @@ export function drawStatsMarkers(
 
     const markerContainer = new Container();
     markerContainer.position.set(worldPoint.x, worldPoint.y);
+    if (onMarkerTap) {
+      markerContainer.eventMode = "static";
+      markerContainer.cursor = "pointer";
+      markerContainer.on("pointerdown", (pointerEvent) => {
+        (pointerEvent as { stopPropagation?: () => void }).stopPropagation?.();
+      });
+      markerContainer.on("pointertap", (pointerEvent) => {
+        (pointerEvent as { stopPropagation?: () => void }).stopPropagation?.();
+        onMarkerTap(event.id);
+      });
+    }
     const markerGraphic = new Graphics();
     markerContainer.addChild(markerGraphic);
 
