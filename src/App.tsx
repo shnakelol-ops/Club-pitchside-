@@ -992,6 +992,10 @@ const PANEL_CSS = `
   gap: 3px;
 }
 
+.scoreboard-attack-row {
+  margin-top: 3px;
+}
+
 .scoreboard-team-btn {
   min-height: 28px;
   min-width: 54px;
@@ -1009,22 +1013,27 @@ const PANEL_CSS = `
 }
 
 .scoreboard-attack-btn {
-  min-height: 24px;
+  min-height: 28px;
   min-width: 54px;
-  padding: 0 8px;
+  padding: 0 11px;
   border-radius: 999px;
-  border: 1px solid rgba(125, 211, 252, 0.5);
-  background: rgba(12, 74, 110, 0.42);
-  color: #bae6fd;
-  font-size: 8px;
+  border: 1px solid rgba(186, 230, 253, 0.82);
+  background: rgba(12, 74, 110, 0.86);
+  color: #f8fafc;
+  font-size: 9.5px;
   font-weight: 700;
   line-height: 1;
-  letter-spacing: 0.18px;
+  letter-spacing: 0.24px;
   text-transform: uppercase;
   cursor: pointer;
+  box-shadow: 0 0 0 1px rgba(12, 74, 110, 0.36), 0 1px 4px rgba(2, 6, 23, 0.35);
 }
 
 .scoreboard-attack-btn--rail {
+  width: 100%;
+}
+
+.scoreboard-attack-btn--strip {
   width: 100%;
 }
 
@@ -1918,7 +1927,7 @@ export default function App() {
       getRenderablePitchEvents(loggedEvents, reviewHalf, reviewEventGroup, reviewZone, attackingDirection),
     [loggedEvents, reviewHalf, reviewEventGroup, reviewZone, attackingDirection],
   );
-  const attackingDirectionLabel = attackingDirection === "RIGHT" ? "ATT →" : "ATT ←";
+  const attackingDirectionLabel = attackingDirection === "RIGHT" ? "ATTACKING →" : "ATTACKING ←";
   const toggleAttackingDirection = () => {
     setAttackingDirection((prev) => (prev === "RIGHT" ? "LEFT" : "RIGHT"));
   };
@@ -2181,9 +2190,11 @@ export default function App() {
         >
           AWAY
         </button>
+      </div>
+      <div className="scoreboard-attack-row">
         <button
           type="button"
-          className="scoreboard-attack-btn"
+          className="scoreboard-attack-btn scoreboard-attack-btn--strip"
           onClick={toggleAttackingDirection}
           aria-label={`Tracked team attacking ${
             attackingDirection === "RIGHT" ? "right" : "left"
