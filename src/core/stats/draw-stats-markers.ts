@@ -130,7 +130,7 @@ export function drawStatsMarkers(
     if (shouldShowPlayerNumber) {
       const clampedNumber = Math.min(99, Math.max(1, Math.floor(event.playerNumber)));
       const numberLabel = String(clampedNumber);
-      const targetFontPx = numberLabel.length === 1 ? 10 : 9;
+      const targetFontPx = numberLabel.length === 1 ? 12 : 11;
       const numberFontSize = targetFontPx / worldToScreenScale;
       const numberText = new Text({
         text: numberLabel,
@@ -140,7 +140,7 @@ export function drawStatsMarkers(
           fontWeight: "900",
           align: "center",
           letterSpacing: 0,
-          stroke: { color: 0x06101f, width: 2.5 / worldToScreenScale },
+          stroke: { color: 0x06101f, width: 2 / worldToScreenScale },
           dropShadow: false,
         }),
       });
