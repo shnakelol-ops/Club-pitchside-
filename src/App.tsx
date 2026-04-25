@@ -21,18 +21,15 @@ type UtilityPanel = "PLAYERS" | "REVIEW" | null;
 type ReviewHalf = "H1" | "H2" | "FULL";
 type ReviewEventGroup = "ALL" | "SCORES" | "WIDES" | "SHOTS" | "TURNOVERS" | "KICKOUTS" | "FREES";
 type ReviewZone = "FULL" | "OWN_HALF" | "OPPOSITION_HALF";
-type ReviewPlayerScope = "ALL" | "ACTIVE";
 type PlayerRole = "STARTER" | "SUB";
 type SquadPlayer = { id: string; name: string; number: number; role: PlayerRole };
 type Squad = { id: string; name: string; players: SquadPlayer[] };
 type LoggedMatchEvent = MatchEvent & {
-  playerId?: string;
   playerName?: string;
   playerNumber?: number;
   squadId?: string;
   team?: TeamSide;
 };
-type ActivePlayerTag = { id: string; name: string; number: number; squadId: string };
 
 const EVENT_BUTTONS: Array<{ label: string; kind: MatchEventKind }> = [
   { label: "GOAL", kind: "GOAL" },
@@ -171,53 +168,11 @@ function formatGaelicScore(score: TeamScore): string {
   return `${score.goals}-${String(score.points).padStart(2, "0")}`;
 }
 
-function normalizePlayerName(name: string): string {
-  return name.trim().toLowerCase();
-}
-
-function isEventTaggedToPlayer(event: LoggedMatchEvent, activePlayerTag: ActivePlayerTag): boolean {
-  if (event.team && event.team !== "HOME") return false;
-  if (event.playerId) {
-    return event.playerId === activePlayerTag.id;
-  }
-  if (event.squadId && event.squadId !== activePlayerTag.squadId) return false;
-  if (typeof event.playerNumber === "number" && Number.isFinite(event.playerNumber)) {
-    return event.playerNumber === activePlayerTag.number;
-  }
-  if (typeof event.playerName === "string" && event.playerName.trim().length > 0) {
-    return normalizePlayerName(event.playerName) === normalizePlayerName(activePlayerTag.name);
-  }
-  return false;
-}
-
-function getTaggedPlayerLabel(
-  event: LoggedMatchEvent,
-  playerById: ReadonlyMap<string, SquadPlayer>,
-): string {
-  if (event.playerId) {
-    const matchedPlayer = playerById.get(event.playerId);
-    if (!matchedPlayer) return "Unknown player";
-    return `#${matchedPlayer.number} ${matchedPlayer.name}`;
-  }
-  const hasPlayerNumber = typeof event.playerNumber === "number" && Number.isFinite(event.playerNumber);
-  const hasPlayerName = typeof event.playerName === "string" && event.playerName.trim().length > 0;
-  if (!hasPlayerNumber && !hasPlayerName) return "No player";
-  if (hasPlayerNumber && hasPlayerName) {
-    return `#${event.playerNumber} ${event.playerName}`;
-  }
-  if (hasPlayerNumber) {
-    return `#${event.playerNumber}`;
-  }
-  return event.playerName!.trim();
-}
-
 function getRenderablePitchEvents(
   events: readonly LoggedMatchEvent[],
   reviewHalf: ReviewHalf,
   reviewEventGroup: ReviewEventGroup,
   reviewZone: ReviewZone,
-  reviewPlayerScope: ReviewPlayerScope,
-  activePlayerTag: ActivePlayerTag | null,
 ): LoggedMatchEvent[] {
   const groupKinds =
     reviewEventGroup === "ALL"
@@ -233,10 +188,6 @@ function getRenderablePitchEvents(
 
     if (reviewZone === "OWN_HALF" && event.nx > 0.5) return false;
     if (reviewZone === "OPPOSITION_HALF" && event.nx <= 0.5) return false;
-    if (reviewPlayerScope === "ACTIVE") {
-      if (!activePlayerTag) return false;
-      if (!isEventTaggedToPlayer(event, activePlayerTag)) return false;
-    }
 
     return true;
   });
@@ -582,82 +533,6 @@ const PANEL_CSS = `
   flex: 0 0 auto;
 }
 
-.review-event-card {
-  position: fixed;
-  z-index: 22;
-  left: 12px;
-  min-width: 170px;
-  max-width: min(58vw, 260px);
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 8px;
-  border-radius: 10px;
-  border: 1px solid rgba(148, 163, 184, 0.34);
-  background: rgba(10, 20, 35, 0.9);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  box-shadow: 0 8px 16px rgba(4, 12, 24, 0.28);
-}
-
-.review-event-card--portrait {
-  top: max(96px, calc(env(safe-area-inset-top) + 92px));
-}
-
-.review-event-card--landscape {
-  top: max(48px, calc(env(safe-area-inset-top) + 44px));
-}
-
-.review-event-card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.review-event-card-title {
-  color: #dbe7f5;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.18px;
-  text-transform: uppercase;
-}
-
-.review-event-card-close {
-  width: 18px;
-  height: 18px;
-  border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.34);
-  background: rgba(15, 23, 42, 0.86);
-  color: #dbe7f5;
-  font-size: 11px;
-  line-height: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.review-event-card-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  color: #dbe7f5;
-  font-size: 9px;
-  letter-spacing: 0.16px;
-}
-
-.review-event-card-row-label {
-  opacity: 0.84;
-  text-transform: uppercase;
-}
-
-.review-event-card-row-value {
-  font-weight: 700;
-  text-align: right;
-}
-
 .review-quick-strip {
   position: fixed;
   left: 8px;
@@ -778,57 +653,6 @@ const PANEL_CSS = `
   max-width: min(62vw, 228px);
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.active-player-summary-card {
-  position: fixed;
-  left: 12px;
-  z-index: 22;
-  min-width: 140px;
-  border: 1px solid rgba(125, 211, 252, 0.34);
-  border-radius: 10px;
-  background: rgba(10, 20, 35, 0.86);
-  color: #dbeafe;
-  padding: 7px 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
-  box-shadow: 0 8px 14px rgba(4, 12, 24, 0.24);
-}
-
-.active-player-summary-card--portrait {
-  top: max(96px, calc(env(safe-area-inset-top) + 92px));
-}
-
-.active-player-summary-card--landscape {
-  top: max(46px, calc(env(safe-area-inset-top) + 40px));
-}
-
-.active-player-summary-title {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.16px;
-  text-transform: uppercase;
-}
-
-.active-player-summary-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  font-size: 9px;
-  letter-spacing: 0.14px;
-}
-
-.active-player-summary-row-label {
-  opacity: 0.86;
-  text-transform: uppercase;
-}
-
-.active-player-summary-row-value {
-  font-weight: 700;
 }
 
 .utility-player-btn,
@@ -1358,9 +1182,7 @@ export default function App() {
   const [reviewHalf, setReviewHalf] = useState<ReviewHalf>("FULL");
   const [reviewEventGroup, setReviewEventGroup] = useState<ReviewEventGroup>("ALL");
   const [reviewZone, setReviewZone] = useState<ReviewZone>("FULL");
-  const [reviewPlayerScope, setReviewPlayerScope] = useState<ReviewPlayerScope>("ALL");
   const [showReviewStrip, setShowReviewStrip] = useState(false);
-  const [selectedReviewEventId, setSelectedReviewEventId] = useState<string | null>(null);
   const [loggedEvents, setLoggedEvents] = useState<readonly LoggedMatchEvent[]>([]);
   const [visibilityMode, setVisibilityMode] = useState<VisibilityMode>("ALL");
   const [matchState, setMatchState] = useState<MatchState>("PRE_MATCH");
@@ -1379,10 +1201,8 @@ export default function App() {
   const reviewHalfRef = useRef<ReviewHalf>("FULL");
   const reviewEventGroupRef = useRef<ReviewEventGroup>("ALL");
   const reviewZoneRef = useRef<ReviewZone>("FULL");
-  const reviewPlayerScopeRef = useRef<ReviewPlayerScope>("ALL");
   const pendingScorerRef = useRef<{ name: string; number: number; squadId: string } | null>(null);
   const activeSquadIdRef = useRef("");
-  const activePlayerTagRef = useRef<ActivePlayerTag | null>(null);
   const homeNameInputRef = useRef<HTMLInputElement>(null);
   const awayNameInputRef = useRef<HTMLInputElement>(null);
   const matchEngineStateRef = useRef(createInitialMatchEngineState());
@@ -1393,7 +1213,6 @@ export default function App() {
     setActiveEventKind: (kind: MatchEventKind) => void;
     undoLastEvent: () => void;
     setShowPlayerInitials: (show: boolean) => void;
-    setOnMarkerTap: (handler: ((eventId: string) => void) | null) => void;
     setVisibleEventLimit: (limit: number | null) => void;
     setEventContext: (context: { half: 1 | 2; timestamp: number; canLog: boolean }) => void;
   } | null>(null);
@@ -1408,18 +1227,6 @@ export default function App() {
       activeSquadPlayers.find((player) => player.name === activePlayer) ??
       null
     : null;
-  const activePlayerTag = useMemo<ActivePlayerTag | null>(
-    () =>
-      activePlayerEntry
-        ? {
-            id: activePlayerEntry.id,
-            name: activePlayerEntry.name,
-            number: activePlayerEntry.number,
-            squadId: activeSquad.id,
-          }
-        : null,
-    [activePlayerEntry, activeSquad.id],
-  );
 
   const setActiveSquadById = (nextSquadId: string) => {
     setActiveSquadId(nextSquadId);
@@ -1631,14 +1438,6 @@ export default function App() {
   }, [reviewZone]);
 
   useEffect(() => {
-    reviewPlayerScopeRef.current = reviewPlayerScope;
-  }, [reviewPlayerScope]);
-
-  useEffect(() => {
-    activePlayerTagRef.current = activePlayerTag;
-  }, [activePlayerTag]);
-
-  useEffect(() => {
     if (!activePlayer) {
       setActivePlayerNumber(null);
       return;
@@ -1701,7 +1500,6 @@ export default function App() {
       setActiveEventKind: (kind: MatchEventKind) => void;
       undoLastEvent: () => void;
       setShowPlayerInitials: (show: boolean) => void;
-      setOnMarkerTap: (handler: ((eventId: string) => void) | null) => void;
       setVisibleEventLimit: (limit: number | null) => void;
       setEventContext: (context: { half: 1 | 2; timestamp: number; canLog: boolean }) => void;
     } | null = null;
@@ -1738,8 +1536,6 @@ export default function App() {
               reviewHalfRef.current,
               reviewEventGroupRef.current,
               reviewZoneRef.current,
-              reviewPlayerScopeRef.current,
-              activePlayerTagRef.current,
             ),
           );
           return nextLoggedEvents;
@@ -1800,11 +1596,9 @@ export default function App() {
     reviewHalfRef.current = "H2";
     reviewEventGroupRef.current = "ALL";
     reviewZoneRef.current = "FULL";
-    reviewPlayerScopeRef.current = "ALL";
     setReviewHalf("H2");
     setReviewEventGroup("ALL");
     setReviewZone("FULL");
-    setReviewPlayerScope("ALL");
     setShowReviewStrip(false);
     setUtilityPanel(null);
     handleRef.current?.setEvents([]);
@@ -1829,8 +1623,8 @@ export default function App() {
   };
 
   const openReviewPanel = () => {
-    setShowReviewStrip(true);
-    setUtilityPanel(null);
+    setShowReviewStrip(false);
+    setUtilityPanel("REVIEW");
     setIsUtilityOpen(false);
   };
 
@@ -1845,9 +1639,7 @@ export default function App() {
     setReviewHalf("FULL");
     setReviewEventGroup("ALL");
     setReviewZone("FULL");
-    setReviewPlayerScope("ALL");
     setShowReviewStrip(false);
-    setSelectedReviewEventId(null);
     setUtilityPanel(null);
   };
 
@@ -1879,11 +1671,9 @@ export default function App() {
     reviewHalfRef.current = "FULL";
     reviewEventGroupRef.current = "ALL";
     reviewZoneRef.current = "FULL";
-    reviewPlayerScopeRef.current = "ALL";
     setReviewHalf("FULL");
     setReviewEventGroup("ALL");
     setReviewZone("FULL");
-    setReviewPlayerScope("ALL");
     setShowReviewStrip(false);
     setUtilityPanel(null);
     setActivePlayer(null);
@@ -1921,37 +1711,10 @@ export default function App() {
   }, [showPlayerInitials]);
 
   useEffect(() => {
-    const isReviewModeActive = showReviewStrip || utilityPanel === "REVIEW";
-    handleRef.current?.setOnMarkerTap(
-      isReviewModeActive
-        ? (eventId) => {
-            setSelectedReviewEventId(eventId);
-          }
-        : null,
-    );
-    if (!isReviewModeActive) {
-      setSelectedReviewEventId(null);
-    }
-  }, [showReviewStrip, utilityPanel]);
-
-  useEffect(() => {
     handleRef.current?.setEvents(
-      getRenderablePitchEvents(
-        loggedEvents,
-        reviewHalf,
-        reviewEventGroup,
-        reviewZone,
-        reviewPlayerScope,
-        activePlayerTag,
-      ),
+      getRenderablePitchEvents(loggedEvents, reviewHalf, reviewEventGroup, reviewZone),
     );
-  }, [activePlayerTag, loggedEvents, reviewEventGroup, reviewHalf, reviewPlayerScope, reviewZone]);
-
-  useEffect(() => {
-    if (!selectedReviewEventId) return;
-    if (loggedEvents.some((event) => event.id === selectedReviewEventId)) return;
-    setSelectedReviewEventId(null);
-  }, [loggedEvents, selectedReviewEventId]);
+  }, [loggedEvents, reviewHalf, reviewEventGroup, reviewZone]);
 
   useEffect(() => {
     const updateLandscape = () => {
@@ -2020,49 +1783,9 @@ export default function App() {
             : null;
 
   const renderableLoggedEvents = useMemo(
-    () =>
-      getRenderablePitchEvents(
-        loggedEvents,
-        reviewHalf,
-        reviewEventGroup,
-        reviewZone,
-        reviewPlayerScope,
-        activePlayerTag,
-      ),
-    [activePlayerTag, loggedEvents, reviewEventGroup, reviewHalf, reviewPlayerScope, reviewZone],
+    () => getRenderablePitchEvents(loggedEvents, reviewHalf, reviewEventGroup, reviewZone),
+    [loggedEvents, reviewHalf, reviewEventGroup, reviewZone],
   );
-  const isReviewModeActive = showReviewStrip || utilityPanel === "REVIEW";
-  const playerById = useMemo(() => {
-    const next = new Map<string, SquadPlayer>();
-    for (const squad of squads) {
-      for (const player of squad.players) {
-        next.set(player.id, player);
-      }
-    }
-    return next;
-  }, [squads]);
-  const selectedReviewEvent =
-    selectedReviewEventId == null
-      ? null
-      : loggedEvents.find((event) => event.id === selectedReviewEventId) ?? null;
-  const selectedReviewPlayerLabel =
-    selectedReviewEvent == null ? null : getTaggedPlayerLabel(selectedReviewEvent, playerById);
-  const activePlayerSummary = useMemo(() => {
-    if (!activePlayerTag) return null;
-    let points = 0;
-    let wides = 0;
-    for (const event of loggedEvents) {
-      if (!isEventTaggedToPlayer(event, activePlayerTag)) continue;
-      if (event.kind === "POINT") {
-        points += 1;
-        continue;
-      }
-      if (event.kind === "WIDE") {
-        wides += 1;
-      }
-    }
-    return { points, wides };
-  }, [activePlayerTag, loggedEvents]);
 
   const homeScore = useMemo(() => computeTeamScore(loggedEvents, "HOME"), [loggedEvents]);
   const awayScore = useMemo(() => computeTeamScore(loggedEvents, "AWAY"), [loggedEvents]);
@@ -2479,7 +2202,7 @@ export default function App() {
           </button>
         </div>
       ) : null}
-      {utilityPanel === "REVIEW" && !showReviewStrip ? (
+      {utilityPanel === "REVIEW" ? (
         <div className={reviewPanelClass} role="dialog" aria-label="Review mode">
           <div className="utility-review-scroll">
             <div className="utility-panel-title">Review</div>
@@ -2590,7 +2313,7 @@ export default function App() {
           </button>
         </div>
       ) : null}
-      {showReviewStrip ? (
+      {showReviewStrip && utilityPanel !== "REVIEW" ? (
         <div
           className={`review-strip ${isLandscape ? "review-strip--landscape" : "review-strip--portrait"}`}
           role="toolbar"
@@ -2671,29 +2394,6 @@ export default function App() {
               {option.label}
             </button>
           ))}
-          {([
-            { id: "ALL", label: "ALL" },
-            { id: "ACTIVE", label: "ACTIVE" },
-          ] as const).map((option) => (
-            <button
-              key={`strip-player-scope-${option.id}`}
-              type="button"
-              className="review-strip-chip"
-              onClick={() => {
-                setReviewPlayerScope(option.id);
-              }}
-              style={
-                reviewPlayerScope === option.id
-                  ? {
-                      border: "1px solid rgba(125,211,252,0.9)",
-                      background: "rgba(14,116,144,0.38)",
-                    }
-                  : undefined
-              }
-            >
-              {option.label}
-            </button>
-          ))}
           <button
             type="button"
             className="review-strip-chip"
@@ -2702,45 +2402,6 @@ export default function App() {
           >
             Exit
           </button>
-        </div>
-      ) : null}
-      {isReviewModeActive && selectedReviewEvent ? (
-        <div
-          className={`review-event-card ${isLandscape ? "review-event-card--landscape" : "review-event-card--portrait"}`}
-          role="status"
-          aria-live="polite"
-        >
-          <div className="review-event-card-head">
-            <div className="review-event-card-title">Event detail</div>
-            <button
-              type="button"
-              className="review-event-card-close"
-              aria-label="Close event detail"
-              onClick={() => {
-                setSelectedReviewEventId(null);
-              }}
-            >
-              ×
-            </button>
-          </div>
-          <div className="review-event-card-row">
-            <span className="review-event-card-row-label">Type</span>
-            <span className="review-event-card-row-value">{selectedReviewEvent.kind}</span>
-          </div>
-          <div className="review-event-card-row">
-            <span className="review-event-card-row-label">Player</span>
-            <span className="review-event-card-row-value">{selectedReviewPlayerLabel}</span>
-          </div>
-          <div className="review-event-card-row">
-            <span className="review-event-card-row-label">Half</span>
-            <span className="review-event-card-row-value">H{selectedReviewEvent.half}</span>
-          </div>
-          <div className="review-event-card-row">
-            <span className="review-event-card-row-label">Time</span>
-            <span className="review-event-card-row-value">
-              {formatMatchClock(selectedReviewEvent.timestamp)}
-            </span>
-          </div>
         </div>
       ) : null}
       <div className="match-stopwatch" aria-live="polite">
@@ -2990,23 +2651,6 @@ export default function App() {
           style={activePlayerChipFloatingStyle}
         >
           {activePlayerChipText}
-        </div>
-      ) : null}
-      {activePlayerTag && activePlayerSummary && !isReviewModeActive ? (
-        <div
-          className={`active-player-summary-card ${isLandscape ? "active-player-summary-card--landscape" : "active-player-summary-card--portrait"}`}
-        >
-          <div className="active-player-summary-title">
-            #{activePlayerTag.number} {activePlayerTag.name}
-          </div>
-          <div className="active-player-summary-row">
-            <span className="active-player-summary-row-label">Points</span>
-            <span className="active-player-summary-row-value">{activePlayerSummary.points}</span>
-          </div>
-          <div className="active-player-summary-row">
-            <span className="active-player-summary-row-label">Wides</span>
-            <span className="active-player-summary-row-value">{activePlayerSummary.wides}</span>
-          </div>
         </div>
       ) : null}
       <div className={utilityControlsClass}>

@@ -30,7 +30,6 @@ export type CreatePixiPitchSurfaceOptions = {
   showPlayerInitials?: boolean;
   onEventLogged?: (event: MatchEvent) => void;
   onPitchTap?: (nx: number, ny: number) => void;
-  onMarkerTap?: (eventId: string) => void;
 };
 
 export type PixiPitchSurfaceHandle = {
@@ -38,7 +37,6 @@ export type PixiPitchSurfaceHandle = {
   setActiveEventKind: (kind: MatchEventKind) => void;
   setEventContext: (context: { half: 1 | 2; timestamp: number; canLog: boolean }) => void;
   setShowPlayerInitials: (show: boolean) => void;
-  setOnMarkerTap: (handler: ((eventId: string) => void) | null) => void;
   setVisibleEventLimit: (limit: number | null) => void;
   undoLastEvent: () => void;
   destroy: () => void;
@@ -88,8 +86,7 @@ export async function createPixiPitchSurface(
   const pitchRoot = createPitchRoot(options.sport);
   world.addChild(pitchRoot.root);
   const statsMarkers = new Graphics();
-  statsMarkers.eventMode = "passive";
-  statsMarkers.zIndex = 110;
+  statsMarkers.eventMode = "none";
   world.addChild(statsMarkers);
 
   const eventStore = createMatchEventStore(options.events ?? []);
@@ -99,7 +96,6 @@ export async function createPixiPitchSurface(
   let eventTimestampSecondsState = Math.max(0, Math.floor(options.eventTimestampSeconds ?? 0));
   let canLogEventsState = options.canLogEvents ?? true;
   let showPlayerInitialsState = options.showPlayerInitials ?? true;
-  let onMarkerTapState = options.onMarkerTap ?? null;
   let visibleEventLimitState: number | null = null;
   const onEventLoggedState = options.onEventLogged;
   const onPitchTapState = options.onPitchTap;
@@ -112,7 +108,6 @@ export async function createPixiPitchSurface(
   const redrawMarkers = () => {
     drawStatsMarkers(statsMarkers, getRenderableEvents(), {
       showPlayerLabels: showPlayerInitialsState,
-      onMarkerTap: onMarkerTapState ?? undefined,
     });
   };
 
@@ -191,10 +186,6 @@ export async function createPixiPitchSurface(
     },
     setShowPlayerInitials: (show) => {
       showPlayerInitialsState = show;
-      redrawMarkers();
-    },
-    setOnMarkerTap: (handler) => {
-      onMarkerTapState = handler;
       redrawMarkers();
     },
     setVisibleEventLimit: (limit) => {
