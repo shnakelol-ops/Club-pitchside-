@@ -510,7 +510,7 @@ const PANEL_CSS = `
 }
 
 .review-strip--portrait {
-  top: max(8px, env(safe-area-inset-top));
+  top: max(56px, calc(env(safe-area-inset-top) + 52px));
 }
 
 .review-strip--landscape {
