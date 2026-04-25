@@ -1,4 +1,4 @@
-import { Container, Graphics, Text, TextStyle } from "pixi.js";
+import { Container, Graphics } from "pixi.js";
 
 import type { MatchEvent } from "./stats-event-model";
 import { getStatsMarkerStyle } from "./stats-marker-style";
@@ -128,31 +128,7 @@ export function drawStatsMarkers(
       event.playerNumber > 0 &&
       (event.team == null || event.team === "HOME");
     if (shouldShowPlayerNumber) {
-      const clampedNumber = Math.min(99, Math.max(1, Math.floor(event.playerNumber)));
-      const numberLabel = String(clampedNumber);
-      const targetFontPx = numberLabel.length === 1 ? 12 : 11;
-      const numberFontSize = targetFontPx / worldToScreenScale;
-      const numberText = new Text({
-        text: numberLabel,
-        style: new TextStyle({
-          fill: 0xffffff,
-          fontSize: numberFontSize,
-          fontWeight: "900",
-          align: "center",
-          letterSpacing: 0,
-          stroke: { color: 0x06101f, width: 2 / worldToScreenScale },
-          dropShadow: false,
-        }),
-      });
-      numberText.anchor.set(0.5);
-      numberText.roundPixels = true;
-      numberText.x = 0;
-      numberText.y = 0;
-      const maxLabelWidth = innerDotRadius * 2 * 0.7;
-      if (numberText.width > maxLabelWidth && numberText.width > 0) {
-        numberText.scale.set(maxLabelWidth / numberText.width);
-      }
-      markerContainer.addChild(numberText);
+      // V1 decision: keep player metadata on events, but hide live marker number labels.
     }
 
     g.addChild(markerContainer);
