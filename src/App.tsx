@@ -1139,6 +1139,14 @@ export default function App() {
     activePlayerNumberRef.current = player.number;
   };
 
+  const toggleActivePlayerById = (playerId: string) => {
+    if (activePlayerEntry?.id === playerId) {
+      selectActivePlayerById(null);
+      return;
+    }
+    selectActivePlayerById(playerId);
+  };
+
   const editPlayer = (playerId: string) => {
     const targetPlayer = activeSquadPlayers.find((player) => player.id === playerId);
     if (!targetPlayer) return;
@@ -1917,6 +1925,16 @@ export default function App() {
             >
               Edit Active
             </button>
+            <button
+              type="button"
+              className="utility-review-btn"
+              disabled={!activePlayerEntry}
+              onClick={() => {
+                selectActivePlayerById(null);
+              }}
+            >
+              Clear
+            </button>
           </div>
           <div className="utility-player-add-row">
             <input
@@ -1949,7 +1967,7 @@ export default function App() {
                         type="button"
                         className="utility-player-pill"
                         onClick={() => {
-                          selectActivePlayerById(player.id);
+                          toggleActivePlayerById(player.id);
                           closeUtilityPanel();
                           setIsUtilityOpen(false);
                         }}
@@ -1986,7 +2004,7 @@ export default function App() {
                       type="button"
                       className="utility-player-pill"
                       onClick={() => {
-                        selectActivePlayerById(player.id);
+                        toggleActivePlayerById(player.id);
                         closeUtilityPanel();
                         setIsUtilityOpen(false);
                       }}
