@@ -2497,8 +2497,8 @@ export default function App() {
             </button>
           ))}
           {([
-            { id: "OWN_HALF", label: "OWN" },
-            { id: "OPPOSITION_HALF", label: "OPP" },
+            { id: "OWN_HALF", label: "DEF HALF" },
+            { id: "OPPOSITION_HALF", label: "ATT HALF" },
           ] as const).map((option) => (
             <button
               key={`strip-zone-${option.id}`}
