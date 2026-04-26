@@ -1363,13 +1363,15 @@ export default function App() {
   const activeSquad =
     squads.find((squad) => squad.id === activeSquadId) ?? squads[0] ?? createDefaultSquad();
   const activeSquadPlayers = activeSquad.players;
-  const activePlayerEntry = activePlayer
-    ? activeSquadPlayers.find(
-        (player) => player.name === activePlayer && player.number === (activePlayerNumber ?? -1),
-      ) ??
-      activeSquadPlayers.find((player) => player.name === activePlayer) ??
-      null
-    : null;
+  const activePlayerEntry =
+    (activePlayerId ? activeSquadPlayers.find((player) => player.id === activePlayerId) : null) ??
+    (activePlayer
+      ? activeSquadPlayers.find(
+          (player) => player.name === activePlayer && player.number === (activePlayerNumber ?? -1),
+        ) ??
+        activeSquadPlayers.find((player) => player.name === activePlayer) ??
+        null
+      : null);
 
   const setActiveSquadById = (nextSquadId: string) => {
     setActiveSquadId(nextSquadId);
@@ -1605,25 +1607,21 @@ export default function App() {
   }, [firstHalfAttackingDirection]);
 
   useEffect(() => {
-    if (!activePlayer) {
-      setActivePlayerNumber(null);
-      setActivePlayerId(null);
+    if (!activePlayerId) return;
+    const matchedPlayer = activeSquadPlayers.find((player) => player.id === activePlayerId);
+    if (!matchedPlayer) {
+      selectActivePlayerById(null);
       return;
     }
-    const matchedPlayer =
-      activeSquadPlayers.find(
-        (player) => player.name === activePlayer && player.number === (activePlayerNumber ?? -1),
-      ) ?? activeSquadPlayers.find((player) => player.name === activePlayer);
-    if (!matchedPlayer) {
-      setActivePlayer(null);
-      setActivePlayerNumber(null);
-      setActivePlayerId(null);
-      return;
+    if (matchedPlayer.name !== activePlayer) {
+      setActivePlayer(matchedPlayer.name);
+      activePlayerRef.current = matchedPlayer.name;
     }
     if (matchedPlayer.number !== activePlayerNumber) {
       setActivePlayerNumber(matchedPlayer.number);
+      activePlayerNumberRef.current = matchedPlayer.number;
     }
-  }, [activePlayer, activeSquadPlayers]);
+  }, [activePlayerId, activePlayer, activePlayerNumber, activeSquadPlayers]);
 
   useEffect(() => {
     activeSquadIdRef.current = activeSquadId;
