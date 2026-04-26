@@ -17,18 +17,10 @@ import { type MatchEvent, type MatchEventKind } from "./core/stats/stats-event-m
 type VisibilityMode = "ALL" | "LAST_5" | "LAST_10";
 type TeamScore = { goals: number; points: number; total: number };
 type TeamSide = "HOME" | "AWAY";
-type UtilityPanel = "PLAYERS" | "REVIEW" | "SUMMARY" | null;
+type UtilityPanel = "PLAYERS" | "REVIEW" | null;
 type ReviewHalf = "H1" | "H2" | "FULL";
-type ReviewEventGroup =
-  | "ALL"
-  | "SCORES"
-  | "WIDES"
-  | "SHOTS"
-  | "TURNOVERS"
-  | "KICKOUTS"
-  | "FREES";
+type ReviewEventGroup = "ALL" | "SCORES" | "WIDES" | "SHOTS" | "TURNOVERS" | "KICKOUTS" | "FREES";
 type ReviewZone = "FULL" | "OWN_HALF" | "OPPOSITION_HALF";
-type AttackingDirection = "LEFT" | "RIGHT";
 type PlayerRole = "STARTER" | "SUB";
 type SquadPlayer = { id: string; name: string; number: number; role: PlayerRole };
 type Squad = { id: string; name: string; players: SquadPlayer[] };
@@ -182,9 +174,6 @@ function getRenderablePitchEvents(
   reviewHalf: ReviewHalf,
   reviewEventGroup: ReviewEventGroup,
   reviewZone: ReviewZone,
-  attackingDirection: AttackingDirection,
-  reviewActivePlayerOnly: boolean,
-  activePlayerId: string | null,
 ): LoggedMatchEvent[] {
   const groupKinds =
     reviewEventGroup === "ALL"
@@ -197,25 +186,12 @@ function getRenderablePitchEvents(
     if (reviewHalf === "H2" && event.half !== 2) return false;
 
     if (groupKinds && !groupKinds.has(event.kind)) return false;
-    if (reviewActivePlayerOnly && (activePlayerId == null || event.playerId !== activePlayerId)) return false;
 
-    const isAttackingHalf = attackingDirection === "RIGHT" ? event.nx >= 0.5 : event.nx < 0.5;
-    if (reviewZone === "OWN_HALF" && isAttackingHalf) return false;
-    if (reviewZone === "OPPOSITION_HALF" && !isAttackingHalf) return false;
+    if (reviewZone === "OWN_HALF" && event.nx > 0.5) return false;
+    if (reviewZone === "OPPOSITION_HALF" && event.nx <= 0.5) return false;
 
     return true;
   });
-}
-
-function oppositeAttackingDirection(direction: AttackingDirection): AttackingDirection {
-  return direction === "RIGHT" ? "LEFT" : "RIGHT";
-}
-
-function getEffectiveAttackingDirection(
-  firstHalfAttackingDirection: AttackingDirection,
-  half: 1 | 2,
-): AttackingDirection {
-  return half === 2 ? oppositeAttackingDirection(firstHalfAttackingDirection) : firstHalfAttackingDirection;
 }
 
 const PANEL_CSS = `
@@ -535,7 +511,7 @@ const PANEL_CSS = `
 }
 
 .review-strip--portrait {
-  top: max(96px, calc(env(safe-area-inset-top) + 92px));
+  top: max(56px, calc(env(safe-area-inset-top) + 52px));
 }
 
 .review-strip--landscape {
@@ -1013,10 +989,6 @@ const PANEL_CSS = `
   gap: 3px;
 }
 
-.scoreboard-attack-row {
-  margin-top: 3px;
-}
-
 .scoreboard-team-btn {
   min-height: 28px;
   min-width: 54px;
@@ -1031,35 +1003,6 @@ const PANEL_CSS = `
   letter-spacing: 0.18px;
   text-transform: uppercase;
   cursor: pointer;
-}
-
-.scoreboard-attack-btn {
-  min-height: 28px;
-  min-width: 54px;
-  padding: 0 11px;
-  border-radius: 999px;
-  border: 1px solid rgba(186, 230, 253, 0.82);
-  background: rgba(12, 74, 110, 0.86);
-  color: #f8fafc;
-  font-size: 9.5px;
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: 0.24px;
-  text-transform: uppercase;
-  cursor: pointer;
-  box-shadow: 0 0 0 1px rgba(12, 74, 110, 0.36), 0 1px 4px rgba(2, 6, 23, 0.35);
-}
-
-.scoreboard-attack-btn:disabled {
-  cursor: default;
-}
-
-.scoreboard-attack-btn--rail {
-  width: 100%;
-}
-
-.scoreboard-attack-btn--strip {
-  width: 100%;
 }
 
 .scoreboard-rail {
@@ -1311,15 +1254,11 @@ export default function App() {
   const [squadDraft, setSquadDraft] = useState("");
   const [activePlayer, setActivePlayer] = useState<string | null>(null);
   const [activePlayerNumber, setActivePlayerNumber] = useState<number | null>(null);
-  const [activePlayerId, setActivePlayerId] = useState<string | null>(null);
   const [playerDraft, setPlayerDraft] = useState("");
   const [showPlayerInitials] = useState(true);
   const [reviewHalf, setReviewHalf] = useState<ReviewHalf>("FULL");
   const [reviewEventGroup, setReviewEventGroup] = useState<ReviewEventGroup>("ALL");
-  const [reviewActivePlayerOnly, setReviewActivePlayerOnly] = useState(false);
   const [reviewZone, setReviewZone] = useState<ReviewZone>("FULL");
-  const [firstHalfAttackingDirection, setFirstHalfAttackingDirection] =
-    useState<AttackingDirection>("RIGHT");
   const [showReviewStrip, setShowReviewStrip] = useState(false);
   const [selectedReviewEventId, setSelectedReviewEventId] = useState<string | null>(null);
   const [loggedEvents, setLoggedEvents] = useState<readonly LoggedMatchEvent[]>([]);
@@ -1337,13 +1276,9 @@ export default function App() {
   const activeTeamRef = useRef<TeamSide>("HOME");
   const activePlayerRef = useRef<string | null>(null);
   const activePlayerNumberRef = useRef<number | null>(null);
-  const activePlayerIdRef = useRef<string | null>(null);
   const reviewHalfRef = useRef<ReviewHalf>("FULL");
   const reviewEventGroupRef = useRef<ReviewEventGroup>("ALL");
-  const reviewActivePlayerOnlyRef = useRef(false);
   const reviewZoneRef = useRef<ReviewZone>("FULL");
-  const isReviewModeActiveRef = useRef(false);
-  const firstHalfAttackingDirectionRef = useRef<AttackingDirection>("RIGHT");
   const pendingScorerRef = useRef<{ name: string; number: number; squadId: string } | null>(null);
   const activeSquadIdRef = useRef("");
   const homeNameInputRef = useRef<HTMLInputElement>(null);
@@ -1364,22 +1299,18 @@ export default function App() {
   const activeSquad =
     squads.find((squad) => squad.id === activeSquadId) ?? squads[0] ?? createDefaultSquad();
   const activeSquadPlayers = activeSquad.players;
-  const activePlayerEntry =
-    (activePlayerId ? activeSquadPlayers.find((player) => player.id === activePlayerId) : null) ??
-    (activePlayer
-      ? activeSquadPlayers.find(
-          (player) => player.name === activePlayer && player.number === (activePlayerNumber ?? -1),
-        ) ??
-        activeSquadPlayers.find((player) => player.name === activePlayer) ??
-        null
-      : null);
+  const activePlayerEntry = activePlayer
+    ? activeSquadPlayers.find(
+        (player) => player.name === activePlayer && player.number === (activePlayerNumber ?? -1),
+      ) ??
+      activeSquadPlayers.find((player) => player.name === activePlayer) ??
+      null
+    : null;
 
   const setActiveSquadById = (nextSquadId: string) => {
     setActiveSquadId(nextSquadId);
     setActivePlayer(null);
     setActivePlayerNumber(null);
-    setActivePlayerId(null);
-    activePlayerIdRef.current = null;
     setPlayerDraft("");
   };
 
@@ -1401,17 +1332,13 @@ export default function App() {
       if (nextSelectedPlayer) {
         setActivePlayer(nextSelectedPlayer.name);
         setActivePlayerNumber(nextSelectedPlayer.number);
-        setActivePlayerId(nextSelectedPlayer.id);
         activePlayerRef.current = nextSelectedPlayer.name;
         activePlayerNumberRef.current = nextSelectedPlayer.number;
-        activePlayerIdRef.current = nextSelectedPlayer.id;
       } else {
         setActivePlayer(null);
         setActivePlayerNumber(null);
-        setActivePlayerId(null);
         activePlayerRef.current = null;
         activePlayerNumberRef.current = null;
-        activePlayerIdRef.current = null;
       }
     }
   };
@@ -1420,28 +1347,22 @@ export default function App() {
     if (!playerId) {
       setActivePlayer(null);
       setActivePlayerNumber(null);
-      setActivePlayerId(null);
       activePlayerRef.current = null;
       activePlayerNumberRef.current = null;
-      activePlayerIdRef.current = null;
       return;
     }
     const player = activeSquadPlayers.find((entry) => entry.id === playerId);
     if (!player) {
       setActivePlayer(null);
       setActivePlayerNumber(null);
-      setActivePlayerId(null);
       activePlayerRef.current = null;
       activePlayerNumberRef.current = null;
-      activePlayerIdRef.current = null;
       return;
     }
     setActivePlayer(player.name);
     setActivePlayerNumber(player.number);
-    setActivePlayerId(player.id);
     activePlayerRef.current = player.name;
     activePlayerNumberRef.current = player.number;
-    activePlayerIdRef.current = player.id;
   };
 
   const toggleActivePlayerById = (playerId: string) => {
@@ -1584,10 +1505,6 @@ export default function App() {
   }, [activePlayerNumber]);
 
   useEffect(() => {
-    activePlayerIdRef.current = activePlayerId;
-  }, [activePlayerId]);
-
-  useEffect(() => {
     reviewHalfRef.current = reviewHalf;
   }, [reviewHalf]);
 
@@ -1596,33 +1513,27 @@ export default function App() {
   }, [reviewEventGroup]);
 
   useEffect(() => {
-    reviewActivePlayerOnlyRef.current = reviewActivePlayerOnly;
-  }, [reviewActivePlayerOnly]);
-
-  useEffect(() => {
     reviewZoneRef.current = reviewZone;
   }, [reviewZone]);
 
   useEffect(() => {
-    firstHalfAttackingDirectionRef.current = firstHalfAttackingDirection;
-  }, [firstHalfAttackingDirection]);
-
-  useEffect(() => {
-    if (!activePlayerId) return;
-    const matchedPlayer = activeSquadPlayers.find((player) => player.id === activePlayerId);
-    if (!matchedPlayer) {
-      selectActivePlayerById(null);
+    if (!activePlayer) {
+      setActivePlayerNumber(null);
       return;
     }
-    if (matchedPlayer.name !== activePlayer) {
-      setActivePlayer(matchedPlayer.name);
-      activePlayerRef.current = matchedPlayer.name;
+    const matchedPlayer =
+      activeSquadPlayers.find(
+        (player) => player.name === activePlayer && player.number === (activePlayerNumber ?? -1),
+      ) ?? activeSquadPlayers.find((player) => player.name === activePlayer);
+    if (!matchedPlayer) {
+      setActivePlayer(null);
+      setActivePlayerNumber(null);
+      return;
     }
     if (matchedPlayer.number !== activePlayerNumber) {
       setActivePlayerNumber(matchedPlayer.number);
-      activePlayerNumberRef.current = matchedPlayer.number;
     }
-  }, [activePlayerId, activePlayer, activePlayerNumber, activeSquadPlayers]);
+  }, [activePlayer, activeSquadPlayers]);
 
   useEffect(() => {
     activeSquadIdRef.current = activeSquadId;
@@ -1637,7 +1548,6 @@ export default function App() {
     setActiveSquadId(squads[0]?.id ?? "");
     setActivePlayer(null);
     setActivePlayerNumber(null);
-    setActivePlayerId(null);
   }, [activeSquadId, squads]);
 
   useEffect(() => {
@@ -1681,12 +1591,10 @@ export default function App() {
         const teamSide = activeTeamRef.current;
         const nextEvent: LoggedMatchEvent = {
           ...event,
-          half: matchEngineStateRef.current.currentHalf,
           id: `team-${teamSide.toLowerCase()}-${event.id}`,
           team: teamSide,
         };
         if (teamSide === "HOME") {
-          nextEvent.playerId = activePlayerIdRef.current ?? null;
           if (SCORE_EVENT_KINDS.has(event.kind) && pendingScorerRef.current) {
             nextEvent.playerName = pendingScorerRef.current.name;
             nextEvent.playerNumber = pendingScorerRef.current.number;
@@ -1702,19 +1610,12 @@ export default function App() {
         }
         setLoggedEvents((prev) => {
           const nextLoggedEvents = [...prev, nextEvent];
-          const isReviewModeActive = isReviewModeActiveRef.current;
           handleRef.current?.setEvents(
             getRenderablePitchEvents(
               nextLoggedEvents,
-              isReviewModeActive ? reviewHalfRef.current : matchEngineStateRef.current.currentHalf === 1 ? "H1" : "H2",
-              isReviewModeActive ? reviewEventGroupRef.current : "ALL",
-              isReviewModeActive ? reviewZoneRef.current : "FULL",
-              getEffectiveAttackingDirection(
-                firstHalfAttackingDirectionRef.current,
-                matchEngineStateRef.current.currentHalf,
-              ),
-              isReviewModeActive ? reviewActivePlayerOnlyRef.current : false,
-              isReviewModeActive ? activePlayerIdRef.current : null,
+              reviewHalfRef.current,
+              reviewEventGroupRef.current,
+              reviewZoneRef.current,
             ),
           );
           return nextLoggedEvents;
@@ -1777,7 +1678,6 @@ export default function App() {
     reviewZoneRef.current = "FULL";
     setReviewHalf("H2");
     setReviewEventGroup("ALL");
-    setReviewActivePlayerOnly(false);
     setReviewZone("FULL");
     setShowReviewStrip(false);
     setUtilityPanel(null);
@@ -1803,14 +1703,8 @@ export default function App() {
   };
 
   const openReviewPanel = () => {
-    setShowReviewStrip(true);
-    setUtilityPanel(null);
-    setIsUtilityOpen(false);
-  };
-
-  const openMatchSummaryPanel = () => {
     setShowReviewStrip(false);
-    setUtilityPanel("SUMMARY");
+    setUtilityPanel("REVIEW");
     setIsUtilityOpen(false);
   };
 
@@ -1824,7 +1718,6 @@ export default function App() {
     reviewZoneRef.current = "FULL";
     setReviewHalf("FULL");
     setReviewEventGroup("ALL");
-    setReviewActivePlayerOnly(false);
     setReviewZone("FULL");
     setShowReviewStrip(false);
     setSelectedReviewEventId(null);
@@ -1861,13 +1754,11 @@ export default function App() {
     reviewZoneRef.current = "FULL";
     setReviewHalf("FULL");
     setReviewEventGroup("ALL");
-    setReviewActivePlayerOnly(false);
     setReviewZone("FULL");
     setShowReviewStrip(false);
     setUtilityPanel(null);
     setActivePlayer(null);
     setActivePlayerNumber(null);
-    setActivePlayerId(null);
     setPlayerDraft("");
     setMatchState("PRE_MATCH");
     setCurrentHalf(1);
@@ -1902,7 +1793,6 @@ export default function App() {
 
   useEffect(() => {
     const isReviewModeActive = showReviewStrip || utilityPanel === "REVIEW";
-    isReviewModeActiveRef.current = isReviewModeActive;
     handleRef.current?.setOnMarkerTap(
       isReviewModeActive
         ? (eventId) => {
@@ -1916,19 +1806,10 @@ export default function App() {
   }, [showReviewStrip, utilityPanel]);
 
   useEffect(() => {
-    const isReviewModeActive = showReviewStrip || utilityPanel === "REVIEW";
     handleRef.current?.setEvents(
-      getRenderablePitchEvents(
-        loggedEvents,
-        isReviewModeActive ? reviewHalf : currentHalf === 1 ? "H1" : "H2",
-        isReviewModeActive ? reviewEventGroup : "ALL",
-        isReviewModeActive ? reviewZone : "FULL",
-        getEffectiveAttackingDirection(firstHalfAttackingDirection, currentHalf),
-        isReviewModeActive ? reviewActivePlayerOnly : false,
-        isReviewModeActive ? activePlayerId : null,
-      ),
+      getRenderablePitchEvents(loggedEvents, reviewHalf, reviewEventGroup, reviewZone),
     );
-  }, [loggedEvents, reviewHalf, reviewEventGroup, reviewZone, showReviewStrip, utilityPanel, firstHalfAttackingDirection, currentHalf, reviewActivePlayerOnly, activePlayerId, selectedEventKind]);
+  }, [loggedEvents, reviewHalf, reviewEventGroup, reviewZone]);
 
   useEffect(() => {
     if (!selectedReviewEventId) return;
@@ -2002,33 +1883,10 @@ export default function App() {
             ? { label: "FT", onClick: endMatchAction }
             : null;
 
-  const effectiveAttackingDirection = getEffectiveAttackingDirection(
-    firstHalfAttackingDirection,
-    currentHalf,
-  );
   const renderableLoggedEvents = useMemo(
-    () =>
-      getRenderablePitchEvents(
-        loggedEvents,
-        reviewHalf,
-        reviewEventGroup,
-        reviewZone,
-        effectiveAttackingDirection,
-        reviewActivePlayerOnly,
-        activePlayerId,
-      ),
-    [loggedEvents, reviewHalf, reviewEventGroup, reviewZone, effectiveAttackingDirection, reviewActivePlayerOnly, activePlayerId],
+    () => getRenderablePitchEvents(loggedEvents, reviewHalf, reviewEventGroup, reviewZone),
+    [loggedEvents, reviewHalf, reviewEventGroup, reviewZone],
   );
-  const attackingDirectionHalfLabel = currentHalf === 2 ? "2H" : "1H";
-  const attackingDirectionLabel =
-    effectiveAttackingDirection === "RIGHT"
-      ? `${attackingDirectionHalfLabel} ATTACKING →`
-      : `← ${attackingDirectionHalfLabel} ATTACKING`;
-  const canSetFirstHalfAttackingDirection = matchState === "PRE_MATCH";
-  const toggleFirstHalfAttackingDirection = () => {
-    if (!canSetFirstHalfAttackingDirection) return;
-    setFirstHalfAttackingDirection((prev) => oppositeAttackingDirection(prev));
-  };
   const isReviewModeActive = showReviewStrip || utilityPanel === "REVIEW";
   const playerById = useMemo(() => {
     const next = new Map<string, SquadPlayer>();
@@ -2053,66 +1911,6 @@ export default function App() {
             if (!matchedPlayer) return "Unknown player";
             return `#${matchedPlayer.number} ${matchedPlayer.name}`;
           })();
-  const activeReviewPlayerLabel =
-    activePlayerId == null ? null : (() => {
-      const player = playerById.get(activePlayerId);
-      return player ? `#${player.number} ${player.name}` : null;
-    })();
-  const reviewMatchSummaryLines = useMemo(() => {
-    const playerStats = new Map<
-      string,
-      { goals: number; points: number; twoPointers: number; turnoversWon: number; kickoutsWon: number; freesWon: number }
-    >();
-    let wides = 0;
-    let shots = 0;
-    let scores = 0;
-    for (const event of loggedEvents) {
-      if (event.team !== "HOME") continue;
-      if (event.kind === "WIDE") wides += 1;
-      if (event.kind === "SHOT" || event.kind === "GOAL" || event.kind === "POINT" || event.kind === "TWO_POINTER" || event.kind === "WIDE") shots += 1;
-      if (event.kind === "GOAL" || event.kind === "POINT" || event.kind === "TWO_POINTER") scores += 1;
-      const playerId = event.playerId;
-      if (!playerId || !playerById.has(playerId)) continue;
-      const stat = playerStats.get(playerId) ?? { goals: 0, points: 0, twoPointers: 0, turnoversWon: 0, kickoutsWon: 0, freesWon: 0 };
-      if (event.kind === "GOAL") stat.goals += 1;
-      else if (event.kind === "POINT") stat.points += 1;
-      else if (event.kind === "TWO_POINTER") stat.twoPointers += 1;
-      else if (event.kind === "TURNOVER_WON") stat.turnoversWon += 1;
-      else if (event.kind === "KICKOUT_WON") stat.kickoutsWon += 1;
-      else if (event.kind === "FREE_WON") stat.freesWon += 1;
-      playerStats.set(playerId, stat);
-    }
-    const formatPlayer = (playerId: string) => {
-      const player = playerById.get(playerId);
-      return player ? `#${player.number} ${player.name}` : null;
-    };
-    const topBy = (key: "turnoversWon" | "kickoutsWon" | "freesWon", label: string) => {
-      let best: { playerId: string; value: number } | null = null;
-      for (const [playerId, stat] of playerStats) {
-        if (stat[key] <= 0) continue;
-        if (!best || stat[key] > best.value) best = { playerId, value: stat[key] };
-      }
-      if (!best) return null;
-      const playerLabel = formatPlayer(best.playerId);
-      return playerLabel ? `${playerLabel} — ${label} (${best.value})` : null;
-    };
-    let topScorerLine: string | null = null;
-    let bestScore = 0;
-    for (const [playerId, stat] of playerStats) {
-      const total = stat.goals * 3 + stat.points + stat.twoPointers * 2;
-      if (total <= 0 || total < bestScore) continue;
-      const playerLabel = formatPlayer(playerId);
-      if (!playerLabel) continue;
-      bestScore = total;
-      topScorerLine = `${playerLabel} — Top Scorer (${stat.goals}-${String(stat.points + stat.twoPointers * 2).padStart(2, "0")})`;
-    }
-    const lines = [topScorerLine, topBy("turnoversWon", "Most Turnovers Won"), topBy("kickoutsWon", "Most Kickouts Won"), topBy("freesWon", "Most Frees Won")].filter(
-      (line): line is string => line != null,
-    );
-    if (wides > 0) lines.push(`Wides: ${wides}`);
-    if (shots > 0) lines.push(`Conversion: ${Math.round((scores / shots) * 100)}%`);
-    return lines;
-  }, [loggedEvents, playerById]);
 
   const homeScore = useMemo(() => computeTeamScore(loggedEvents, "HOME"), [loggedEvents]);
   const awayScore = useMemo(() => computeTeamScore(loggedEvents, "AWAY"), [loggedEvents]);
@@ -2226,17 +2024,6 @@ export default function App() {
           </span>
         )}
       </div>
-      <button
-        type="button"
-        className="scoreboard-attack-btn scoreboard-attack-btn--rail"
-        onClick={toggleFirstHalfAttackingDirection}
-        disabled={!canSetFirstHalfAttackingDirection}
-        aria-label={`Tracked team attacking ${
-          effectiveAttackingDirection === "RIGHT" ? "right" : "left"
-        }`}
-      >
-        {attackingDirectionLabel}
-      </button>
     </div>
   ) : (
     <div className="scoreboard-strip" aria-label="Match scoreboard">
@@ -2350,19 +2137,6 @@ export default function App() {
           AWAY
         </button>
       </div>
-      <div className="scoreboard-attack-row">
-        <button
-          type="button"
-          className="scoreboard-attack-btn scoreboard-attack-btn--strip"
-          onClick={toggleFirstHalfAttackingDirection}
-          disabled={!canSetFirstHalfAttackingDirection}
-          aria-label={`Tracked team attacking ${
-            effectiveAttackingDirection === "RIGHT" ? "right" : "left"
-          }`}
-        >
-          {attackingDirectionLabel}
-        </button>
-      </div>
     </div>
   );
 
@@ -2395,7 +2169,7 @@ export default function App() {
       ? { bottom: `${keyboardInset + 18}px` }
       : { bottom: "max(88px, calc(env(safe-area-inset-bottom) + 84px))" };
   const playersPanelStyle = isLandscape
-    ? { zIndex: 10001, maxHeight: "calc(100dvh - 24px)", overflowY: "auto" as const, paddingBottom: "10px" }
+    ? { zIndex: 10001 }
     : keyboardInset > 0
       ? {
           zIndex: 10001,
@@ -2456,11 +2230,7 @@ export default function App() {
             </button>
           </div>
           {activePlayerChipText ? (
-            <div
-              className="utility-active-player-chip"
-              aria-live="polite"
-              onClick={() => selectActivePlayerById(null)}
-            >
+            <div className="utility-active-player-chip" aria-live="polite">
               {activePlayerChipText}
             </div>
           ) : null}
@@ -2595,7 +2365,6 @@ export default function App() {
             </div>
             {([
               { id: "ALL", label: "ALL" },
-              { id: "ACTIVE", label: "ACTIVE" },
               { id: "SCORES", label: "SCORES" },
               { id: "WIDES", label: "WIDES" },
               { id: "SHOTS", label: "SHOTS" },
@@ -2608,19 +2377,12 @@ export default function App() {
                 type="button"
                 className="utility-review-btn"
                 onClick={() => {
-                  if (option.id === "ACTIVE") {
-                    setReviewActivePlayerOnly((prev) => !prev);
-                  } else {
-                    setReviewEventGroup(option.id);
-                  }
+                  setReviewEventGroup(option.id);
                   setShowReviewStrip(true);
                   closeUtilityPanel();
                 }}
                 style={
-                  option.id === "ACTIVE" ? (reviewActivePlayerOnly ? {
-                        border: "1px solid rgba(125,211,252,0.9)",
-                        background: "rgba(14,116,144,0.38)",
-                      } : undefined) : reviewEventGroup === option.id
+                  reviewEventGroup === option.id
                     ? {
                         border: "1px solid rgba(125,211,252,0.9)",
                         background: "rgba(14,116,144,0.38)",
@@ -2666,38 +2428,12 @@ export default function App() {
             >
               {renderableLoggedEvents.length} events shown
             </div>
-            {reviewActivePlayerOnly && activePlayerId && activeReviewPlayerLabel ? (
-              <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.9, textTransform: "none" }}>
-                ACTIVE: {activeReviewPlayerLabel} · {renderableLoggedEvents.length} events
-              </div>
-            ) : null}
           </div>
           <button
             type="button"
             className="utility-panel-close utility-panel-close--sticky"
             onClick={closeUtilityPanel}
           >
-            Close
-          </button>
-        </div>
-      ) : null}
-      {utilityPanel === "SUMMARY" ? (
-        <div className={utilityPanelClass} role="dialog" aria-label="Match summary">
-          <div className="utility-review-scroll">
-            <div className="utility-panel-title">MATCH SUMMARY</div>
-            {reviewMatchSummaryLines.length > 0 ? (
-              reviewMatchSummaryLines.map((line) => (
-                <div key={`summary-panel-${line}`} className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.9, textTransform: "none" }}>
-                  {line}
-                </div>
-              ))
-            ) : (
-              <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.9, textTransform: "none" }}>
-                No tagged match data yet.
-              </div>
-            )}
-          </div>
-          <button type="button" className="utility-panel-close" onClick={closeUtilityPanel}>
             Close
           </button>
         </div>
@@ -2734,7 +2470,6 @@ export default function App() {
           ))}
           {([
             { id: "ALL", label: "ALL" },
-            { id: "ACTIVE", label: "ACTIVE" },
             { id: "SCORES", label: "SCORES" },
             { id: "WIDES", label: "WIDES" },
             { id: "SHOTS", label: "SHOTS" },
@@ -2747,17 +2482,10 @@ export default function App() {
               type="button"
               className="review-strip-chip"
               onClick={() => {
-                if (option.id === "ACTIVE") {
-                  setReviewActivePlayerOnly((prev) => !prev);
-                } else {
-                  setReviewEventGroup(option.id);
-                }
+                setReviewEventGroup(option.id);
               }}
               style={
-                option.id === "ACTIVE" ? (reviewActivePlayerOnly ? {
-                      border: "1px solid rgba(125,211,252,0.9)",
-                      background: "rgba(14,116,144,0.38)",
-                    } : undefined) : reviewEventGroup === option.id
+                reviewEventGroup === option.id
                   ? {
                       border: "1px solid rgba(125,211,252,0.9)",
                       background: "rgba(14,116,144,0.38)",
@@ -2769,8 +2497,8 @@ export default function App() {
             </button>
           ))}
           {([
-            { id: "OWN_HALF", label: "DEF HALF" },
-            { id: "OPPOSITION_HALF", label: "ATT HALF" },
+            { id: "OWN_HALF", label: "OWN" },
+            { id: "OPPOSITION_HALF", label: "OPP" },
           ] as const).map((option) => (
             <button
               key={`strip-zone-${option.id}`}
@@ -3081,21 +2809,13 @@ export default function App() {
         />
       </main>
       {activePlayerChipText ? (
-        <button
-          type="button"
+        <div
           className="utility-active-player-chip utility-active-player-chip-floating"
           aria-live="polite"
-          aria-label="Clear active player"
-          title="Clear active player"
-          style={{ ...activePlayerChipFloatingStyle, pointerEvents: "auto" }}
-          onPointerDown={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            selectActivePlayerById(null);
-          }}
+          style={activePlayerChipFloatingStyle}
         >
           {activePlayerChipText}
-        </button>
+        </div>
       ) : null}
       <div className={utilityControlsClass}>
         {isUtilityOpen ? (
@@ -3106,27 +2826,22 @@ export default function App() {
             <button type="button" className="utility-menu-btn" onClick={openReviewPanel}>
               Review
             </button>
-            <button type="button" className="utility-menu-btn" onClick={openMatchSummaryPanel}>
-              Match Summary
-            </button>
             <button type="button" className="utility-menu-btn" onClick={resetMatch}>
-              Restart Match
+              Reset Match
             </button>
           </div>
         ) : null}
-        {!(isLandscape && (utilityPanel === "PLAYERS" || utilityPanel === "SUMMARY")) ? (
-          <button
-            type="button"
-            className="utility-bubble-btn"
-            aria-label="Toggle utility menu"
-            aria-expanded={isUtilityOpen}
-            onClick={() => {
-              setIsUtilityOpen((prev) => !prev);
-            }}
-          >
-            ⋮
-          </button>
-        ) : null}
+        <button
+          type="button"
+          className="utility-bubble-btn"
+          aria-label="Toggle utility menu"
+          aria-expanded={isUtilityOpen}
+          onClick={() => {
+            setIsUtilityOpen((prev) => !prev);
+          }}
+        >
+          ⋮
+        </button>
       </div>
     </>
   );
