@@ -17,7 +17,7 @@ import { type MatchEvent, type MatchEventKind } from "./core/stats/stats-event-m
 type VisibilityMode = "ALL" | "LAST_5" | "LAST_10";
 type TeamScore = { goals: number; points: number; total: number };
 type TeamSide = "HOME" | "AWAY";
-type UtilityPanel = "PLAYERS" | "REVIEW" | "SUMMARY" | null;
+type UtilityPanel = "PLAYERS" | "REVIEW" | null;
 type ReviewHalf = "H1" | "H2" | "FULL";
 type ReviewEventGroup = "ALL" | "SCORES" | "WIDES" | "SHOTS" | "TURNOVERS" | "KICKOUTS" | "FREES";
 type ReviewZone = "FULL" | "OWN_HALF" | "OPPOSITION_HALF";
@@ -353,26 +353,9 @@ const PANEL_CSS = `
 }
 
 .utility-controls--landscape {
-  left: auto;
-  right: 16px;
-  top: 50%;
-  bottom: auto;
-  transform: translateY(-50%);
-  align-items: flex-end;
-}
-
-.utility-controls--landscape .utility-menu {
-  margin-left: 0;
-  margin-right: 44px;
-  margin-bottom: 0;
-}
-
-.utility-controls--landscape .utility-bubble-btn {
-  left: auto;
-  right: 16px;
-  top: 50%;
-  bottom: auto;
-  transform: translateY(-50%);
+  left: 16px;
+  bottom: 90px;
+  align-items: flex-start;
 }
 
 .utility-bubble-btn {
@@ -2853,7 +2836,6 @@ export default function App() {
           className="utility-bubble-btn"
           aria-label="Toggle utility menu"
           aria-expanded={isUtilityOpen}
-          hidden={isLandscape && utilityPanel === "SUMMARY"}
           onClick={() => {
             setIsUtilityOpen((prev) => !prev);
           }}
