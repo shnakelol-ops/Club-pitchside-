@@ -1705,7 +1705,7 @@ export default function App() {
           handleRef.current?.setEvents(
             getRenderablePitchEvents(
               nextLoggedEvents,
-              isReviewModeActive ? reviewHalfRef.current : "FULL",
+              isReviewModeActive ? reviewHalfRef.current : matchEngineStateRef.current.currentHalf === 1 ? "H1" : "H2",
               isReviewModeActive ? reviewEventGroupRef.current : "ALL",
               isReviewModeActive ? reviewZoneRef.current : "FULL",
               getEffectiveAttackingDirection(
@@ -1919,7 +1919,7 @@ export default function App() {
     handleRef.current?.setEvents(
       getRenderablePitchEvents(
         loggedEvents,
-        isReviewModeActive ? reviewHalf : "FULL",
+        isReviewModeActive ? reviewHalf : currentHalf === 1 ? "H1" : "H2",
         isReviewModeActive ? reviewEventGroup : "ALL",
         isReviewModeActive ? reviewZone : "FULL",
         getEffectiveAttackingDirection(firstHalfAttackingDirection, currentHalf),
