@@ -1834,24 +1834,7 @@ export default function App() {
             pendingScorerRef.current = null;
           }
         }
-        setLoggedEvents((prev) => {
-          const nextLoggedEvents = [...prev, nextEvent];
-          handleRef.current?.setEvents(
-            getRenderablePitchEvents(
-              nextLoggedEvents,
-              reviewHalfRef.current,
-              reviewEventGroupRef.current,
-              reviewZoneRef.current,
-              getEffectiveAttackingDirection(
-                firstHalfAttackingDirectionRef.current,
-                matchEngineStateRef.current.currentHalf,
-              ),
-              reviewActivePlayerOnlyRef.current,
-              activePlayerIdRef.current,
-            ),
-          );
-          return nextLoggedEvents;
-        });
+        setLoggedEvents((prev) => [...prev, nextEvent]);
       },
     }).then((nextHandle) => {
       if (disposed) {
@@ -1908,18 +1891,26 @@ export default function App() {
     reviewHalfRef.current = "H2";
     reviewEventGroupRef.current = "ALL";
     reviewZoneRef.current = "FULL";
+    reviewActivePlayerOnlyRef.current = false;
     setReviewHalf("H2");
     setReviewEventGroup("ALL");
     setReviewActivePlayerOnly(false);
     setReviewZone("FULL");
     setShowReviewStrip(false);
     setUtilityPanel(null);
-    handleRef.current?.setEvents([]);
     const next = startSecondHalf(matchEngineStateRef.current);
     matchEngineStateRef.current = next;
     setMatchState(next.matchState);
     setCurrentHalf(next.currentHalf);
     setMatchTimeSeconds(next.matchTimeSeconds);
+    // Eagerly sync the pitch surface so 2H taps register immediately,
+    // independent of when the React effect for setEventContext runs.
+    handleRef.current?.setEventContext({
+      half: next.currentHalf,
+      timestamp: next.matchTimeSeconds,
+      canLog: isLoggingActive(next.matchState) && activeTeamRef.current === "HOME",
+    });
+    handleRef.current?.setEvents([]);
   };
 
   const endMatchAction = () => {
