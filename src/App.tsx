@@ -3133,7 +3133,7 @@ export default function App() {
             </button>
           </div>
         ) : null}
-        {!(isLandscape && utilityPanel === "PLAYERS") ? (
+        {!(isLandscape && (utilityPanel === "PLAYERS" || utilityPanel === "SUMMARY")) ? (
           <button
             type="button"
             className="utility-bubble-btn"
