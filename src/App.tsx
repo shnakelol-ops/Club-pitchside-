@@ -2035,6 +2035,11 @@ export default function App() {
             if (!matchedPlayer) return "Unknown player";
             return `#${matchedPlayer.number} ${matchedPlayer.name}`;
           })();
+  const activeReviewPlayerLabel =
+    activePlayerId == null ? null : (() => {
+      const player = playerById.get(activePlayerId);
+      return player ? `#${player.number} ${player.name}` : null;
+    })();
 
   const homeScore = useMemo(() => computeTeamScore(loggedEvents, "HOME"), [loggedEvents]);
   const awayScore = useMemo(() => computeTeamScore(loggedEvents, "AWAY"), [loggedEvents]);
@@ -2581,6 +2586,11 @@ export default function App() {
             >
               {renderableLoggedEvents.length} events shown
             </div>
+            {reviewEventGroup === "ACTIVE" && activePlayerId && activeReviewPlayerLabel ? (
+              <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.9, textTransform: "none" }}>
+                ACTIVE: {activeReviewPlayerLabel} · {renderableLoggedEvents.length} events
+              </div>
+            ) : null}
           </div>
           <button
             type="button"
