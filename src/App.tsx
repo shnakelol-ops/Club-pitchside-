@@ -2378,7 +2378,11 @@ export default function App() {
             </button>
           </div>
           {activePlayerChipText ? (
-            <div className="utility-active-player-chip" aria-live="polite">
+            <div
+              className="utility-active-player-chip"
+              aria-live="polite"
+              onClick={() => selectActivePlayerById(null)}
+            >
               {activePlayerChipText}
             </div>
           ) : null}
@@ -2963,6 +2967,7 @@ export default function App() {
           className="utility-active-player-chip utility-active-player-chip-floating"
           aria-live="polite"
           style={activePlayerChipFloatingStyle}
+          onClick={() => selectActivePlayerById(null)}
         >
           {activePlayerChipText}
         </div>
