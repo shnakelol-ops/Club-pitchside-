@@ -17,7 +17,7 @@ import { type MatchEvent, type MatchEventKind } from "./core/stats/stats-event-m
 type VisibilityMode = "ALL" | "LAST_5" | "LAST_10";
 type TeamScore = { goals: number; points: number; total: number };
 type TeamSide = "HOME" | "AWAY";
-type UtilityPanel = "PLAYERS" | "REVIEW" | null;
+type UtilityPanel = "PLAYERS" | "REVIEW" | "SUMMARY" | null;
 type ReviewHalf = "H1" | "H2" | "FULL";
 type ReviewEventGroup = "ALL" | "SCORES" | "WIDES" | "SHOTS" | "TURNOVERS" | "KICKOUTS" | "FREES";
 type ReviewZone = "FULL" | "OWN_HALF" | "OPPOSITION_HALF";
@@ -2836,6 +2836,7 @@ export default function App() {
           className="utility-bubble-btn"
           aria-label="Toggle utility menu"
           aria-expanded={isUtilityOpen}
+          hidden={isLandscape && utilityPanel === "SUMMARY"}
           onClick={() => {
             setIsUtilityOpen((prev) => !prev);
           }}
