@@ -1359,6 +1359,7 @@ export default function App() {
   const reviewEventGroupRef = useRef<ReviewEventGroup>("ALL");
   const reviewActivePlayerOnlyRef = useRef(false);
   const reviewZoneRef = useRef<ReviewZone>("FULL");
+  const isReviewModeActiveRef = useRef(false);
   const firstHalfAttackingDirectionRef = useRef<AttackingDirection>("RIGHT");
   const pendingScorerRef = useRef<{ name: string; number: number; squadId: string } | null>(null);
   const activeSquadIdRef = useRef("");
@@ -1717,18 +1718,19 @@ export default function App() {
         }
         setLoggedEvents((prev) => {
           const nextLoggedEvents = [...prev, nextEvent];
+          const isReviewModeActive = isReviewModeActiveRef.current;
           handleRef.current?.setEvents(
             getRenderablePitchEvents(
               nextLoggedEvents,
-              reviewHalfRef.current,
-              reviewEventGroupRef.current,
-              reviewZoneRef.current,
+              isReviewModeActive ? reviewHalfRef.current : "FULL",
+              isReviewModeActive ? reviewEventGroupRef.current : "ALL",
+              isReviewModeActive ? reviewZoneRef.current : "FULL",
               getEffectiveAttackingDirection(
                 firstHalfAttackingDirectionRef.current,
                 matchEngineStateRef.current.currentHalf,
               ),
-              reviewActivePlayerOnlyRef.current,
-              activePlayerIdRef.current,
+              isReviewModeActive ? reviewActivePlayerOnlyRef.current : false,
+              isReviewModeActive ? activePlayerIdRef.current : null,
             ),
           );
           return nextLoggedEvents;
@@ -1916,6 +1918,7 @@ export default function App() {
 
   useEffect(() => {
     const isReviewModeActive = showReviewStrip || utilityPanel === "REVIEW";
+    isReviewModeActiveRef.current = isReviewModeActive;
     handleRef.current?.setOnMarkerTap(
       isReviewModeActive
         ? (eventId) => {
@@ -1929,18 +1932,19 @@ export default function App() {
   }, [showReviewStrip, utilityPanel]);
 
   useEffect(() => {
+    const isReviewModeActive = showReviewStrip || utilityPanel === "REVIEW";
     handleRef.current?.setEvents(
       getRenderablePitchEvents(
         loggedEvents,
-        reviewHalf,
-        reviewEventGroup,
-        reviewZone,
+        isReviewModeActive ? reviewHalf : "FULL",
+        isReviewModeActive ? reviewEventGroup : "ALL",
+        isReviewModeActive ? reviewZone : "FULL",
         getEffectiveAttackingDirection(firstHalfAttackingDirection, currentHalf),
-        reviewActivePlayerOnly,
-        activePlayerId,
+        isReviewModeActive ? reviewActivePlayerOnly : false,
+        isReviewModeActive ? activePlayerId : null,
       ),
     );
-  }, [loggedEvents, reviewHalf, reviewEventGroup, reviewZone, firstHalfAttackingDirection, currentHalf, reviewActivePlayerOnly, activePlayerId]);
+  }, [loggedEvents, reviewHalf, reviewEventGroup, reviewZone, showReviewStrip, utilityPanel, firstHalfAttackingDirection, currentHalf, reviewActivePlayerOnly, activePlayerId, selectedEventKind]);
 
   useEffect(() => {
     if (!selectedReviewEventId) return;
@@ -3129,17 +3133,19 @@ export default function App() {
             </button>
           </div>
         ) : null}
-        <button
-          type="button"
-          className="utility-bubble-btn"
-          aria-label="Toggle utility menu"
-          aria-expanded={isUtilityOpen}
-          onClick={() => {
-            setIsUtilityOpen((prev) => !prev);
-          }}
-        >
-          ⋮
-        </button>
+        {!(isLandscape && utilityPanel === "PLAYERS") ? (
+          <button
+            type="button"
+            className="utility-bubble-btn"
+            aria-label="Toggle utility menu"
+            aria-expanded={isUtilityOpen}
+            onClick={() => {
+              setIsUtilityOpen((prev) => !prev);
+            }}
+          >
+            ⋮
+          </button>
+        ) : null}
       </div>
     </>
   );
