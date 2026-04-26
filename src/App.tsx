@@ -2049,6 +2049,62 @@ export default function App() {
       const player = playerById.get(activePlayerId);
       return player ? `#${player.number} ${player.name}` : null;
     })();
+  const reviewMatchSummaryLines = useMemo(() => {
+    if (!(utilityPanel === "REVIEW" && reviewHalf === "FULL")) return [] as string[];
+    const playerStats = new Map<
+      string,
+      { goals: number; points: number; twoPointers: number; turnoversWon: number; kickoutsWon: number; freesWon: number }
+    >();
+    let wides = 0;
+    let shots = 0;
+    let scores = 0;
+    for (const event of loggedEvents) {
+      if (event.team !== "HOME") continue;
+      if (event.kind === "WIDE") wides += 1;
+      if (event.kind === "SHOT" || event.kind === "GOAL" || event.kind === "POINT" || event.kind === "TWO_POINTER" || event.kind === "WIDE") shots += 1;
+      if (event.kind === "GOAL" || event.kind === "POINT" || event.kind === "TWO_POINTER") scores += 1;
+      const playerId = event.playerId;
+      if (!playerId || !playerById.has(playerId)) continue;
+      const stat = playerStats.get(playerId) ?? { goals: 0, points: 0, twoPointers: 0, turnoversWon: 0, kickoutsWon: 0, freesWon: 0 };
+      if (event.kind === "GOAL") stat.goals += 1;
+      else if (event.kind === "POINT") stat.points += 1;
+      else if (event.kind === "TWO_POINTER") stat.twoPointers += 1;
+      else if (event.kind === "TURNOVER_WON") stat.turnoversWon += 1;
+      else if (event.kind === "KICKOUT_WON") stat.kickoutsWon += 1;
+      else if (event.kind === "FREE_WON") stat.freesWon += 1;
+      playerStats.set(playerId, stat);
+    }
+    const formatPlayer = (playerId: string) => {
+      const player = playerById.get(playerId);
+      return player ? `#${player.number} ${player.name}` : null;
+    };
+    const topBy = (key: "turnoversWon" | "kickoutsWon" | "freesWon", label: string) => {
+      let best: { playerId: string; value: number } | null = null;
+      for (const [playerId, stat] of playerStats) {
+        if (stat[key] <= 0) continue;
+        if (!best || stat[key] > best.value) best = { playerId, value: stat[key] };
+      }
+      if (!best) return null;
+      const playerLabel = formatPlayer(best.playerId);
+      return playerLabel ? `${playerLabel} — ${label} (${best.value})` : null;
+    };
+    let topScorerLine: string | null = null;
+    let bestScore = 0;
+    for (const [playerId, stat] of playerStats) {
+      const total = stat.goals * 3 + stat.points + stat.twoPointers * 2;
+      if (total <= 0 || total < bestScore) continue;
+      const playerLabel = formatPlayer(playerId);
+      if (!playerLabel) continue;
+      bestScore = total;
+      topScorerLine = `${playerLabel} — Top Scorer (${stat.goals}-${String(stat.points + stat.twoPointers * 2).padStart(2, "0")})`;
+    }
+    const lines = [topScorerLine, topBy("turnoversWon", "Most Turnover Won"), topBy("kickoutsWon", "Most Kickout Won"), topBy("freesWon", "Most Frees Won")].filter(
+      (line): line is string => line != null,
+    );
+    if (wides > 0) lines.push(`Wides: ${wides}`);
+    if (shots > 0) lines.push(`Conversion: ${Math.round((scores / shots) * 100)}%`);
+    return lines;
+  }, [utilityPanel, reviewHalf, loggedEvents, playerById]);
 
   const homeScore = useMemo(() => computeTeamScore(loggedEvents, "HOME"), [loggedEvents]);
   const awayScore = useMemo(() => computeTeamScore(loggedEvents, "AWAY"), [loggedEvents]);
@@ -2602,6 +2658,18 @@ export default function App() {
             >
               {renderableLoggedEvents.length} events shown
             </div>
+            {reviewMatchSummaryLines.length > 0 ? (
+              <>
+                <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.78 }}>
+                  MATCH SUMMARY
+                </div>
+                {reviewMatchSummaryLines.map((line) => (
+                  <div key={`summary-${line}`} className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.9, textTransform: "none" }}>
+                    {line}
+                  </div>
+                ))}
+              </>
+            ) : null}
             {reviewActivePlayerOnly && activePlayerId && activeReviewPlayerLabel ? (
               <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.9, textTransform: "none" }}>
                 ACTIVE: {activeReviewPlayerLabel} · {renderableLoggedEvents.length} events
