@@ -2367,6 +2367,9 @@ export default function App() {
   const utilityPanelClass = isLandscape
     ? "utility-overlay-panel utility-overlay-panel--landscape"
     : "utility-overlay-panel utility-overlay-panel--portrait";
+  const summaryPanelStyle = isLandscape
+    ? undefined
+    : { left: "64px", bottom: "74px", maxWidth: "calc(100vw - 78px)" };
   const reviewPanelClass =
     isLandscape && utilityPanel === "REVIEW"
       ? `${utilityPanelClass} utility-overlay-panel--review-landscape`
@@ -2677,7 +2680,7 @@ export default function App() {
         </div>
       ) : null}
       {utilityPanel === "SUMMARY" ? (
-        <div className={utilityPanelClass} role="dialog" aria-label="Match summary">
+        <div className={utilityPanelClass} role="dialog" aria-label="Match summary" style={summaryPanelStyle}>
           <div className="utility-review-scroll">
             <div className="utility-panel-title">MATCH SUMMARY</div>
             {reviewMatchSummaryLines.length > 0 ? (
