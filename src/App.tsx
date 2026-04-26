@@ -377,26 +377,9 @@ const PANEL_CSS = `
 }
 
 .utility-controls--landscape {
-  left: auto;
-  right: 16px;
-  top: 50%;
-  bottom: auto;
-  transform: translateY(-50%);
-  align-items: flex-end;
-}
-
-.utility-controls--landscape .utility-menu {
-  margin-left: 0;
-  margin-right: 44px;
-  margin-bottom: 0;
-}
-
-.utility-controls--landscape .utility-bubble-btn {
-  left: auto;
-  right: 16px;
-  top: 50%;
-  bottom: auto;
-  transform: translateY(-50%);
+  left: 16px;
+  bottom: 90px;
+  align-items: flex-start;
 }
 
 .utility-bubble-btn {
@@ -2388,9 +2371,6 @@ export default function App() {
   const utilityPanelClass = isLandscape
     ? "utility-overlay-panel utility-overlay-panel--landscape"
     : "utility-overlay-panel utility-overlay-panel--portrait";
-  const summaryPanelStyle = isLandscape
-    ? undefined
-    : { left: "64px", bottom: "74px", maxWidth: "calc(100vw - 78px)" };
   const reviewPanelClass =
     isLandscape && utilityPanel === "REVIEW"
       ? `${utilityPanelClass} utility-overlay-panel--review-landscape`
@@ -2701,7 +2681,7 @@ export default function App() {
         </div>
       ) : null}
       {utilityPanel === "SUMMARY" ? (
-        <div className={utilityPanelClass} role="dialog" aria-label="Match summary" style={summaryPanelStyle}>
+        <div className={utilityPanelClass} role="dialog" aria-label="Match summary">
           <div className="utility-review-scroll">
             <div className="utility-panel-title">MATCH SUMMARY</div>
             {reviewMatchSummaryLines.length > 0 ? (
