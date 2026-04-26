@@ -19,7 +19,15 @@ type TeamScore = { goals: number; points: number; total: number };
 type TeamSide = "HOME" | "AWAY";
 type UtilityPanel = "PLAYERS" | "REVIEW" | null;
 type ReviewHalf = "H1" | "H2" | "FULL";
-type ReviewEventGroup = "ALL" | "SCORES" | "WIDES" | "SHOTS" | "TURNOVERS" | "KICKOUTS" | "FREES";
+type ReviewEventGroup =
+  | "ALL"
+  | "ACTIVE"
+  | "SCORES"
+  | "WIDES"
+  | "SHOTS"
+  | "TURNOVERS"
+  | "KICKOUTS"
+  | "FREES";
 type ReviewZone = "FULL" | "OWN_HALF" | "OPPOSITION_HALF";
 type AttackingDirection = "LEFT" | "RIGHT";
 type PlayerRole = "STARTER" | "SUB";
@@ -51,7 +59,7 @@ const AWAY_INSTANT_SCORING_KINDS = new Set<MatchEventKind>(["GOAL", "POINT", "TW
 const SCORE_EVENT_KINDS = new Set<MatchEventKind>(["GOAL", "POINT", "TWO_POINTER"]);
 const FORMATION_ROW_SIZES = [1, 3, 3, 2, 3, 3] as const;
 const SQUADS_STORAGE_KEY = "pitchsideclub.squads";
-const REVIEW_EVENT_GROUP_KINDS: Record<Exclude<ReviewEventGroup, "ALL">, readonly MatchEventKind[]> = {
+const REVIEW_EVENT_GROUP_KINDS: Record<Exclude<ReviewEventGroup, "ALL" | "ACTIVE">, readonly MatchEventKind[]> = {
   SCORES: ["GOAL", "POINT", "TWO_POINTER"],
   WIDES: ["WIDE"],
   SHOTS: ["SHOT"],
@@ -176,7 +184,12 @@ function getRenderablePitchEvents(
   reviewEventGroup: ReviewEventGroup,
   reviewZone: ReviewZone,
   attackingDirection: AttackingDirection,
+  activePlayerId: string | null,
 ): LoggedMatchEvent[] {
+  if (reviewEventGroup === "ACTIVE") {
+    if (activePlayerId == null) return [];
+    return events.filter((event) => event.playerId === activePlayerId);
+  }
   const groupKinds =
     reviewEventGroup === "ALL"
       ? null
@@ -1696,6 +1709,7 @@ export default function App() {
                 firstHalfAttackingDirectionRef.current,
                 matchEngineStateRef.current.currentHalf,
               ),
+              activePlayerIdRef.current,
             ),
           );
           return nextLoggedEvents;
@@ -1894,9 +1908,10 @@ export default function App() {
         reviewEventGroup,
         reviewZone,
         getEffectiveAttackingDirection(firstHalfAttackingDirection, currentHalf),
+        activePlayerId,
       ),
     );
-  }, [loggedEvents, reviewHalf, reviewEventGroup, reviewZone, firstHalfAttackingDirection, currentHalf]);
+  }, [loggedEvents, reviewHalf, reviewEventGroup, reviewZone, firstHalfAttackingDirection, currentHalf, activePlayerId]);
 
   useEffect(() => {
     if (!selectedReviewEventId) return;
@@ -1982,8 +1997,9 @@ export default function App() {
         reviewEventGroup,
         reviewZone,
         effectiveAttackingDirection,
+        activePlayerId,
       ),
-    [loggedEvents, reviewHalf, reviewEventGroup, reviewZone, effectiveAttackingDirection],
+    [loggedEvents, reviewHalf, reviewEventGroup, reviewZone, effectiveAttackingDirection, activePlayerId],
   );
   const attackingDirectionHalfLabel = currentHalf === 2 ? "2H" : "1H";
   const attackingDirectionLabel =
@@ -2497,6 +2513,7 @@ export default function App() {
             </div>
             {([
               { id: "ALL", label: "ALL" },
+              { id: "ACTIVE", label: "ACTIVE" },
               { id: "SCORES", label: "SCORES" },
               { id: "WIDES", label: "WIDES" },
               { id: "SHOTS", label: "SHOTS" },
@@ -2602,6 +2619,7 @@ export default function App() {
           ))}
           {([
             { id: "ALL", label: "ALL" },
+            { id: "ACTIVE", label: "ACTIVE" },
             { id: "SCORES", label: "SCORES" },
             { id: "WIDES", label: "WIDES" },
             { id: "SHOTS", label: "SHOTS" },
