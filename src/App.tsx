@@ -1182,6 +1182,45 @@ const PANEL_CSS = `
   text-align: center;
 }
 
+.scoreboard-rail-venue {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 18px;
+  padding: 0 2px;
+}
+
+.scoreboard-rail-venue-label {
+  color: rgba(203, 213, 225, 0.9);
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.18px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 64px;
+}
+
+.scoreboard-rail-venue-input {
+  width: 100%;
+  min-width: 0;
+  height: 20px;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.46);
+  background: rgba(15, 23, 42, 0.9);
+  color: #e2e8f0;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0 4px;
+  letter-spacing: 0.16px;
+  text-transform: uppercase;
+  text-align: center;
+}
+
 .match-stopwatch {
   position: fixed;
   top: 10px;
@@ -1298,6 +1337,9 @@ export default function App() {
   });
   const [editingTeam, setEditingTeam] = useState<TeamSide | null>(null);
   const [teamNameDraft, setTeamNameDraft] = useState("");
+  const [venueName, setVenueName] = useState<string>("");
+  const [editingVenue, setEditingVenue] = useState<boolean>(false);
+  const [venueDraft, setVenueDraft] = useState("");
   const [isUtilityOpen, setIsUtilityOpen] = useState(false);
   const [utilityPanel, setUtilityPanel] = useState<UtilityPanel>(null);
   const [squads, setSquads] = useState<Squad[]>(() => {
@@ -1347,6 +1389,7 @@ export default function App() {
   const activeSquadIdRef = useRef("");
   const homeNameInputRef = useRef<HTMLInputElement>(null);
   const awayNameInputRef = useRef<HTMLInputElement>(null);
+  const venueInputRef = useRef<HTMLInputElement>(null);
   const matchEngineStateRef = useRef(createInitialMatchEngineState());
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const handleRef = useRef<{
@@ -1536,6 +1579,17 @@ export default function App() {
     setTeamNameDraft("");
   };
 
+  const startVenueEdit = () => {
+    setEditingVenue(true);
+    setVenueDraft(venueName);
+  };
+
+  const commitVenueEdit = () => {
+    setVenueName(venueDraft.trim().slice(0, 24));
+    setEditingVenue(false);
+    setVenueDraft("");
+  };
+
   const selectEventKind = (kind: MatchEventKind) => {
     setSelectedEventKind(kind);
     selectedEventRef.current = kind;
@@ -1658,6 +1712,12 @@ export default function App() {
     target?.focus();
     target?.select();
   }, [editingTeam]);
+
+  useEffect(() => {
+    if (!editingVenue) return;
+    venueInputRef.current?.focus();
+    venueInputRef.current?.select();
+  }, [editingVenue]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -2116,6 +2176,41 @@ export default function App() {
 
   const scoreboard = isLandscape ? (
     <div className="scoreboard-rail" aria-label="Match scoreboard">
+      <div className="scoreboard-rail-venue">
+        {editingVenue ? (
+          <input
+            ref={venueInputRef}
+            className="scoreboard-rail-venue-input"
+            value={venueDraft}
+            onChange={(event) => {
+              setVenueDraft(event.target.value.slice(0, 24));
+            }}
+            onBlur={commitVenueEdit}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                commitVenueEdit();
+              }
+            }}
+            maxLength={24}
+            placeholder="Venue"
+            aria-label="Edit venue"
+          />
+        ) : (
+          <>
+            <span className="scoreboard-rail-venue-label">
+              {venueName.length > 0 ? venueName : "Venue"}
+            </span>
+            <button
+              type="button"
+              className="scoreboard-name-edit-btn"
+              aria-label="Edit venue"
+              onClick={startVenueEdit}
+            >
+              ✏️
+            </button>
+          </>
+        )}
+      </div>
       <div className="scoreboard-rail-team-wrap">
         <button
           type="button"
@@ -2132,38 +2227,6 @@ export default function App() {
         >
           HOME
         </button>
-        {editingTeam === "HOME" ? (
-          <input
-            ref={homeNameInputRef}
-            className="scoreboard-rail-name-input"
-            value={teamNameDraft}
-            onChange={(event) => {
-              setTeamNameDraft(event.target.value.slice(0, 15));
-            }}
-            onBlur={commitTeamNameEdit}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                commitTeamNameEdit();
-              }
-            }}
-            maxLength={15}
-            aria-label="Edit home team name"
-          />
-        ) : (
-          <span className="scoreboard-rail-name-line">
-            <span className="scoreboard-rail-team-name">{teamNames.HOME}</span>
-            {canEditTeamNames ? (
-              <button
-                type="button"
-                className="scoreboard-name-edit-btn"
-                aria-label="Edit home team name"
-                onClick={() => startTeamNameEdit("HOME")}
-              >
-                ✏️
-              </button>
-            ) : null}
-          </span>
-        )}
       </div>
       <div className="scoreboard-rail-score">
         {formatGaelicScore(homeScore)}
@@ -2190,38 +2253,6 @@ export default function App() {
         >
           AWAY
         </button>
-        {editingTeam === "AWAY" ? (
-          <input
-            ref={awayNameInputRef}
-            className="scoreboard-rail-name-input"
-            value={teamNameDraft}
-            onChange={(event) => {
-              setTeamNameDraft(event.target.value.slice(0, 15));
-            }}
-            onBlur={commitTeamNameEdit}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                commitTeamNameEdit();
-              }
-            }}
-            maxLength={15}
-            aria-label="Edit away team name"
-          />
-        ) : (
-          <span className="scoreboard-rail-name-line">
-            <span className="scoreboard-rail-team-name">{teamNames.AWAY}</span>
-            {canEditTeamNames ? (
-              <button
-                type="button"
-                className="scoreboard-name-edit-btn"
-                aria-label="Edit away team name"
-                onClick={() => startTeamNameEdit("AWAY")}
-              >
-                ✏️
-              </button>
-            ) : null}
-          </span>
-        )}
       </div>
       <button
         type="button"
