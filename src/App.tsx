@@ -2963,14 +2963,21 @@ export default function App() {
         />
       </main>
       {activePlayerChipText ? (
-        <div
+        <button
+          type="button"
           className="utility-active-player-chip utility-active-player-chip-floating"
           aria-live="polite"
-          style={activePlayerChipFloatingStyle}
-          onClick={() => selectActivePlayerById(null)}
+          aria-label="Clear active player"
+          title="Clear active player"
+          style={{ ...activePlayerChipFloatingStyle, pointerEvents: "auto" }}
+          onPointerDown={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            selectActivePlayerById(null);
+          }}
         >
           {activePlayerChipText}
-        </div>
+        </button>
       ) : null}
       <div className={utilityControlsClass}>
         {isUtilityOpen ? (
