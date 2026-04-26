@@ -377,9 +377,26 @@ const PANEL_CSS = `
 }
 
 .utility-controls--landscape {
-  left: 16px;
-  bottom: 90px;
-  align-items: flex-start;
+  left: auto;
+  right: 16px;
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
+  align-items: flex-end;
+}
+
+.utility-controls--landscape .utility-menu {
+  margin-left: 0;
+  margin-right: 44px;
+  margin-bottom: 0;
+}
+
+.utility-controls--landscape .utility-bubble-btn {
+  left: auto;
+  right: 16px;
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
 }
 
 .utility-bubble-btn {
@@ -2393,7 +2410,7 @@ export default function App() {
       ? { bottom: `${keyboardInset + 18}px` }
       : { bottom: "max(88px, calc(env(safe-area-inset-bottom) + 84px))" };
   const playersPanelStyle = isLandscape
-    ? { zIndex: 10001 }
+    ? { zIndex: 10001, maxHeight: "calc(100dvh - 24px)", overflowY: "auto" as const, paddingBottom: "10px" }
     : keyboardInset > 0
       ? {
           zIndex: 10001,
