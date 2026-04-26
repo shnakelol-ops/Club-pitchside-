@@ -1324,13 +1324,13 @@ const PANEL_CSS = `
   .utility-bubble-btn {
     left: auto;
     right: 16px;
-    bottom: 30px;
+    bottom: 132px;
   }
 
   .utility-controls--landscape {
     left: auto;
     right: 16px;
-    bottom: 30px;
+    bottom: 132px;
     align-items: flex-end;
   }
 
