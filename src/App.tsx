@@ -17,7 +17,7 @@ import { type MatchEvent, type MatchEventKind } from "./core/stats/stats-event-m
 type VisibilityMode = "ALL" | "LAST_5" | "LAST_10";
 type TeamScore = { goals: number; points: number; total: number };
 type TeamSide = "HOME" | "AWAY";
-type UtilityPanel = "PLAYERS" | "REVIEW" | null;
+type UtilityPanel = "PLAYERS" | "REVIEW" | "SUMMARY" | null;
 type ReviewHalf = "H1" | "H2" | "FULL";
 type ReviewEventGroup =
   | "ALL"
@@ -535,7 +535,7 @@ const PANEL_CSS = `
 }
 
 .review-strip--portrait {
-  top: max(56px, calc(env(safe-area-inset-top) + 52px));
+  top: max(96px, calc(env(safe-area-inset-top) + 92px));
 }
 
 .review-strip--landscape {
@@ -1802,8 +1802,14 @@ export default function App() {
   };
 
   const openReviewPanel = () => {
+    setShowReviewStrip(true);
+    setUtilityPanel(null);
+    setIsUtilityOpen(false);
+  };
+
+  const openMatchSummaryPanel = () => {
     setShowReviewStrip(false);
-    setUtilityPanel("REVIEW");
+    setUtilityPanel("SUMMARY");
     setIsUtilityOpen(false);
   };
 
@@ -2050,7 +2056,6 @@ export default function App() {
       return player ? `#${player.number} ${player.name}` : null;
     })();
   const reviewMatchSummaryLines = useMemo(() => {
-    if (!(utilityPanel === "REVIEW" && reviewHalf === "FULL")) return [] as string[];
     const playerStats = new Map<
       string,
       { goals: number; points: number; twoPointers: number; turnoversWon: number; kickoutsWon: number; freesWon: number }
@@ -2098,13 +2103,13 @@ export default function App() {
       bestScore = total;
       topScorerLine = `${playerLabel} — Top Scorer (${stat.goals}-${String(stat.points + stat.twoPointers * 2).padStart(2, "0")})`;
     }
-    const lines = [topScorerLine, topBy("turnoversWon", "Most Turnover Won"), topBy("kickoutsWon", "Most Kickout Won"), topBy("freesWon", "Most Frees Won")].filter(
+    const lines = [topScorerLine, topBy("turnoversWon", "Most Turnovers Won"), topBy("kickoutsWon", "Most Kickouts Won"), topBy("freesWon", "Most Frees Won")].filter(
       (line): line is string => line != null,
     );
     if (wides > 0) lines.push(`Wides: ${wides}`);
     if (shots > 0) lines.push(`Conversion: ${Math.round((scores / shots) * 100)}%`);
     return lines;
-  }, [utilityPanel, reviewHalf, loggedEvents, playerById]);
+  }, [loggedEvents, playerById]);
 
   const homeScore = useMemo(() => computeTeamScore(loggedEvents, "HOME"), [loggedEvents]);
   const awayScore = useMemo(() => computeTeamScore(loggedEvents, "AWAY"), [loggedEvents]);
@@ -2658,18 +2663,6 @@ export default function App() {
             >
               {renderableLoggedEvents.length} events shown
             </div>
-            {reviewMatchSummaryLines.length > 0 ? (
-              <>
-                <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.78 }}>
-                  MATCH SUMMARY
-                </div>
-                {reviewMatchSummaryLines.map((line) => (
-                  <div key={`summary-${line}`} className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.9, textTransform: "none" }}>
-                    {line}
-                  </div>
-                ))}
-              </>
-            ) : null}
             {reviewActivePlayerOnly && activePlayerId && activeReviewPlayerLabel ? (
               <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.9, textTransform: "none" }}>
                 ACTIVE: {activeReviewPlayerLabel} · {renderableLoggedEvents.length} events
@@ -2681,6 +2674,27 @@ export default function App() {
             className="utility-panel-close utility-panel-close--sticky"
             onClick={closeUtilityPanel}
           >
+            Close
+          </button>
+        </div>
+      ) : null}
+      {utilityPanel === "SUMMARY" ? (
+        <div className={utilityPanelClass} role="dialog" aria-label="Match summary">
+          <div className="utility-review-scroll">
+            <div className="utility-panel-title">MATCH SUMMARY</div>
+            {reviewMatchSummaryLines.length > 0 ? (
+              reviewMatchSummaryLines.map((line) => (
+                <div key={`summary-panel-${line}`} className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.9, textTransform: "none" }}>
+                  {line}
+                </div>
+              ))
+            ) : (
+              <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.9, textTransform: "none" }}>
+                No tagged match data yet.
+              </div>
+            )}
+          </div>
+          <button type="button" className="utility-panel-close" onClick={closeUtilityPanel}>
             Close
           </button>
         </div>
@@ -3089,8 +3103,11 @@ export default function App() {
             <button type="button" className="utility-menu-btn" onClick={openReviewPanel}>
               Review
             </button>
+            <button type="button" className="utility-menu-btn" onClick={openMatchSummaryPanel}>
+              Match Summary
+            </button>
             <button type="button" className="utility-menu-btn" onClick={resetMatch}>
-              Reset Match
+              Restart Match
             </button>
           </div>
         ) : null}
