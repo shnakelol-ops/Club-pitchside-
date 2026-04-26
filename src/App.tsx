@@ -1301,6 +1301,7 @@ export default function App() {
   const [squadDraft, setSquadDraft] = useState("");
   const [activePlayer, setActivePlayer] = useState<string | null>(null);
   const [activePlayerNumber, setActivePlayerNumber] = useState<number | null>(null);
+  const [activePlayerId, setActivePlayerId] = useState<string | null>(null);
   const [playerDraft, setPlayerDraft] = useState("");
   const [showPlayerInitials] = useState(true);
   const [reviewHalf, setReviewHalf] = useState<ReviewHalf>("FULL");
@@ -1325,6 +1326,7 @@ export default function App() {
   const activeTeamRef = useRef<TeamSide>("HOME");
   const activePlayerRef = useRef<string | null>(null);
   const activePlayerNumberRef = useRef<number | null>(null);
+  const activePlayerIdRef = useRef<string | null>(null);
   const reviewHalfRef = useRef<ReviewHalf>("FULL");
   const reviewEventGroupRef = useRef<ReviewEventGroup>("ALL");
   const reviewZoneRef = useRef<ReviewZone>("FULL");
@@ -1361,6 +1363,8 @@ export default function App() {
     setActiveSquadId(nextSquadId);
     setActivePlayer(null);
     setActivePlayerNumber(null);
+    setActivePlayerId(null);
+    activePlayerIdRef.current = null;
     setPlayerDraft("");
   };
 
@@ -1382,13 +1386,17 @@ export default function App() {
       if (nextSelectedPlayer) {
         setActivePlayer(nextSelectedPlayer.name);
         setActivePlayerNumber(nextSelectedPlayer.number);
+        setActivePlayerId(nextSelectedPlayer.id);
         activePlayerRef.current = nextSelectedPlayer.name;
         activePlayerNumberRef.current = nextSelectedPlayer.number;
+        activePlayerIdRef.current = nextSelectedPlayer.id;
       } else {
         setActivePlayer(null);
         setActivePlayerNumber(null);
+        setActivePlayerId(null);
         activePlayerRef.current = null;
         activePlayerNumberRef.current = null;
+        activePlayerIdRef.current = null;
       }
     }
   };
@@ -1397,22 +1405,28 @@ export default function App() {
     if (!playerId) {
       setActivePlayer(null);
       setActivePlayerNumber(null);
+      setActivePlayerId(null);
       activePlayerRef.current = null;
       activePlayerNumberRef.current = null;
+      activePlayerIdRef.current = null;
       return;
     }
     const player = activeSquadPlayers.find((entry) => entry.id === playerId);
     if (!player) {
       setActivePlayer(null);
       setActivePlayerNumber(null);
+      setActivePlayerId(null);
       activePlayerRef.current = null;
       activePlayerNumberRef.current = null;
+      activePlayerIdRef.current = null;
       return;
     }
     setActivePlayer(player.name);
     setActivePlayerNumber(player.number);
+    setActivePlayerId(player.id);
     activePlayerRef.current = player.name;
     activePlayerNumberRef.current = player.number;
+    activePlayerIdRef.current = player.id;
   };
 
   const toggleActivePlayerById = (playerId: string) => {
@@ -1555,6 +1569,10 @@ export default function App() {
   }, [activePlayerNumber]);
 
   useEffect(() => {
+    activePlayerIdRef.current = activePlayerId;
+  }, [activePlayerId]);
+
+  useEffect(() => {
     reviewHalfRef.current = reviewHalf;
   }, [reviewHalf]);
 
@@ -1573,6 +1591,7 @@ export default function App() {
   useEffect(() => {
     if (!activePlayer) {
       setActivePlayerNumber(null);
+      setActivePlayerId(null);
       return;
     }
     const matchedPlayer =
@@ -1582,6 +1601,7 @@ export default function App() {
     if (!matchedPlayer) {
       setActivePlayer(null);
       setActivePlayerNumber(null);
+      setActivePlayerId(null);
       return;
     }
     if (matchedPlayer.number !== activePlayerNumber) {
@@ -1602,6 +1622,7 @@ export default function App() {
     setActiveSquadId(squads[0]?.id ?? "");
     setActivePlayer(null);
     setActivePlayerNumber(null);
+    setActivePlayerId(null);
   }, [activeSquadId, squads]);
 
   useEffect(() => {
@@ -1649,6 +1670,7 @@ export default function App() {
           team: teamSide,
         };
         if (teamSide === "HOME") {
+          nextEvent.playerId = activePlayerIdRef.current ?? null;
           if (SCORE_EVENT_KINDS.has(event.kind) && pendingScorerRef.current) {
             nextEvent.playerName = pendingScorerRef.current.name;
             nextEvent.playerNumber = pendingScorerRef.current.number;
@@ -1817,6 +1839,7 @@ export default function App() {
     setUtilityPanel(null);
     setActivePlayer(null);
     setActivePlayerNumber(null);
+    setActivePlayerId(null);
     setPlayerDraft("");
     setMatchState("PRE_MATCH");
     setCurrentHalf(1);
