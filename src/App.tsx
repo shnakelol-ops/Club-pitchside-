@@ -452,7 +452,7 @@ const PANEL_CSS = `
 
 .utility-overlay-panel {
   position: fixed;
-  z-index: 21;
+  z-index: 10001;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -475,7 +475,7 @@ const PANEL_CSS = `
 .utility-overlay-panel--landscape {
   right: 16px;
   bottom: 142px;
-  max-height: calc(100dvh - 24px);
+  max-height: calc(100dvh - 150px);
   overflow: hidden;
 }
 
@@ -2638,6 +2638,7 @@ export default function App() {
           aria-label="Home players"
           style={playersPanelStyle}
         >
+          <div className="utility-review-scroll">
           <div className="utility-panel-title">HOME Players</div>
           <div className="utility-squad-row">
             <select
@@ -2769,7 +2770,12 @@ export default function App() {
               </div>
             </div>
           ) : null}
-          <button type="button" className="utility-panel-close" onClick={closeUtilityPanel}>
+          </div>
+          <button
+            type="button"
+            className="utility-panel-close utility-panel-close--sticky"
+            onClick={closeUtilityPanel}
+          >
             Close
           </button>
         </div>
@@ -3314,35 +3320,37 @@ export default function App() {
           {activePlayerChipText}
         </button>
       ) : null}
-      <div className={utilityControlsClass}>
-        {isUtilityOpen ? (
-          <div className="utility-menu">
-            <button type="button" className="utility-menu-btn" onClick={openPlayersPanel}>
-              Players
-            </button>
-            <button type="button" className="utility-menu-btn" onClick={openReviewPanel}>
-              Review
-            </button>
-            <button type="button" className="utility-menu-btn" onClick={openMatchSummaryPanel}>
-              Match Summary
-            </button>
-            <button type="button" className="utility-menu-btn" onClick={resetMatch}>
-              Restart Match
-            </button>
-          </div>
-        ) : null}
-        <button
-          type="button"
-          className="utility-bubble-btn"
-          aria-label="Toggle utility menu"
-          aria-expanded={isUtilityOpen}
-          onClick={() => {
-            setIsUtilityOpen((prev) => !prev);
-          }}
-        >
-          ⋮
-        </button>
-      </div>
+      {utilityPanel == null && !isPickerOpen ? (
+        <div className={utilityControlsClass}>
+          {isUtilityOpen ? (
+            <div className="utility-menu">
+              <button type="button" className="utility-menu-btn" onClick={openPlayersPanel}>
+                Players
+              </button>
+              <button type="button" className="utility-menu-btn" onClick={openReviewPanel}>
+                Review
+              </button>
+              <button type="button" className="utility-menu-btn" onClick={openMatchSummaryPanel}>
+                Match Summary
+              </button>
+              <button type="button" className="utility-menu-btn" onClick={resetMatch}>
+                Restart Match
+              </button>
+            </div>
+          ) : null}
+          <button
+            type="button"
+            className="utility-bubble-btn"
+            aria-label="Toggle utility menu"
+            aria-expanded={isUtilityOpen}
+            onClick={() => {
+              setIsUtilityOpen((prev) => !prev);
+            }}
+          >
+            ⋮
+          </button>
+        </div>
+      ) : null}
     </>
   );
 }
