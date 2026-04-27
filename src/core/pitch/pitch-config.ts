@@ -264,10 +264,10 @@ function buildGaelicFootballLandscapeMarkings(): PitchMarking[] {
     { kind: "rect", x: xRight - largeDeep, y: yLargeTop, w: largeDeep, h: largeWide, stroke: Lg.lineScoringEnd, strokeWidth: wEnd },
     { kind: "rect", x: ix, y: ySmallTop, w: smallDeep, h: smallWide, stroke: Lg.lineScoringEnd, strokeWidth: wEndInner },
     { kind: "rect", x: xRight - smallDeep, y: ySmallTop, w: smallDeep, h: smallWide, stroke: Lg.lineScoringEnd, strokeWidth: wEndInner },
-    { kind: "path", d: twoPtLeft, stroke: Lg.arc2Point, strokeWidth: w2Point, strokeLinecap: "round", opacity: 0.92, skipLineGlow: true },
-    { kind: "path", d: twoPtRight, stroke: Lg.arc2Point, strokeWidth: w2Point, strokeLinecap: "round", opacity: 0.92, skipLineGlow: true },
-    { kind: "path", d: dLeft, stroke: Lg.lineGridMid, strokeWidth: wD, strokeLinecap: "round", skipLineGlow: true },
-    { kind: "path", d: dRight, stroke: Lg.lineGridMid, strokeWidth: wD, strokeLinecap: "round", skipLineGlow: true },
+    { kind: "path", d: twoPtLeft, stroke: Lg.lineGridStrong, strokeWidth: w2Point, strokeLinecap: "round", skipLineGlow: true },
+    { kind: "path", d: twoPtRight, stroke: Lg.lineGridStrong, strokeWidth: w2Point, strokeLinecap: "round", skipLineGlow: true },
+    { kind: "path", d: dLeft, stroke: Lg.lineGridStrong, strokeWidth: wD, strokeLinecap: "round", skipLineGlow: true },
+    { kind: "path", d: dRight, stroke: Lg.lineGridStrong, strokeWidth: wD, strokeLinecap: "round", skipLineGlow: true },
   ];
 }
 
@@ -350,8 +350,8 @@ const hurlingCamogieLandscapeMarkings: PitchMarking[] = (() => {
     { kind: "rect", x: ix, y: ySmallTop, w: smallDeep, h: smallWide, stroke: Lg.lineScoringEnd, strokeWidth: wEndInner },
     { kind: "rect", x: xRight - smallDeep, y: ySmallTop, w: smallDeep, h: smallWide, stroke: Lg.lineScoringEnd, strokeWidth: wEndInner },
     // Hurling/Camogie: no football 2-point arc.
-    { kind: "path", d: dLeft, stroke: Lg.lineGridStrong, strokeWidth: wD, strokeLinecap: "round" },
-    { kind: "path", d: dRight, stroke: Lg.lineGridStrong, strokeWidth: wD, strokeLinecap: "round" },
+    { kind: "path", d: dLeft, stroke: Lg.lineGridStrong, strokeWidth: wD, strokeLinecap: "round", skipLineGlow: true },
+    { kind: "path", d: dRight, stroke: Lg.lineGridStrong, strokeWidth: wD, strokeLinecap: "round", skipLineGlow: true },
   ];
 })();
 
