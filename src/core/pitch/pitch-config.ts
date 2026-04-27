@@ -1,7 +1,7 @@
 import { PITCH_STYLE_TOKENS } from "./pitch-style-tokens";
 import { BOARD_PITCH_VIEWBOX } from "./pitch-space";
 
-export type PitchSport = "soccer" | "gaelic" | "hurling";
+export type PitchSport = "soccer" | "gaelic" | "hurling" | "camogie";
 
 const Lg = PITCH_STYLE_TOKENS.lines.gaelic;
 
@@ -177,7 +177,6 @@ const GAELIC_LARGE_WIDE_M = 19;
 const GAELIC_D_FREE_RADIUS_M = 13;
 const GAELIC_TWO_POINT_RADIUS_M = 40;
 const GAELIC_PENALTY_SPOT_M = 11;
-const GAELIC_CENTRE_CIRCLE_RADIUS_M = 13;
 
 function buildGaelicFootballLandscapeMarkings(): PitchMarking[] {
   const playW = 156;
@@ -190,12 +189,14 @@ function buildGaelicFootballLandscapeMarkings(): PitchMarking[] {
   const t13 = 13 / Lm;
   const t20 = 20 / Lm;
   const t45 = 45 / Lm;
+  const t65 = 65 / Lm;
   const xAt = (lenFrac: number) => ix + lenFrac * playW;
 
   const dash13 = "4.2 3.6";
   const wTouch = 0.52;
   const wHalf = 0.6;
   const w45 = 0.54;
+  const w65 = 0.54;
   const w20 = 0.48;
   const w13 = 0.32;
   const wEnd = 0.46;
@@ -212,6 +213,8 @@ function buildGaelicFootballLandscapeMarkings(): PitchMarking[] {
   const x20R = xAt(1 - t20);
   const x45L = xAt(t45);
   const x45R = xAt(1 - t45);
+  const x65L = xAt(t65);
+  const x65R = xAt(1 - t65);
   const xMid = xAt(0.5);
 
   const smallDeep = (GAELIC_SMALL_DEEP_M / GAELIC_LANDSCAPE_LEN_M) * playW;
@@ -222,8 +225,9 @@ function buildGaelicFootballLandscapeMarkings(): PitchMarking[] {
   const ySmallTop = cy - smallWide / 2;
   const yLargeTop = cy - largeWide / 2;
 
-  const rCentre =
-    (GAELIC_CENTRE_CIRCLE_RADIUS_M / GAELIC_LANDSCAPE_LEN_M) * playW;
+  const centreStartLen = (8 / GAELIC_LANDSCAPE_WID_M) * playH;
+  const yCentreTop = cy - centreStartLen / 2;
+  const yCentreBottom = cy + centreStartLen / 2;
 
   const xPenL = xAt(GAELIC_PENALTY_SPOT_M / GAELIC_LANDSCAPE_LEN_M);
   const xPenR = xAt(1 - GAELIC_PENALTY_SPOT_M / GAELIC_LANDSCAPE_LEN_M);
@@ -250,8 +254,9 @@ function buildGaelicFootballLandscapeMarkings(): PitchMarking[] {
     { kind: "line", x1: x20R, y1: iy, x2: x20R, y2: yBottom, stroke: Lg.lineGridMid, strokeWidth: w20 },
     { kind: "line", x1: x45L, y1: iy, x2: x45L, y2: yBottom, stroke: Lg.lineGridStrong, strokeWidth: w45 },
     { kind: "line", x1: x45R, y1: iy, x2: x45R, y2: yBottom, stroke: Lg.lineGridStrong, strokeWidth: w45 },
-    { kind: "line", x1: xMid, y1: iy, x2: xMid, y2: yBottom, stroke: Lg.lineCentre, strokeWidth: wHalf },
-    { kind: "circle", cx, cy, r: rCentre, stroke: Lg.lineGridMid, strokeWidth: w20 },
+    { kind: "line", x1: x65L, y1: iy, x2: x65L, y2: yBottom, stroke: Lg.lineGridStrong, strokeWidth: w65 },
+    { kind: "line", x1: x65R, y1: iy, x2: x65R, y2: yBottom, stroke: Lg.lineGridStrong, strokeWidth: w65 },
+    { kind: "line", x1: xMid, y1: yCentreTop, x2: xMid, y2: yCentreBottom, stroke: Lg.lineCentre, strokeWidth: wHalf },
     { kind: "circle", cx, cy, r: 0.85, fill: Lg.spot },
     { kind: "circle", cx: xPenL, cy, r: rSpot, fill: Lg.lineGridStrong, stroke: "rgba(0,0,0,0.18)", strokeWidth: 0.06 },
     { kind: "circle", cx: xPenR, cy, r: rSpot, fill: Lg.lineGridStrong, stroke: "rgba(0,0,0,0.18)", strokeWidth: 0.06 },
@@ -259,19 +264,102 @@ function buildGaelicFootballLandscapeMarkings(): PitchMarking[] {
     { kind: "rect", x: xRight - largeDeep, y: yLargeTop, w: largeDeep, h: largeWide, stroke: Lg.lineScoringEnd, strokeWidth: wEnd },
     { kind: "rect", x: ix, y: ySmallTop, w: smallDeep, h: smallWide, stroke: Lg.lineScoringEnd, strokeWidth: wEndInner },
     { kind: "rect", x: xRight - smallDeep, y: ySmallTop, w: smallDeep, h: smallWide, stroke: Lg.lineScoringEnd, strokeWidth: wEndInner },
-    { kind: "path", d: twoPtLeft, stroke: Lg.arc2Point, strokeWidth: w2Point, strokeLinecap: "round", opacity: 0.92, skipLineGlow: true },
-    { kind: "path", d: twoPtRight, stroke: Lg.arc2Point, strokeWidth: w2Point, strokeLinecap: "round", opacity: 0.92, skipLineGlow: true },
-    { kind: "path", d: dLeft, stroke: Lg.lineGridMid, strokeWidth: wD, strokeLinecap: "round", skipLineGlow: true },
-    { kind: "path", d: dRight, stroke: Lg.lineGridMid, strokeWidth: wD, strokeLinecap: "round", skipLineGlow: true },
+    { kind: "path", d: twoPtLeft, stroke: Lg.lineGridStrong, strokeWidth: w2Point, strokeLinecap: "round", skipLineGlow: true },
+    { kind: "path", d: twoPtRight, stroke: Lg.lineGridStrong, strokeWidth: w2Point, strokeLinecap: "round", skipLineGlow: true },
+    { kind: "path", d: dLeft, stroke: Lg.lineGridStrong, strokeWidth: wD, strokeLinecap: "round", skipLineGlow: true },
+    { kind: "path", d: dRight, stroke: Lg.lineGridStrong, strokeWidth: wD, strokeLinecap: "round", skipLineGlow: true },
   ];
 }
 
 const gaelicLandscapeMarkings = buildGaelicFootballLandscapeMarkings();
+const hurlingCamogieLandscapeMarkings: PitchMarking[] = (() => {
+  const playW = 156;
+  const playH = 96;
+  const ix = 2;
+  const iy = 2;
+  const xRight = ix + playW;
+  const yBottom = iy + playH;
+  const Lm = GAELIC_LANDSCAPE_LEN_M;
+  const t13 = 13 / Lm;
+  const t20 = 20 / Lm;
+  const t45 = 45 / Lm;
+  const t65 = 65 / Lm;
+  const xAt = (lenFrac: number) => ix + lenFrac * playW;
+
+  const dash13 = "4.2 3.6";
+  const wTouch = 0.52;
+  const wHalf = 0.6;
+  const w45 = 0.54;
+  const w65 = 0.54;
+  const w20 = 0.48;
+  const w13 = 0.32;
+  const wEnd = 0.46;
+  const wEndInner = 0.42;
+  const wD = 0.48;
+
+  const cx = ix + 0.5 * playW;
+  const cy = iy + 0.5 * playH;
+
+  const x13L = xAt(t13);
+  const x13R = xAt(1 - t13);
+  const x20L = xAt(t20);
+  const x20R = xAt(1 - t20);
+  const x45L = xAt(t45);
+  const x45R = xAt(1 - t45);
+  const x65L = xAt(t65);
+  const x65R = xAt(1 - t65);
+  const xMid = xAt(0.5);
+
+  const smallDeep = (GAELIC_SMALL_DEEP_M / GAELIC_LANDSCAPE_LEN_M) * playW;
+  const smallWide = (GAELIC_SMALL_WIDE_M / GAELIC_LANDSCAPE_WID_M) * playH;
+  const largeDeep = (GAELIC_LARGE_DEEP_M / GAELIC_LANDSCAPE_LEN_M) * playW;
+  const largeWide = (GAELIC_LARGE_WIDE_M / GAELIC_LANDSCAPE_WID_M) * playH;
+
+  const ySmallTop = cy - smallWide / 2;
+  const yLargeTop = cy - largeWide / 2;
+
+  const centreStartLen = (8 / GAELIC_LANDSCAPE_WID_M) * playH;
+  const yCentreTop = cy - centreStartLen / 2;
+  const yCentreBottom = cy + centreStartLen / 2;
+
+  const xPenL = xAt(GAELIC_PENALTY_SPOT_M / GAELIC_LANDSCAPE_LEN_M);
+  const xPenR = xAt(1 - GAELIC_PENALTY_SPOT_M / GAELIC_LANDSCAPE_LEN_M);
+  const rSpot = 0.36;
+
+  const rxD = (GAELIC_D_FREE_RADIUS_M / GAELIC_LANDSCAPE_LEN_M) * playW;
+  const ryD = (GAELIC_D_FREE_RADIUS_M / GAELIC_LANDSCAPE_WID_M) * playH;
+  const dLeft = `M ${rnd3(x20L)} ${rnd3(cy - ryD)} A ${rnd3(rxD)} ${rnd3(ryD)} 0 1 1 ${rnd3(x20L)} ${rnd3(cy + ryD)}`;
+  const dRight = `M ${rnd3(x20R)} ${rnd3(cy - ryD)} A ${rnd3(rxD)} ${rnd3(ryD)} 0 1 0 ${rnd3(x20R)} ${rnd3(cy + ryD)}`;
+
+  return [
+    { kind: "rect", x: ix, y: iy, w: playW, h: playH, stroke: Lg.lineGridStrong, strokeWidth: wTouch },
+    { kind: "line", x1: x13L, y1: iy, x2: x13L, y2: yBottom, stroke: Lg.lineGridSoft, strokeWidth: w13, strokeDasharray: dash13 },
+    { kind: "line", x1: x13R, y1: iy, x2: x13R, y2: yBottom, stroke: Lg.lineGridSoft, strokeWidth: w13, strokeDasharray: dash13 },
+    { kind: "line", x1: x20L, y1: iy, x2: x20L, y2: yBottom, stroke: Lg.lineGridMid, strokeWidth: w20 },
+    { kind: "line", x1: x20R, y1: iy, x2: x20R, y2: yBottom, stroke: Lg.lineGridMid, strokeWidth: w20 },
+    { kind: "line", x1: x45L, y1: iy, x2: x45L, y2: yBottom, stroke: Lg.lineGridStrong, strokeWidth: w45 },
+    { kind: "line", x1: x45R, y1: iy, x2: x45R, y2: yBottom, stroke: Lg.lineGridStrong, strokeWidth: w45 },
+    { kind: "line", x1: x65L, y1: iy, x2: x65L, y2: yBottom, stroke: Lg.lineGridStrong, strokeWidth: w65 },
+    { kind: "line", x1: x65R, y1: iy, x2: x65R, y2: yBottom, stroke: Lg.lineGridStrong, strokeWidth: w65 },
+    { kind: "line", x1: xMid, y1: yCentreTop, x2: xMid, y2: yCentreBottom, stroke: Lg.lineCentre, strokeWidth: wHalf },
+    { kind: "circle", cx, cy, r: 0.85, fill: Lg.spot },
+    { kind: "circle", cx: xPenL, cy, r: rSpot, fill: Lg.lineGridStrong, stroke: "rgba(0,0,0,0.18)", strokeWidth: 0.06 },
+    { kind: "circle", cx: xPenR, cy, r: rSpot, fill: Lg.lineGridStrong, stroke: "rgba(0,0,0,0.18)", strokeWidth: 0.06 },
+    { kind: "rect", x: ix, y: yLargeTop, w: largeDeep, h: largeWide, stroke: Lg.lineScoringEnd, strokeWidth: wEnd },
+    { kind: "rect", x: xRight - largeDeep, y: yLargeTop, w: largeDeep, h: largeWide, stroke: Lg.lineScoringEnd, strokeWidth: wEnd },
+    { kind: "rect", x: ix, y: ySmallTop, w: smallDeep, h: smallWide, stroke: Lg.lineScoringEnd, strokeWidth: wEndInner },
+    { kind: "rect", x: xRight - smallDeep, y: ySmallTop, w: smallDeep, h: smallWide, stroke: Lg.lineScoringEnd, strokeWidth: wEndInner },
+    // Hurling/Camogie: no football 2-point arc.
+    { kind: "path", d: dLeft, stroke: Lg.lineGridStrong, strokeWidth: wD, strokeLinecap: "round", skipLineGlow: true },
+    { kind: "path", d: dRight, stroke: Lg.lineGridStrong, strokeWidth: wD, strokeLinecap: "round", skipLineGlow: true },
+  ];
+})();
 
 export const pitchConfig: Record<PitchSport, PitchConfig> = {
   soccer: { viewBox: BOARD_PITCH_VIEWBOX, inner: { x: 2, y: 2, w: 156, h: 96 }, markings: soccerMarkings },
   gaelic: { viewBox: BOARD_PITCH_VIEWBOX, inner: { x: 2, y: 2, w: 156, h: 96 }, markings: gaelicLandscapeMarkings },
-  hurling: { viewBox: BOARD_PITCH_VIEWBOX, inner: { x: 2, y: 2, w: 156, h: 96 }, markings: gaelicLandscapeMarkings },
+  hurling: { viewBox: BOARD_PITCH_VIEWBOX, inner: { x: 2, y: 2, w: 156, h: 96 }, markings: hurlingCamogieLandscapeMarkings },
+  camogie: { viewBox: BOARD_PITCH_VIEWBOX, inner: { x: 2, y: 2, w: 156, h: 96 }, markings: hurlingCamogieLandscapeMarkings },
 };
 
 export function getPitchConfig(sport: PitchSport): PitchConfig {

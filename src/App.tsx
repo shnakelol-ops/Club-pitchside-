@@ -13,6 +13,7 @@ import {
 } from "./core/match/match-state-store";
 import { createPixiPitchSurface } from "./core/pitch/create-pixi-pitch-surface";
 import { type MatchEvent, type MatchEventKind } from "./core/stats/stats-event-model";
+import { gaaModeConfig, type GaaModeKey } from "./config/gaaModeConfig";
 
 type VisibilityMode = "ALL" | "LAST_5" | "LAST_10";
 type TeamScore = { goals: number; points: number; total: number };
@@ -40,32 +41,15 @@ type LoggedMatchEvent = MatchEvent & {
   team?: TeamSide;
 };
 
-const EVENT_BUTTONS: Array<{ label: string; kind: MatchEventKind }> = [
-  { label: "GOAL", kind: "GOAL" },
-  { label: "POINT", kind: "POINT" },
-  { label: "2PT", kind: "TWO_POINTER" },
-  { label: "WIDE", kind: "WIDE" },
-  { label: "SHOT", kind: "SHOT" },
-  { label: "T+", kind: "TURNOVER_WON" },
-  { label: "T−", kind: "TURNOVER_LOST" },
-  { label: "K+", kind: "KICKOUT_WON" },
-  { label: "K−", kind: "KICKOUT_CONCEDED" },
-  { label: "F+", kind: "FREE_WON" },
-  { label: "F−", kind: "FREE_CONCEDED" },
+type ReviewEventGroupOptionId = ReviewEventGroup | "ACTIVE";
+const MODE_MENU_OPTIONS: ReadonlyArray<{ key: GaaModeKey; label: string }> = [
+  { key: "football", label: "Football" },
+  { key: "ladiesFootball", label: "Ladies Football" },
+  { key: "hurling", label: "Hurling" },
+  { key: "camogie", label: "Camogie" },
 ];
-
-const AWAY_INSTANT_SCORING_KINDS = new Set<MatchEventKind>(["GOAL", "POINT", "TWO_POINTER"]);
-const SCORE_EVENT_KINDS = new Set<MatchEventKind>(["GOAL", "POINT", "TWO_POINTER"]);
 const FORMATION_ROW_SIZES = [1, 3, 3, 2, 3, 3] as const;
 const SQUADS_STORAGE_KEY = "pitchsideclub.squads";
-const REVIEW_EVENT_GROUP_KINDS: Record<Exclude<ReviewEventGroup, "ALL">, readonly MatchEventKind[]> = {
-  SCORES: ["GOAL", "POINT", "TWO_POINTER"],
-  WIDES: ["WIDE"],
-  SHOTS: ["SHOT"],
-  TURNOVERS: ["TURNOVER_WON", "TURNOVER_LOST"],
-  KICKOUTS: ["KICKOUT_WON", "KICKOUT_CONCEDED"],
-  FREES: ["FREE_WON", "FREE_CONCEDED"],
-};
 function newLocalEventId(): string {
   const c = globalThis.crypto;
   if (c && "randomUUID" in c && typeof c.randomUUID === "function") {
@@ -163,6 +147,14 @@ function computeTeamScore(events: readonly MatchEvent[], team: TeamSide): TeamSc
     }
     if (event.kind === "TWO_POINTER") {
       points += 2;
+      continue;
+    }
+    if (event.kind === "FORTY_FIVE_TWO_POINT") {
+      points += 2;
+      continue;
+    }
+    if (event.kind === "FREE_SCORED") {
+      points += 1;
     }
   }
 
@@ -181,6 +173,10 @@ function getRenderablePitchEvents(
   events: readonly LoggedMatchEvent[],
   reviewHalf: ReviewHalf,
   reviewEventGroup: ReviewEventGroup,
+  reviewEventGroupKinds: Record<
+    Exclude<ReviewEventGroup, "ALL">,
+    readonly MatchEventKind[]
+  >,
   reviewZone: ReviewZone,
   attackingDirection: AttackingDirection,
   reviewActivePlayerOnly: boolean,
@@ -189,7 +185,7 @@ function getRenderablePitchEvents(
   const groupKinds =
     reviewEventGroup === "ALL"
       ? null
-      : new Set<MatchEventKind>(REVIEW_EVENT_GROUP_KINDS[reviewEventGroup]);
+      : new Set<MatchEventKind>(reviewEventGroupKinds[reviewEventGroup]);
   return events.filter((event) => {
     if (event.id.includes("-instant-score-")) return false;
 
@@ -197,7 +193,7 @@ function getRenderablePitchEvents(
     if (reviewHalf === "H2" && event.half !== 2) return false;
 
     if (groupKinds && !groupKinds.has(event.kind)) return false;
-    if (reviewActivePlayerOnly && (activePlayerId == null || event.playerId !== activePlayerId)) return false;
+    if (reviewActivePlayerOnly && activePlayerId != null && event.playerId !== activePlayerId) return false;
 
     const isAttackingHalf = attackingDirection === "RIGHT" ? event.nx >= 0.5 : event.nx < 0.5;
     if (reviewZone === "OWN_HALF" && isAttackingHalf) return false;
@@ -356,6 +352,25 @@ const PANEL_CSS = `
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.22), 0 0 12px rgba(34, 197, 94, 0.28);
+}
+
+.player-bubble-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(15, 23, 42, 0.68);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: #dbeafe;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.12), 0 0 6px rgba(148, 163, 184, 0.14);
 }
 
 .utility-controls {
@@ -389,11 +404,11 @@ const PANEL_CSS = `
   width: 39px;
   height: 39px;
   border-radius: 999px;
-  border: 1px solid rgba(125, 211, 252, 0.42);
-  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(125, 211, 252, 0.3);
+  background: rgba(15, 23, 42, 0.74);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
-  box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.2), 0 0 10px rgba(96, 165, 250, 0.24);
+  box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.12), 0 0 8px rgba(96, 165, 250, 0.14);
   z-index: 9999;
   color: #dbeafe;
   font-size: 15px;
@@ -1322,21 +1337,21 @@ const PANEL_CSS = `
   }
 
   .utility-bubble-btn {
-    left: auto;
-    right: 16px;
-    bottom: 132px;
+    left: 16px;
+    right: auto;
+    bottom: 90px;
   }
 
   .utility-controls--landscape {
-    left: auto;
-    right: 16px;
-    bottom: 132px;
-    align-items: flex-end;
+    left: 16px;
+    right: auto;
+    bottom: 90px;
+    align-items: flex-start;
   }
 
   .utility-controls--landscape .utility-menu {
-    margin-left: 0;
-    margin-right: 44px;
+    margin-left: 44px;
+    margin-right: 0;
   }
 }
 
@@ -1383,23 +1398,11 @@ const PANEL_CSS = `
 }
 `;
 
-const EVENT_LABEL_BY_KIND: Record<MatchEventKind, string> = {
-  GOAL: "GOAL",
-  POINT: "POINT",
-  TWO_POINTER: "2PT",
-  WIDE: "WIDE",
-  SHOT: "SHOT",
-  TURNOVER_WON: "T+",
-  TURNOVER_LOST: "T−",
-  KICKOUT_WON: "K+",
-  KICKOUT_CONCEDED: "K−",
-  FREE_WON: "F+",
-  FREE_CONCEDED: "F−",
-};
-
 export default function App() {
   const hostRef = useRef<HTMLDivElement>(null);
   const floatingControlsRef = useRef<HTMLDivElement>(null);
+  const [currentMode, setCurrentMode] = useState<GaaModeKey>("football");
+  const mode = gaaModeConfig[currentMode];
   const [selectedEventKind, setSelectedEventKind] = useState<MatchEventKind>("POINT");
   const [activeTeam, setActiveTeam] = useState<TeamSide>("HOME");
   const [teamNames, setTeamNames] = useState<{ HOME: string; AWAY: string }>({
@@ -1463,6 +1466,44 @@ export default function App() {
   const venueInputRef = useRef<HTMLInputElement>(null);
   const matchEngineStateRef = useRef(createInitialMatchEngineState());
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const EVENT_BUTTONS = mode.eventButtons;
+  const EVENT_LABEL_BY_KIND = mode.eventLabels;
+  const AWAY_INSTANT_SCORING_KINDS = useMemo(
+    () => new Set<MatchEventKind>(mode.scoringEvents),
+    [mode],
+  );
+  const SCORE_EVENT_KINDS = useMemo(
+    () => new Set<MatchEventKind>(mode.scoringEvents),
+    [mode],
+  );
+  const REVIEW_EVENT_GROUP_KINDS = useMemo<
+    Record<Exclude<ReviewEventGroup, "ALL">, readonly MatchEventKind[]>
+  >(
+    () => ({
+      SCORES: mode.reviewGroups.SCORES.kinds,
+      WIDES: mode.reviewGroups.WIDES.kinds,
+      SHOTS: mode.reviewGroups.SHOTS.kinds,
+      TURNOVERS: mode.reviewGroups.TURNOVERS.kinds,
+      KICKOUTS: mode.reviewGroups.KICKOUTS.kinds,
+      FREES: mode.reviewGroups.FREES.kinds,
+    }),
+    [mode],
+  );
+  const REVIEW_EVENT_GROUP_OPTIONS = useMemo<
+    ReadonlyArray<{ id: ReviewEventGroupOptionId; label: string }>
+  >(
+    () => [
+      { id: "ALL", label: "ALL" },
+      { id: "ACTIVE", label: "ACTIVE" },
+      { id: "SCORES", label: mode.reviewGroups.SCORES.label },
+      { id: "WIDES", label: mode.reviewGroups.WIDES.label },
+      { id: "SHOTS", label: mode.reviewGroups.SHOTS.label },
+      { id: "TURNOVERS", label: mode.reviewGroups.TURNOVERS.label },
+      { id: "KICKOUTS", label: mode.reviewGroups.KICKOUTS.label },
+      { id: "FREES", label: mode.reviewGroups.FREES.label },
+    ],
+    [mode],
+  );
   const handleRef = useRef<{
     destroy: () => void;
     setEvents: (events: readonly import("./core/stats/stats-event-model").MatchEvent[]) => void;
@@ -1694,6 +1735,22 @@ export default function App() {
     selectEventKind(kind);
   };
 
+  const toggleMatchBubble = () => {
+    setIsPickerOpen((prev) => {
+      const next = !prev;
+      if (next) setIsUtilityOpen(false);
+      return next;
+    });
+  };
+
+  const toggleCommandBubble = () => {
+    setIsUtilityOpen((prev) => {
+      const next = !prev;
+      if (next) setIsPickerOpen(false);
+      return next;
+    });
+  };
+
   useEffect(() => {
     activeTeamRef.current = activeTeam;
   }, [activeTeam]);
@@ -1809,7 +1866,7 @@ export default function App() {
       setEventContext: (context: { half: 1 | 2; timestamp: number; canLog: boolean }) => void;
     } | null = null;
     void createPixiPitchSurface(host, {
-      sport: "gaelic",
+      sport: mode.pitchSport,
       activeEventKind: selectedEventRef.current,
       showPlayerInitials,
       onEventLogged: (event) => {
@@ -1856,7 +1913,7 @@ export default function App() {
       handleRef.current = null;
       handle?.destroy();
     };
-  }, []);
+  }, [mode.pitchSport]);
 
   useEffect(() => {
     const timerId = window.setInterval(() => {
@@ -1924,18 +1981,21 @@ export default function App() {
   const openPlayersPanel = () => {
     setUtilityPanel("PLAYERS");
     setIsUtilityOpen(false);
+    setIsPickerOpen(false);
   };
 
   const openReviewPanel = () => {
     setShowReviewStrip(true);
     setUtilityPanel(null);
     setIsUtilityOpen(false);
+    setIsPickerOpen(false);
   };
 
   const openMatchSummaryPanel = () => {
     setShowReviewStrip(false);
     setUtilityPanel("SUMMARY");
     setIsUtilityOpen(false);
+    setIsPickerOpen(false);
   };
 
   const closeUtilityPanel = () => {
@@ -2044,13 +2104,14 @@ export default function App() {
         loggedEvents,
         reviewHalf,
         reviewEventGroup,
+        REVIEW_EVENT_GROUP_KINDS,
         reviewZone,
         getEffectiveAttackingDirection(firstHalfAttackingDirection, currentHalf),
         reviewActivePlayerOnly,
         activePlayerId,
       ),
     );
-  }, [loggedEvents, reviewHalf, reviewEventGroup, reviewZone, firstHalfAttackingDirection, currentHalf, reviewActivePlayerOnly, activePlayerId]);
+  }, [loggedEvents, reviewHalf, reviewEventGroup, REVIEW_EVENT_GROUP_KINDS, reviewZone, firstHalfAttackingDirection, currentHalf, reviewActivePlayerOnly, activePlayerId]);
 
   useEffect(() => {
     if (!selectedReviewEventId) return;
@@ -2104,6 +2165,25 @@ export default function App() {
     };
   }, [isPickerOpen]);
 
+  useEffect(() => {
+    if (!isUtilityOpen) return;
+
+    const onPointerDownOutside = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if ((event.currentTarget as Node | null) === null) {
+        // no-op guard to keep TS satisfied about event usage shape
+      }
+      if ((document.querySelector(".utility-controls") as HTMLElement | null)?.contains(target)) return;
+      setIsUtilityOpen(false);
+    };
+
+    document.addEventListener("pointerdown", onPointerDownOutside);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDownOutside);
+    };
+  }, [isUtilityOpen]);
+
   const matchStateToken =
     matchState === "FIRST_HALF" || matchState === "SECOND_HALF"
       ? `H${currentHalf}`
@@ -2134,12 +2214,13 @@ export default function App() {
         loggedEvents,
         reviewHalf,
         reviewEventGroup,
+        REVIEW_EVENT_GROUP_KINDS,
         reviewZone,
         effectiveAttackingDirection,
         reviewActivePlayerOnly,
         activePlayerId,
       ),
-    [loggedEvents, reviewHalf, reviewEventGroup, reviewZone, effectiveAttackingDirection, reviewActivePlayerOnly, activePlayerId],
+    [loggedEvents, reviewHalf, reviewEventGroup, REVIEW_EVENT_GROUP_KINDS, reviewZone, effectiveAttackingDirection, reviewActivePlayerOnly, activePlayerId],
   );
   const attackingDirectionHalfLabel = currentHalf === 2 ? "2H" : "1H";
   const attackingDirectionLabel =
@@ -2191,14 +2272,16 @@ export default function App() {
     for (const event of loggedEvents) {
       if (event.team !== "HOME") continue;
       if (event.kind === "WIDE") wides += 1;
-      if (event.kind === "SHOT" || event.kind === "GOAL" || event.kind === "POINT" || event.kind === "TWO_POINTER" || event.kind === "WIDE") shots += 1;
-      if (event.kind === "GOAL" || event.kind === "POINT" || event.kind === "TWO_POINTER") scores += 1;
+      if (event.kind === "SHOT" || event.kind === "GOAL" || event.kind === "POINT" || event.kind === "TWO_POINTER" || event.kind === "FORTY_FIVE_TWO_POINT" || event.kind === "FREE_SCORED" || event.kind === "WIDE") shots += 1;
+      if (event.kind === "GOAL" || event.kind === "POINT" || event.kind === "TWO_POINTER" || event.kind === "FORTY_FIVE_TWO_POINT" || event.kind === "FREE_SCORED") scores += 1;
       const playerId = event.playerId;
       if (!playerId || !playerById.has(playerId)) continue;
       const stat = playerStats.get(playerId) ?? { goals: 0, points: 0, twoPointers: 0, turnoversWon: 0, kickoutsWon: 0, freesWon: 0 };
       if (event.kind === "GOAL") stat.goals += 1;
       else if (event.kind === "POINT") stat.points += 1;
       else if (event.kind === "TWO_POINTER") stat.twoPointers += 1;
+      else if (event.kind === "FORTY_FIVE_TWO_POINT") stat.twoPointers += 1;
+      else if (event.kind === "FREE_SCORED") stat.points += 1;
       else if (event.kind === "TURNOVER_WON") stat.turnoversWon += 1;
       else if (event.kind === "KICKOUT_WON") stat.kickoutsWon += 1;
       else if (event.kind === "FREE_WON") stat.freesWon += 1;
@@ -2228,13 +2311,14 @@ export default function App() {
       bestScore = total;
       topScorerLine = `${playerLabel} — Top Scorer (${stat.goals}-${String(stat.points + stat.twoPointers * 2).padStart(2, "0")})`;
     }
-    const lines = [topScorerLine, topBy("turnoversWon", "Most Turnovers Won"), topBy("kickoutsWon", "Most Kickouts Won"), topBy("freesWon", "Most Frees Won")].filter(
+    const restartSummaryLabel = mode.restartLabel === "Puckout" ? "Most Puckouts Won" : "Most Kickouts Won";
+    const lines = [topScorerLine, topBy("turnoversWon", "Most Turnovers Won"), topBy("kickoutsWon", restartSummaryLabel), topBy("freesWon", "Most Frees Won")].filter(
       (line): line is string => line != null,
     );
     if (wides > 0) lines.push(`Wides: ${wides}`);
     if (shots > 0) lines.push(`Conversion: ${Math.round((scores / shots) * 100)}%`);
     return lines;
-  }, [loggedEvents, playerById]);
+  }, [loggedEvents, playerById, mode.restartLabel]);
 
   const homeScore = useMemo(() => computeTeamScore(loggedEvents, "HOME"), [loggedEvents]);
   const awayScore = useMemo(() => computeTeamScore(loggedEvents, "AWAY"), [loggedEvents]);
@@ -2807,16 +2891,7 @@ export default function App() {
             <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.86 }}>
               Event Group
             </div>
-            {([
-              { id: "ALL", label: "ALL" },
-              { id: "ACTIVE", label: "ACTIVE" },
-              { id: "SCORES", label: "SCORES" },
-              { id: "WIDES", label: "WIDES" },
-              { id: "SHOTS", label: "SHOTS" },
-              { id: "TURNOVERS", label: "TURNOVERS" },
-              { id: "KICKOUTS", label: "KICKOUTS" },
-              { id: "FREES", label: "FREES" },
-            ] as const).map((option) => (
+            {REVIEW_EVENT_GROUP_OPTIONS.map((option) => (
               <button
                 key={option.id}
                 type="button"
@@ -2946,16 +3021,7 @@ export default function App() {
               {option.label}
             </button>
           ))}
-          {([
-            { id: "ALL", label: "ALL" },
-            { id: "ACTIVE", label: "ACTIVE" },
-            { id: "SCORES", label: "SCORES" },
-            { id: "WIDES", label: "WIDES" },
-            { id: "SHOTS", label: "SHOTS" },
-            { id: "TURNOVERS", label: "TURNOVERS" },
-            { id: "KICKOUTS", label: "KICKOUTS" },
-            { id: "FREES", label: "FREES" },
-          ] as const).map((option) => (
+          {REVIEW_EVENT_GROUP_OPTIONS.map((option) => (
             <button
               key={`strip-group-${option.id}`}
               type="button"
@@ -3113,8 +3179,8 @@ export default function App() {
               <div className="visibility-row">
                 {([
                   { id: "ALL", label: "Show All" },
-                  { id: "LAST_5", label: "Last 5" },
-                  { id: "LAST_10", label: "Last 10" },
+                  { id: "LAST_5", label: "Last 5 mins" },
+                  { id: "LAST_10", label: "Last 10 mins" },
                 ] as const).map((mode) => (
                   <button
                     key={mode.id}
@@ -3139,17 +3205,35 @@ export default function App() {
                 ))}
               </div>
               <div className="undo-wrap">
-                <button
-                  type="button"
-                  className="undo-btn"
-                  onClick={() => {
-                    undoLastEventAction();
-                    setIsPickerOpen(false);
-                  }}
-                  style={{ border: "1px solid rgba(148,163,184,0.4)" }}
-                >
-                  Undo last
-                </button>
+                <div style={{ display: "flex", gap: "4px" }}>
+                  <button
+                    type="button"
+                    className="undo-btn"
+                    onClick={openReviewPanel}
+                    style={{ border: "1px solid rgba(125,211,252,0.52)" }}
+                  >
+                    Review
+                  </button>
+                  <button
+                    type="button"
+                    className="undo-btn"
+                    onClick={openMatchSummaryPanel}
+                    style={{ border: "1px solid rgba(125,211,252,0.52)" }}
+                  >
+                    Match Summary
+                  </button>
+                  <button
+                    type="button"
+                    className="undo-btn"
+                    onClick={() => {
+                      undoLastEventAction();
+                      setIsPickerOpen(false);
+                    }}
+                    style={{ border: "1px solid rgba(148,163,184,0.4)" }}
+                  >
+                    Undo last
+                  </button>
+                </div>
               </div>
             </div>
           ) : null}
@@ -3224,8 +3308,8 @@ export default function App() {
               <div className="landscape-toolbar-secondary">
                 {([
                   { id: "ALL", label: "Show All" },
-                  { id: "LAST_5", label: "Last 5" },
-                  { id: "LAST_10", label: "Last 10" },
+                  { id: "LAST_5", label: "Last 5 mins" },
+                  { id: "LAST_10", label: "Last 10 mins" },
                 ] as const).map((mode) => (
                   <button
                     key={mode.id}
@@ -3251,6 +3335,22 @@ export default function App() {
                 <button
                   type="button"
                   className="landscape-toolbar-secondary-btn"
+                  onClick={openReviewPanel}
+                  style={{ border: "1px solid rgba(125,211,252,0.52)" }}
+                >
+                  Review
+                </button>
+                <button
+                  type="button"
+                  className="landscape-toolbar-secondary-btn"
+                  onClick={openMatchSummaryPanel}
+                  style={{ border: "1px solid rgba(125,211,252,0.52)" }}
+                >
+                  Match Summary
+                </button>
+                <button
+                  type="button"
+                  className="landscape-toolbar-secondary-btn"
                   onClick={() => {
                     undoLastEventAction();
                   }}
@@ -3267,8 +3367,16 @@ export default function App() {
           ) : null}
           <button
             type="button"
+            className="player-bubble-btn"
+            aria-label="Open players panel"
+            onClick={openPlayersPanel}
+          >
+            👤
+          </button>
+          <button
+            type="button"
             onClick={() => {
-              setIsPickerOpen((prev) => !prev);
+              toggleMatchBubble();
             }}
             aria-label="Toggle event picker"
             aria-expanded={isPickerOpen}
@@ -3277,6 +3385,9 @@ export default function App() {
               border: isPickerOpen
                 ? "1px solid rgba(34,197,94,0.78)"
                 : "1px solid rgba(148,163,184,0.45)",
+              boxShadow: isPickerOpen
+                ? "0 0 0 1px rgba(34,197,94,0.34), 0 0 14px rgba(34,197,94,0.32)"
+                : "0 0 0 1px rgba(148,163,184,0.16), 0 0 8px rgba(148,163,184,0.16)",
             }}
           >
             {isPickerOpen ? "×" : "●"}
@@ -3311,19 +3422,49 @@ export default function App() {
           {activePlayerChipText}
         </button>
       ) : null}
-      {utilityPanel == null && !isPickerOpen ? (
+      {utilityPanel == null ? (
         <div className={utilityControlsClass}>
           {isUtilityOpen ? (
             <div className="utility-menu">
-              <button type="button" className="utility-menu-btn" onClick={openPlayersPanel}>
-                Players
+              <button
+                type="button"
+                className="utility-menu-btn"
+                disabled
+                style={{ opacity: 0.8, cursor: "default" }}
+              >
+                {teamNames.HOME} v {teamNames.AWAY}
               </button>
-              <button type="button" className="utility-menu-btn" onClick={openReviewPanel}>
-                Review
+              <button
+                type="button"
+                className="utility-menu-btn"
+                disabled
+                style={{ opacity: 0.8, cursor: "default", textTransform: "none" }}
+              >
+                {venueName.length > 0 ? venueName : "Venue"}
               </button>
-              <button type="button" className="utility-menu-btn" onClick={openMatchSummaryPanel}>
-                Match Summary
-              </button>
+              {MODE_MENU_OPTIONS.map((option) => {
+                const isActiveMode = option.key === currentMode;
+                return (
+                  <button
+                    key={option.key}
+                    type="button"
+                    className="utility-menu-btn"
+                    onClick={() => {
+                      setCurrentMode(option.key);
+                    }}
+                    style={
+                      isActiveMode
+                        ? {
+                            border: "1px solid rgba(34,197,94,0.9)",
+                            background: "rgba(22,101,52,0.72)",
+                          }
+                        : undefined
+                    }
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
               <button type="button" className="utility-menu-btn" onClick={resetMatch}>
                 Restart Match
               </button>
@@ -3335,7 +3476,10 @@ export default function App() {
             aria-label="Toggle utility menu"
             aria-expanded={isUtilityOpen}
             onClick={() => {
-              setIsUtilityOpen((prev) => !prev);
+              toggleCommandBubble();
+            }}
+            style={{
+              boxShadow: "0 0 0 1px rgba(96,165,250,0.14), 0 0 7px rgba(96,165,250,0.14)",
             }}
           >
             ⋮

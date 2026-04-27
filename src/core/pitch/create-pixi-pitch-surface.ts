@@ -21,7 +21,7 @@ type RenderableMatchEvent = MatchEvent & {
 };
 
 export type CreatePixiPitchSurfaceOptions = {
-  sport: "soccer" | "gaelic" | "hurling";
+  sport: "soccer" | "gaelic" | "hurling" | "camogie";
   events?: readonly RenderableMatchEvent[];
   activeEventKind?: MatchEventKind;
   eventHalf?: 1 | 2;

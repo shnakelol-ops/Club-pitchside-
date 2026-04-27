@@ -14,6 +14,17 @@ export type StatsMarkerStyle = {
   centerDotRadiusScale: number;
 };
 
+const FALLBACK_MARKER_STYLE: StatsMarkerStyle = {
+  radius: 2.9,
+  fill: "rgba(148, 163, 184, 1)",
+  stroke: "rgba(51, 65, 85, 1)",
+  strokeWidth: 0.74,
+  contrastStroke: "rgba(15, 23, 42, 0.58)",
+  contrastStrokeWidth: 0.5,
+  centerDot: "rgba(248, 250, 252, 0.9)",
+  centerDotRadiusScale: 0.2,
+};
+
 function styleForType(type: MatchEventKind): StatsMarkerStyle {
   switch (type) {
     case "GOAL":
@@ -82,6 +93,17 @@ function styleForType(type: MatchEventKind): StatsMarkerStyle {
         centerDot: "rgba(250, 255, 253, 0.96)",
         centerDotRadiusScale: 0.24,
       };
+    case "FORTY_FIVE_TWO_POINT":
+      return {
+        radius: 3.2,
+        fill: "rgba(110, 231, 183, 1)",
+        stroke: "rgba(16, 185, 129, 1)",
+        strokeWidth: 0.9,
+        contrastStroke: "rgba(3, 28, 22, 0.62)",
+        contrastStrokeWidth: 0.6,
+        centerDot: "rgba(236, 253, 245, 0.94)",
+        centerDotRadiusScale: 0.22,
+      };
     case "SHOT":
       return {
         radius: 2.95,
@@ -115,6 +137,28 @@ function styleForType(type: MatchEventKind): StatsMarkerStyle {
         centerDot: "rgba(255, 241, 241, 0.9)",
         centerDotRadiusScale: 0.2,
       };
+    case "FREE_SCORED":
+      return {
+        radius: 3.0,
+        fill: "rgba(56, 189, 248, 1)",
+        stroke: "rgba(14, 116, 144, 1)",
+        strokeWidth: 0.8,
+        contrastStroke: "rgba(8, 24, 34, 0.6)",
+        contrastStrokeWidth: 0.54,
+        centerDot: "rgba(240, 249, 255, 0.92)",
+        centerDotRadiusScale: 0.2,
+      };
+    case "FREE_MISSED":
+      return {
+        radius: 3.0,
+        fill: "rgba(249, 115, 22, 1)",
+        stroke: "rgba(154, 52, 18, 1)",
+        strokeWidth: 0.8,
+        contrastStroke: "rgba(40, 16, 8, 0.62)",
+        contrastStrokeWidth: 0.54,
+        centerDot: "rgba(255, 237, 213, 0.92)",
+        centerDotRadiusScale: 0.2,
+      };
     case "KICKOUT_WON":
       return {
         radius: 3.0,
@@ -137,10 +181,9 @@ function styleForType(type: MatchEventKind): StatsMarkerStyle {
         centerDot: "rgba(245, 235, 255, 0.9)",
         centerDotRadiusScale: 0.2,
       };
-    default: {
-      const _never: never = type;
-      return _never;
-    }
+    default:
+      // Defensive fallback: unknown kinds should never blank marker rendering.
+      return FALLBACK_MARKER_STYLE;
   }
 }
 
