@@ -2,6 +2,7 @@ import type { MatchEventKind } from "../core/stats/stats-event-model";
 
 type GaaModeDefinition = {
   modeName: string;
+  pitchSport: "gaelic" | "hurling";
   eventButtons: ReadonlyArray<{ label: string; kind: MatchEventKind }>;
   eventLabels: Record<MatchEventKind, string>;
   scoringEvents: ReadonlyArray<MatchEventKind>;
@@ -86,6 +87,7 @@ function buildReviewGroups(includeTwoPointer: boolean) {
 export const gaaModeConfig = {
   football: {
     modeName: "Football",
+    pitchSport: "gaelic",
     eventButtons: buildEventButtons({
       includeTwoPointer: true,
       kickoutWonLabel: "K+",
@@ -102,6 +104,7 @@ export const gaaModeConfig = {
   },
   ladiesFootball: {
     modeName: "Ladies Football",
+    pitchSport: "gaelic",
     eventButtons: buildEventButtons({
       includeTwoPointer: true,
       kickoutWonLabel: "K+",
@@ -119,6 +122,7 @@ export const gaaModeConfig = {
   },
   hurling: {
     modeName: "Hurling",
+    pitchSport: "hurling",
     eventButtons: buildEventButtons({
       includeTwoPointer: false,
       kickoutWonLabel: "P+",
@@ -135,6 +139,7 @@ export const gaaModeConfig = {
   },
   camogie: {
     modeName: "Camogie",
+    pitchSport: "hurling",
     eventButtons: buildEventButtons({
       includeTwoPointer: false,
       kickoutWonLabel: "P+",

@@ -1866,7 +1866,7 @@ export default function App() {
       setEventContext: (context: { half: 1 | 2; timestamp: number; canLog: boolean }) => void;
     } | null = null;
     void createPixiPitchSurface(host, {
-      sport: "gaelic",
+      sport: mode.pitchSport,
       activeEventKind: selectedEventRef.current,
       showPlayerInitials,
       onEventLogged: (event) => {
@@ -1913,7 +1913,7 @@ export default function App() {
       handleRef.current = null;
       handle?.destroy();
     };
-  }, []);
+  }, [mode.pitchSport]);
 
   useEffect(() => {
     const timerId = window.setInterval(() => {
