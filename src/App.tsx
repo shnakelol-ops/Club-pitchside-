@@ -1818,6 +1818,10 @@ export default function App() {
   const handleEventButtonPress = (kind: MatchEventKind) => {
     if (!isLoggingActive(matchState)) return;
     if (!isEventKindAllowedForSport(currentSport, kind)) return;
+    if (currentSport === "hurling") {
+      selectEventKind(kind);
+      return;
+    }
     if (activeTeam === "AWAY" && effectiveAwayInstantScoringKinds.has(kind)) {
       selectEventKind(kind);
       logAwayInstantScore(kind);
@@ -1989,7 +1993,7 @@ export default function App() {
         timestamp: matchEngineStateRef.current.matchTimeSeconds,
         canLog:
           isLoggingActive(matchEngineStateRef.current.matchState) &&
-          activeTeamRef.current === "HOME",
+          (currentSport === "hurling" || activeTeamRef.current === "HOME"),
       });
     });
     return () => {
@@ -2049,7 +2053,9 @@ export default function App() {
     handleRef.current?.setEventContext({
       half: next.currentHalf,
       timestamp: next.matchTimeSeconds,
-      canLog: isLoggingActive(next.matchState) && activeTeamRef.current === "HOME",
+      canLog:
+        isLoggingActive(next.matchState) &&
+        (currentSport === "hurling" || activeTeamRef.current === "HOME"),
     });
     handleRef.current?.setEvents([]);
   };
@@ -2151,9 +2157,11 @@ export default function App() {
     handleRef.current?.setEventContext({
       half: currentHalf,
       timestamp: matchTimeSeconds,
-      canLog: isLoggingActive(matchState) && activeTeam === "HOME",
+      canLog:
+        isLoggingActive(matchState) &&
+        (currentSport === "hurling" || activeTeam === "HOME"),
     });
-  }, [activeTeam, currentHalf, matchTimeSeconds, matchState]);
+  }, [activeTeam, currentHalf, currentSport, matchTimeSeconds, matchState]);
 
   useEffect(() => {
     const visibleLimit =
