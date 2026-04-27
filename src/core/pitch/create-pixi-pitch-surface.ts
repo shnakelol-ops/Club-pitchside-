@@ -2,6 +2,7 @@ import { Application, Container, Graphics } from "pixi.js";
 
 import { BOARD_PITCH_VIEWBOX } from "./pitch-space";
 import { createPitchRoot } from "./create-pitch-root";
+import { getPitchConfig } from "./pitch-config";
 import {
   letterboxPitchWorld,
   worldToBoardNorm,
@@ -62,6 +63,85 @@ export async function createPixiPitchSurface(
   host: HTMLElement,
   options: CreatePixiPitchSurfaceOptions,
 ): Promise<PixiPitchSurfaceHandle> {
+  const SCALE = 100 / 145;
+  const GOAL_X = 50;
+  const TOP_GOAL_Y = 0;
+  const BOTTOM_GOAL_Y = 100;
+
+  const drawGaelicFootballArcs = (graphics: Graphics): void => {
+    graphics.clear();
+    if (options.sport !== "gaelic") return;
+
+    const snap = (v: number): number => Math.round(v) + 0.5;
+    const rotateAngle = (angle: number): number => angle - Math.PI / 2;
+
+    const { inner, markings } = getPitchConfig("gaelic");
+    const toBoardX = (normY: number): number => inner.x + (normY / 100) * inner.w;
+    const toBoardY = (normX: number): number => inner.y + (normX / 100) * inner.h;
+    const toBoardRadius = (normLength: number): number => (normLength / 100) * inner.w;
+
+    const lineStyleSource = markings.find(
+      (marking): marking is Extract<(typeof markings)[number], { kind: "line" }> =>
+        marking.kind === "line" && Math.abs(marking.strokeWidth - 0.54) < 1e-6,
+    ) ?? markings.find(
+      (marking): marking is Extract<(typeof markings)[number], { kind: "line" }> => marking.kind === "line",
+    );
+    if (!lineStyleSource) return;
+
+    const strokeWidth = lineStyleSource.strokeWidth;
+    let strokeColor: number = 0xffffff;
+    let strokeAlpha = 1;
+    const rgbaMatch = lineStyleSource.stroke.match(
+      /rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([0-9.]+))?\s*\)/i,
+    );
+    if (rgbaMatch) {
+      const r = Math.max(0, Math.min(255, Number(rgbaMatch[1])));
+      const g = Math.max(0, Math.min(255, Number(rgbaMatch[2])));
+      const b = Math.max(0, Math.min(255, Number(rgbaMatch[3])));
+      strokeColor = (r << 16) | (g << 8) | b;
+      if (rgbaMatch[4] != null) {
+        const parsed = Number(rgbaMatch[4]);
+        if (Number.isFinite(parsed)) strokeAlpha = Math.max(0, Math.min(1, parsed));
+      }
+    }
+
+    const goalXSnapped = snap(toBoardY(GOAL_X));
+    const topGoalYSnapped = snap(toBoardX(TOP_GOAL_Y));
+    const bottomGoalYSnapped = snap(toBoardX(BOTTOM_GOAL_Y));
+
+    const dRadius = snap(toBoardRadius(13 * SCALE));
+    const dCYTop = snap(toBoardX(11 * SCALE));
+    const dCYBottom = snap(toBoardX(100 - (11 * SCALE)));
+
+    const arcRadius = snap(toBoardRadius(40 * SCALE));
+
+    const drawArc = (
+      cx: number,
+      cy: number,
+      r: number,
+      start: number,
+      end: number,
+      counterClockwise = false,
+    ): void => {
+      graphics
+        .moveTo(cx + Math.cos(start) * r, cy + Math.sin(start) * r)
+        .arc(cx, cy, r, start, end, counterClockwise)
+        .stroke({
+          color: strokeColor,
+          alpha: strokeAlpha,
+          width: strokeWidth,
+          cap: "round",
+          join: "round",
+          alignment: 0.5,
+        });
+    };
+
+    drawArc(goalXSnapped, dCYTop, dRadius, rotateAngle(Math.PI), rotateAngle(0), false);
+    drawArc(goalXSnapped, dCYBottom, dRadius, rotateAngle(0), rotateAngle(Math.PI), true);
+    drawArc(goalXSnapped, topGoalYSnapped, arcRadius, rotateAngle(Math.PI * 0.2), rotateAngle(Math.PI * 0.8));
+    drawArc(goalXSnapped, bottomGoalYSnapped, arcRadius, rotateAngle(Math.PI * 1.2), rotateAngle(Math.PI * 1.8), true);
+  };
+
   const app = new Application();
   await app.init({
     width: host.clientWidth || 640,
@@ -87,6 +167,10 @@ export async function createPixiPitchSurface(
 
   const pitchRoot = createPitchRoot(options.sport);
   world.addChild(pitchRoot.root);
+  const footballArcLayer = new Graphics();
+  footballArcLayer.eventMode = "none";
+  world.addChild(footballArcLayer);
+  drawGaelicFootballArcs(footballArcLayer);
   const statsMarkers = new Graphics();
   statsMarkers.eventMode = "none";
   world.addChild(statsMarkers);
@@ -208,6 +292,7 @@ export async function createPixiPitchSurface(
     destroy: () => {
       resizeObserver.disconnect();
       pitchRoot.dispose();
+      footballArcLayer.destroy();
       hitArea.destroy();
       statsMarkers.destroy();
       try {
