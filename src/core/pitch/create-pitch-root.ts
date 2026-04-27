@@ -222,8 +222,15 @@ function lineStroke(stroke: string, strokeWidth: number) {
   };
 }
 
-function drawMarkings(g: Graphics, markings: readonly PitchMarking[]): void {
+function drawMarkings(
+  g: Graphics,
+  markings: readonly PitchMarking[],
+  options?: { skipLineGlowMarked?: boolean },
+): void {
   for (const m of markings) {
+    if (options?.skipLineGlowMarked && m.kind === "path" && m.skipLineGlow) {
+      continue;
+    }
     switch (m.kind) {
       case "line": {
         const dash = parseDashArray(m.strokeDasharray);
@@ -379,18 +386,18 @@ export function createPitchRoot(sport: PitchSport): PitchRootMount {
     face.addChild(lift);
   }
 
-  const markingsGraphics = new Graphics({ roundPixels: true });
+  const markingsGraphics = new Graphics();
   markingsGraphics.zIndex = 4;
   const { markings } = getPitchConfig(sport);
   drawMarkings(markingsGraphics, markings);
-  if (!isSoccer) markingsGraphics.tint = 0xf6fffa;
+  if (!isSoccer) markingsGraphics.tint = 0xffffff;
   face.addChild(markingsGraphics);
-  const markingsClarity = new Graphics({ roundPixels: true });
+  const markingsClarity = new Graphics();
   markingsClarity.zIndex = 5;
-  drawMarkings(markingsClarity, markings);
-  if (!isSoccer) markingsClarity.tint = 0xf9fffc;
+  drawMarkings(markingsClarity, markings, { skipLineGlowMarked: true });
+  if (!isSoccer) markingsClarity.tint = 0xffffff;
   markingsClarity.blendMode = "screen";
-  markingsClarity.alpha = isSoccer ? 0.12 : 0.18;
+  markingsClarity.alpha = isSoccer ? 0.12 : 0.16;
   face.addChild(markingsClarity);
 
   const sheen = new FillGradient({
