@@ -193,7 +193,7 @@ function getRenderablePitchEvents(
     if (reviewHalf === "H2" && event.half !== 2) return false;
 
     if (groupKinds && !groupKinds.has(event.kind)) return false;
-    if (reviewActivePlayerOnly && (activePlayerId == null || event.playerId !== activePlayerId)) return false;
+    if (reviewActivePlayerOnly && activePlayerId != null && event.playerId !== activePlayerId) return false;
 
     const isAttackingHalf = attackingDirection === "RIGHT" ? event.nx >= 0.5 : event.nx < 0.5;
     if (reviewZone === "OWN_HALF" && isAttackingHalf) return false;
