@@ -2311,13 +2311,14 @@ export default function App() {
       bestScore = total;
       topScorerLine = `${playerLabel} — Top Scorer (${stat.goals}-${String(stat.points + stat.twoPointers * 2).padStart(2, "0")})`;
     }
-    const lines = [topScorerLine, topBy("turnoversWon", "Most Turnovers Won"), topBy("kickoutsWon", "Most Kickouts Won"), topBy("freesWon", "Most Frees Won")].filter(
+    const restartSummaryLabel = mode.restartLabel === "Puckout" ? "Most Puckouts Won" : "Most Kickouts Won";
+    const lines = [topScorerLine, topBy("turnoversWon", "Most Turnovers Won"), topBy("kickoutsWon", restartSummaryLabel), topBy("freesWon", "Most Frees Won")].filter(
       (line): line is string => line != null,
     );
     if (wides > 0) lines.push(`Wides: ${wides}`);
     if (shots > 0) lines.push(`Conversion: ${Math.round((scores / shots) * 100)}%`);
     return lines;
-  }, [loggedEvents, playerById]);
+  }, [loggedEvents, playerById, mode.restartLabel]);
 
   const homeScore = useMemo(() => computeTeamScore(loggedEvents, "HOME"), [loggedEvents]);
   const awayScore = useMemo(() => computeTeamScore(loggedEvents, "AWAY"), [loggedEvents]);
