@@ -3178,8 +3178,8 @@ export default function App() {
               <div className="visibility-row">
                 {([
                   { id: "ALL", label: "Show All" },
-                  { id: "LAST_5", label: "Last 5" },
-                  { id: "LAST_10", label: "Last 10" },
+                  { id: "LAST_5", label: "Last 5 mins" },
+                  { id: "LAST_10", label: "Last 10 mins" },
                 ] as const).map((mode) => (
                   <button
                     key={mode.id}
@@ -3307,8 +3307,8 @@ export default function App() {
               <div className="landscape-toolbar-secondary">
                 {([
                   { id: "ALL", label: "Show All" },
-                  { id: "LAST_5", label: "Last 5" },
-                  { id: "LAST_10", label: "Last 10" },
+                  { id: "LAST_5", label: "Last 5 mins" },
+                  { id: "LAST_10", label: "Last 10 mins" },
                 ] as const).map((mode) => (
                   <button
                     key={mode.id}
