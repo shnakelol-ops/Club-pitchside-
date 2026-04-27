@@ -247,13 +247,23 @@ function buildGaelicFootballLandscapeMarkings(): PitchMarking[] {
   const xPenR = xAt(1 - GAELIC_PENALTY_SPOT_M / GAELIC_LANDSCAPE_LEN_M);
   const rSpot = 0.36;
 
-  const rD = Math.round((GAELIC_D_FREE_RADIUS_M / GAELIC_LANDSCAPE_LEN_M) * playW);
-  const rTwoPoint = Math.round(x65L - x45L);
-  const x45LSnapped = Math.round(x45L);
-  const x45RSnapped = Math.round(x45R);
-  const x20LSnapped = Math.round(x20L);
-  const x20RSnapped = Math.round(x20R);
-  const cySnapped = Math.round(cy);
+  const scale = 100 / GAELIC_LANDSCAPE_LEN_M;
+  const goalCentreXNorm = 50;
+  const goalCentreYNormLeft = 0;
+  const goalCentreYNormRight = 100;
+  const dCentreYNorm = 11 * scale;
+  const dRadiusNorm = 13 * scale;
+  const arc40RadiusNorm = 40 * scale;
+  const toBoardLen = (normLen: number) => ix + (normLen / 100) * playW;
+  const toBoardWid = (normWid: number) => iy + (normWid / 100) * playH;
+
+  const cySnapped = Math.round(toBoardWid(goalCentreXNorm));
+  const dCxLeftSnapped = Math.round(toBoardLen(goalCentreYNormLeft + dCentreYNorm));
+  const dCxRightSnapped = Math.round(toBoardLen(goalCentreYNormRight - dCentreYNorm));
+  const dRadiusSnapped = Math.round((dRadiusNorm / 100) * playW);
+  const arc40CxLeftSnapped = Math.round(toBoardLen(goalCentreYNormLeft));
+  const arc40CxRightSnapped = Math.round(toBoardLen(goalCentreYNormRight));
+  const arc40RadiusSnapped = Math.round((arc40RadiusNorm / 100) * playW);
 
   return [
     { kind: "rect", x: ix, y: iy, w: playW, h: playH, stroke: Lg.lineGridStrong, strokeWidth: wTouch },
@@ -275,9 +285,9 @@ function buildGaelicFootballLandscapeMarkings(): PitchMarking[] {
     { kind: "rect", x: xRight - smallDeep, y: ySmallTop, w: smallDeep, h: smallWide, stroke: Lg.lineScoringEnd, strokeWidth: wEndInner },
     {
       kind: "arc",
-      cx: x45LSnapped,
+      cx: arc40CxLeftSnapped,
       cy: cySnapped,
-      r: rTwoPoint,
+      r: arc40RadiusSnapped,
       startAngle: -Math.PI / 2,
       endAngle: Math.PI / 2,
       stroke: Lg.lineGridStrong,
@@ -287,9 +297,9 @@ function buildGaelicFootballLandscapeMarkings(): PitchMarking[] {
     },
     {
       kind: "arc",
-      cx: x45RSnapped,
+      cx: arc40CxRightSnapped,
       cy: cySnapped,
-      r: rTwoPoint,
+      r: arc40RadiusSnapped,
       startAngle: -Math.PI / 2,
       endAngle: Math.PI / 2,
       stroke: Lg.lineGridStrong,
@@ -299,9 +309,9 @@ function buildGaelicFootballLandscapeMarkings(): PitchMarking[] {
     },
     {
       kind: "arc",
-      cx: x20LSnapped,
+      cx: dCxLeftSnapped,
       cy: cySnapped,
-      r: rD,
+      r: dRadiusSnapped,
       startAngle: -Math.PI / 2,
       endAngle: Math.PI / 2,
       stroke: Lg.lineGridStrong,
@@ -311,9 +321,9 @@ function buildGaelicFootballLandscapeMarkings(): PitchMarking[] {
     },
     {
       kind: "arc",
-      cx: x20RSnapped,
+      cx: dCxRightSnapped,
       cy: cySnapped,
-      r: rD,
+      r: dRadiusSnapped,
       startAngle: -Math.PI / 2,
       endAngle: Math.PI / 2,
       stroke: Lg.lineGridStrong,
