@@ -322,7 +322,7 @@ export function createPitchRoot(sport: PitchSport): PitchRootMount {
   });
   const verticalBands = turfRecipe(sport).verticalBands;
   const density = 2.15 / Math.max(2.8, verticalBands);
-  stripes.tileScale.set(density, 2.05);
+  stripes.tileScale.set(2.05, density);
   stripes.alpha = sport === "soccer" ? 0.36 : 0.31;
   stripes.blendMode = "multiply";
   stripes.zIndex = 1;

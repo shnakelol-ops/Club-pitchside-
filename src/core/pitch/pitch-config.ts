@@ -177,7 +177,6 @@ const GAELIC_LARGE_WIDE_M = 19;
 const GAELIC_D_FREE_RADIUS_M = 13;
 const GAELIC_TWO_POINT_RADIUS_M = 40;
 const GAELIC_PENALTY_SPOT_M = 11;
-const GAELIC_CENTRE_CIRCLE_RADIUS_M = 13;
 
 function buildGaelicFootballLandscapeMarkings(): PitchMarking[] {
   const playW = 156;
@@ -190,12 +189,14 @@ function buildGaelicFootballLandscapeMarkings(): PitchMarking[] {
   const t13 = 13 / Lm;
   const t20 = 20 / Lm;
   const t45 = 45 / Lm;
+  const t65 = 65 / Lm;
   const xAt = (lenFrac: number) => ix + lenFrac * playW;
 
   const dash13 = "4.2 3.6";
   const wTouch = 0.52;
   const wHalf = 0.6;
   const w45 = 0.54;
+  const w65 = 0.54;
   const w20 = 0.48;
   const w13 = 0.32;
   const wEnd = 0.46;
@@ -212,6 +213,8 @@ function buildGaelicFootballLandscapeMarkings(): PitchMarking[] {
   const x20R = xAt(1 - t20);
   const x45L = xAt(t45);
   const x45R = xAt(1 - t45);
+  const x65L = xAt(t65);
+  const x65R = xAt(1 - t65);
   const xMid = xAt(0.5);
 
   const smallDeep = (GAELIC_SMALL_DEEP_M / GAELIC_LANDSCAPE_LEN_M) * playW;
@@ -222,8 +225,9 @@ function buildGaelicFootballLandscapeMarkings(): PitchMarking[] {
   const ySmallTop = cy - smallWide / 2;
   const yLargeTop = cy - largeWide / 2;
 
-  const rCentre =
-    (GAELIC_CENTRE_CIRCLE_RADIUS_M / GAELIC_LANDSCAPE_LEN_M) * playW;
+  const centreStartLen = (8 / GAELIC_LANDSCAPE_WID_M) * playH;
+  const yCentreTop = cy - centreStartLen / 2;
+  const yCentreBottom = cy + centreStartLen / 2;
 
   const xPenL = xAt(GAELIC_PENALTY_SPOT_M / GAELIC_LANDSCAPE_LEN_M);
   const xPenR = xAt(1 - GAELIC_PENALTY_SPOT_M / GAELIC_LANDSCAPE_LEN_M);
@@ -250,8 +254,9 @@ function buildGaelicFootballLandscapeMarkings(): PitchMarking[] {
     { kind: "line", x1: x20R, y1: iy, x2: x20R, y2: yBottom, stroke: Lg.lineGridMid, strokeWidth: w20 },
     { kind: "line", x1: x45L, y1: iy, x2: x45L, y2: yBottom, stroke: Lg.lineGridStrong, strokeWidth: w45 },
     { kind: "line", x1: x45R, y1: iy, x2: x45R, y2: yBottom, stroke: Lg.lineGridStrong, strokeWidth: w45 },
-    { kind: "line", x1: xMid, y1: iy, x2: xMid, y2: yBottom, stroke: Lg.lineCentre, strokeWidth: wHalf },
-    { kind: "circle", cx, cy, r: rCentre, stroke: Lg.lineGridMid, strokeWidth: w20 },
+    { kind: "line", x1: x65L, y1: iy, x2: x65L, y2: yBottom, stroke: Lg.lineGridStrong, strokeWidth: w65 },
+    { kind: "line", x1: x65R, y1: iy, x2: x65R, y2: yBottom, stroke: Lg.lineGridStrong, strokeWidth: w65 },
+    { kind: "line", x1: xMid, y1: yCentreTop, x2: xMid, y2: yCentreBottom, stroke: Lg.lineCentre, strokeWidth: wHalf },
     { kind: "circle", cx, cy, r: 0.85, fill: Lg.spot },
     { kind: "circle", cx: xPenL, cy, r: rSpot, fill: Lg.lineGridStrong, stroke: "rgba(0,0,0,0.18)", strokeWidth: 0.06 },
     { kind: "circle", cx: xPenR, cy, r: rSpot, fill: Lg.lineGridStrong, stroke: "rgba(0,0,0,0.18)", strokeWidth: 0.06 },
@@ -313,8 +318,9 @@ const hurlingCamogieLandscapeMarkings: PitchMarking[] = (() => {
   const ySmallTop = cy - smallWide / 2;
   const yLargeTop = cy - largeWide / 2;
 
-  const rCentre =
-    (GAELIC_CENTRE_CIRCLE_RADIUS_M / GAELIC_LANDSCAPE_LEN_M) * playW;
+  const centreStartLen = (8 / GAELIC_LANDSCAPE_WID_M) * playH;
+  const yCentreTop = cy - centreStartLen / 2;
+  const yCentreBottom = cy + centreStartLen / 2;
 
   const xPenL = xAt(GAELIC_PENALTY_SPOT_M / GAELIC_LANDSCAPE_LEN_M);
   const xPenR = xAt(1 - GAELIC_PENALTY_SPOT_M / GAELIC_LANDSCAPE_LEN_M);
@@ -335,8 +341,7 @@ const hurlingCamogieLandscapeMarkings: PitchMarking[] = (() => {
     { kind: "line", x1: x45R, y1: iy, x2: x45R, y2: yBottom, stroke: Lg.lineGridStrong, strokeWidth: w45 },
     { kind: "line", x1: x65L, y1: iy, x2: x65L, y2: yBottom, stroke: Lg.lineGridStrong, strokeWidth: w65 },
     { kind: "line", x1: x65R, y1: iy, x2: x65R, y2: yBottom, stroke: Lg.lineGridStrong, strokeWidth: w65 },
-    { kind: "line", x1: xMid, y1: iy, x2: xMid, y2: yBottom, stroke: Lg.lineCentre, strokeWidth: wHalf },
-    { kind: "circle", cx, cy, r: rCentre, stroke: Lg.lineGridMid, strokeWidth: w20 },
+    { kind: "line", x1: xMid, y1: yCentreTop, x2: xMid, y2: yCentreBottom, stroke: Lg.lineCentre, strokeWidth: wHalf },
     { kind: "circle", cx, cy, r: 0.85, fill: Lg.spot },
     { kind: "circle", cx: xPenL, cy, r: rSpot, fill: Lg.lineGridStrong, stroke: "rgba(0,0,0,0.18)", strokeWidth: 0.06 },
     { kind: "circle", cx: xPenR, cy, r: rSpot, fill: Lg.lineGridStrong, stroke: "rgba(0,0,0,0.18)", strokeWidth: 0.06 },
