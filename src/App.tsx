@@ -42,7 +42,8 @@ type LoggedMatchEvent = MatchEvent & {
 };
 
 type ReviewEventGroupOptionId = ReviewEventGroup | "ACTIVE";
-const mode = gaaModeConfig.football;
+const currentMode = "football";
+const mode = gaaModeConfig[currentMode];
 const EVENT_BUTTONS = mode.eventButtons;
 const EVENT_LABEL_BY_KIND = mode.eventLabels;
 const AWAY_INSTANT_SCORING_KINDS = new Set<MatchEventKind>(mode.scoringEvents);
