@@ -13,7 +13,7 @@ import {
 } from "./core/match/match-state-store";
 import { createPixiPitchSurface } from "./core/pitch/create-pixi-pitch-surface";
 import { type MatchEvent, type MatchEventKind } from "./core/stats/stats-event-model";
-import { gaaModeConfig } from "./config/gaaModeConfig";
+import { gaaModeConfig, type GaaModeKey } from "./config/gaaModeConfig";
 
 type VisibilityMode = "ALL" | "LAST_5" | "LAST_10";
 type TeamScore = { goals: number; points: number; total: number };
@@ -42,35 +42,14 @@ type LoggedMatchEvent = MatchEvent & {
 };
 
 type ReviewEventGroupOptionId = ReviewEventGroup | "ACTIVE";
-const currentMode = "football";
-const mode = gaaModeConfig[currentMode];
-const EVENT_BUTTONS = mode.eventButtons;
-const EVENT_LABEL_BY_KIND = mode.eventLabels;
-const AWAY_INSTANT_SCORING_KINDS = new Set<MatchEventKind>(mode.scoringEvents);
-const SCORE_EVENT_KINDS = new Set<MatchEventKind>(mode.scoringEvents);
+const MODE_MENU_OPTIONS: ReadonlyArray<{ key: GaaModeKey; label: string }> = [
+  { key: "football", label: "Football" },
+  { key: "ladiesFootball", label: "Ladies" },
+  { key: "hurling", label: "Hurling" },
+  { key: "camogie", label: "Camogie" },
+];
 const FORMATION_ROW_SIZES = [1, 3, 3, 2, 3, 3] as const;
 const SQUADS_STORAGE_KEY = "pitchsideclub.squads";
-const REVIEW_EVENT_GROUP_KINDS: Record<Exclude<ReviewEventGroup, "ALL">, readonly MatchEventKind[]> = {
-  SCORES: mode.reviewGroups.SCORES.kinds,
-  WIDES: mode.reviewGroups.WIDES.kinds,
-  SHOTS: mode.reviewGroups.SHOTS.kinds,
-  TURNOVERS: mode.reviewGroups.TURNOVERS.kinds,
-  KICKOUTS: mode.reviewGroups.KICKOUTS.kinds,
-  FREES: mode.reviewGroups.FREES.kinds,
-};
-const REVIEW_EVENT_GROUP_OPTIONS: ReadonlyArray<{
-  id: ReviewEventGroupOptionId;
-  label: string;
-}> = [
-  { id: "ALL", label: "ALL" },
-  { id: "ACTIVE", label: "ACTIVE" },
-  { id: "SCORES", label: mode.reviewGroups.SCORES.label },
-  { id: "WIDES", label: mode.reviewGroups.WIDES.label },
-  { id: "SHOTS", label: mode.reviewGroups.SHOTS.label },
-  { id: "TURNOVERS", label: mode.reviewGroups.TURNOVERS.label },
-  { id: "KICKOUTS", label: mode.reviewGroups.KICKOUTS.label },
-  { id: "FREES", label: mode.reviewGroups.FREES.label },
-];
 function newLocalEventId(): string {
   const c = globalThis.crypto;
   if (c && "randomUUID" in c && typeof c.randomUUID === "function") {
@@ -186,6 +165,10 @@ function getRenderablePitchEvents(
   events: readonly LoggedMatchEvent[],
   reviewHalf: ReviewHalf,
   reviewEventGroup: ReviewEventGroup,
+  reviewEventGroupKinds: Record<
+    Exclude<ReviewEventGroup, "ALL">,
+    readonly MatchEventKind[]
+  >,
   reviewZone: ReviewZone,
   attackingDirection: AttackingDirection,
   reviewActivePlayerOnly: boolean,
@@ -194,7 +177,7 @@ function getRenderablePitchEvents(
   const groupKinds =
     reviewEventGroup === "ALL"
       ? null
-      : new Set<MatchEventKind>(REVIEW_EVENT_GROUP_KINDS[reviewEventGroup]);
+      : new Set<MatchEventKind>(reviewEventGroupKinds[reviewEventGroup]);
   return events.filter((event) => {
     if (event.id.includes("-instant-score-")) return false;
 
@@ -1391,6 +1374,8 @@ const PANEL_CSS = `
 export default function App() {
   const hostRef = useRef<HTMLDivElement>(null);
   const floatingControlsRef = useRef<HTMLDivElement>(null);
+  const [currentMode, setCurrentMode] = useState<GaaModeKey>("football");
+  const mode = gaaModeConfig[currentMode];
   const [selectedEventKind, setSelectedEventKind] = useState<MatchEventKind>("POINT");
   const [activeTeam, setActiveTeam] = useState<TeamSide>("HOME");
   const [teamNames, setTeamNames] = useState<{ HOME: string; AWAY: string }>({
@@ -1454,6 +1439,44 @@ export default function App() {
   const venueInputRef = useRef<HTMLInputElement>(null);
   const matchEngineStateRef = useRef(createInitialMatchEngineState());
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const EVENT_BUTTONS = mode.eventButtons;
+  const EVENT_LABEL_BY_KIND = mode.eventLabels;
+  const AWAY_INSTANT_SCORING_KINDS = useMemo(
+    () => new Set<MatchEventKind>(mode.scoringEvents),
+    [mode],
+  );
+  const SCORE_EVENT_KINDS = useMemo(
+    () => new Set<MatchEventKind>(mode.scoringEvents),
+    [mode],
+  );
+  const REVIEW_EVENT_GROUP_KINDS = useMemo<
+    Record<Exclude<ReviewEventGroup, "ALL">, readonly MatchEventKind[]>
+  >(
+    () => ({
+      SCORES: mode.reviewGroups.SCORES.kinds,
+      WIDES: mode.reviewGroups.WIDES.kinds,
+      SHOTS: mode.reviewGroups.SHOTS.kinds,
+      TURNOVERS: mode.reviewGroups.TURNOVERS.kinds,
+      KICKOUTS: mode.reviewGroups.KICKOUTS.kinds,
+      FREES: mode.reviewGroups.FREES.kinds,
+    }),
+    [mode],
+  );
+  const REVIEW_EVENT_GROUP_OPTIONS = useMemo<
+    ReadonlyArray<{ id: ReviewEventGroupOptionId; label: string }>
+  >(
+    () => [
+      { id: "ALL", label: "ALL" },
+      { id: "ACTIVE", label: "ACTIVE" },
+      { id: "SCORES", label: mode.reviewGroups.SCORES.label },
+      { id: "WIDES", label: mode.reviewGroups.WIDES.label },
+      { id: "SHOTS", label: mode.reviewGroups.SHOTS.label },
+      { id: "TURNOVERS", label: mode.reviewGroups.TURNOVERS.label },
+      { id: "KICKOUTS", label: mode.reviewGroups.KICKOUTS.label },
+      { id: "FREES", label: mode.reviewGroups.FREES.label },
+    ],
+    [mode],
+  );
   const handleRef = useRef<{
     destroy: () => void;
     setEvents: (events: readonly import("./core/stats/stats-event-model").MatchEvent[]) => void;
@@ -2035,13 +2058,14 @@ export default function App() {
         loggedEvents,
         reviewHalf,
         reviewEventGroup,
+        REVIEW_EVENT_GROUP_KINDS,
         reviewZone,
         getEffectiveAttackingDirection(firstHalfAttackingDirection, currentHalf),
         reviewActivePlayerOnly,
         activePlayerId,
       ),
     );
-  }, [loggedEvents, reviewHalf, reviewEventGroup, reviewZone, firstHalfAttackingDirection, currentHalf, reviewActivePlayerOnly, activePlayerId]);
+  }, [loggedEvents, reviewHalf, reviewEventGroup, REVIEW_EVENT_GROUP_KINDS, reviewZone, firstHalfAttackingDirection, currentHalf, reviewActivePlayerOnly, activePlayerId]);
 
   useEffect(() => {
     if (!selectedReviewEventId) return;
@@ -2125,12 +2149,13 @@ export default function App() {
         loggedEvents,
         reviewHalf,
         reviewEventGroup,
+        REVIEW_EVENT_GROUP_KINDS,
         reviewZone,
         effectiveAttackingDirection,
         reviewActivePlayerOnly,
         activePlayerId,
       ),
-    [loggedEvents, reviewHalf, reviewEventGroup, reviewZone, effectiveAttackingDirection, reviewActivePlayerOnly, activePlayerId],
+    [loggedEvents, reviewHalf, reviewEventGroup, REVIEW_EVENT_GROUP_KINDS, reviewZone, effectiveAttackingDirection, reviewActivePlayerOnly, activePlayerId],
   );
   const attackingDirectionHalfLabel = currentHalf === 2 ? "2H" : "1H";
   const attackingDirectionLabel =
@@ -3288,6 +3313,29 @@ export default function App() {
         <div className={utilityControlsClass}>
           {isUtilityOpen ? (
             <div className="utility-menu">
+              {MODE_MENU_OPTIONS.map((option) => {
+                const isActiveMode = option.key === currentMode;
+                return (
+                  <button
+                    key={option.key}
+                    type="button"
+                    className="utility-menu-btn"
+                    onClick={() => {
+                      setCurrentMode(option.key);
+                    }}
+                    style={
+                      isActiveMode
+                        ? {
+                            border: "1px solid rgba(34,197,94,0.9)",
+                            background: "rgba(22,101,52,0.72)",
+                          }
+                        : undefined
+                    }
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
               <button type="button" className="utility-menu-btn" onClick={openPlayersPanel}>
                 Players
               </button>
