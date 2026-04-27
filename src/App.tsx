@@ -344,6 +344,7 @@ const PANEL_CSS = `
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.22), 0 0 12px rgba(34, 197, 94, 0.28);
 }
 
 .utility-controls {
@@ -377,11 +378,11 @@ const PANEL_CSS = `
   width: 39px;
   height: 39px;
   border-radius: 999px;
-  border: 1px solid rgba(125, 211, 252, 0.42);
-  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(125, 211, 252, 0.3);
+  background: rgba(15, 23, 42, 0.74);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
-  box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.2), 0 0 10px rgba(96, 165, 250, 0.24);
+  box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.12), 0 0 8px rgba(96, 165, 250, 0.14);
   z-index: 9999;
   color: #dbeafe;
   font-size: 15px;
@@ -1310,21 +1311,21 @@ const PANEL_CSS = `
   }
 
   .utility-bubble-btn {
-    left: auto;
-    right: 16px;
-    bottom: 132px;
+    left: 16px;
+    right: auto;
+    bottom: 90px;
   }
 
   .utility-controls--landscape {
-    left: auto;
-    right: 16px;
-    bottom: 132px;
-    align-items: flex-end;
+    left: 16px;
+    right: auto;
+    bottom: 90px;
+    align-items: flex-start;
   }
 
   .utility-controls--landscape .utility-menu {
     margin-left: 0;
-    margin-right: 44px;
+    margin-right: 0;
   }
 }
 
@@ -1708,6 +1709,22 @@ export default function App() {
     selectEventKind(kind);
   };
 
+  const toggleMatchBubble = () => {
+    setIsPickerOpen((prev) => {
+      const next = !prev;
+      if (next) setIsUtilityOpen(false);
+      return next;
+    });
+  };
+
+  const toggleCommandBubble = () => {
+    setIsUtilityOpen((prev) => {
+      const next = !prev;
+      if (next) setIsPickerOpen(false);
+      return next;
+    });
+  };
+
   useEffect(() => {
     activeTeamRef.current = activeTeam;
   }, [activeTeam]);
@@ -1938,18 +1955,21 @@ export default function App() {
   const openPlayersPanel = () => {
     setUtilityPanel("PLAYERS");
     setIsUtilityOpen(false);
+    setIsPickerOpen(false);
   };
 
   const openReviewPanel = () => {
     setShowReviewStrip(true);
     setUtilityPanel(null);
     setIsUtilityOpen(false);
+    setIsPickerOpen(false);
   };
 
   const openMatchSummaryPanel = () => {
     setShowReviewStrip(false);
     setUtilityPanel("SUMMARY");
     setIsUtilityOpen(false);
+    setIsPickerOpen(false);
   };
 
   const closeUtilityPanel = () => {
@@ -2118,6 +2138,25 @@ export default function App() {
       document.removeEventListener("pointerdown", onPointerDownOutside);
     };
   }, [isPickerOpen]);
+
+  useEffect(() => {
+    if (!isUtilityOpen) return;
+
+    const onPointerDownOutside = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if ((event.currentTarget as Node | null) === null) {
+        // no-op guard to keep TS satisfied about event usage shape
+      }
+      if ((document.querySelector(".utility-controls") as HTMLElement | null)?.contains(target)) return;
+      setIsUtilityOpen(false);
+    };
+
+    document.addEventListener("pointerdown", onPointerDownOutside);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDownOutside);
+    };
+  }, [isUtilityOpen]);
 
   const matchStateToken =
     matchState === "FIRST_HALF" || matchState === "SECOND_HALF"
@@ -3137,17 +3176,27 @@ export default function App() {
                 ))}
               </div>
               <div className="undo-wrap">
-                <button
-                  type="button"
-                  className="undo-btn"
-                  onClick={() => {
-                    undoLastEventAction();
-                    setIsPickerOpen(false);
-                  }}
-                  style={{ border: "1px solid rgba(148,163,184,0.4)" }}
-                >
-                  Undo last
-                </button>
+                <div style={{ display: "flex", gap: "4px" }}>
+                  <button
+                    type="button"
+                    className="undo-btn"
+                    onClick={openReviewPanel}
+                    style={{ border: "1px solid rgba(125,211,252,0.52)" }}
+                  >
+                    Review
+                  </button>
+                  <button
+                    type="button"
+                    className="undo-btn"
+                    onClick={() => {
+                      undoLastEventAction();
+                      setIsPickerOpen(false);
+                    }}
+                    style={{ border: "1px solid rgba(148,163,184,0.4)" }}
+                  >
+                    Undo last
+                  </button>
+                </div>
               </div>
             </div>
           ) : null}
@@ -3249,6 +3298,14 @@ export default function App() {
                 <button
                   type="button"
                   className="landscape-toolbar-secondary-btn"
+                  onClick={openReviewPanel}
+                  style={{ border: "1px solid rgba(125,211,252,0.52)" }}
+                >
+                  Review
+                </button>
+                <button
+                  type="button"
+                  className="landscape-toolbar-secondary-btn"
                   onClick={() => {
                     undoLastEventAction();
                   }}
@@ -3266,7 +3323,7 @@ export default function App() {
           <button
             type="button"
             onClick={() => {
-              setIsPickerOpen((prev) => !prev);
+              toggleMatchBubble();
             }}
             aria-label="Toggle event picker"
             aria-expanded={isPickerOpen}
@@ -3275,6 +3332,9 @@ export default function App() {
               border: isPickerOpen
                 ? "1px solid rgba(34,197,94,0.78)"
                 : "1px solid rgba(148,163,184,0.45)",
+              boxShadow: isPickerOpen
+                ? "0 0 0 1px rgba(34,197,94,0.34), 0 0 14px rgba(34,197,94,0.32)"
+                : "0 0 0 1px rgba(148,163,184,0.16), 0 0 8px rgba(148,163,184,0.16)",
             }}
           >
             {isPickerOpen ? "×" : "●"}
@@ -3309,10 +3369,26 @@ export default function App() {
           {activePlayerChipText}
         </button>
       ) : null}
-      {utilityPanel == null && !isPickerOpen ? (
+      {utilityPanel == null ? (
         <div className={utilityControlsClass}>
           {isUtilityOpen ? (
             <div className="utility-menu">
+              <button
+                type="button"
+                className="utility-menu-btn"
+                disabled
+                style={{ opacity: 0.8, cursor: "default" }}
+              >
+                {teamNames.HOME} v {teamNames.AWAY}
+              </button>
+              <button
+                type="button"
+                className="utility-menu-btn"
+                disabled
+                style={{ opacity: 0.8, cursor: "default", textTransform: "none" }}
+              >
+                {venueName.length > 0 ? venueName : "Venue"}
+              </button>
               {MODE_MENU_OPTIONS.map((option) => {
                 const isActiveMode = option.key === currentMode;
                 return (
@@ -3339,14 +3415,11 @@ export default function App() {
               <button type="button" className="utility-menu-btn" onClick={openPlayersPanel}>
                 Players
               </button>
-              <button type="button" className="utility-menu-btn" onClick={openReviewPanel}>
-                Review
-              </button>
               <button type="button" className="utility-menu-btn" onClick={openMatchSummaryPanel}>
                 Match Summary
               </button>
               <button type="button" className="utility-menu-btn" onClick={resetMatch}>
-                Restart Match
+                Restart {mode.restartLabel}
               </button>
             </div>
           ) : null}
@@ -3356,7 +3429,10 @@ export default function App() {
             aria-label="Toggle utility menu"
             aria-expanded={isUtilityOpen}
             onClick={() => {
-              setIsUtilityOpen((prev) => !prev);
+              toggleCommandBubble();
+            }}
+            style={{
+              boxShadow: "0 0 0 1px rgba(96,165,250,0.14), 0 0 7px rgba(96,165,250,0.14)",
             }}
           >
             ⋮
