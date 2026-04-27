@@ -65,16 +65,16 @@ function turfRecipe(sport: PitchSport): TurfRecipe {
   // Shared GAA base (football, ladies football, hurling, camogie).
   return {
     wash: [
-      { t: 0, c: "#081e16" },
-      { t: 0.28, c: "#145239" },
-      { t: 0.48, c: "#23714d" },
-      { t: 0.62, c: "#206246" },
-      { t: 0.78, c: "#194f39" },
-      { t: 1, c: "#0a271c" },
+      { t: 0, c: "#0c291d" },
+      { t: 0.24, c: "#1a6143" },
+      { t: 0.46, c: "#2d825b" },
+      { t: 0.62, c: "#277351" },
+      { t: 0.8, c: "#1f5e42" },
+      { t: 1, c: "#103629" },
     ],
-    centreWash: "rgba(214, 252, 226, 0.105)",
-    verticalBands: 5.1,
-    grain: 0.009,
+    centreWash: "rgba(220, 255, 232, 0.125)",
+    verticalBands: 5.2,
+    grain: 0.011,
   };
 }
 
@@ -105,13 +105,24 @@ function bakeTurfWashTexture(sport: PitchSport): Texture {
 
   const img = ctx.getImageData(0, 0, W, H);
   const d = img.data;
+  const isSoccer = sport === "soccer";
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       const i = (y * W + x) * 4;
-      if (((x * 11 + y * 5) & 511) === 0) {
-        const j = (Math.sin(x * 0.05) + Math.cos(y * 0.04)) * recipe.grain * 18;
+      if (isSoccer) {
+        if (((x * 11 + y * 5) & 511) === 0) {
+          const j = (Math.sin(x * 0.05) + Math.cos(y * 0.04)) * recipe.grain * 18;
+          d[i] = Math.max(0, Math.min(255, Math.round((d[i] ?? 0) + j)));
+          d[i + 1] = Math.max(0, Math.min(255, Math.round((d[i + 1] ?? 0) + j * 0.96)));
+          d[i + 2] = Math.max(0, Math.min(255, Math.round((d[i + 2] ?? 0) + j * 0.9)));
+        }
+      } else {
+        const mottling = Math.sin(x * 0.014 + y * 0.02) * Math.cos(y * 0.018 - x * 0.011);
+        const grain = Math.sin(x * 0.12 + y * 0.07) * Math.cos(x * 0.06 - y * 0.09);
+        const fleck = ((x * 29 + y * 31) & 255) === 0 ? 0.9 : 0;
+        const j = (mottling * 15 + grain * 6 + fleck * 9) * recipe.grain;
         d[i] = Math.max(0, Math.min(255, Math.round((d[i] ?? 0) + j)));
-        d[i + 1] = Math.max(0, Math.min(255, Math.round((d[i + 1] ?? 0) + j * 0.96)));
+        d[i + 1] = Math.max(0, Math.min(255, Math.round((d[i + 1] ?? 0) + j * 0.98)));
         d[i + 2] = Math.max(0, Math.min(255, Math.round((d[i + 2] ?? 0) + j * 0.9)));
       }
     }
@@ -276,11 +287,12 @@ export function createPitchRoot(sport: PitchSport): PitchRootMount {
   const verticalBands = turfRecipe(sport).verticalBands;
   const density = 2.15 / Math.max(2.8, verticalBands);
   stripes.tileScale.set(density, 2.05);
-  stripes.alpha = sport === "soccer" ? 0.36 : 0.35;
+  stripes.alpha = sport === "soccer" ? 0.36 : 0.33;
   stripes.blendMode = "multiply";
   stripes.zIndex = 1;
   face.addChild(stripes);
 
+  const isSoccer = sport === "soccer";
   const vignette = new FillGradient({
     type: "radial",
     center: { x: 0.5, y: 0.48 },
@@ -288,30 +300,38 @@ export function createPitchRoot(sport: PitchSport): PitchRootMount {
     outerRadius: 1,
     outerCenter: { x: 0.5, y: 0.48 },
     textureSpace: "local",
-    colorStops: [
-      { offset: 0.32, color: "#00000000" },
-      { offset: 0.78, color: "rgba(0, 14, 10, 0.1)" },
-      { offset: 1, color: "rgba(0, 18, 12, 0.2)" },
-    ],
+    colorStops: isSoccer
+      ? [
+          { offset: 0.32, color: "#00000000" },
+          { offset: 0.78, color: "rgba(0, 14, 10, 0.1)" },
+          { offset: 1, color: "rgba(0, 18, 12, 0.2)" },
+        ]
+      : [
+          { offset: 0.34, color: "#00000000" },
+          { offset: 0.82, color: "rgba(0, 12, 9, 0.075)" },
+          { offset: 1, color: "rgba(0, 16, 11, 0.14)" },
+        ],
   });
   disposers.push(() => vignette.destroy());
   const depth = new Graphics();
   depth.zIndex = 2;
   depth.rect(0, 0, vbW, vbH).fill(vignette);
   depth.blendMode = "multiply";
-  depth.alpha = sport === "soccer" ? 0.38 : 0.3;
+  depth.alpha = sport === "soccer" ? 0.38 : 0.24;
   face.addChild(depth);
 
   const markingsGraphics = new Graphics({ roundPixels: true });
   markingsGraphics.zIndex = 4;
   const { markings } = getPitchConfig(sport);
   drawMarkings(markingsGraphics, markings);
+  if (!isSoccer) markingsGraphics.tint = 0xf6fffa;
   face.addChild(markingsGraphics);
   const markingsClarity = new Graphics({ roundPixels: true });
   markingsClarity.zIndex = 5;
   drawMarkings(markingsClarity, markings);
+  if (!isSoccer) markingsClarity.tint = 0xf9fffc;
   markingsClarity.blendMode = "screen";
-  markingsClarity.alpha = 0.12;
+  markingsClarity.alpha = isSoccer ? 0.12 : 0.18;
   face.addChild(markingsClarity);
 
   const sheen = new FillGradient({
@@ -331,7 +351,7 @@ export function createPitchRoot(sport: PitchSport): PitchRootMount {
   glass.zIndex = 7;
   glass.rect(0, 0, vbW, vbH).fill(sheen);
   glass.blendMode = "screen";
-  glass.alpha = 0.16;
+  glass.alpha = isSoccer ? 0.16 : 0.14;
   face.addChild(glass);
 
   face.sortChildren();
