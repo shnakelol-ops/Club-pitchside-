@@ -24,13 +24,13 @@ function createStripeTexture(sport: PitchSport): Texture {
     ctx.fillStyle = stripe
       ? isSoccer
         ? "rgba(255,255,255,0.26)"
-        : "rgba(255,255,255,0.3)"
+        : "rgba(255,255,255,0.28)"
       : isSoccer
         ? "rgba(0,0,0,0.18)"
-        : "rgba(0,0,0,0.2)";
+        : "rgba(0,0,0,0.17)";
     ctx.fillRect(x, 0, band * 0.52, H);
   }
-  ctx.fillStyle = "rgba(255,255,255,0.04)";
+  ctx.fillStyle = "rgba(255,255,255,0.03)";
   for (let y = 0; y < H; y += 17) {
     ctx.fillRect(0, y, W, 2);
   }
@@ -72,9 +72,9 @@ function turfRecipe(sport: PitchSport): TurfRecipe {
       { t: 0.8, c: "#1f5e42" },
       { t: 1, c: "#103629" },
     ],
-    centreWash: "rgba(220, 255, 232, 0.125)",
+    centreWash: "rgba(220, 255, 232, 0.135)",
     verticalBands: 5.2,
-    grain: 0.011,
+    grain: 0.012,
   };
 }
 
@@ -103,9 +103,44 @@ function bakeTurfWashTexture(sport: PitchSport): Texture {
   ctx.fillStyle = rg;
   ctx.fillRect(0, 0, W, H);
 
+  const isSoccer = sport === "soccer";
+  if (!isSoccer) {
+    // Subtle deterministic tonal patches to avoid a flat digital fill.
+    for (let p = 0; p < 8; p++) {
+      const sx = Math.sin((p + 1) * 12.9898) * 43758.5453123;
+      const sy = Math.sin((p + 1) * 78.233) * 12345.6789012;
+      const rx = sx - Math.floor(sx);
+      const ry = sy - Math.floor(sy);
+      const px = W * (0.1 + rx * 0.8);
+      const py = H * (0.1 + ry * 0.8);
+      const rr = H * (0.15 + ((rx + ry) * 0.5) * 0.18);
+      const patch = ctx.createRadialGradient(px, py, 0, px, py, rr);
+      if (p % 2 === 0) {
+        patch.addColorStop(0, "rgba(235,255,242,0.032)");
+      } else {
+        patch.addColorStop(0, "rgba(0,20,12,0.02)");
+      }
+      patch.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = patch;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    // Fine low-opacity flecks for grass depth (deterministic noise).
+    for (let f = 0; f < 920; f++) {
+      const nx = Math.sin((f + 1) * 91.17) * 43758.5453123;
+      const ny = Math.sin((f + 1) * 17.31) * 24634.6345124;
+      const rx = nx - Math.floor(nx);
+      const ry = ny - Math.floor(ny);
+      const x = Math.floor(rx * W);
+      const y = Math.floor(ry * H);
+      const bright = (f & 3) === 0;
+      ctx.fillStyle = bright ? "rgba(238,255,244,0.02)" : "rgba(0,14,8,0.014)";
+      ctx.fillRect(x, y, 1, (f & 1) + 1);
+    }
+  }
+
   const img = ctx.getImageData(0, 0, W, H);
   const d = img.data;
-  const isSoccer = sport === "soccer";
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       const i = (y * W + x) * 4;
@@ -119,8 +154,9 @@ function bakeTurfWashTexture(sport: PitchSport): Texture {
       } else {
         const mottling = Math.sin(x * 0.014 + y * 0.02) * Math.cos(y * 0.018 - x * 0.011);
         const grain = Math.sin(x * 0.12 + y * 0.07) * Math.cos(x * 0.06 - y * 0.09);
+        const blade = Math.sin(x * 0.03 + y * 0.11) * 0.6 + Math.cos(x * 0.017 - y * 0.095) * 0.4;
         const fleck = ((x * 29 + y * 31) & 255) === 0 ? 0.9 : 0;
-        const j = (mottling * 15 + grain * 6 + fleck * 9) * recipe.grain;
+        const j = (mottling * 13 + grain * 5 + blade * 4 + fleck * 6) * recipe.grain;
         d[i] = Math.max(0, Math.min(255, Math.round((d[i] ?? 0) + j)));
         d[i + 1] = Math.max(0, Math.min(255, Math.round((d[i + 1] ?? 0) + j * 0.98)));
         d[i + 2] = Math.max(0, Math.min(255, Math.round((d[i + 2] ?? 0) + j * 0.9)));
@@ -287,7 +323,7 @@ export function createPitchRoot(sport: PitchSport): PitchRootMount {
   const verticalBands = turfRecipe(sport).verticalBands;
   const density = 2.15 / Math.max(2.8, verticalBands);
   stripes.tileScale.set(density, 2.05);
-  stripes.alpha = sport === "soccer" ? 0.36 : 0.33;
+  stripes.alpha = sport === "soccer" ? 0.36 : 0.31;
   stripes.blendMode = "multiply";
   stripes.zIndex = 1;
   face.addChild(stripes);
@@ -319,6 +355,29 @@ export function createPitchRoot(sport: PitchSport): PitchRootMount {
   depth.blendMode = "multiply";
   depth.alpha = sport === "soccer" ? 0.38 : 0.24;
   face.addChild(depth);
+
+  if (!isSoccer) {
+    const centreLift = new FillGradient({
+      type: "radial",
+      center: { x: 0.5, y: 0.48 },
+      innerRadius: 0,
+      outerRadius: 1,
+      outerCenter: { x: 0.5, y: 0.48 },
+      textureSpace: "local",
+      colorStops: [
+        { offset: 0, color: "rgba(234, 255, 242, 0.13)" },
+        { offset: 0.42, color: "rgba(222, 255, 236, 0.05)" },
+        { offset: 1, color: "rgba(255, 255, 255, 0)" },
+      ],
+    });
+    disposers.push(() => centreLift.destroy());
+    const lift = new Graphics();
+    lift.zIndex = 3;
+    lift.rect(0, 0, vbW, vbH).fill(centreLift);
+    lift.blendMode = "screen";
+    lift.alpha = 0.16;
+    face.addChild(lift);
+  }
 
   const markingsGraphics = new Graphics({ roundPixels: true });
   markingsGraphics.zIndex = 4;
