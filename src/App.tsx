@@ -355,6 +355,24 @@ const PANEL_CSS = `
   box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.22), 0 0 12px rgba(34, 197, 94, 0.28);
 }
 
+.player-bubble-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(15, 23, 42, 0.68);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: #dbeafe;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.12), 0 0 6px rgba(148, 163, 184, 0.14);
+}
+
 .utility-controls {
   position: fixed;
   z-index: 9999;
@@ -3190,14 +3208,6 @@ export default function App() {
                   <button
                     type="button"
                     className="undo-btn"
-                    onClick={openPlayersPanel}
-                    style={{ border: "1px solid rgba(125,211,252,0.4)" }}
-                  >
-                    Players
-                  </button>
-                  <button
-                    type="button"
-                    className="undo-btn"
                     onClick={openReviewPanel}
                     style={{ border: "1px solid rgba(125,211,252,0.52)" }}
                   >
@@ -3324,14 +3334,6 @@ export default function App() {
                 <button
                   type="button"
                   className="landscape-toolbar-secondary-btn"
-                  onClick={openPlayersPanel}
-                  style={{ border: "1px solid rgba(125,211,252,0.4)" }}
-                >
-                  Players
-                </button>
-                <button
-                  type="button"
-                  className="landscape-toolbar-secondary-btn"
                   onClick={openReviewPanel}
                   style={{ border: "1px solid rgba(125,211,252,0.52)" }}
                 >
@@ -3362,6 +3364,14 @@ export default function App() {
               {EVENT_LABEL_BY_KIND[selectedEventKind]}
             </div>
           ) : null}
+          <button
+            type="button"
+            className="player-bubble-btn"
+            aria-label="Open players panel"
+            onClick={openPlayersPanel}
+          >
+            👤
+          </button>
           <button
             type="button"
             onClick={() => {
