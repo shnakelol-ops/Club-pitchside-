@@ -64,21 +64,20 @@ export async function createPixiPitchSurface(
   options: CreatePixiPitchSurfaceOptions,
 ): Promise<PixiPitchSurfaceHandle> {
   const SCALE = 100 / 145;
-  const GOAL_X = 50;
-  const TOP_GOAL_Y = 0;
-  const BOTTOM_GOAL_Y = 100;
+  const GOAL_CENTER_WIDTH_NORM = 50;
+  const LEFT_GOAL_LENGTH_NORM = 0;
+  const RIGHT_GOAL_LENGTH_NORM = 100;
 
   const drawGaelicFootballArcs = (graphics: Graphics): void => {
     graphics.clear();
     if (options.sport !== "gaelic") return;
 
     const snap = (v: number): number => Math.round(v) + 0.5;
-    const rotateAngle = (angle: number): number => angle - Math.PI / 2;
 
     const { inner, markings } = getPitchConfig("gaelic");
-    const toBoardX = (normY: number): number => inner.x + (normY / 100) * inner.w;
-    const toBoardY = (normX: number): number => inner.y + (normX / 100) * inner.h;
-    const toBoardRadius = (normLength: number): number => (normLength / 100) * inner.w;
+    const toPixiX = (normLength: number): number => inner.x + (normLength / 100) * inner.w;
+    const toPixiY = (normWidth: number): number => inner.y + (normWidth / 100) * inner.h;
+    const toPixiLengthRadius = (normLength: number): number => (normLength / 100) * inner.w;
 
     const lineStyleSource = markings.find(
       (marking): marking is Extract<(typeof markings)[number], { kind: "line" }> =>
@@ -105,15 +104,17 @@ export async function createPixiPitchSurface(
       }
     }
 
-    const goalXSnapped = snap(toBoardY(GOAL_X));
-    const topGoalYSnapped = snap(toBoardX(TOP_GOAL_Y));
-    const bottomGoalYSnapped = snap(toBoardX(BOTTOM_GOAL_Y));
+    const dCentreOffset = 11 * SCALE;
+    const dRadiusNorm = 13 * SCALE;
+    const arcRadiusNorm = 40 * SCALE;
 
-    const dRadius = snap(toBoardRadius(13 * SCALE));
-    const dCYTop = snap(toBoardX(11 * SCALE));
-    const dCYBottom = snap(toBoardX(100 - (11 * SCALE)));
-
-    const arcRadius = snap(toBoardRadius(40 * SCALE));
+    const leftGoalCx = snap(toPixiX(LEFT_GOAL_LENGTH_NORM));
+    const rightGoalCx = snap(toPixiX(RIGHT_GOAL_LENGTH_NORM));
+    const midfieldCy = snap(toPixiY(GOAL_CENTER_WIDTH_NORM));
+    const leftDCx = snap(toPixiX(dCentreOffset));
+    const rightDCx = snap(toPixiX(100 - dCentreOffset));
+    const dRadius = snap(toPixiLengthRadius(dRadiusNorm));
+    const arcRadius = snap(toPixiLengthRadius(arcRadiusNorm));
 
     const drawArc = (
       cx: number,
@@ -136,10 +137,13 @@ export async function createPixiPitchSurface(
         });
     };
 
-    drawArc(goalXSnapped, dCYTop, dRadius, rotateAngle(Math.PI), rotateAngle(0), false);
-    drawArc(goalXSnapped, dCYBottom, dRadius, rotateAngle(0), rotateAngle(Math.PI), true);
-    drawArc(goalXSnapped, topGoalYSnapped, arcRadius, rotateAngle(Math.PI * 0.2), rotateAngle(Math.PI * 0.8));
-    drawArc(goalXSnapped, bottomGoalYSnapped, arcRadius, rotateAngle(Math.PI * 1.2), rotateAngle(Math.PI * 1.8), true);
+    // D arcs: centred 11m from each goal line, radius 13m, facing field.
+    drawArc(leftDCx, midfieldCy, dRadius, -Math.PI / 2, Math.PI / 2);
+    drawArc(rightDCx, midfieldCy, dRadius, Math.PI / 2, (3 * Math.PI) / 2);
+
+    // 40m arcs: centred on each goal line, radius 40m, field-facing segments.
+    drawArc(leftGoalCx, midfieldCy, arcRadius, -Math.PI * 0.32, Math.PI * 0.32);
+    drawArc(rightGoalCx, midfieldCy, arcRadius, Math.PI * 0.68, Math.PI * 1.32);
   };
 
   const app = new Application();
