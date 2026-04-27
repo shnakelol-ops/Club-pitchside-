@@ -13,6 +13,7 @@ import {
 } from "./core/match/match-state-store";
 import { createPixiPitchSurface } from "./core/pitch/create-pixi-pitch-surface";
 import { type MatchEvent, type MatchEventKind } from "./core/stats/stats-event-model";
+import { gaaModeConfig } from "./config/gaaModeConfig";
 
 type VisibilityMode = "ALL" | "LAST_5" | "LAST_10";
 type TeamScore = { goals: number; points: number; total: number };
@@ -40,32 +41,35 @@ type LoggedMatchEvent = MatchEvent & {
   team?: TeamSide;
 };
 
-const EVENT_BUTTONS: Array<{ label: string; kind: MatchEventKind }> = [
-  { label: "GOAL", kind: "GOAL" },
-  { label: "POINT", kind: "POINT" },
-  { label: "2PT", kind: "TWO_POINTER" },
-  { label: "WIDE", kind: "WIDE" },
-  { label: "SHOT", kind: "SHOT" },
-  { label: "T+", kind: "TURNOVER_WON" },
-  { label: "T−", kind: "TURNOVER_LOST" },
-  { label: "K+", kind: "KICKOUT_WON" },
-  { label: "K−", kind: "KICKOUT_CONCEDED" },
-  { label: "F+", kind: "FREE_WON" },
-  { label: "F−", kind: "FREE_CONCEDED" },
-];
-
-const AWAY_INSTANT_SCORING_KINDS = new Set<MatchEventKind>(["GOAL", "POINT", "TWO_POINTER"]);
-const SCORE_EVENT_KINDS = new Set<MatchEventKind>(["GOAL", "POINT", "TWO_POINTER"]);
+type ReviewEventGroupOptionId = ReviewEventGroup | "ACTIVE";
+const mode = gaaModeConfig.football;
+const EVENT_BUTTONS = mode.eventButtons;
+const EVENT_LABEL_BY_KIND = mode.eventLabels;
+const AWAY_INSTANT_SCORING_KINDS = new Set<MatchEventKind>(mode.scoringEvents);
+const SCORE_EVENT_KINDS = new Set<MatchEventKind>(mode.scoringEvents);
 const FORMATION_ROW_SIZES = [1, 3, 3, 2, 3, 3] as const;
 const SQUADS_STORAGE_KEY = "pitchsideclub.squads";
 const REVIEW_EVENT_GROUP_KINDS: Record<Exclude<ReviewEventGroup, "ALL">, readonly MatchEventKind[]> = {
-  SCORES: ["GOAL", "POINT", "TWO_POINTER"],
-  WIDES: ["WIDE"],
-  SHOTS: ["SHOT"],
-  TURNOVERS: ["TURNOVER_WON", "TURNOVER_LOST"],
-  KICKOUTS: ["KICKOUT_WON", "KICKOUT_CONCEDED"],
-  FREES: ["FREE_WON", "FREE_CONCEDED"],
+  SCORES: mode.reviewGroups.SCORES.kinds,
+  WIDES: mode.reviewGroups.WIDES.kinds,
+  SHOTS: mode.reviewGroups.SHOTS.kinds,
+  TURNOVERS: mode.reviewGroups.TURNOVERS.kinds,
+  KICKOUTS: mode.reviewGroups.KICKOUTS.kinds,
+  FREES: mode.reviewGroups.FREES.kinds,
 };
+const REVIEW_EVENT_GROUP_OPTIONS: ReadonlyArray<{
+  id: ReviewEventGroupOptionId;
+  label: string;
+}> = [
+  { id: "ALL", label: "ALL" },
+  { id: "ACTIVE", label: "ACTIVE" },
+  { id: "SCORES", label: mode.reviewGroups.SCORES.label },
+  { id: "WIDES", label: mode.reviewGroups.WIDES.label },
+  { id: "SHOTS", label: mode.reviewGroups.SHOTS.label },
+  { id: "TURNOVERS", label: mode.reviewGroups.TURNOVERS.label },
+  { id: "KICKOUTS", label: mode.reviewGroups.KICKOUTS.label },
+  { id: "FREES", label: mode.reviewGroups.FREES.label },
+];
 function newLocalEventId(): string {
   const c = globalThis.crypto;
   if (c && "randomUUID" in c && typeof c.randomUUID === "function") {
@@ -1382,20 +1386,6 @@ const PANEL_CSS = `
   inset: -5px;
 }
 `;
-
-const EVENT_LABEL_BY_KIND: Record<MatchEventKind, string> = {
-  GOAL: "GOAL",
-  POINT: "POINT",
-  TWO_POINTER: "2PT",
-  WIDE: "WIDE",
-  SHOT: "SHOT",
-  TURNOVER_WON: "T+",
-  TURNOVER_LOST: "T−",
-  KICKOUT_WON: "K+",
-  KICKOUT_CONCEDED: "K−",
-  FREE_WON: "F+",
-  FREE_CONCEDED: "F−",
-};
 
 export default function App() {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -2807,16 +2797,7 @@ export default function App() {
             <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.86 }}>
               Event Group
             </div>
-            {([
-              { id: "ALL", label: "ALL" },
-              { id: "ACTIVE", label: "ACTIVE" },
-              { id: "SCORES", label: "SCORES" },
-              { id: "WIDES", label: "WIDES" },
-              { id: "SHOTS", label: "SHOTS" },
-              { id: "TURNOVERS", label: "TURNOVERS" },
-              { id: "KICKOUTS", label: "KICKOUTS" },
-              { id: "FREES", label: "FREES" },
-            ] as const).map((option) => (
+            {REVIEW_EVENT_GROUP_OPTIONS.map((option) => (
               <button
                 key={option.id}
                 type="button"
@@ -2946,16 +2927,7 @@ export default function App() {
               {option.label}
             </button>
           ))}
-          {([
-            { id: "ALL", label: "ALL" },
-            { id: "ACTIVE", label: "ACTIVE" },
-            { id: "SCORES", label: "SCORES" },
-            { id: "WIDES", label: "WIDES" },
-            { id: "SHOTS", label: "SHOTS" },
-            { id: "TURNOVERS", label: "TURNOVERS" },
-            { id: "KICKOUTS", label: "KICKOUTS" },
-            { id: "FREES", label: "FREES" },
-          ] as const).map((option) => (
+          {REVIEW_EVENT_GROUP_OPTIONS.map((option) => (
             <button
               key={`strip-group-${option.id}`}
               type="button"
