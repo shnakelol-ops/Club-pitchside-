@@ -14,6 +14,17 @@ export type StatsMarkerStyle = {
   centerDotRadiusScale: number;
 };
 
+const FALLBACK_MARKER_STYLE: StatsMarkerStyle = {
+  radius: 2.9,
+  fill: "rgba(148, 163, 184, 1)",
+  stroke: "rgba(51, 65, 85, 1)",
+  strokeWidth: 0.74,
+  contrastStroke: "rgba(15, 23, 42, 0.58)",
+  contrastStrokeWidth: 0.5,
+  centerDot: "rgba(248, 250, 252, 0.9)",
+  centerDotRadiusScale: 0.2,
+};
+
 function styleForType(type: MatchEventKind): StatsMarkerStyle {
   switch (type) {
     case "GOAL":
@@ -159,10 +170,9 @@ function styleForType(type: MatchEventKind): StatsMarkerStyle {
         centerDot: "rgba(245, 235, 255, 0.9)",
         centerDotRadiusScale: 0.2,
       };
-    default: {
-      const _never: never = type;
-      return _never;
-    }
+    default:
+      // Defensive fallback: unknown kinds should never blank marker rendering.
+      return FALLBACK_MARKER_STYLE;
   }
 }
 
