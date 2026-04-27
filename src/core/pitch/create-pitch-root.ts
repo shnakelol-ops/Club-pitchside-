@@ -17,14 +17,17 @@ function createStripeTexture(sport: PitchSport): Texture {
   const ctx = canvas.getContext("2d");
   if (!ctx) return Texture.WHITE;
 
-  const band = sport === "hurling" ? 9 : 8;
+  const isSoccer = sport === "soccer";
+  const band = isSoccer ? 8 : 8.5;
   for (let x = 0; x < W; x += band) {
     const stripe = (x / band) % 2 === 0;
     ctx.fillStyle = stripe
-      ? sport === "hurling"
-        ? "rgba(255,255,255,0.22)"
-        : "rgba(255,255,255,0.26)"
-      : "rgba(0,0,0,0.18)";
+      ? isSoccer
+        ? "rgba(255,255,255,0.26)"
+        : "rgba(255,255,255,0.3)"
+      : isSoccer
+        ? "rgba(0,0,0,0.18)"
+        : "rgba(0,0,0,0.2)";
     ctx.fillRect(x, 0, band * 0.52, H);
   }
   ctx.fillStyle = "rgba(255,255,255,0.04)";
@@ -59,31 +62,18 @@ function turfRecipe(sport: PitchSport): TurfRecipe {
       grain: 0.01,
     };
   }
-  if (sport === "hurling") {
-    return {
-      wash: [
-        { t: 0, c: "#040e0c" },
-        { t: 0.36, c: "#0f322b" },
-        { t: 0.53, c: "#164a40" },
-        { t: 0.7, c: "#10342e" },
-        { t: 1, c: "#051210" },
-      ],
-      centreWash: "rgba(186, 236, 220, 0.072)",
-      verticalBands: 4.05,
-      grain: 0.011,
-    };
-  }
+  // Shared GAA base (football, ladies football, hurling, camogie).
   return {
     wash: [
-      { t: 0, c: "#05140f" },
-      { t: 0.28, c: "#0f3d2c" },
-      { t: 0.48, c: "#1a5c3e" },
-      { t: 0.62, c: "#174a34" },
-      { t: 0.78, c: "#123828" },
-      { t: 1, c: "#061812" },
+      { t: 0, c: "#081e16" },
+      { t: 0.28, c: "#145239" },
+      { t: 0.48, c: "#23714d" },
+      { t: 0.62, c: "#206246" },
+      { t: 0.78, c: "#194f39" },
+      { t: 1, c: "#0a271c" },
     ],
-    centreWash: "rgba(200, 248, 218, 0.09)",
-    verticalBands: 5.35,
+    centreWash: "rgba(214, 252, 226, 0.105)",
+    verticalBands: 5.1,
     grain: 0.009,
   };
 }
@@ -286,7 +276,7 @@ export function createPitchRoot(sport: PitchSport): PitchRootMount {
   const verticalBands = turfRecipe(sport).verticalBands;
   const density = 2.15 / Math.max(2.8, verticalBands);
   stripes.tileScale.set(density, 2.05);
-  stripes.alpha = sport === "hurling" ? 0.33 : 0.36;
+  stripes.alpha = sport === "soccer" ? 0.36 : 0.35;
   stripes.blendMode = "multiply";
   stripes.zIndex = 1;
   face.addChild(stripes);
@@ -309,7 +299,7 @@ export function createPitchRoot(sport: PitchSport): PitchRootMount {
   depth.zIndex = 2;
   depth.rect(0, 0, vbW, vbH).fill(vignette);
   depth.blendMode = "multiply";
-  depth.alpha = 0.38;
+  depth.alpha = sport === "soccer" ? 0.38 : 0.3;
   face.addChild(depth);
 
   const markingsGraphics = new Graphics({ roundPixels: true });
@@ -317,6 +307,12 @@ export function createPitchRoot(sport: PitchSport): PitchRootMount {
   const { markings } = getPitchConfig(sport);
   drawMarkings(markingsGraphics, markings);
   face.addChild(markingsGraphics);
+  const markingsClarity = new Graphics({ roundPixels: true });
+  markingsClarity.zIndex = 5;
+  drawMarkings(markingsClarity, markings);
+  markingsClarity.blendMode = "screen";
+  markingsClarity.alpha = 0.12;
+  face.addChild(markingsClarity);
 
   const sheen = new FillGradient({
     type: "linear",
