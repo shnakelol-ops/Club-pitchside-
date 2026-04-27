@@ -268,10 +268,76 @@ function buildGaelicFootballLandscapeMarkings(): PitchMarking[] {
 
 const gaelicLandscapeMarkings = buildGaelicFootballLandscapeMarkings();
 
+const HURLING_LANDSCAPE_LEN_M = 145;
+const HURLING_LANDSCAPE_WID_M = 90;
+const HURLING_SMALL_DEEP_M = 4.5;
+const HURLING_SMALL_WIDE_M = 14;
+const HURLING_LARGE_DEEP_M = 13;
+const HURLING_LARGE_WIDE_M = 19;
+const HURLING_65_M_LINE = 65;
+const HURLING_GOAL_MOUTH_M = 6.5;
+
+function buildHurlingLandscapeMarkings(): PitchMarking[] {
+  const playW = 156;
+  const playH = 96;
+  const ix = 2;
+  const iy = 2;
+  const xRight = ix + playW;
+  const yBottom = iy + playH;
+  const xAt = (mFromLeft: number) => ix + (mFromLeft / HURLING_LANDSCAPE_LEN_M) * playW;
+
+  const wTouch = 0.52;
+  const w65 = 0.48;
+  const wHalf = 0.6;
+  const wLarge = 0.46;
+  const wSmall = 0.42;
+  const wGoalGraphic = 0.42;
+
+  const cy = iy + playH / 2;
+  const xMid = xAt(HURLING_LANDSCAPE_LEN_M / 2);
+  const x65L = xAt(HURLING_65_M_LINE);
+  const x65R = xAt(HURLING_LANDSCAPE_LEN_M - HURLING_65_M_LINE);
+
+  const smallDeep = (HURLING_SMALL_DEEP_M / HURLING_LANDSCAPE_LEN_M) * playW;
+  const smallWide = (HURLING_SMALL_WIDE_M / HURLING_LANDSCAPE_WID_M) * playH;
+  const largeDeep = (HURLING_LARGE_DEEP_M / HURLING_LANDSCAPE_LEN_M) * playW;
+  const largeWide = (HURLING_LARGE_WIDE_M / HURLING_LANDSCAPE_WID_M) * playH;
+  const ySmallTop = cy - smallWide / 2;
+  const yLargeTop = cy - largeWide / 2;
+
+  const goalMouthH = (HURLING_GOAL_MOUTH_M / HURLING_LANDSCAPE_WID_M) * playH;
+  const gTop = cy - goalMouthH / 2;
+  const gBot = cy + goalMouthH / 2;
+  const netDepth = 1.35;
+  const netFill = "rgba(255,255,255,0.11)";
+  const netStroke = "rgba(255,255,255,0.45)";
+
+  return [
+    { kind: "rect", x: ix, y: iy, w: playW, h: playH, stroke: Lg.lineGridStrong, strokeWidth: wTouch },
+    { kind: "line", x1: x65L, y1: iy, x2: x65L, y2: yBottom, stroke: Lg.lineGridMid, strokeWidth: w65 },
+    { kind: "line", x1: x65R, y1: iy, x2: x65R, y2: yBottom, stroke: Lg.lineGridMid, strokeWidth: w65 },
+    { kind: "line", x1: xMid, y1: iy, x2: xMid, y2: yBottom, stroke: Lg.lineCentre, strokeWidth: wHalf },
+    { kind: "rect", x: ix, y: yLargeTop, w: largeDeep, h: largeWide, stroke: Lg.lineScoringEnd, strokeWidth: wLarge },
+    { kind: "rect", x: xRight - largeDeep, y: yLargeTop, w: largeDeep, h: largeWide, stroke: Lg.lineScoringEnd, strokeWidth: wLarge },
+    { kind: "rect", x: ix, y: ySmallTop, w: smallDeep, h: smallWide, stroke: Lg.lineScoringEnd, strokeWidth: wSmall },
+    { kind: "rect", x: xRight - smallDeep, y: ySmallTop, w: smallDeep, h: smallWide, stroke: Lg.lineScoringEnd, strokeWidth: wSmall },
+    { kind: "rect", x: ix - netDepth, y: gTop, w: netDepth, h: goalMouthH, stroke: netStroke, strokeWidth: 0.22, fill: netFill },
+    { kind: "line", x1: ix, y1: gTop, x2: ix, y2: gBot, stroke: "rgba(255,255,255,0.92)", strokeWidth: wGoalGraphic },
+    { kind: "line", x1: ix - netDepth * 0.35, y1: gTop, x2: ix, y2: gTop, stroke: "rgba(255,255,255,0.88)", strokeWidth: 0.32 },
+    { kind: "line", x1: ix - netDepth * 0.35, y1: gBot, x2: ix, y2: gBot, stroke: "rgba(255,255,255,0.88)", strokeWidth: 0.32 },
+    { kind: "rect", x: xRight, y: gTop, w: netDepth, h: goalMouthH, stroke: netStroke, strokeWidth: 0.22, fill: netFill },
+    { kind: "line", x1: xRight, y1: gTop, x2: xRight, y2: gBot, stroke: "rgba(255,255,255,0.92)", strokeWidth: wGoalGraphic },
+    { kind: "line", x1: xRight + netDepth * 0.35, y1: gTop, x2: xRight, y2: gTop, stroke: "rgba(255,255,255,0.88)", strokeWidth: 0.32 },
+    { kind: "line", x1: xRight + netDepth * 0.35, y1: gBot, x2: xRight, y2: gBot, stroke: "rgba(255,255,255,0.88)", strokeWidth: 0.32 },
+  ];
+}
+
+const hurlingLandscapeMarkings = buildHurlingLandscapeMarkings();
+
 export const pitchConfig: Record<PitchSport, PitchConfig> = {
   soccer: { viewBox: BOARD_PITCH_VIEWBOX, inner: { x: 2, y: 2, w: 156, h: 96 }, markings: soccerMarkings },
   gaelic: { viewBox: BOARD_PITCH_VIEWBOX, inner: { x: 2, y: 2, w: 156, h: 96 }, markings: gaelicLandscapeMarkings },
-  hurling: { viewBox: BOARD_PITCH_VIEWBOX, inner: { x: 2, y: 2, w: 156, h: 96 }, markings: gaelicLandscapeMarkings },
+  hurling: { viewBox: BOARD_PITCH_VIEWBOX, inner: { x: 2, y: 2, w: 156, h: 96 }, markings: hurlingLandscapeMarkings },
 };
 
 export function getPitchConfig(sport: PitchSport): PitchConfig {

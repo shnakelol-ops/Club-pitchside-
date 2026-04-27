@@ -137,6 +137,28 @@ function styleForType(type: MatchEventKind): StatsMarkerStyle {
         centerDot: "rgba(245, 235, 255, 0.9)",
         centerDotRadiusScale: 0.2,
       };
+    case "PUCKOUT_WON":
+      return {
+        radius: 3.0,
+        fill: "rgba(45, 212, 191, 1)",
+        stroke: "rgba(13, 148, 136, 1)",
+        strokeWidth: 0.78,
+        contrastStroke: "rgba(6, 30, 28, 0.58)",
+        contrastStrokeWidth: 0.54,
+        centerDot: "rgba(236, 255, 252, 0.9)",
+        centerDotRadiusScale: 0.2,
+      };
+    case "PUCKOUT_LOST":
+      return {
+        radius: 3.0,
+        fill: "rgba(251, 113, 133, 1)",
+        stroke: "rgba(190, 24, 93, 1)",
+        strokeWidth: 0.78,
+        contrastStroke: "rgba(49, 8, 26, 0.62)",
+        contrastStrokeWidth: 0.54,
+        centerDot: "rgba(255, 241, 245, 0.9)",
+        centerDotRadiusScale: 0.2,
+      };
     default: {
       const _never: never = type;
       return _never;

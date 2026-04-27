@@ -13,10 +13,22 @@ import {
 } from "./core/match/match-state-store";
 import { createPixiPitchSurface } from "./core/pitch/create-pixi-pitch-surface";
 import { type MatchEvent, type MatchEventKind } from "./core/stats/stats-event-model";
+import {
+  buildHurlingMatchSummaryLines,
+  computeHurlingTeamScore,
+  formatHurlingScore,
+  HURLING_AWAY_INSTANT_SCORING_KINDS,
+  HURLING_EVENT_BUTTONS,
+  HURLING_EVENT_LABEL_BY_KIND,
+  HURLING_REVIEW_EVENT_GROUP_KINDS,
+  HURLING_SCORE_EVENT_KINDS,
+  isHurlingEventKind,
+} from "./core/stats/hurling-stats-handler";
 
 type VisibilityMode = "ALL" | "LAST_5" | "LAST_10";
 type TeamScore = { goals: number; points: number; total: number };
 type TeamSide = "HOME" | "AWAY";
+type AppSport = "football" | "hurling";
 type UtilityPanel = "PLAYERS" | "REVIEW" | "SUMMARY" | null;
 type ReviewHalf = "H1" | "H2" | "FULL";
 type ReviewEventGroup =
@@ -26,6 +38,7 @@ type ReviewEventGroup =
   | "SHOTS"
   | "TURNOVERS"
   | "KICKOUTS"
+  | "PUCKOUTS"
   | "FREES";
 type ReviewZone = "FULL" | "OWN_HALF" | "OPPOSITION_HALF";
 type AttackingDirection = "LEFT" | "RIGHT";
@@ -58,14 +71,69 @@ const AWAY_INSTANT_SCORING_KINDS = new Set<MatchEventKind>(["GOAL", "POINT", "TW
 const SCORE_EVENT_KINDS = new Set<MatchEventKind>(["GOAL", "POINT", "TWO_POINTER"]);
 const FORMATION_ROW_SIZES = [1, 3, 3, 2, 3, 3] as const;
 const SQUADS_STORAGE_KEY = "pitchsideclub.squads";
-const REVIEW_EVENT_GROUP_KINDS: Record<Exclude<ReviewEventGroup, "ALL">, readonly MatchEventKind[]> = {
+const REVIEW_EVENT_GROUP_KINDS = {
   SCORES: ["GOAL", "POINT", "TWO_POINTER"],
   WIDES: ["WIDE"],
   SHOTS: ["SHOT"],
   TURNOVERS: ["TURNOVER_WON", "TURNOVER_LOST"],
   KICKOUTS: ["KICKOUT_WON", "KICKOUT_CONCEDED"],
   FREES: ["FREE_WON", "FREE_CONCEDED"],
-};
+} as const satisfies Partial<Record<Exclude<ReviewEventGroup, "ALL">, readonly MatchEventKind[]>>;
+const FOOTBALL_EVENT_KIND_SET = new Set<MatchEventKind>(EVENT_BUTTONS.map((item) => item.kind));
+const FOOTBALL_REVIEW_EVENT_GROUP_OPTIONS: ReadonlyArray<{
+  id: ReviewEventGroup | "ACTIVE";
+  label: string;
+}> = [
+  { id: "ALL", label: "ALL" },
+  { id: "ACTIVE", label: "ACTIVE" },
+  { id: "SCORES", label: "SCORES" },
+  { id: "WIDES", label: "WIDES" },
+  { id: "SHOTS", label: "SHOTS" },
+  { id: "TURNOVERS", label: "TURNOVERS" },
+  { id: "KICKOUTS", label: "KICKOUTS" },
+  { id: "FREES", label: "FREES" },
+];
+const HURLING_REVIEW_EVENT_GROUP_OPTIONS: ReadonlyArray<{
+  id: ReviewEventGroup | "ACTIVE";
+  label: string;
+}> = [
+  { id: "ALL", label: "ALL" },
+  { id: "ACTIVE", label: "ACTIVE" },
+  { id: "SCORES", label: "SCORES" },
+  { id: "WIDES", label: "WIDES" },
+  { id: "SHOTS", label: "SHOTS" },
+  { id: "TURNOVERS", label: "TURNOVERS" },
+  { id: "PUCKOUTS", label: "PUCKOUTS" },
+  { id: "FREES", label: "FREES" },
+];
+
+function isReviewEventGroupAllowedForSport(
+  sport: AppSport,
+  group: ReviewEventGroup,
+): boolean {
+  if (group === "ALL") return true;
+  if (sport === "hurling") {
+    return group !== "KICKOUTS";
+  }
+  return group !== "PUCKOUTS";
+}
+
+function isEventKindAllowedForSport(
+  sport: AppSport,
+  kind: MatchEventKind,
+): boolean {
+  if (sport === "hurling") return isHurlingEventKind(kind);
+  return FOOTBALL_EVENT_KIND_SET.has(kind);
+}
+
+function normalizeReviewEventGroupForSport(
+  sport: AppSport,
+  reviewEventGroup: ReviewEventGroup,
+): ReviewEventGroup {
+  return isReviewEventGroupAllowedForSport(sport, reviewEventGroup)
+    ? reviewEventGroup
+    : "ALL";
+}
 function newLocalEventId(): string {
   const c = globalThis.crypto;
   if (c && "randomUUID" in c && typeof c.randomUUID === "function") {
@@ -179,18 +247,22 @@ function formatGaelicScore(score: TeamScore): string {
 
 function getRenderablePitchEvents(
   events: readonly LoggedMatchEvent[],
+  sport: AppSport,
   reviewHalf: ReviewHalf,
   reviewEventGroup: ReviewEventGroup,
   reviewZone: ReviewZone,
   attackingDirection: AttackingDirection,
   reviewActivePlayerOnly: boolean,
   activePlayerId: string | null,
+  reviewGroupKindsMap: Partial<Record<Exclude<ReviewEventGroup, "ALL">, readonly MatchEventKind[]>>,
 ): LoggedMatchEvent[] {
-  const groupKinds =
+  const groupKindsList =
     reviewEventGroup === "ALL"
       ? null
-      : new Set<MatchEventKind>(REVIEW_EVENT_GROUP_KINDS[reviewEventGroup]);
+      : reviewGroupKindsMap[reviewEventGroup] ?? [];
+  const groupKinds = groupKindsList ? new Set<MatchEventKind>(groupKindsList) : null;
   return events.filter((event) => {
+    if (!isEventKindAllowedForSport(sport, event.kind)) return false;
     if (event.id.includes("-instant-score-")) return false;
 
     if (reviewHalf === "H1" && event.half !== 1) return false;
@@ -1393,6 +1465,8 @@ const EVENT_LABEL_BY_KIND: Record<MatchEventKind, string> = {
   TURNOVER_LOST: "T−",
   KICKOUT_WON: "K+",
   KICKOUT_CONCEDED: "K−",
+  PUCKOUT_WON: "P+",
+  PUCKOUT_LOST: "P−",
   FREE_WON: "F+",
   FREE_CONCEDED: "F−",
 };
@@ -1401,6 +1475,7 @@ export default function App() {
   const hostRef = useRef<HTMLDivElement>(null);
   const floatingControlsRef = useRef<HTMLDivElement>(null);
   const [selectedEventKind, setSelectedEventKind] = useState<MatchEventKind>("POINT");
+  const [sport, setSport] = useState<AppSport>("football");
   const [activeTeam, setActiveTeam] = useState<TeamSide>("HOME");
   const [teamNames, setTeamNames] = useState<{ HOME: string; AWAY: string }>({
     HOME: "Team A",
@@ -1484,6 +1559,47 @@ export default function App() {
       activeSquadPlayers.find((player) => player.name === activePlayer) ??
       null
     : null;
+  const currentSport = sport;
+  const effectiveEventButtons = currentSport === "hurling" ? HURLING_EVENT_BUTTONS : EVENT_BUTTONS;
+  const effectiveAwayInstantScoringKinds =
+    currentSport === "hurling" ? HURLING_AWAY_INSTANT_SCORING_KINDS : AWAY_INSTANT_SCORING_KINDS;
+  const effectiveScoreEventKinds =
+    currentSport === "hurling" ? HURLING_SCORE_EVENT_KINDS : SCORE_EVENT_KINDS;
+  const effectiveReviewEventGroupOptions =
+    currentSport === "hurling"
+      ? HURLING_REVIEW_EVENT_GROUP_OPTIONS
+      : FOOTBALL_REVIEW_EVENT_GROUP_OPTIONS;
+  const effectiveReviewEventGroupKinds = (currentSport === "hurling"
+    ? HURLING_REVIEW_EVENT_GROUP_KINDS
+    : REVIEW_EVENT_GROUP_KINDS) as Partial<
+    Record<Exclude<ReviewEventGroup, "ALL">, readonly MatchEventKind[]>
+  >;
+  const effectiveEventLabelByKind =
+    currentSport === "hurling"
+      ? ({ ...EVENT_LABEL_BY_KIND, ...HURLING_EVENT_LABEL_BY_KIND } as Record<
+          MatchEventKind,
+          string
+        >)
+      : EVENT_LABEL_BY_KIND;
+  const normalizedReviewEventGroup = normalizeReviewEventGroupForSport(
+    currentSport,
+    reviewEventGroup,
+  );
+
+  useEffect(() => {
+    setReviewEventGroup((prev) =>
+      normalizeReviewEventGroupForSport(currentSport, prev),
+    );
+    setLoggedEvents((prev) =>
+      prev.filter((event) => isEventKindAllowedForSport(currentSport, event.kind)),
+    );
+    const fallbackKind = effectiveEventButtons[0]?.kind ?? "POINT";
+    if (!isEventKindAllowedForSport(currentSport, selectedEventRef.current)) {
+      selectedEventRef.current = fallbackKind;
+      setSelectedEventKind(fallbackKind);
+      handleRef.current?.setActiveEventKind(fallbackKind);
+    }
+  }, [currentSport, effectiveEventButtons]);
 
   const setActiveSquadById = (nextSquadId: string) => {
     setActiveSquadId(nextSquadId);
@@ -1685,7 +1801,8 @@ export default function App() {
 
   const handleEventButtonPress = (kind: MatchEventKind) => {
     if (!isLoggingActive(matchState)) return;
-    if (activeTeam === "AWAY" && AWAY_INSTANT_SCORING_KINDS.has(kind)) {
+    if (!isEventKindAllowedForSport(currentSport, kind)) return;
+    if (activeTeam === "AWAY" && effectiveAwayInstantScoringKinds.has(kind)) {
       selectEventKind(kind);
       logAwayInstantScore(kind);
       return;
@@ -1693,6 +1810,14 @@ export default function App() {
     if (activeTeam === "AWAY") return;
     selectEventKind(kind);
   };
+
+  useEffect(() => {
+    if (isEventKindAllowedForSport(currentSport, selectedEventKind)) return;
+    const fallback = effectiveEventButtons[0]?.kind ?? "POINT";
+    setSelectedEventKind(fallback);
+    selectedEventRef.current = fallback;
+    handleRef.current?.setActiveEventKind(fallback);
+  }, [currentSport, effectiveEventButtons, selectedEventKind]);
 
   useEffect(() => {
     activeTeamRef.current = activeTeam;
@@ -1809,7 +1934,7 @@ export default function App() {
       setEventContext: (context: { half: 1 | 2; timestamp: number; canLog: boolean }) => void;
     } | null = null;
     void createPixiPitchSurface(host, {
-      sport: "gaelic",
+      sport: currentSport === "football" ? "gaelic" : "hurling",
       activeEventKind: selectedEventRef.current,
       showPlayerInitials,
       onEventLogged: (event) => {
@@ -1821,7 +1946,7 @@ export default function App() {
         };
         if (teamSide === "HOME") {
           nextEvent.playerId = activePlayerIdRef.current ?? null;
-          if (SCORE_EVENT_KINDS.has(event.kind) && pendingScorerRef.current) {
+          if (effectiveScoreEventKinds.has(event.kind) && pendingScorerRef.current) {
             nextEvent.playerName = pendingScorerRef.current.name;
             nextEvent.playerNumber = pendingScorerRef.current.number;
             nextEvent.squadId = pendingScorerRef.current.squadId;
@@ -1856,7 +1981,7 @@ export default function App() {
       handleRef.current = null;
       handle?.destroy();
     };
-  }, []);
+  }, [currentSport, effectiveScoreEventKinds, showPlayerInitials]);
 
   useEffect(() => {
     const timerId = window.setInterval(() => {
@@ -2042,15 +2167,17 @@ export default function App() {
     handleRef.current?.setEvents(
       getRenderablePitchEvents(
         loggedEvents,
+        currentSport,
         reviewHalf,
-        reviewEventGroup,
+        normalizedReviewEventGroup,
         reviewZone,
         getEffectiveAttackingDirection(firstHalfAttackingDirection, currentHalf),
         reviewActivePlayerOnly,
         activePlayerId,
+        effectiveReviewEventGroupKinds,
       ),
     );
-  }, [loggedEvents, reviewHalf, reviewEventGroup, reviewZone, firstHalfAttackingDirection, currentHalf, reviewActivePlayerOnly, activePlayerId]);
+  }, [loggedEvents, currentSport, reviewHalf, normalizedReviewEventGroup, reviewZone, firstHalfAttackingDirection, currentHalf, reviewActivePlayerOnly, activePlayerId, effectiveReviewEventGroupKinds]);
 
   useEffect(() => {
     if (!selectedReviewEventId) return;
@@ -2132,14 +2259,16 @@ export default function App() {
     () =>
       getRenderablePitchEvents(
         loggedEvents,
+        currentSport,
         reviewHalf,
-        reviewEventGroup,
+        normalizedReviewEventGroup,
         reviewZone,
         effectiveAttackingDirection,
         reviewActivePlayerOnly,
         activePlayerId,
+        effectiveReviewEventGroupKinds,
       ),
-    [loggedEvents, reviewHalf, reviewEventGroup, reviewZone, effectiveAttackingDirection, reviewActivePlayerOnly, activePlayerId],
+    [loggedEvents, currentSport, reviewHalf, normalizedReviewEventGroup, reviewZone, effectiveAttackingDirection, reviewActivePlayerOnly, activePlayerId, effectiveReviewEventGroupKinds],
   );
   const attackingDirectionHalfLabel = currentHalf === 2 ? "2H" : "1H";
   const attackingDirectionLabel =
@@ -2181,6 +2310,9 @@ export default function App() {
       return player ? `#${player.number} ${player.name}` : null;
     })();
   const reviewMatchSummaryLines = useMemo(() => {
+    if (currentSport === "hurling") {
+      return buildHurlingMatchSummaryLines(loggedEvents, playerById);
+    }
     const playerStats = new Map<
       string,
       { goals: number; points: number; twoPointers: number; turnoversWon: number; kickoutsWon: number; freesWon: number }
@@ -2234,13 +2366,55 @@ export default function App() {
     if (wides > 0) lines.push(`Wides: ${wides}`);
     if (shots > 0) lines.push(`Conversion: ${Math.round((scores / shots) * 100)}%`);
     return lines;
-  }, [loggedEvents, playerById]);
+  }, [currentSport, loggedEvents, playerById]);
 
-  const homeScore = useMemo(() => computeTeamScore(loggedEvents, "HOME"), [loggedEvents]);
-  const awayScore = useMemo(() => computeTeamScore(loggedEvents, "AWAY"), [loggedEvents]);
+  const homeScore = useMemo(
+    () =>
+      currentSport === "hurling"
+        ? computeHurlingTeamScore(loggedEvents, "HOME")
+        : computeTeamScore(loggedEvents, "HOME"),
+    [currentSport, loggedEvents],
+  );
+  const awayScore = useMemo(
+    () =>
+      currentSport === "hurling"
+        ? computeHurlingTeamScore(loggedEvents, "AWAY")
+        : computeTeamScore(loggedEvents, "AWAY"),
+    [currentSport, loggedEvents],
+  );
+  const formatActiveScore = (score: TeamScore) =>
+    currentSport === "hurling"
+      ? formatHurlingScore(score)
+      : formatGaelicScore(score);
 
+  const scoreLabel = currentSport === "hurling" ? "HURLING" : "FOOTBALL";
   const scoreboard = isLandscape ? (
     <div className="scoreboard-rail" aria-label="Match scoreboard">
+      <div className="scoreboard-rail-team-wrap" style={{ alignItems: "center", justifyContent: "flex-start", gap: "6px" }}>
+        <span className="scoreboard-rail-team-name" style={{ opacity: 0.8 }}>{scoreLabel}</span>
+        <div style={{ display: "inline-flex", gap: "4px" }}>
+          <button
+            type="button"
+            className="scoreboard-name-edit-btn"
+            onClick={() => {
+              setSport("football");
+            }}
+            style={currentSport === "football" ? { border: "1px solid rgba(125,211,252,0.92)" } : undefined}
+          >
+            FB
+          </button>
+          <button
+            type="button"
+            className="scoreboard-name-edit-btn"
+            onClick={() => {
+              setSport("hurling");
+            }}
+            style={currentSport === "hurling" ? { border: "1px solid rgba(125,211,252,0.92)" } : undefined}
+          >
+            HURL
+          </button>
+        </div>
+      </div>
       <div className="scoreboard-rail-venue">
         {editingVenue ? (
           <input
@@ -2329,12 +2503,12 @@ export default function App() {
         )}
       </div>
       <div className="scoreboard-rail-score">
-        {formatGaelicScore(homeScore)}
+        {formatActiveScore(homeScore)}
         <span className="scoreboard-rail-total">({homeScore.total})</span>
       </div>
       <div className="scoreboard-rail-separator">v</div>
       <div className="scoreboard-rail-score">
-        {formatGaelicScore(awayScore)}
+        {formatActiveScore(awayScore)}
         <span className="scoreboard-rail-total">({awayScore.total})</span>
       </div>
       <div className="scoreboard-rail-team-wrap">
@@ -2402,6 +2576,28 @@ export default function App() {
   ) : (
     <div className="scoreboard-strip" aria-label="Match scoreboard">
       <div className="scoreboard-strip-venue">
+        <div style={{ display: "inline-flex", gap: "4px", marginRight: "8px" }}>
+          <button
+            type="button"
+            className="scoreboard-name-edit-btn"
+            onClick={() => {
+              setSport("football");
+            }}
+            style={currentSport === "football" ? { border: "1px solid rgba(125,211,252,0.92)" } : undefined}
+          >
+            FB
+          </button>
+          <button
+            type="button"
+            className="scoreboard-name-edit-btn"
+            onClick={() => {
+              setSport("hurling");
+            }}
+            style={currentSport === "hurling" ? { border: "1px solid rgba(125,211,252,0.92)" } : undefined}
+          >
+            HURL
+          </button>
+        </div>
         {editingVenue ? (
           <input
             ref={venueInputRef}
@@ -2472,7 +2668,7 @@ export default function App() {
               </span>
             )}
             <span className="scoreboard-side-score">
-              {formatGaelicScore(homeScore)}
+              {formatActiveScore(homeScore)}
               <span className="scoreboard-total">({homeScore.total})</span>
             </span>
           </span>
@@ -2493,7 +2689,7 @@ export default function App() {
           >
             <span className="scoreboard-side-label">{teamNames.HOME}</span>
             <span className="scoreboard-side-score">
-              {formatGaelicScore(homeScore)}
+              {formatActiveScore(homeScore)}
               <span className="scoreboard-total">({homeScore.total})</span>
             </span>
           </button>
@@ -2531,7 +2727,7 @@ export default function App() {
               </span>
             )}
             <span className="scoreboard-side-score">
-              {formatGaelicScore(awayScore)}
+              {formatActiveScore(awayScore)}
               <span className="scoreboard-total">({awayScore.total})</span>
             </span>
           </span>
@@ -2552,7 +2748,7 @@ export default function App() {
           >
             <span className="scoreboard-side-label">{teamNames.AWAY}</span>
             <span className="scoreboard-side-score">
-              {formatGaelicScore(awayScore)}
+              {formatActiveScore(awayScore)}
               <span className="scoreboard-total">({awayScore.total})</span>
             </span>
           </button>
@@ -2807,16 +3003,7 @@ export default function App() {
             <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.86 }}>
               Event Group
             </div>
-            {([
-              { id: "ALL", label: "ALL" },
-              { id: "ACTIVE", label: "ACTIVE" },
-              { id: "SCORES", label: "SCORES" },
-              { id: "WIDES", label: "WIDES" },
-              { id: "SHOTS", label: "SHOTS" },
-              { id: "TURNOVERS", label: "TURNOVERS" },
-              { id: "KICKOUTS", label: "KICKOUTS" },
-              { id: "FREES", label: "FREES" },
-            ] as const).map((option) => (
+            {effectiveReviewEventGroupOptions.map((option) => (
               <button
                 key={option.id}
                 type="button"
@@ -2831,15 +3018,19 @@ export default function App() {
                   closeUtilityPanel();
                 }}
                 style={
-                  option.id === "ACTIVE" ? (reviewActivePlayerOnly ? {
-                        border: "1px solid rgba(125,211,252,0.9)",
-                        background: "rgba(14,116,144,0.38)",
-                      } : undefined) : reviewEventGroup === option.id
-                    ? {
-                        border: "1px solid rgba(125,211,252,0.9)",
-                        background: "rgba(14,116,144,0.38)",
-                      }
-                    : undefined
+                  option.id === "ACTIVE"
+                    ? reviewActivePlayerOnly
+                      ? {
+                          border: "1px solid rgba(125,211,252,0.9)",
+                          background: "rgba(14,116,144,0.38)",
+                        }
+                      : undefined
+                    : normalizedReviewEventGroup === option.id
+                      ? {
+                          border: "1px solid rgba(125,211,252,0.9)",
+                          background: "rgba(14,116,144,0.38)",
+                        }
+                      : undefined
                 }
               >
                 {option.label}
@@ -2946,16 +3137,7 @@ export default function App() {
               {option.label}
             </button>
           ))}
-          {([
-            { id: "ALL", label: "ALL" },
-            { id: "ACTIVE", label: "ACTIVE" },
-            { id: "SCORES", label: "SCORES" },
-            { id: "WIDES", label: "WIDES" },
-            { id: "SHOTS", label: "SHOTS" },
-            { id: "TURNOVERS", label: "TURNOVERS" },
-            { id: "KICKOUTS", label: "KICKOUTS" },
-            { id: "FREES", label: "FREES" },
-          ] as const).map((option) => (
+          {effectiveReviewEventGroupOptions.map((option) => (
             <button
               key={`strip-group-${option.id}`}
               type="button"
@@ -2968,15 +3150,19 @@ export default function App() {
                 }
               }}
               style={
-                option.id === "ACTIVE" ? (reviewActivePlayerOnly ? {
-                      border: "1px solid rgba(125,211,252,0.9)",
-                      background: "rgba(14,116,144,0.38)",
-                    } : undefined) : reviewEventGroup === option.id
-                  ? {
-                      border: "1px solid rgba(125,211,252,0.9)",
-                      background: "rgba(14,116,144,0.38)",
-                    }
-                  : undefined
+                option.id === "ACTIVE"
+                  ? reviewActivePlayerOnly
+                    ? {
+                        border: "1px solid rgba(125,211,252,0.9)",
+                        background: "rgba(14,116,144,0.38)",
+                      }
+                    : undefined
+                  : normalizedReviewEventGroup === option.id
+                    ? {
+                        border: "1px solid rgba(125,211,252,0.9)",
+                        background: "rgba(14,116,144,0.38)",
+                      }
+                    : undefined
               }
             >
               {option.label}
@@ -3076,11 +3262,11 @@ export default function App() {
           {!isLandscape && isPickerOpen ? (
             <div className="event-panel">
               <div className="event-grid">
-                {EVENT_BUTTONS.map((item, idx) => {
+                {effectiveEventButtons.map((item, idx) => {
                   const isActive = item.kind === selectedEventKind;
                   const isScoring = idx <= 4;
                   const isDisabledForAway =
-                    activeTeam === "AWAY" && !AWAY_INSTANT_SCORING_KINDS.has(item.kind);
+                    activeTeam === "AWAY" && !effectiveAwayInstantScoringKinds.has(item.kind);
                   return (
                     <button
                       key={item.label}
@@ -3156,10 +3342,10 @@ export default function App() {
           {isLandscape && isPickerOpen ? (
             <div className="landscape-toolbar">
               <div className="landscape-toolbar-row">
-                {EVENT_BUTTONS.slice(0, 5).map((item) => {
+                {effectiveEventButtons.slice(0, 5).map((item) => {
                   const isActive = item.kind === selectedEventKind;
                   const isDisabledForAway =
-                    activeTeam === "AWAY" && !AWAY_INSTANT_SCORING_KINDS.has(item.kind);
+                    activeTeam === "AWAY" && !effectiveAwayInstantScoringKinds.has(item.kind);
                   return (
                     <button
                       key={item.label}
@@ -3189,10 +3375,10 @@ export default function App() {
                 })}
               </div>
               <div className="landscape-toolbar-row">
-                {EVENT_BUTTONS.slice(5).map((item) => {
+                {effectiveEventButtons.slice(5).map((item) => {
                   const isActive = item.kind === selectedEventKind;
                   const isDisabledForAway =
-                    activeTeam === "AWAY" && !AWAY_INSTANT_SCORING_KINDS.has(item.kind);
+                    activeTeam === "AWAY" && !effectiveAwayInstantScoringKinds.has(item.kind);
                   return (
                     <button
                       key={item.label}
@@ -3262,7 +3448,7 @@ export default function App() {
           ) : null}
           {!isPickerOpen && !isLandscape ? (
             <div aria-live="polite" className="active-chip">
-              {EVENT_LABEL_BY_KIND[selectedEventKind]}
+              {effectiveEventLabelByKind[selectedEventKind]}
             </div>
           ) : null}
           <button
