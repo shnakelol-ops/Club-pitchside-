@@ -60,20 +60,6 @@ type PathSpec = {
   skipLineGlow?: boolean;
 };
 
-type ArcSpec = {
-  kind: "arc";
-  cx: number;
-  cy: number;
-  r: number;
-  startAngle: number;
-  endAngle: number;
-  counterClockwise?: boolean;
-  stroke: string;
-  strokeWidth: number;
-  opacity?: number;
-  skipLineGlow?: boolean;
-};
-
 type TextSpec = {
   kind: "text";
   x: number;
@@ -92,7 +78,6 @@ export type PitchMarking =
   | CircleSpec
   | EllipseSpec
   | PathSpec
-  | ArcSpec
   | TextSpec;
 
 export type PitchConfig = {
@@ -190,6 +175,7 @@ const GAELIC_SMALL_WIDE_M = 14;
 const GAELIC_LARGE_DEEP_M = 13;
 const GAELIC_LARGE_WIDE_M = 19;
 const GAELIC_D_FREE_RADIUS_M = 13;
+const GAELIC_TWO_POINT_RADIUS_M = 40;
 const GAELIC_PENALTY_SPOT_M = 11;
 
 function buildGaelicFootballLandscapeMarkings(): PitchMarking[] {
@@ -215,8 +201,8 @@ function buildGaelicFootballLandscapeMarkings(): PitchMarking[] {
   const w13 = 0.32;
   const wEnd = 0.46;
   const wEndInner = 0.42;
-  const wD = w45;
-  const w2Point = w45;
+  const wD = 0.48;
+  const w2Point = 0.48;
 
   const cx = ix + 0.5 * playW;
   const cy = iy + 0.5 * playH;
@@ -247,23 +233,18 @@ function buildGaelicFootballLandscapeMarkings(): PitchMarking[] {
   const xPenR = xAt(1 - GAELIC_PENALTY_SPOT_M / GAELIC_LANDSCAPE_LEN_M);
   const rSpot = 0.36;
 
-  const scale = 100 / GAELIC_LANDSCAPE_LEN_M;
-  const goalCentreXNorm = 50;
-  const goalCentreYNormLeft = 0;
-  const goalCentreYNormRight = 100;
-  const dCentreYNorm = 11 * scale;
-  const dRadiusNorm = 13 * scale;
-  const arc40RadiusNorm = 40 * scale;
-  const toBoardLen = (normLen: number) => ix + (normLen / 100) * playW;
-  const toBoardWid = (normWid: number) => iy + (normWid / 100) * playH;
+  const rxD = (GAELIC_D_FREE_RADIUS_M / GAELIC_LANDSCAPE_LEN_M) * playW;
+  const ryD = (GAELIC_D_FREE_RADIUS_M / GAELIC_LANDSCAPE_WID_M) * playH;
+  const dLeft = `M ${rnd3(x20L)} ${rnd3(cy - ryD)} A ${rnd3(rxD)} ${rnd3(ryD)} 0 1 1 ${rnd3(x20L)} ${rnd3(cy + ryD)}`;
+  const dRight = `M ${rnd3(x20R)} ${rnd3(cy - ryD)} A ${rnd3(rxD)} ${rnd3(ryD)} 0 1 0 ${rnd3(x20R)} ${rnd3(cy + ryD)}`;
 
-  const cySnapped = Math.round(toBoardWid(goalCentreXNorm));
-  const dCxLeftSnapped = Math.round(toBoardLen(goalCentreYNormLeft + dCentreYNorm));
-  const dCxRightSnapped = Math.round(toBoardLen(goalCentreYNormRight - dCentreYNorm));
-  const dRadiusSnapped = Math.round((dRadiusNorm / 100) * playW);
-  const arc40CxLeftSnapped = Math.round(toBoardLen(goalCentreYNormLeft));
-  const arc40CxRightSnapped = Math.round(toBoardLen(goalCentreYNormRight));
-  const arc40RadiusSnapped = Math.round((arc40RadiusNorm / 100) * playW);
+  const rx40 = (GAELIC_TWO_POINT_RADIUS_M / GAELIC_LANDSCAPE_LEN_M) * playW;
+  const ry40 = (GAELIC_TWO_POINT_RADIUS_M / GAELIC_LANDSCAPE_WID_M) * playH;
+  const sin60 = Math.sin(Math.PI / 3);
+  const yArcLo = cy - ry40 * sin60;
+  const yArcHi = cy + ry40 * sin60;
+  const twoPtLeft = `M ${rnd3(x20L)} ${rnd3(yArcLo)} A ${rnd3(rx40)} ${rnd3(ry40)} 0 0 1 ${rnd3(x20L)} ${rnd3(yArcHi)}`;
+  const twoPtRight = `M ${rnd3(x20R)} ${rnd3(yArcLo)} A ${rnd3(rx40)} ${rnd3(ry40)} 0 0 0 ${rnd3(x20R)} ${rnd3(yArcHi)}`;
 
   return [
     { kind: "rect", x: ix, y: iy, w: playW, h: playH, stroke: Lg.lineGridStrong, strokeWidth: wTouch },
@@ -283,54 +264,10 @@ function buildGaelicFootballLandscapeMarkings(): PitchMarking[] {
     { kind: "rect", x: xRight - largeDeep, y: yLargeTop, w: largeDeep, h: largeWide, stroke: Lg.lineScoringEnd, strokeWidth: wEnd },
     { kind: "rect", x: ix, y: ySmallTop, w: smallDeep, h: smallWide, stroke: Lg.lineScoringEnd, strokeWidth: wEndInner },
     { kind: "rect", x: xRight - smallDeep, y: ySmallTop, w: smallDeep, h: smallWide, stroke: Lg.lineScoringEnd, strokeWidth: wEndInner },
-    {
-      kind: "arc",
-      cx: arc40CxLeftSnapped,
-      cy: cySnapped,
-      r: arc40RadiusSnapped,
-      startAngle: -Math.PI / 2,
-      endAngle: Math.PI / 2,
-      stroke: Lg.lineGridStrong,
-      strokeWidth: w2Point,
-      counterClockwise: false,
-      skipLineGlow: true,
-    },
-    {
-      kind: "arc",
-      cx: arc40CxRightSnapped,
-      cy: cySnapped,
-      r: arc40RadiusSnapped,
-      startAngle: -Math.PI / 2,
-      endAngle: Math.PI / 2,
-      stroke: Lg.lineGridStrong,
-      strokeWidth: w2Point,
-      counterClockwise: true,
-      skipLineGlow: true,
-    },
-    {
-      kind: "arc",
-      cx: dCxLeftSnapped,
-      cy: cySnapped,
-      r: dRadiusSnapped,
-      startAngle: -Math.PI / 2,
-      endAngle: Math.PI / 2,
-      stroke: Lg.lineGridStrong,
-      strokeWidth: wD,
-      counterClockwise: false,
-      skipLineGlow: true,
-    },
-    {
-      kind: "arc",
-      cx: dCxRightSnapped,
-      cy: cySnapped,
-      r: dRadiusSnapped,
-      startAngle: -Math.PI / 2,
-      endAngle: Math.PI / 2,
-      stroke: Lg.lineGridStrong,
-      strokeWidth: wD,
-      counterClockwise: true,
-      skipLineGlow: true,
-    },
+    { kind: "path", d: twoPtLeft, stroke: Lg.lineGridStrong, strokeWidth: w2Point, strokeLinecap: "round", skipLineGlow: true },
+    { kind: "path", d: twoPtRight, stroke: Lg.lineGridStrong, strokeWidth: w2Point, strokeLinecap: "round", skipLineGlow: true },
+    { kind: "path", d: dLeft, stroke: Lg.lineGridStrong, strokeWidth: wD, strokeLinecap: "round", skipLineGlow: true },
+    { kind: "path", d: dRight, stroke: Lg.lineGridStrong, strokeWidth: wD, strokeLinecap: "round", skipLineGlow: true },
   ];
 }
 
@@ -358,7 +295,7 @@ const hurlingCamogieLandscapeMarkings: PitchMarking[] = (() => {
   const w13 = 0.32;
   const wEnd = 0.46;
   const wEndInner = 0.42;
-  const wD = w45;
+  const wD = 0.48;
 
   const cx = ix + 0.5 * playW;
   const cy = iy + 0.5 * playH;
@@ -389,10 +326,10 @@ const hurlingCamogieLandscapeMarkings: PitchMarking[] = (() => {
   const xPenR = xAt(1 - GAELIC_PENALTY_SPOT_M / GAELIC_LANDSCAPE_LEN_M);
   const rSpot = 0.36;
 
-  const rD = Math.round((GAELIC_D_FREE_RADIUS_M / GAELIC_LANDSCAPE_LEN_M) * playW);
-  const x20LSnapped = Math.round(x20L);
-  const x20RSnapped = Math.round(x20R);
-  const cySnapped = Math.round(cy);
+  const rxD = (GAELIC_D_FREE_RADIUS_M / GAELIC_LANDSCAPE_LEN_M) * playW;
+  const ryD = (GAELIC_D_FREE_RADIUS_M / GAELIC_LANDSCAPE_WID_M) * playH;
+  const dLeft = `M ${rnd3(x20L)} ${rnd3(cy - ryD)} A ${rnd3(rxD)} ${rnd3(ryD)} 0 1 1 ${rnd3(x20L)} ${rnd3(cy + ryD)}`;
+  const dRight = `M ${rnd3(x20R)} ${rnd3(cy - ryD)} A ${rnd3(rxD)} ${rnd3(ryD)} 0 1 0 ${rnd3(x20R)} ${rnd3(cy + ryD)}`;
 
   return [
     { kind: "rect", x: ix, y: iy, w: playW, h: playH, stroke: Lg.lineGridStrong, strokeWidth: wTouch },
@@ -413,30 +350,8 @@ const hurlingCamogieLandscapeMarkings: PitchMarking[] = (() => {
     { kind: "rect", x: ix, y: ySmallTop, w: smallDeep, h: smallWide, stroke: Lg.lineScoringEnd, strokeWidth: wEndInner },
     { kind: "rect", x: xRight - smallDeep, y: ySmallTop, w: smallDeep, h: smallWide, stroke: Lg.lineScoringEnd, strokeWidth: wEndInner },
     // Hurling/Camogie: no football 2-point arc.
-    {
-      kind: "arc",
-      cx: x20LSnapped,
-      cy: cySnapped,
-      r: rD,
-      startAngle: -Math.PI / 2,
-      endAngle: Math.PI / 2,
-      stroke: Lg.lineGridStrong,
-      strokeWidth: wD,
-      counterClockwise: false,
-      skipLineGlow: true,
-    },
-    {
-      kind: "arc",
-      cx: x20RSnapped,
-      cy: cySnapped,
-      r: rD,
-      startAngle: -Math.PI / 2,
-      endAngle: Math.PI / 2,
-      stroke: Lg.lineGridStrong,
-      strokeWidth: wD,
-      counterClockwise: true,
-      skipLineGlow: true,
-    },
+    { kind: "path", d: dLeft, stroke: Lg.lineGridStrong, strokeWidth: wD, strokeLinecap: "round", skipLineGlow: true },
+    { kind: "path", d: dRight, stroke: Lg.lineGridStrong, strokeWidth: wD, strokeLinecap: "round", skipLineGlow: true },
   ];
 })();
 
