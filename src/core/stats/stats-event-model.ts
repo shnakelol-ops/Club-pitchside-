@@ -10,6 +10,8 @@ export const MATCH_EVENT_KINDS = [
   "SHOT",
   "FREE_WON",
   "FREE_CONCEDED",
+  "FREE_SCORED",
+  "FREE_MISSED",
   "KICKOUT_WON",
   "KICKOUT_CONCEDED",
 ] as const;

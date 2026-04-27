@@ -115,6 +115,28 @@ function styleForType(type: MatchEventKind): StatsMarkerStyle {
         centerDot: "rgba(255, 241, 241, 0.9)",
         centerDotRadiusScale: 0.2,
       };
+    case "FREE_SCORED":
+      return {
+        radius: 3.0,
+        fill: "rgba(56, 189, 248, 1)",
+        stroke: "rgba(14, 116, 144, 1)",
+        strokeWidth: 0.8,
+        contrastStroke: "rgba(8, 24, 34, 0.6)",
+        contrastStrokeWidth: 0.54,
+        centerDot: "rgba(240, 249, 255, 0.92)",
+        centerDotRadiusScale: 0.2,
+      };
+    case "FREE_MISSED":
+      return {
+        radius: 3.0,
+        fill: "rgba(249, 115, 22, 1)",
+        stroke: "rgba(154, 52, 18, 1)",
+        strokeWidth: 0.8,
+        contrastStroke: "rgba(40, 16, 8, 0.62)",
+        contrastStrokeWidth: 0.54,
+        centerDot: "rgba(255, 237, 213, 0.92)",
+        centerDotRadiusScale: 0.2,
+      };
     case "KICKOUT_WON":
       return {
         radius: 3.0,

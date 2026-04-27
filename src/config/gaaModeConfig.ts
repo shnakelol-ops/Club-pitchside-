@@ -13,14 +13,14 @@ type ModeLabelOverrides = {
   includeTwoPointer: boolean;
   kickoutWonLabel: string;
   kickoutConcededLabel: string;
-  freeWonLabel: string;
+  placeBallLabel: string;
 };
 
 function buildEventButtons({
   includeTwoPointer,
   kickoutWonLabel,
   kickoutConcededLabel,
-  freeWonLabel,
+  placeBallLabel,
 }: ModeLabelOverrides): ReadonlyArray<{ label: string; kind: MatchEventKind }> {
   const baseButtons: Array<{ label: string; kind: MatchEventKind }> = [
     { label: "GOAL", kind: "GOAL" },
@@ -31,8 +31,11 @@ function buildEventButtons({
     { label: "T−", kind: "TURNOVER_LOST" },
     { label: kickoutWonLabel, kind: "KICKOUT_WON" },
     { label: kickoutConcededLabel, kind: "KICKOUT_CONCEDED" },
-    { label: freeWonLabel, kind: "FREE_WON" },
+    { label: "F+", kind: "FREE_WON" },
     { label: "F−", kind: "FREE_CONCEDED" },
+    { label: "FS", kind: "FREE_SCORED" },
+    { label: "FM", kind: "FREE_MISSED" },
+    { label: placeBallLabel, kind: "FREE_WON" },
   ];
   if (includeTwoPointer) {
     baseButtons.splice(2, 0, { label: "2PT", kind: "TWO_POINTER" });
@@ -43,8 +46,7 @@ function buildEventButtons({
 function buildEventLabels({
   kickoutWonLabel,
   kickoutConcededLabel,
-  freeWonLabel,
-}: Pick<ModeLabelOverrides, "kickoutWonLabel" | "kickoutConcededLabel" | "freeWonLabel">): Record<
+}: Pick<ModeLabelOverrides, "kickoutWonLabel" | "kickoutConcededLabel">): Record<
   MatchEventKind,
   string
 > {
@@ -58,19 +60,21 @@ function buildEventLabels({
     TURNOVER_LOST: "T−",
     KICKOUT_WON: kickoutWonLabel,
     KICKOUT_CONCEDED: kickoutConcededLabel,
-    FREE_WON: freeWonLabel,
+    FREE_WON: "F+",
     FREE_CONCEDED: "F−",
+    FREE_SCORED: "FS",
+    FREE_MISSED: "FM",
   };
 }
 
 function buildReviewGroups(includeTwoPointer: boolean) {
   return {
-    SCORES: { label: "SCORES", kinds: includeTwoPointer ? ["GOAL", "POINT", "TWO_POINTER"] : ["GOAL", "POINT"] },
+    SCORES: { label: "SCORES", kinds: includeTwoPointer ? ["GOAL", "POINT", "TWO_POINTER", "FREE_SCORED"] : ["GOAL", "POINT", "FREE_SCORED"] },
     WIDES: { label: "WIDES", kinds: ["WIDE"] },
     SHOTS: { label: "SHOTS", kinds: ["SHOT"] },
     TURNOVERS: { label: "TURNOVERS", kinds: ["TURNOVER_WON", "TURNOVER_LOST"] },
     KICKOUTS: { label: "KICKOUTS", kinds: ["KICKOUT_WON", "KICKOUT_CONCEDED"] },
-    FREES: { label: "FREES", kinds: ["FREE_WON", "FREE_CONCEDED"] },
+    FREES: { label: "FREES", kinds: ["FREE_WON", "FREE_CONCEDED", "FREE_SCORED", "FREE_MISSED"] },
   } as const satisfies Record<string, { label: string; kinds: ReadonlyArray<MatchEventKind> }>;
 }
 
@@ -81,14 +85,13 @@ export const gaaModeConfig = {
       includeTwoPointer: true,
       kickoutWonLabel: "K+",
       kickoutConcededLabel: "K−",
-      freeWonLabel: "45",
+      placeBallLabel: "45",
     }),
     eventLabels: buildEventLabels({
       kickoutWonLabel: "K+",
       kickoutConcededLabel: "K−",
-      freeWonLabel: "45",
     }),
-    scoringEvents: ["GOAL", "POINT", "TWO_POINTER"],
+    scoringEvents: ["GOAL", "POINT", "TWO_POINTER", "FREE_SCORED"],
     reviewGroups: buildReviewGroups(true),
     restartLabel: "Kickout",
   },
@@ -98,14 +101,13 @@ export const gaaModeConfig = {
       includeTwoPointer: true,
       kickoutWonLabel: "K+",
       kickoutConcededLabel: "K−",
-      freeWonLabel: "45",
+      placeBallLabel: "45",
     }),
     eventLabels: buildEventLabels({
       kickoutWonLabel: "K+",
       kickoutConcededLabel: "K−",
-      freeWonLabel: "45",
     }),
-    scoringEvents: ["GOAL", "POINT", "TWO_POINTER"],
+    scoringEvents: ["GOAL", "POINT", "TWO_POINTER", "FREE_SCORED"],
     reviewGroups: buildReviewGroups(true),
     restartLabel: "Kickout",
   },
@@ -115,14 +117,13 @@ export const gaaModeConfig = {
       includeTwoPointer: false,
       kickoutWonLabel: "P+",
       kickoutConcededLabel: "P-",
-      freeWonLabel: "65",
+      placeBallLabel: "65",
     }),
     eventLabels: buildEventLabels({
       kickoutWonLabel: "P+",
       kickoutConcededLabel: "P-",
-      freeWonLabel: "65",
     }),
-    scoringEvents: ["GOAL", "POINT"],
+    scoringEvents: ["GOAL", "POINT", "FREE_SCORED"],
     reviewGroups: buildReviewGroups(false),
     restartLabel: "Puckout",
   },
@@ -132,14 +133,13 @@ export const gaaModeConfig = {
       includeTwoPointer: false,
       kickoutWonLabel: "P+",
       kickoutConcededLabel: "P-",
-      freeWonLabel: "65",
+      placeBallLabel: "65",
     }),
     eventLabels: buildEventLabels({
       kickoutWonLabel: "P+",
       kickoutConcededLabel: "P-",
-      freeWonLabel: "65",
     }),
-    scoringEvents: ["GOAL", "POINT"],
+    scoringEvents: ["GOAL", "POINT", "FREE_SCORED"],
     reviewGroups: buildReviewGroups(false),
     restartLabel: "Puckout",
   },
