@@ -1969,6 +1969,13 @@ export default function App() {
     setIsPickerOpen(false);
   };
 
+  const openMatchSummaryPanel = () => {
+    setShowReviewStrip(false);
+    setUtilityPanel("SUMMARY");
+    setIsUtilityOpen(false);
+    setIsPickerOpen(false);
+  };
+
   const closeUtilityPanel = () => {
     setUtilityPanel(null);
   };
@@ -3178,10 +3185,26 @@ export default function App() {
                   <button
                     type="button"
                     className="undo-btn"
+                    onClick={openPlayersPanel}
+                    style={{ border: "1px solid rgba(125,211,252,0.4)" }}
+                  >
+                    Players
+                  </button>
+                  <button
+                    type="button"
+                    className="undo-btn"
                     onClick={openReviewPanel}
                     style={{ border: "1px solid rgba(125,211,252,0.52)" }}
                   >
                     Review
+                  </button>
+                  <button
+                    type="button"
+                    className="undo-btn"
+                    onClick={openMatchSummaryPanel}
+                    style={{ border: "1px solid rgba(125,211,252,0.52)" }}
+                  >
+                    Match Summary
                   </button>
                   <button
                     type="button"
@@ -3296,10 +3319,26 @@ export default function App() {
                 <button
                   type="button"
                   className="landscape-toolbar-secondary-btn"
+                  onClick={openPlayersPanel}
+                  style={{ border: "1px solid rgba(125,211,252,0.4)" }}
+                >
+                  Players
+                </button>
+                <button
+                  type="button"
+                  className="landscape-toolbar-secondary-btn"
                   onClick={openReviewPanel}
                   style={{ border: "1px solid rgba(125,211,252,0.52)" }}
                 >
                   Review
+                </button>
+                <button
+                  type="button"
+                  className="landscape-toolbar-secondary-btn"
+                  onClick={openMatchSummaryPanel}
+                  style={{ border: "1px solid rgba(125,211,252,0.52)" }}
+                >
+                  Match Summary
                 </button>
                 <button
                   type="button"
@@ -3410,9 +3449,6 @@ export default function App() {
                   </button>
                 );
               })}
-              <button type="button" className="utility-menu-btn" onClick={openPlayersPanel}>
-                Players
-              </button>
               <button type="button" className="utility-menu-btn" onClick={resetMatch}>
                 Restart Match
               </button>
