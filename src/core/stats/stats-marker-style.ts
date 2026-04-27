@@ -93,6 +93,17 @@ function styleForType(type: MatchEventKind): StatsMarkerStyle {
         centerDot: "rgba(250, 255, 253, 0.96)",
         centerDotRadiusScale: 0.24,
       };
+    case "FORTY_FIVE_TWO_POINT":
+      return {
+        radius: 3.2,
+        fill: "rgba(110, 231, 183, 1)",
+        stroke: "rgba(16, 185, 129, 1)",
+        strokeWidth: 0.9,
+        contrastStroke: "rgba(3, 28, 22, 0.62)",
+        contrastStrokeWidth: 0.6,
+        centerDot: "rgba(236, 253, 245, 0.94)",
+        centerDotRadiusScale: 0.22,
+      };
     case "SHOT":
       return {
         radius: 2.95,

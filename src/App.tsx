@@ -44,7 +44,7 @@ type LoggedMatchEvent = MatchEvent & {
 type ReviewEventGroupOptionId = ReviewEventGroup | "ACTIVE";
 const MODE_MENU_OPTIONS: ReadonlyArray<{ key: GaaModeKey; label: string }> = [
   { key: "football", label: "Football" },
-  { key: "ladiesFootball", label: "Ladies" },
+  { key: "ladiesFootball", label: "Ladies Football" },
   { key: "hurling", label: "Hurling" },
   { key: "camogie", label: "Camogie" },
 ];
@@ -146,6 +146,10 @@ function computeTeamScore(events: readonly MatchEvent[], team: TeamSide): TeamSc
       continue;
     }
     if (event.kind === "TWO_POINTER") {
+      points += 2;
+      continue;
+    }
+    if (event.kind === "FORTY_FIVE_TWO_POINT") {
       points += 2;
       continue;
     }
@@ -2250,14 +2254,15 @@ export default function App() {
     for (const event of loggedEvents) {
       if (event.team !== "HOME") continue;
       if (event.kind === "WIDE") wides += 1;
-      if (event.kind === "SHOT" || event.kind === "GOAL" || event.kind === "POINT" || event.kind === "TWO_POINTER" || event.kind === "FREE_SCORED" || event.kind === "WIDE") shots += 1;
-      if (event.kind === "GOAL" || event.kind === "POINT" || event.kind === "TWO_POINTER" || event.kind === "FREE_SCORED") scores += 1;
+      if (event.kind === "SHOT" || event.kind === "GOAL" || event.kind === "POINT" || event.kind === "TWO_POINTER" || event.kind === "FORTY_FIVE_TWO_POINT" || event.kind === "FREE_SCORED" || event.kind === "WIDE") shots += 1;
+      if (event.kind === "GOAL" || event.kind === "POINT" || event.kind === "TWO_POINTER" || event.kind === "FORTY_FIVE_TWO_POINT" || event.kind === "FREE_SCORED") scores += 1;
       const playerId = event.playerId;
       if (!playerId || !playerById.has(playerId)) continue;
       const stat = playerStats.get(playerId) ?? { goals: 0, points: 0, twoPointers: 0, turnoversWon: 0, kickoutsWon: 0, freesWon: 0 };
       if (event.kind === "GOAL") stat.goals += 1;
       else if (event.kind === "POINT") stat.points += 1;
       else if (event.kind === "TWO_POINTER") stat.twoPointers += 1;
+      else if (event.kind === "FORTY_FIVE_TWO_POINT") stat.twoPointers += 1;
       else if (event.kind === "FREE_SCORED") stat.points += 1;
       else if (event.kind === "TURNOVER_WON") stat.turnoversWon += 1;
       else if (event.kind === "KICKOUT_WON") stat.kickoutsWon += 1;
