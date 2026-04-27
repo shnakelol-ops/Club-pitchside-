@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/tacticalpad-lite",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/tacticalpad-lite/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
