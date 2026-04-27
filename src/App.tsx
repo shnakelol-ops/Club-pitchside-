@@ -18,10 +18,12 @@ import {
   computeHurlingTeamScore,
   formatHurlingScore,
   HURLING_AWAY_INSTANT_SCORING_KINDS,
-  HURLING_EVENT_BUTTONS,
+  HURLING_EVENT_GROUPS,
   HURLING_EVENT_LABEL_BY_KIND,
   HURLING_REVIEW_EVENT_GROUP_KINDS,
+  HURLING_REVIEW_EVENT_GROUP_OPTIONS,
   HURLING_SCORE_EVENT_KINDS,
+  type HurlingEventGroupId,
   isHurlingEventKind,
 } from "./core/stats/hurling-stats-handler";
 
@@ -39,7 +41,8 @@ type ReviewEventGroup =
   | "TURNOVERS"
   | "KICKOUTS"
   | "PUCKOUTS"
-  | "FREES";
+  | "FREES"
+  | "SIXTY_FIVES";
 type ReviewZone = "FULL" | "OWN_HALF" | "OPPOSITION_HALF";
 type AttackingDirection = "LEFT" | "RIGHT";
 type PlayerRole = "STARTER" | "SUB";
@@ -93,20 +96,6 @@ const FOOTBALL_REVIEW_EVENT_GROUP_OPTIONS: ReadonlyArray<{
   { id: "KICKOUTS", label: "KICKOUTS" },
   { id: "FREES", label: "FREES" },
 ];
-const HURLING_REVIEW_EVENT_GROUP_OPTIONS: ReadonlyArray<{
-  id: ReviewEventGroup | "ACTIVE";
-  label: string;
-}> = [
-  { id: "ALL", label: "ALL" },
-  { id: "ACTIVE", label: "ACTIVE" },
-  { id: "SCORES", label: "SCORES" },
-  { id: "WIDES", label: "WIDES" },
-  { id: "SHOTS", label: "SHOTS" },
-  { id: "TURNOVERS", label: "TURNOVERS" },
-  { id: "PUCKOUTS", label: "PUCKOUTS" },
-  { id: "FREES", label: "FREES" },
-];
-
 function isReviewEventGroupAllowedForSport(
   sport: AppSport,
   group: ReviewEventGroup,
@@ -115,7 +104,7 @@ function isReviewEventGroupAllowedForSport(
   if (sport === "hurling") {
     return group !== "KICKOUTS";
   }
-  return group !== "PUCKOUTS";
+  return group !== "PUCKOUTS" && group !== "SIXTY_FIVES";
 }
 
 function isEventKindAllowedForSport(
@@ -1465,10 +1454,17 @@ const EVENT_LABEL_BY_KIND: Record<MatchEventKind, string> = {
   TURNOVER_LOST: "T−",
   KICKOUT_WON: "K+",
   KICKOUT_CONCEDED: "K−",
-  PUCKOUT_WON: "P+",
-  PUCKOUT_LOST: "P−",
   FREE_WON: "F+",
   FREE_CONCEDED: "F−",
+  FREE_SCORED: "FS+",
+  FREE_MISSED: "FS−",
+  SIXTY_FIVE_SCORED: "65+",
+  SIXTY_FIVE_MISSED: "65−",
+  PUCKOUT_SHORT_WON: "PS+",
+  PUCKOUT_SHORT_LOST: "PS−",
+  PUCKOUT_LONG_WON: "PL+",
+  PUCKOUT_LONG_LOST: "PL−",
+  PUCKOUT_DIRECT_OUT: "PDO",
 };
 
 export default function App() {
@@ -1538,6 +1534,7 @@ export default function App() {
   const venueInputRef = useRef<HTMLInputElement>(null);
   const matchEngineStateRef = useRef(createInitialMatchEngineState());
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [activeHurlingGroupId, setActiveHurlingGroupId] = useState<HurlingEventGroupId>("SCORE");
   const handleRef = useRef<{
     destroy: () => void;
     setEvents: (events: readonly import("./core/stats/stats-event-model").MatchEvent[]) => void;
@@ -1560,7 +1557,9 @@ export default function App() {
       null
     : null;
   const currentSport = sport;
-  const effectiveEventButtons = currentSport === "hurling" ? HURLING_EVENT_BUTTONS : EVENT_BUTTONS;
+  const effectiveEventButtons = currentSport === "hurling"
+    ? HURLING_EVENT_GROUPS.flatMap((group) => group.events)
+    : EVENT_BUTTONS;
   const effectiveAwayInstantScoringKinds =
     currentSport === "hurling" ? HURLING_AWAY_INSTANT_SCORING_KINDS : AWAY_INSTANT_SCORING_KINDS;
   const effectiveScoreEventKinds =
@@ -1581,6 +1580,13 @@ export default function App() {
           string
         >)
       : EVENT_LABEL_BY_KIND;
+  const activeHurlingEventButtons = useMemo(() => {
+    if (currentSport !== "hurling") return [];
+    const activeGroup =
+      HURLING_EVENT_GROUPS.find((group) => group.id === activeHurlingGroupId) ??
+      HURLING_EVENT_GROUPS[0];
+    return activeGroup?.events ?? [];
+  }, [activeHurlingGroupId, currentSport]);
   const normalizedReviewEventGroup = normalizeReviewEventGroupForSport(
     currentSport,
     reviewEventGroup,
@@ -1600,6 +1606,16 @@ export default function App() {
       handleRef.current?.setActiveEventKind(fallbackKind);
     }
   }, [currentSport, effectiveEventButtons]);
+
+  useEffect(() => {
+    if (currentSport !== "hurling") return;
+    const selectedGroup = HURLING_EVENT_GROUPS.find((group) =>
+      group.events.some((eventButton) => eventButton.kind === selectedEventKind),
+    );
+    if (!selectedGroup) return;
+    if (selectedGroup.id === activeHurlingGroupId) return;
+    setActiveHurlingGroupId(selectedGroup.id);
+  }, [activeHurlingGroupId, currentSport, selectedEventKind]);
 
   const setActiveSquadById = (nextSquadId: string) => {
     setActiveSquadId(nextSquadId);
@@ -3261,41 +3277,103 @@ export default function App() {
       >
           {!isLandscape && isPickerOpen ? (
             <div className="event-panel">
-              <div className="event-grid">
-                {effectiveEventButtons.map((item, idx) => {
-                  const isActive = item.kind === selectedEventKind;
-                  const isScoring = idx <= 4;
-                  const isDisabledForAway =
-                    activeTeam === "AWAY" && !effectiveAwayInstantScoringKinds.has(item.kind);
-                  return (
-                    <button
-                      key={item.label}
-                      type="button"
-                      className="event-btn"
-                      disabled={isDisabledForAway}
-                      onClick={() => {
-                        handleEventButtonPress(item.kind);
-                      }}
-                      style={{
-                        border: isActive
-                          ? "1px solid rgba(34,197,94,0.96)"
-                          : isScoring
-                            ? "1px solid rgba(148,163,184,0.52)"
-                            : "1px solid rgba(148,163,184,0.36)",
-                        background: isActive
-                          ? "rgba(22,101,52,0.7)"
-                          : isScoring
-                            ? "rgba(21, 39, 62, 0.84)"
-                            : "rgba(14, 24, 40, 0.72)",
-                        fontWeight: isActive ? 700 : 600,
-                        opacity: isDisabledForAway ? 0.46 : 1,
-                      }}
-                    >
-                      {item.label}
-                    </button>
-                  );
-                })}
-              </div>
+              {currentSport === "hurling" ? (
+                <>
+                  <div className="event-grid" style={{ marginBottom: "4px" }}>
+                    {HURLING_EVENT_GROUPS.map((group) => {
+                      const isGroupActive = group.id === activeHurlingGroupId;
+                      return (
+                        <button
+                          key={group.id}
+                          type="button"
+                          className="event-btn"
+                          onClick={() => {
+                            setActiveHurlingGroupId(group.id);
+                          }}
+                          style={{
+                            border: isGroupActive
+                              ? "1px solid rgba(125,211,252,0.92)"
+                              : "1px solid rgba(148,163,184,0.36)",
+                            background: isGroupActive
+                              ? "rgba(14,116,144,0.42)"
+                              : "rgba(14, 24, 40, 0.72)",
+                            fontWeight: isGroupActive ? 700 : 600,
+                          }}
+                        >
+                          {group.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="event-grid">
+                    {activeHurlingEventButtons.map((item) => {
+                      const isActive = item.kind === selectedEventKind;
+                      const isDisabledForAway =
+                        activeTeam === "AWAY" &&
+                        !effectiveAwayInstantScoringKinds.has(item.kind);
+                      return (
+                        <button
+                          key={item.label}
+                          type="button"
+                          className="event-btn"
+                          disabled={isDisabledForAway}
+                          onClick={() => {
+                            handleEventButtonPress(item.kind);
+                          }}
+                          style={{
+                            border: isActive
+                              ? "1px solid rgba(34,197,94,0.96)"
+                              : "1px solid rgba(148,163,184,0.36)",
+                            background: isActive
+                              ? "rgba(22,101,52,0.7)"
+                              : "rgba(14, 24, 40, 0.72)",
+                            fontWeight: isActive ? 700 : 600,
+                            opacity: isDisabledForAway ? 0.46 : 1,
+                          }}
+                        >
+                          {item.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : (
+                <div className="event-grid">
+                  {effectiveEventButtons.map((item, idx) => {
+                    const isActive = item.kind === selectedEventKind;
+                    const isScoring = idx <= 4;
+                    const isDisabledForAway =
+                      activeTeam === "AWAY" && !effectiveAwayInstantScoringKinds.has(item.kind);
+                    return (
+                      <button
+                        key={item.label}
+                        type="button"
+                        className="event-btn"
+                        disabled={isDisabledForAway}
+                        onClick={() => {
+                          handleEventButtonPress(item.kind);
+                        }}
+                        style={{
+                          border: isActive
+                            ? "1px solid rgba(34,197,94,0.96)"
+                            : isScoring
+                              ? "1px solid rgba(148,163,184,0.52)"
+                              : "1px solid rgba(148,163,184,0.36)",
+                          background: isActive
+                            ? "rgba(22,101,52,0.7)"
+                            : isScoring
+                              ? "rgba(21, 39, 62, 0.84)"
+                              : "rgba(14, 24, 40, 0.72)",
+                          fontWeight: isActive ? 700 : 600,
+                          opacity: isDisabledForAway ? 0.46 : 1,
+                        }}
+                      >
+                        {item.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               <div className="visibility-row">
                 {([
                   { id: "ALL", label: "Show All" },
@@ -3341,72 +3419,138 @@ export default function App() {
           ) : null}
           {isLandscape && isPickerOpen ? (
             <div className="landscape-toolbar">
-              <div className="landscape-toolbar-row">
-                {effectiveEventButtons.slice(0, 5).map((item) => {
-                  const isActive = item.kind === selectedEventKind;
-                  const isDisabledForAway =
-                    activeTeam === "AWAY" && !effectiveAwayInstantScoringKinds.has(item.kind);
-                  return (
-                    <button
-                      key={item.label}
-                      type="button"
-                      className="landscape-toolbar-btn"
-                      disabled={isDisabledForAway}
-                      onClick={() => {
-                        handleEventButtonPress(item.kind);
-                      }}
-                      style={
-                        isActive || isDisabledForAway
-                          ? {
-                              ...(isActive
-                                ? {
-                                    border: "1px solid rgba(34,197,94,0.96)",
-                                    background: "rgba(22,101,52,0.7)",
-                                  }
-                                : {}),
-                              ...(isDisabledForAway ? { opacity: 0.46 } : {}),
-                            }
-                          : undefined
-                      }
-                    >
-                      {item.label}
-                    </button>
-                  );
-                })}
-              </div>
-              <div className="landscape-toolbar-row">
-                {effectiveEventButtons.slice(5).map((item) => {
-                  const isActive = item.kind === selectedEventKind;
-                  const isDisabledForAway =
-                    activeTeam === "AWAY" && !effectiveAwayInstantScoringKinds.has(item.kind);
-                  return (
-                    <button
-                      key={item.label}
-                      type="button"
-                      className="landscape-toolbar-btn"
-                      disabled={isDisabledForAway}
-                      onClick={() => {
-                        handleEventButtonPress(item.kind);
-                      }}
-                      style={
-                        isActive || isDisabledForAway
-                          ? {
-                              ...(isActive
-                                ? {
-                                    border: "1px solid rgba(34,197,94,0.96)",
-                                    background: "rgba(22,101,52,0.7)",
-                                  }
-                                : {}),
-                              ...(isDisabledForAway ? { opacity: 0.46 } : {}),
-                            }
-                          : undefined
-                      }
-                    >
-                      {item.label}
-                    </button>
-                  );
-                })}
-              </div>
+              {currentSport === "hurling" ? (
+                <>
+                  <div className="landscape-toolbar-row">
+                    {HURLING_EVENT_GROUPS.map((group) => {
+                      const isGroupActive = group.id === activeHurlingGroupId;
+                      return (
+                        <button
+                          key={group.id}
+                          type="button"
+                          className="landscape-toolbar-btn"
+                          onClick={() => {
+                            setActiveHurlingGroupId(group.id);
+                          }}
+                          style={
+                            isGroupActive
+                              ? {
+                                  border: "1px solid rgba(125,211,252,0.92)",
+                                  background: "rgba(14,116,144,0.42)",
+                                }
+                              : undefined
+                          }
+                        >
+                          {group.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="landscape-toolbar-row">
+                    {activeHurlingEventButtons.map((item) => {
+                      const isActive = item.kind === selectedEventKind;
+                      const isDisabledForAway =
+                        activeTeam === "AWAY" &&
+                        !effectiveAwayInstantScoringKinds.has(item.kind);
+                      return (
+                        <button
+                          key={item.label}
+                          type="button"
+                          className="landscape-toolbar-btn"
+                          disabled={isDisabledForAway}
+                          onClick={() => {
+                            handleEventButtonPress(item.kind);
+                          }}
+                          style={
+                            isActive || isDisabledForAway
+                              ? {
+                                  ...(isActive
+                                    ? {
+                                        border: "1px solid rgba(34,197,94,0.96)",
+                                        background: "rgba(22,101,52,0.7)",
+                                      }
+                                    : {}),
+                                  ...(isDisabledForAway ? { opacity: 0.46 } : {}),
+                                }
+                              : undefined
+                          }
+                        >
+                          {item.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="landscape-toolbar-row">
+                    {effectiveEventButtons.slice(0, 5).map((item) => {
+                      const isActive = item.kind === selectedEventKind;
+                      const isDisabledForAway =
+                        activeTeam === "AWAY" && !effectiveAwayInstantScoringKinds.has(item.kind);
+                      return (
+                        <button
+                          key={item.label}
+                          type="button"
+                          className="landscape-toolbar-btn"
+                          disabled={isDisabledForAway}
+                          onClick={() => {
+                            handleEventButtonPress(item.kind);
+                          }}
+                          style={
+                            isActive || isDisabledForAway
+                              ? {
+                                  ...(isActive
+                                    ? {
+                                        border: "1px solid rgba(34,197,94,0.96)",
+                                        background: "rgba(22,101,52,0.7)",
+                                      }
+                                    : {}),
+                                  ...(isDisabledForAway ? { opacity: 0.46 } : {}),
+                                }
+                              : undefined
+                          }
+                        >
+                          {item.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="landscape-toolbar-row">
+                    {effectiveEventButtons.slice(5).map((item) => {
+                      const isActive = item.kind === selectedEventKind;
+                      const isDisabledForAway =
+                        activeTeam === "AWAY" && !effectiveAwayInstantScoringKinds.has(item.kind);
+                      return (
+                        <button
+                          key={item.label}
+                          type="button"
+                          className="landscape-toolbar-btn"
+                          disabled={isDisabledForAway}
+                          onClick={() => {
+                            handleEventButtonPress(item.kind);
+                          }}
+                          style={
+                            isActive || isDisabledForAway
+                              ? {
+                                  ...(isActive
+                                    ? {
+                                        border: "1px solid rgba(34,197,94,0.96)",
+                                        background: "rgba(22,101,52,0.7)",
+                                      }
+                                    : {}),
+                                  ...(isDisabledForAway ? { opacity: 0.46 } : {}),
+                                }
+                              : undefined
+                          }
+                        >
+                          {item.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
               <div className="landscape-toolbar-secondary">
                 {([
                   { id: "ALL", label: "Show All" },

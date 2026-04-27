@@ -115,6 +115,50 @@ function styleForType(type: MatchEventKind): StatsMarkerStyle {
         centerDot: "rgba(255, 241, 241, 0.9)",
         centerDotRadiusScale: 0.2,
       };
+    case "FREE_SCORED":
+      return {
+        radius: 3.05,
+        fill: "rgba(74, 222, 128, 1)",
+        stroke: "rgba(21, 128, 61, 1)",
+        strokeWidth: 0.84,
+        contrastStroke: "rgba(8, 28, 14, 0.58)",
+        contrastStrokeWidth: 0.54,
+        centerDot: "rgba(240, 255, 244, 0.92)",
+        centerDotRadiusScale: 0.22,
+      };
+    case "FREE_MISSED":
+      return {
+        radius: 3.0,
+        fill: "rgba(251, 146, 60, 1)",
+        stroke: "rgba(194, 65, 12, 1)",
+        strokeWidth: 0.82,
+        contrastStroke: "rgba(52, 24, 8, 0.62)",
+        contrastStrokeWidth: 0.54,
+        centerDot: "rgba(255, 245, 235, 0.92)",
+        centerDotRadiusScale: 0.22,
+      };
+    case "SIXTY_FIVE_SCORED":
+      return {
+        radius: 3.2,
+        fill: "rgba(134, 239, 172, 1)",
+        stroke: "rgba(22, 163, 74, 1)",
+        strokeWidth: 0.9,
+        contrastStroke: "rgba(6, 24, 14, 0.62)",
+        contrastStrokeWidth: 0.58,
+        centerDot: "rgba(248, 255, 250, 0.94)",
+        centerDotRadiusScale: 0.24,
+      };
+    case "SIXTY_FIVE_MISSED":
+      return {
+        radius: 3.1,
+        fill: "rgba(251, 113, 133, 1)",
+        stroke: "rgba(190, 24, 93, 1)",
+        strokeWidth: 0.86,
+        contrastStroke: "rgba(49, 8, 26, 0.62)",
+        contrastStrokeWidth: 0.56,
+        centerDot: "rgba(255, 241, 245, 0.9)",
+        centerDotRadiusScale: 0.22,
+      };
     case "KICKOUT_WON":
       return {
         radius: 3.0,
@@ -137,27 +181,60 @@ function styleForType(type: MatchEventKind): StatsMarkerStyle {
         centerDot: "rgba(245, 235, 255, 0.9)",
         centerDotRadiusScale: 0.2,
       };
-    case "PUCKOUT_WON":
+    case "PUCKOUT_SHORT_WON":
       return {
-        radius: 3.0,
+        radius: 2.95,
         fill: "rgba(45, 212, 191, 1)",
-        stroke: "rgba(13, 148, 136, 1)",
+        stroke: "rgba(15, 118, 110, 1)",
         strokeWidth: 0.78,
         contrastStroke: "rgba(6, 30, 28, 0.58)",
         contrastStrokeWidth: 0.54,
         centerDot: "rgba(236, 255, 252, 0.9)",
         centerDotRadiusScale: 0.2,
       };
-    case "PUCKOUT_LOST":
+    case "PUCKOUT_SHORT_LOST":
       return {
-        radius: 3.0,
-        fill: "rgba(251, 113, 133, 1)",
+        radius: 2.95,
+        fill: "rgba(244, 114, 182, 1)",
         stroke: "rgba(190, 24, 93, 1)",
         strokeWidth: 0.78,
         contrastStroke: "rgba(49, 8, 26, 0.62)",
         contrastStrokeWidth: 0.54,
         centerDot: "rgba(255, 241, 245, 0.9)",
         centerDotRadiusScale: 0.2,
+      };
+    case "PUCKOUT_LONG_WON":
+      return {
+        radius: 3.2,
+        fill: "rgba(34, 197, 94, 1)",
+        stroke: "rgba(21, 128, 61, 1)",
+        strokeWidth: 0.84,
+        contrastStroke: "rgba(8, 30, 14, 0.62)",
+        contrastStrokeWidth: 0.56,
+        centerDot: "rgba(238, 255, 244, 0.92)",
+        centerDotRadiusScale: 0.22,
+      };
+    case "PUCKOUT_LONG_LOST":
+      return {
+        radius: 3.2,
+        fill: "rgba(251, 113, 133, 1)",
+        stroke: "rgba(190, 24, 93, 1)",
+        strokeWidth: 0.84,
+        contrastStroke: "rgba(49, 8, 26, 0.62)",
+        contrastStrokeWidth: 0.56,
+        centerDot: "rgba(255, 241, 245, 0.92)",
+        centerDotRadiusScale: 0.22,
+      };
+    case "PUCKOUT_DIRECT_OUT":
+      return {
+        radius: 3.15,
+        fill: "rgba(251, 146, 60, 1)",
+        stroke: "rgba(194, 65, 12, 1)",
+        strokeWidth: 0.84,
+        contrastStroke: "rgba(52, 24, 8, 0.62)",
+        contrastStrokeWidth: 0.56,
+        centerDot: "rgba(255, 245, 235, 0.92)",
+        centerDotRadiusScale: 0.22,
       };
     default: {
       const _never: never = type;
