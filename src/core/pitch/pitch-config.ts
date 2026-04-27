@@ -60,6 +60,21 @@ type PathSpec = {
   skipLineGlow?: boolean;
 };
 
+type ArcSpec = {
+  kind: "arc";
+  cx: number;
+  cy: number;
+  rx: number;
+  ry: number;
+  startAngle: number;
+  endAngle: number;
+  counterClockwise?: boolean;
+  stroke: string;
+  strokeWidth: number;
+  opacity?: number;
+  skipLineGlow?: boolean;
+};
+
 type TextSpec = {
   kind: "text";
   x: number;
@@ -78,6 +93,7 @@ export type PitchMarking =
   | CircleSpec
   | EllipseSpec
   | PathSpec
+  | ArcSpec
   | TextSpec;
 
 export type PitchConfig = {
@@ -235,16 +251,9 @@ function buildGaelicFootballLandscapeMarkings(): PitchMarking[] {
 
   const rxD = (GAELIC_D_FREE_RADIUS_M / GAELIC_LANDSCAPE_LEN_M) * playW;
   const ryD = (GAELIC_D_FREE_RADIUS_M / GAELIC_LANDSCAPE_WID_M) * playH;
-  const dLeft = `M ${rnd3(x20L)} ${rnd3(cy - ryD)} A ${rnd3(rxD)} ${rnd3(ryD)} 0 1 1 ${rnd3(x20L)} ${rnd3(cy + ryD)}`;
-  const dRight = `M ${rnd3(x20R)} ${rnd3(cy - ryD)} A ${rnd3(rxD)} ${rnd3(ryD)} 0 1 0 ${rnd3(x20R)} ${rnd3(cy + ryD)}`;
 
   const rx40 = (GAELIC_TWO_POINT_RADIUS_M / GAELIC_LANDSCAPE_LEN_M) * playW;
   const ry40 = (GAELIC_TWO_POINT_RADIUS_M / GAELIC_LANDSCAPE_WID_M) * playH;
-  const sin60 = Math.sin(Math.PI / 3);
-  const yArcLo = cy - ry40 * sin60;
-  const yArcHi = cy + ry40 * sin60;
-  const twoPtLeft = `M ${rnd3(x20L)} ${rnd3(yArcLo)} A ${rnd3(rx40)} ${rnd3(ry40)} 0 0 1 ${rnd3(x20L)} ${rnd3(yArcHi)}`;
-  const twoPtRight = `M ${rnd3(x20R)} ${rnd3(yArcLo)} A ${rnd3(rx40)} ${rnd3(ry40)} 0 0 0 ${rnd3(x20R)} ${rnd3(yArcHi)}`;
 
   return [
     { kind: "rect", x: ix, y: iy, w: playW, h: playH, stroke: Lg.lineGridStrong, strokeWidth: wTouch },
@@ -264,10 +273,58 @@ function buildGaelicFootballLandscapeMarkings(): PitchMarking[] {
     { kind: "rect", x: xRight - largeDeep, y: yLargeTop, w: largeDeep, h: largeWide, stroke: Lg.lineScoringEnd, strokeWidth: wEnd },
     { kind: "rect", x: ix, y: ySmallTop, w: smallDeep, h: smallWide, stroke: Lg.lineScoringEnd, strokeWidth: wEndInner },
     { kind: "rect", x: xRight - smallDeep, y: ySmallTop, w: smallDeep, h: smallWide, stroke: Lg.lineScoringEnd, strokeWidth: wEndInner },
-    { kind: "path", d: twoPtLeft, stroke: Lg.lineGridStrong, strokeWidth: w2Point, strokeLinecap: "round", skipLineGlow: true },
-    { kind: "path", d: twoPtRight, stroke: Lg.lineGridStrong, strokeWidth: w2Point, strokeLinecap: "round", skipLineGlow: true },
-    { kind: "path", d: dLeft, stroke: Lg.lineGridStrong, strokeWidth: wD, strokeLinecap: "round", skipLineGlow: true },
-    { kind: "path", d: dRight, stroke: Lg.lineGridStrong, strokeWidth: wD, strokeLinecap: "round", skipLineGlow: true },
+    {
+      kind: "arc",
+      cx: x20L,
+      cy,
+      rx: rx40,
+      ry: ry40,
+      startAngle: -Math.PI / 2,
+      endAngle: Math.PI / 2,
+      stroke: Lg.lineGridStrong,
+      strokeWidth: w2Point,
+      counterClockwise: false,
+      skipLineGlow: true,
+    },
+    {
+      kind: "arc",
+      cx: x20R,
+      cy,
+      rx: rx40,
+      ry: ry40,
+      startAngle: -Math.PI / 2,
+      endAngle: Math.PI / 2,
+      stroke: Lg.lineGridStrong,
+      strokeWidth: w2Point,
+      counterClockwise: true,
+      skipLineGlow: true,
+    },
+    {
+      kind: "arc",
+      cx: x20L,
+      cy,
+      rx: rxD,
+      ry: ryD,
+      startAngle: -Math.PI / 2,
+      endAngle: Math.PI / 2,
+      stroke: Lg.lineGridStrong,
+      strokeWidth: wD,
+      counterClockwise: false,
+      skipLineGlow: true,
+    },
+    {
+      kind: "arc",
+      cx: x20R,
+      cy,
+      rx: rxD,
+      ry: ryD,
+      startAngle: -Math.PI / 2,
+      endAngle: Math.PI / 2,
+      stroke: Lg.lineGridStrong,
+      strokeWidth: wD,
+      counterClockwise: true,
+      skipLineGlow: true,
+    },
   ];
 }
 
@@ -328,8 +385,6 @@ const hurlingCamogieLandscapeMarkings: PitchMarking[] = (() => {
 
   const rxD = (GAELIC_D_FREE_RADIUS_M / GAELIC_LANDSCAPE_LEN_M) * playW;
   const ryD = (GAELIC_D_FREE_RADIUS_M / GAELIC_LANDSCAPE_WID_M) * playH;
-  const dLeft = `M ${rnd3(x20L)} ${rnd3(cy - ryD)} A ${rnd3(rxD)} ${rnd3(ryD)} 0 1 1 ${rnd3(x20L)} ${rnd3(cy + ryD)}`;
-  const dRight = `M ${rnd3(x20R)} ${rnd3(cy - ryD)} A ${rnd3(rxD)} ${rnd3(ryD)} 0 1 0 ${rnd3(x20R)} ${rnd3(cy + ryD)}`;
 
   return [
     { kind: "rect", x: ix, y: iy, w: playW, h: playH, stroke: Lg.lineGridStrong, strokeWidth: wTouch },
@@ -350,8 +405,32 @@ const hurlingCamogieLandscapeMarkings: PitchMarking[] = (() => {
     { kind: "rect", x: ix, y: ySmallTop, w: smallDeep, h: smallWide, stroke: Lg.lineScoringEnd, strokeWidth: wEndInner },
     { kind: "rect", x: xRight - smallDeep, y: ySmallTop, w: smallDeep, h: smallWide, stroke: Lg.lineScoringEnd, strokeWidth: wEndInner },
     // Hurling/Camogie: no football 2-point arc.
-    { kind: "path", d: dLeft, stroke: Lg.lineGridStrong, strokeWidth: wD, strokeLinecap: "round", skipLineGlow: true },
-    { kind: "path", d: dRight, stroke: Lg.lineGridStrong, strokeWidth: wD, strokeLinecap: "round", skipLineGlow: true },
+    {
+      kind: "arc",
+      cx: x20L,
+      cy,
+      rx: rxD,
+      ry: ryD,
+      startAngle: -Math.PI / 2,
+      endAngle: Math.PI / 2,
+      stroke: Lg.lineGridStrong,
+      strokeWidth: wD,
+      counterClockwise: false,
+      skipLineGlow: true,
+    },
+    {
+      kind: "arc",
+      cx: x20R,
+      cy,
+      rx: rxD,
+      ry: ryD,
+      startAngle: -Math.PI / 2,
+      endAngle: Math.PI / 2,
+      stroke: Lg.lineGridStrong,
+      strokeWidth: wD,
+      counterClockwise: true,
+      skipLineGlow: true,
+    },
   ];
 })();
 

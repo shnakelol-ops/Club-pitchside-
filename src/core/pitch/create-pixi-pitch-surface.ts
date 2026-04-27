@@ -2,6 +2,7 @@ import { Application, Container, Graphics } from "pixi.js";
 
 import { BOARD_PITCH_VIEWBOX } from "./pitch-space";
 import { createPitchRoot } from "./create-pitch-root";
+import { getPitchConfig } from "./pitch-config";
 import {
   letterboxPitchWorld,
   worldToBoardNorm,
@@ -62,6 +63,47 @@ export async function createPixiPitchSurface(
   host: HTMLElement,
   options: CreatePixiPitchSurfaceOptions,
 ): Promise<PixiPitchSurfaceHandle> {
+  const extractAlpha = (stroke: string): number => {
+    const m = stroke.match(/rgba\(\s*255\s*,\s*255\s*,\s*255\s*,\s*([0-9.]+)\s*\)/i);
+    if (!m) return 1;
+    const alpha = Number(m[1]);
+    return Number.isFinite(alpha) ? Math.max(0, Math.min(1, alpha)) : 1;
+  };
+
+  const drawArcMarkings = (layer: Container): void => {
+    layer.removeChildren().forEach((child) => child.destroy());
+    const { markings } = getPitchConfig(options.sport);
+    for (const marking of markings) {
+      if (marking.kind !== "arc") continue;
+      const alpha = marking.opacity ?? extractAlpha(marking.stroke);
+      const arc = new Graphics();
+      arc.eventMode = "none";
+      arc.position.set(marking.cx, marking.cy);
+      arc.scale.set(1, marking.ry / Math.max(1e-6, marking.rx));
+      const startX = Math.cos(marking.startAngle) * marking.rx;
+      const startY = Math.sin(marking.startAngle) * marking.rx;
+      arc
+        .moveTo(startX, startY)
+        .arc(
+          0,
+          0,
+          marking.rx,
+          marking.startAngle,
+          marking.endAngle,
+          marking.counterClockwise ?? false,
+        )
+        .stroke({
+          color: 0xffffff,
+          alpha,
+          width: marking.strokeWidth,
+          cap: "round",
+          join: "round",
+          alignment: 0.5,
+        });
+      layer.addChild(arc);
+    }
+  };
+
   const app = new Application();
   await app.init({
     width: host.clientWidth || 640,
@@ -87,6 +129,10 @@ export async function createPixiPitchSurface(
 
   const pitchRoot = createPitchRoot(options.sport);
   world.addChild(pitchRoot.root);
+  const arcMarkings = new Container();
+  arcMarkings.eventMode = "none";
+  world.addChild(arcMarkings);
+  drawArcMarkings(arcMarkings);
   const statsMarkers = new Graphics();
   statsMarkers.eventMode = "none";
   world.addChild(statsMarkers);
@@ -208,6 +254,7 @@ export async function createPixiPitchSurface(
     destroy: () => {
       resizeObserver.disconnect();
       pitchRoot.dispose();
+      arcMarkings.destroy({ children: true });
       hitArea.destroy();
       statsMarkers.destroy();
       try {
