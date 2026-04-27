@@ -1350,7 +1350,7 @@ const PANEL_CSS = `
   }
 
   .utility-controls--landscape .utility-menu {
-    margin-left: 0;
+    margin-left: 44px;
     margin-right: 0;
   }
 }
