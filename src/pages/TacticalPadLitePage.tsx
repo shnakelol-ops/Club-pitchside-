@@ -6,8 +6,8 @@ import {
 } from "../engine/pixi/createTacticalPadLiteSurface";
 import "./tactical-pad-lite-shell.css";
 
-const PORTRAIT_BUBBLE_SIZE_PX = 54;
-const LANDSCAPE_BUBBLE_SIZE_PX = 44;
+const PORTRAIT_BUBBLE_SIZE_PX = 42;
+const LANDSCAPE_BUBBLE_SIZE_PX = 38;
 const BUBBLE_MARGIN_PX = 12;
 const SAFE_GAP_PX = 8;
 const MIN_LANDSCAPE_WIDTH_FOR_SIDE_PANEL_PX = 600;
@@ -321,13 +321,16 @@ export default function TacticalPadLitePage() {
         <button
           type="button"
           className="tactical-pad-lite__bubble"
+          aria-label={isDrawerOpen ? "Close tactical tools menu" : "Open tactical tools menu"}
           style={{ left: `${bubblePosition.x}px`, top: `${bubblePosition.y}px` }}
           onPointerDown={handleBubblePointerDown}
           onPointerMove={handleBubblePointerMove}
           onPointerUp={completeBubbleInteraction}
           onPointerCancel={cancelBubbleInteraction}
         >
-          <span className="tactical-pad-lite__bubble-label">{isDrawerOpen ? "Close" : "Tools"}</span>
+          <span className="tactical-pad-lite__bubble-icon" aria-hidden="true">
+            {isDrawerOpen ? "×" : "☰"}
+          </span>
         </button>
       </div>
     </div>
