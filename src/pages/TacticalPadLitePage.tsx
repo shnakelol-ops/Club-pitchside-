@@ -1,4 +1,4 @@
-import { useEffect, useRef, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 
 import {
   createTacticalPadLiteSurface,
@@ -45,9 +45,21 @@ const BUTTON_STYLE: CSSProperties = {
   cursor: "pointer",
 };
 
+const PHASE_COUNT_STYLE: CSSProperties = {
+  border: "1px solid rgba(225, 243, 235, 0.3)",
+  borderRadius: "10px",
+  background: "rgba(10, 22, 18, 0.72)",
+  color: "#e7f6ee",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "13px",
+  fontWeight: 600,
+  padding: "8px 13px",
+};
+
 export default function TacticalPadLitePage() {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const surfaceRef = useRef<TacticalPadLiteSurface | null>(null);
+  const [phaseCount, setPhaseCount] = useState(0);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -56,7 +68,13 @@ export default function TacticalPadLitePage() {
     let disposed = false;
     let destroySurface: (() => void) | null = null;
 
-    void createTacticalPadLiteSurface(host).then((surface) => {
+    void createTacticalPadLiteSurface(host, {
+      onPhaseCountChange: (count) => {
+        if (!disposed) {
+          setPhaseCount(count);
+        }
+      },
+    }).then((surface) => {
       if (disposed) {
         surface.destroy();
         return;
@@ -79,12 +97,16 @@ export default function TacticalPadLitePage() {
         <button type="button" style={BUTTON_STYLE} onClick={() => surfaceRef.current?.setStart()}>
           Set Start
         </button>
+        <button type="button" style={BUTTON_STYLE} onClick={() => surfaceRef.current?.addPhase()}>
+          Add Phase
+        </button>
         <button type="button" style={BUTTON_STYLE} onClick={() => surfaceRef.current?.play()}>
           Play
         </button>
         <button type="button" style={BUTTON_STYLE} onClick={() => surfaceRef.current?.reset()}>
           Reset
         </button>
+        <div style={PHASE_COUNT_STYLE}>Phases: {phaseCount}</div>
       </div>
     </div>
   );
