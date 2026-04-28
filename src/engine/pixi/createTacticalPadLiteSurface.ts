@@ -2,6 +2,7 @@ import { Application, Container, Graphics, Text } from "pixi.js";
 
 import { createWorldViewport } from "./createWorldViewport";
 import {
+  clampNormalizedPoint,
   NORMALIZED_MAX,
   NORMALIZED_MIN,
   type NormalizedPoint,
@@ -20,6 +21,9 @@ export type TacticalPadLiteSurface = {
 
 const WORLD_SIZE = { width: 160, height: 100 } as const;
 const PLAYER_RADIUS = 4.1;
+const PATH_STROKE_WIDTH = 1.15;
+const PATH_STROKE_COLOR = 0xffe07a;
+const PATH_STROKE_ALPHA = 0.98;
 
 const INITIAL_PLAYERS: Array<{ id: "P1" | "P2" | "P3"; number: number; position: NormalizedPoint }> = [
   { id: "P1", number: 1, position: { x: 30, y: 50 } },
@@ -104,6 +108,15 @@ function setTokenWorldPosition(player: TacticalPlayer, mapper: ReturnType<typeof
   player.token.position.set(world.x, world.y);
 }
 
+function getStagePointFromEvent(event: unknown, stage: Container): { x: number; y: number } | null {
+  const stagePoint = (event as {
+    data?: { getLocalPosition?: (target: Container) => { x: number; y: number } };
+    getLocalPosition?: (target: Container) => { x: number; y: number };
+  }).data?.getLocalPosition?.(stage) ??
+    (event as { getLocalPosition?: (target: Container) => { x: number; y: number } }).getLocalPosition?.(stage);
+  return stagePoint ?? null;
+}
+
 export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<TacticalPadLiteSurface> {
   const app = new Application();
   await app.init({
@@ -132,6 +145,9 @@ export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<T
   world.addChild(pitch);
   drawPitchBackground(pitch);
 
+  const pathGraphics = new Graphics();
+  world.addChild(pathGraphics);
+
   const playersLayer = new Container();
   world.addChild(playersLayer);
 
@@ -156,6 +172,70 @@ export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<T
         player: TacticalPlayer;
       }
     | null = null;
+  let isPathDrawing = false;
+  let activePathPoints: NormalizedPoint[] = [];
+
+  function drawPathLine(points: readonly NormalizedPoint[]): void {
+    pathGraphics.clear();
+    if (points.length < 2) return;
+
+    const worldPoints = points.map((point) => mapper.normalizedToWorld(point));
+    const firstPoint = worldPoints[0];
+    pathGraphics.moveTo(firstPoint.x, firstPoint.y);
+
+    if (worldPoints.length === 2) {
+      const endPoint = worldPoints[1];
+      pathGraphics.lineTo(endPoint.x, endPoint.y);
+    } else {
+      for (let index = 1; index < worldPoints.length - 1; index += 1) {
+        const control = worldPoints[index];
+        const next = worldPoints[index + 1];
+        const midpointX = (control.x + next.x) * 0.5;
+        const midpointY = (control.y + next.y) * 0.5;
+        pathGraphics.quadraticCurveTo(control.x, control.y, midpointX, midpointY);
+      }
+      const penultimate = worldPoints[worldPoints.length - 2];
+      const last = worldPoints[worldPoints.length - 1];
+      pathGraphics.quadraticCurveTo(penultimate.x, penultimate.y, last.x, last.y);
+    }
+
+    pathGraphics.stroke({
+      color: PATH_STROKE_COLOR,
+      alpha: PATH_STROKE_ALPHA,
+      width: PATH_STROKE_WIDTH,
+      cap: "round",
+      join: "round",
+    });
+  }
+
+  function getNormalizedPointFromPointerEvent(
+    event: unknown,
+    clampToPitchBounds: boolean,
+  ): NormalizedPoint | null {
+    const stagePoint = getStagePointFromEvent(event, app.stage);
+    if (!stagePoint) return null;
+
+    const worldPoint = mapper.viewportToWorld(stagePoint);
+    if (!clampToPitchBounds) {
+      if (
+        worldPoint.x < 0 ||
+        worldPoint.x > WORLD_SIZE.width ||
+        worldPoint.y < 0 ||
+        worldPoint.y > WORLD_SIZE.height
+      ) {
+        return null;
+      }
+    }
+
+    const boundedWorld = clampToPitchBounds
+      ? {
+          x: clampWorld(worldPoint.x, WORLD_SIZE.width),
+          y: clampWorld(worldPoint.y, WORLD_SIZE.height),
+        }
+      : worldPoint;
+
+    return clampNormalizedPoint(mapper.worldToNormalized(boundedWorld));
+  }
 
   function fitToHost(): void {
     const width = host.clientWidth;
@@ -172,18 +252,13 @@ export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<T
     for (const player of players) {
       setTokenWorldPosition(player, mapper);
     }
+    drawPathLine(activePathPoints);
   }
 
   function updateDraggedPlayerFromEvent(event: unknown): void {
     if (!activeDrag) return;
 
-    const stagePoint = (event as {
-      data?: { getLocalPosition?: (target: Container) => { x: number; y: number } };
-      getLocalPosition?: (target: Container) => { x: number; y: number };
-    }).data?.getLocalPosition?.(app.stage) ??
-      (event as { getLocalPosition?: (target: Container) => { x: number; y: number } }).getLocalPosition?.(
-        app.stage,
-      );
+    const stagePoint = getStagePointFromEvent(event, app.stage);
     if (!stagePoint) return;
 
     const worldPoint = mapper.viewportToWorld({ x: stagePoint.x, y: stagePoint.y });
@@ -198,6 +273,32 @@ export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<T
       y: Math.max(NORMALIZED_MIN, Math.min(NORMALIZED_MAX, normalized.y)),
     };
     setTokenWorldPosition(activeDrag.player, mapper);
+  }
+
+  function beginPathFromEvent(event: unknown): void {
+    if (activeDrag) return;
+    const startingPoint = getNormalizedPointFromPointerEvent(event, false);
+    if (!startingPoint) return;
+    activePathPoints = [startingPoint];
+    isPathDrawing = true;
+    drawPathLine(activePathPoints);
+  }
+
+  function extendPathFromEvent(event: unknown): void {
+    if (!isPathDrawing) return;
+    const nextPoint = getNormalizedPointFromPointerEvent(event, true);
+    if (!nextPoint) return;
+
+    const previous = activePathPoints[activePathPoints.length - 1];
+    if (!previous || (previous.x === nextPoint.x && previous.y === nextPoint.y)) {
+      return;
+    }
+    activePathPoints.push(nextPoint);
+    drawPathLine(activePathPoints);
+  }
+
+  function finishPath(): void {
+    isPathDrawing = false;
   }
 
   function releaseDrag(): void {
@@ -219,12 +320,18 @@ export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<T
 
   app.stage.on("pointermove", (event) => {
     updateDraggedPlayerFromEvent(event);
+    extendPathFromEvent(event);
+  });
+  app.stage.on("pointerdown", (event) => {
+    beginPathFromEvent(event);
   });
   app.stage.on("pointerup", () => {
     releaseDrag();
+    finishPath();
   });
   app.stage.on("pointerupoutside", () => {
     releaseDrag();
+    finishPath();
   });
 
   const resizeObserver = new ResizeObserver(() => {
