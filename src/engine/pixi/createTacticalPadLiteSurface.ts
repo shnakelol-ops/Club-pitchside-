@@ -108,6 +108,10 @@ function setTokenWorldPosition(player: TacticalPlayer, mapper: ReturnType<typeof
   player.token.position.set(world.x, world.y);
 }
 
+function isWorldPointInsidePitch(point: { x: number; y: number }): boolean {
+  return point.x >= 0 && point.x <= WORLD_SIZE.width && point.y >= 0 && point.y <= WORLD_SIZE.height;
+}
+
 function getStagePointFromEvent(event: unknown, stage: Container): { x: number; y: number } | null {
   const stagePoint = (event as {
     data?: { getLocalPosition?: (target: Container) => { x: number; y: number } };
@@ -174,6 +178,7 @@ export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<T
     | null = null;
   let isPathDrawing = false;
   let activePathPoints: NormalizedPoint[] = [];
+  let hasClampedOutsidePoint = false;
 
   function drawPathLine(points: readonly NormalizedPoint[]): void {
     pathGraphics.clear();
@@ -210,31 +215,141 @@ export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<T
 
   function getNormalizedPointFromPointerEvent(
     event: unknown,
-    clampToPitchBounds: boolean,
-  ): NormalizedPoint | null {
+  ): { point: NormalizedPoint; wasClamped: boolean } | null {
     const stagePoint = getStagePointFromEvent(event, app.stage);
     if (!stagePoint) return null;
 
     const worldPoint = mapper.viewportToWorld(stagePoint);
-    if (!clampToPitchBounds) {
-      if (
-        worldPoint.x < 0 ||
-        worldPoint.x > WORLD_SIZE.width ||
-        worldPoint.y < 0 ||
-        worldPoint.y > WORLD_SIZE.height
-      ) {
-        return null;
-      }
-    }
-
-    const boundedWorld = clampToPitchBounds
-      ? {
+    const isInside = isWorldPointInsidePitch(worldPoint);
+    const boundedWorld = isInside
+      ? worldPoint
+      : {
           x: clampWorld(worldPoint.x, WORLD_SIZE.width),
           y: clampWorld(worldPoint.y, WORLD_SIZE.height),
-        }
-      : worldPoint;
+        };
 
-    return clampNormalizedPoint(mapper.worldToNormalized(boundedWorld));
+    return {
+      point: clampNormalizedPoint(mapper.worldToNormalized(boundedWorld)),
+      wasClamped: !isInside,
+    };
+  }
+
+  function getPlayerAtPointerEvent(event: unknown): TacticalPlayer | null {
+    const stagePoint = getStagePointFromEvent(event, app.stage);
+    if (!stagePoint) return null;
+
+    const worldPoint = mapper.viewportToWorld(stagePoint);
+    for (const player of players) {
+      const playerWorld = mapper.normalizedToWorld(player.position);
+      const dx = worldPoint.x - playerWorld.x;
+      const dy = worldPoint.y - playerWorld.y;
+      if (dx * dx + dy * dy <= PLAYER_RADIUS * PLAYER_RADIUS) {
+        return player;
+      }
+    }
+    return null;
+  }
+
+  function setPlayerInteractionEnabled(enabled: boolean): void {
+    const nextEventMode: Container["eventMode"] = enabled ? "static" : "none";
+    const nextCursor = enabled ? "grab" : "default";
+    for (const player of players) {
+      player.token.eventMode = nextEventMode;
+      if (!activeDrag || activeDrag.player !== player) {
+        player.token.cursor = nextCursor;
+      }
+    }
+  }
+
+  function startDragFromEvent(player: TacticalPlayer, event: unknown): void {
+    if (isPathDrawing) return;
+    activeDrag = { player };
+    player.token.cursor = "grabbing";
+    updateDraggedPlayerFromEvent(event);
+  }
+
+  function startPathFromEvent(event: unknown): void {
+    if (activeDrag) return;
+    const pointData = getNormalizedPointFromPointerEvent(event);
+    if (!pointData || pointData.wasClamped) return;
+    activePathPoints = [pointData.point];
+    isPathDrawing = true;
+    hasClampedOutsidePoint = false;
+    setPlayerInteractionEnabled(false);
+    drawPathLine(activePathPoints);
+  }
+
+  function extendPathFromEvent(event: unknown): void {
+    if (!isPathDrawing || activeDrag) return;
+    const pointData = getNormalizedPointFromPointerEvent(event);
+    if (!pointData) return;
+    if (pointData.wasClamped) {
+      if (hasClampedOutsidePoint) return;
+      hasClampedOutsidePoint = true;
+    } else {
+      hasClampedOutsidePoint = false;
+    }
+
+    const nextPoint = pointData.point;
+    const previous = activePathPoints[activePathPoints.length - 1];
+    if (!previous || (previous.x === nextPoint.x && previous.y === nextPoint.y)) {
+      return;
+    }
+    activePathPoints.push(nextPoint);
+    drawPathLine(activePathPoints);
+  }
+
+  function finishPath(): void {
+    if (!isPathDrawing) return;
+    isPathDrawing = false;
+    hasClampedOutsidePoint = false;
+    setPlayerInteractionEnabled(true);
+  }
+
+  function handleStagePointerDown(event: unknown): void {
+    if (activeDrag || isPathDrawing) return;
+    const hitPlayer = getPlayerAtPointerEvent(event);
+    if (hitPlayer) {
+      startDragFromEvent(hitPlayer, event);
+      return;
+    }
+    startPathFromEvent(event);
+  }
+
+  function releaseDrag(): void {
+    if (!activeDrag) return;
+    activeDrag.player.token.cursor = "grab";
+    activeDrag = null;
+  }
+
+  function handleStagePointerMove(event: unknown): void {
+    updateDraggedPlayerFromEvent(event);
+    extendPathFromEvent(event);
+  }
+
+  function handleStagePointerUp(): void {
+    releaseDrag();
+    finishPath();
+  }
+
+  function updateDraggedPlayerFromEvent(event: unknown): void {
+    if (!activeDrag || isPathDrawing) return;
+
+    const stagePoint = getStagePointFromEvent(event, app.stage);
+    if (!stagePoint) return;
+
+    const worldPoint = mapper.viewportToWorld({ x: stagePoint.x, y: stagePoint.y });
+    const boundedWorld = {
+      x: clampWorld(worldPoint.x, WORLD_SIZE.width),
+      y: clampWorld(worldPoint.y, WORLD_SIZE.height),
+    };
+
+    const normalized = mapper.worldToNormalized(boundedWorld);
+    activeDrag.player.position = {
+      x: Math.max(NORMALIZED_MIN, Math.min(NORMALIZED_MAX, normalized.x)),
+      y: Math.max(NORMALIZED_MIN, Math.min(NORMALIZED_MAX, normalized.y)),
+    };
+    setTokenWorldPosition(activeDrag.player, mapper);
   }
 
   function fitToHost(): void {
@@ -255,83 +370,30 @@ export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<T
     drawPathLine(activePathPoints);
   }
 
-  function updateDraggedPlayerFromEvent(event: unknown): void {
-    if (!activeDrag) return;
-
-    const stagePoint = getStagePointFromEvent(event, app.stage);
-    if (!stagePoint) return;
-
-    const worldPoint = mapper.viewportToWorld({ x: stagePoint.x, y: stagePoint.y });
-    const boundedWorld = {
-      x: clampWorld(worldPoint.x, WORLD_SIZE.width),
-      y: clampWorld(worldPoint.y, WORLD_SIZE.height),
-    };
-
-    const normalized = mapper.worldToNormalized(boundedWorld);
-    activeDrag.player.position = {
-      x: Math.max(NORMALIZED_MIN, Math.min(NORMALIZED_MAX, normalized.x)),
-      y: Math.max(NORMALIZED_MIN, Math.min(NORMALIZED_MAX, normalized.y)),
-    };
-    setTokenWorldPosition(activeDrag.player, mapper);
-  }
-
-  function beginPathFromEvent(event: unknown): void {
-    if (activeDrag) return;
-    const startingPoint = getNormalizedPointFromPointerEvent(event, false);
-    if (!startingPoint) return;
-    activePathPoints = [startingPoint];
-    isPathDrawing = true;
-    drawPathLine(activePathPoints);
-  }
-
-  function extendPathFromEvent(event: unknown): void {
-    if (!isPathDrawing) return;
-    const nextPoint = getNormalizedPointFromPointerEvent(event, true);
-    if (!nextPoint) return;
-
-    const previous = activePathPoints[activePathPoints.length - 1];
-    if (!previous || (previous.x === nextPoint.x && previous.y === nextPoint.y)) {
-      return;
-    }
-    activePathPoints.push(nextPoint);
-    drawPathLine(activePathPoints);
-  }
-
-  function finishPath(): void {
-    isPathDrawing = false;
-  }
-
-  function releaseDrag(): void {
-    if (!activeDrag) return;
-    activeDrag.player.token.cursor = "grab";
-    activeDrag = null;
-  }
-
   for (const player of players) {
     setTokenWorldPosition(player, mapper);
-
     player.token.on("pointerdown", (event) => {
-      activeDrag = { player };
-      player.token.cursor = "grabbing";
-      updateDraggedPlayerFromEvent(event);
+      if (isPathDrawing) {
+        (event as { stopPropagation?: () => void }).stopPropagation?.();
+        return;
+      }
+      startDragFromEvent(player, event);
       (event as { stopPropagation?: () => void }).stopPropagation?.();
     });
   }
+  setPlayerInteractionEnabled(true);
 
   app.stage.on("pointermove", (event) => {
-    updateDraggedPlayerFromEvent(event);
-    extendPathFromEvent(event);
+    handleStagePointerMove(event);
   });
   app.stage.on("pointerdown", (event) => {
-    beginPathFromEvent(event);
+    handleStagePointerDown(event);
   });
   app.stage.on("pointerup", () => {
-    releaseDrag();
-    finishPath();
+    handleStagePointerUp();
   });
   app.stage.on("pointerupoutside", () => {
-    releaseDrag();
-    finishPath();
+    handleStagePointerUp();
   });
 
   const resizeObserver = new ResizeObserver(() => {
