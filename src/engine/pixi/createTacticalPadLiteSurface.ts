@@ -23,12 +23,19 @@ export type TacticalPlayerPositionSnapshot = {
 
 type TacticalPlayerId = TacticalPlayer["id"];
 type TacticalPlayerPositionMap = Record<TacticalPlayerId, NormalizedPoint>;
+type TacticalPhaseSnapshot = TacticalPlayerPositionSnapshot[];
+type TacticalPlaybackSegment = {
+  start: TacticalPlayerPositionMap;
+  target: TacticalPlayerPositionMap;
+};
 
 export type TacticalPadLiteSurface = {
   setStart: () => void;
   play: () => void;
+  playPhaseSequence: (phaseSequence: TacticalPhaseSnapshot[]) => void;
   reset: () => void;
   getCurrentPlayerPositions: () => TacticalPlayerPositionSnapshot[];
+  getStartPlayerPositions: () => TacticalPlayerPositionSnapshot[];
   destroy: () => void;
 };
 
@@ -182,17 +189,9 @@ export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<T
 
   const PLAY_DURATION_MS = 1200;
   let isPlaying = false;
-  let playElapsedMs = 0;
-  let playStartPositions: TacticalPlayerPositionMap = {
-    P1: { ...players[0].current },
-    P2: { ...players[1].current },
-    P3: { ...players[2].current },
-  };
-  let playTargetPositions: TacticalPlayerPositionMap = {
-    P1: { ...players[0].current },
-    P2: { ...players[1].current },
-    P3: { ...players[2].current },
-  };
+  let playbackSegmentElapsedMs = 0;
+  let playbackSegmentIndex = 0;
+  let playbackSegments: TacticalPlaybackSegment[] = [];
   let startPositions: TacticalPlayerPositionMap = {
     P1: { ...players[0].current },
     P2: { ...players[1].current },
@@ -251,11 +250,46 @@ export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<T
 
   function cancelPlayback(): void {
     isPlaying = false;
-    playElapsedMs = 0;
+    playbackSegmentElapsedMs = 0;
+    playbackSegmentIndex = 0;
+    playbackSegments = [];
   }
 
   function positionsEqual(a: NormalizedPoint, b: NormalizedPoint): boolean {
     return a.x === b.x && a.y === b.y;
+  }
+
+  function positionsMapFromPhaseSnapshot(
+    phaseSnapshot: TacticalPhaseSnapshot,
+    fallback: TacticalPlayerPositionMap,
+  ): TacticalPlayerPositionMap {
+    const byId = {
+      P1: cloneNormalizedPoint(fallback.P1),
+      P2: cloneNormalizedPoint(fallback.P2),
+      P3: cloneNormalizedPoint(fallback.P3),
+    };
+    for (const player of phaseSnapshot) {
+      byId[player.id] = cloneNormalizedPoint(player.current);
+    }
+    return byId;
+  }
+
+  function beginPlayback(segments: TacticalPlaybackSegment[]): void {
+    cancelPlayback();
+    if (segments.length === 0) return;
+
+    playbackSegments = segments.map((segment) => ({
+      start: clonePositionMap(segment.start),
+      target: clonePositionMap(segment.target),
+    }));
+    playbackSegmentIndex = 0;
+    playbackSegmentElapsedMs = 0;
+    isPlaying = true;
+
+    const firstSegment = playbackSegments[0];
+    applyStartPositions(firstSegment.start);
+    applyTargetPositions(firstSegment.target);
+    applyCurrentPositions(firstSegment.start);
   }
 
   function fitToHost(): void {
@@ -313,12 +347,18 @@ export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<T
 
   function stepPlayback(deltaMs: number): void {
     if (!isPlaying) return;
-    playElapsedMs += deltaMs;
-    const progress = Math.max(0, Math.min(1, playElapsedMs / PLAY_DURATION_MS));
+    const segment = playbackSegments[playbackSegmentIndex];
+    if (!segment) {
+      cancelPlayback();
+      return;
+    }
+
+    playbackSegmentElapsedMs += deltaMs;
+    const progress = Math.max(0, Math.min(1, playbackSegmentElapsedMs / PLAY_DURATION_MS));
 
     for (const player of players) {
-      const playStart = playStartPositions[player.id];
-      const playTarget = playTargetPositions[player.id];
+      const playStart = segment.start[player.id];
+      const playTarget = segment.target[player.id];
       player.current = {
         x: playStart.x + (playTarget.x - playStart.x) * progress,
         y: playStart.y + (playTarget.y - playStart.y) * progress,
@@ -327,8 +367,19 @@ export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<T
     }
 
     if (progress >= 1) {
-      applyCurrentPositions(playTargetPositions);
-      cancelPlayback();
+      applyCurrentPositions(segment.target);
+
+      if (playbackSegmentIndex >= playbackSegments.length - 1) {
+        cancelPlayback();
+        return;
+      }
+
+      playbackSegmentIndex += 1;
+      playbackSegmentElapsedMs = 0;
+      const nextSegment = playbackSegments[playbackSegmentIndex];
+      applyStartPositions(nextSegment.start);
+      applyTargetPositions(nextSegment.target);
+      applyCurrentPositions(nextSegment.start);
     }
   }
 
@@ -388,14 +439,45 @@ export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<T
         targetPositions = clonePositionMap(currentPositions);
       }
 
-      playStartPositions = clonePositionMap(startPositions);
-      playTargetPositions = clonePositionMap(targetPositions);
-      applyStartPositions(playStartPositions);
-      applyTargetPositions(playTargetPositions);
-      applyCurrentPositions(playStartPositions);
+      beginPlayback([
+        {
+          start: clonePositionMap(startPositions),
+          target: clonePositionMap(targetPositions),
+        },
+      ]);
+    },
+    playPhaseSequence: (phaseSequence) => {
+      releaseDrag();
+      cancelPlayback();
 
-      isPlaying = true;
-      playElapsedMs = 0;
+      const phasePositionMaps: TacticalPlayerPositionMap[] = [];
+      let fallback = clonePositionMap(startPositions);
+      for (const phase of phaseSequence) {
+        const phaseMap = positionsMapFromPhaseSnapshot(phase, fallback);
+        phasePositionMaps.push(phaseMap);
+        fallback = clonePositionMap(phaseMap);
+      }
+
+      if (phasePositionMaps.length < 2) {
+        beginPlayback([
+          {
+            start: clonePositionMap(startPositions),
+            target: clonePositionMap(targetPositions),
+          },
+        ]);
+        return;
+      }
+
+      const segments: TacticalPlaybackSegment[] = [];
+      for (let index = 0; index < phasePositionMaps.length - 1; index += 1) {
+        segments.push({
+          start: clonePositionMap(phasePositionMaps[index]),
+          target: clonePositionMap(phasePositionMaps[index + 1]),
+        });
+      }
+
+      targetPositions = clonePositionMap(phasePositionMaps[phasePositionMaps.length - 1]);
+      beginPlayback(segments);
     },
     reset: () => {
       releaseDrag();
@@ -407,6 +489,11 @@ export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<T
       players.map((player) => ({
         id: player.id,
         current: { ...player.current },
+      })),
+    getStartPlayerPositions: () =>
+      (["P1", "P2", "P3"] as const).map((id) => ({
+        id,
+        current: cloneNormalizedPoint(startPositions[id]),
       })),
     destroy: () => {
       resizeObserver.disconnect();

@@ -95,6 +95,29 @@ export default function TacticalPadLitePage() {
     };
   }, []);
 
+  function deepCopyPhaseSnapshot(
+    snapshot: TacticalPlayerPositionSnapshot[],
+  ): TacticalPlayerPositionSnapshot[] {
+    return snapshot.map((player) => ({
+      id: player.id,
+      current: { ...player.current },
+    }));
+  }
+
+  function readCurrentSnapshot(): TacticalPlayerPositionSnapshot[] | null {
+    const snapshot = surfaceRef.current?.getCurrentPlayerPositions();
+    if (!snapshot) return null;
+    return deepCopyPhaseSnapshot(snapshot);
+  }
+
+  function buildPhasePlaybackSequence(): TacticalPlayerPositionSnapshot[][] {
+    const startSnapshot = surfaceRef.current?.getStartPlayerPositions();
+    if (!startSnapshot) return [];
+    const phaseZero = deepCopyPhaseSnapshot(startSnapshot);
+    const addedPhases = phasesRef.current.map((phase) => deepCopyPhaseSnapshot(phase));
+    return [phaseZero, ...addedPhases];
+  }
+
   return (
     <div style={ROOT_STYLE}>
       <div ref={hostRef} style={BOARD_STYLE} />
@@ -104,22 +127,37 @@ export default function TacticalPadLitePage() {
           type="button"
           style={BUTTON_STYLE}
           onClick={() => {
-            const snapshot = surfaceRef.current?.getCurrentPlayerPositions();
+            const snapshot = readCurrentSnapshot();
             if (!snapshot) return;
-            const deepCopiedSnapshot: TacticalPlayerPositionSnapshot[] = snapshot.map((player) => ({
-              id: player.id,
-              current: { ...player.current },
-            }));
-            phasesRef.current = [...phasesRef.current, deepCopiedSnapshot];
+            phasesRef.current = [...phasesRef.current, snapshot];
             setPhaseCount(phasesRef.current.length);
           }}
         >
           Add Phase
         </button>
-        <button type="button" style={BUTTON_STYLE} onClick={() => surfaceRef.current?.setStart()}>
+        <button
+          type="button"
+          style={BUTTON_STYLE}
+          onClick={() => {
+            surfaceRef.current?.setStart();
+            phasesRef.current = [];
+            setPhaseCount(0);
+          }}
+        >
           Set Start
         </button>
-        <button type="button" style={BUTTON_STYLE} onClick={() => surfaceRef.current?.play()}>
+        <button
+          type="button"
+          style={BUTTON_STYLE}
+          onClick={() => {
+            const phaseSequence = buildPhasePlaybackSequence();
+            if (phaseSequence.length <= 1) {
+              surfaceRef.current?.play();
+              return;
+            }
+            surfaceRef.current?.playPhaseSequence(phaseSequence);
+          }}
+        >
           Play
         </button>
         <button type="button" style={BUTTON_STYLE} onClick={() => surfaceRef.current?.reset()}>
