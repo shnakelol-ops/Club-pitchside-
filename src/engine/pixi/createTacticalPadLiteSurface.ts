@@ -21,6 +21,9 @@ export type TacticalPlayerPositionSnapshot = {
   current: NormalizedPoint;
 };
 
+type TacticalPlayerId = TacticalPlayer["id"];
+type TacticalPlayerPositionMap = Record<TacticalPlayerId, NormalizedPoint>;
+
 export type TacticalPadLiteSurface = {
   setStart: () => void;
   play: () => void;
@@ -180,12 +183,80 @@ export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<T
   const PLAY_DURATION_MS = 1200;
   let isPlaying = false;
   let playElapsedMs = 0;
+  let playStartPositions: TacticalPlayerPositionMap = {
+    P1: { ...players[0].current },
+    P2: { ...players[1].current },
+    P3: { ...players[2].current },
+  };
+  let playTargetPositions: TacticalPlayerPositionMap = {
+    P1: { ...players[0].current },
+    P2: { ...players[1].current },
+    P3: { ...players[2].current },
+  };
+  let startPositions: TacticalPlayerPositionMap = {
+    P1: { ...players[0].current },
+    P2: { ...players[1].current },
+    P3: { ...players[2].current },
+  };
+  let targetPositions: TacticalPlayerPositionMap = {
+    P1: { ...players[0].current },
+    P2: { ...players[1].current },
+    P3: { ...players[2].current },
+  };
 
   let activeDrag:
     | {
         player: TacticalPlayer;
       }
     | null = null;
+
+  function cloneNormalizedPoint(point: NormalizedPoint): NormalizedPoint {
+    return { x: point.x, y: point.y };
+  }
+
+  function clonePositionMap(source: TacticalPlayerPositionMap): TacticalPlayerPositionMap {
+    return {
+      P1: cloneNormalizedPoint(source.P1),
+      P2: cloneNormalizedPoint(source.P2),
+      P3: cloneNormalizedPoint(source.P3),
+    };
+  }
+
+  function readCurrentPositions(): TacticalPlayerPositionMap {
+    const snapshot = {} as TacticalPlayerPositionMap;
+    for (const player of players) {
+      snapshot[player.id] = cloneNormalizedPoint(player.current);
+    }
+    return snapshot;
+  }
+
+  function applyCurrentPositions(snapshot: TacticalPlayerPositionMap): void {
+    for (const player of players) {
+      player.current = cloneNormalizedPoint(snapshot[player.id]);
+      setTokenWorldPosition(player, mapper);
+    }
+  }
+
+  function applyStartPositions(snapshot: TacticalPlayerPositionMap): void {
+    for (const player of players) {
+      player.start = cloneNormalizedPoint(snapshot[player.id]);
+    }
+  }
+
+  function applyTargetPositions(snapshot: TacticalPlayerPositionMap): void {
+    for (const player of players) {
+      player.target = cloneNormalizedPoint(snapshot[player.id]);
+    }
+  }
+
+  function cancelPlayback(): void {
+    isPlaying = false;
+    playElapsedMs = 0;
+  }
+
+  function positionsEqual(a: NormalizedPoint, b: NormalizedPoint): boolean {
+    return a.x === b.x && a.y === b.y;
+  }
 
   function fitToHost(): void {
     const width = host.clientWidth;
@@ -228,7 +299,9 @@ export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<T
       x: Math.max(NORMALIZED_MIN, Math.min(NORMALIZED_MAX, normalized.x)),
       y: Math.max(NORMALIZED_MIN, Math.min(NORMALIZED_MAX, normalized.y)),
     };
-    activeDrag.player.target = { ...activeDrag.player.current };
+    const playerTarget = cloneNormalizedPoint(activeDrag.player.current);
+    activeDrag.player.target = playerTarget;
+    targetPositions[activeDrag.player.id] = cloneNormalizedPoint(playerTarget);
     setTokenWorldPosition(activeDrag.player, mapper);
   }
 
@@ -238,29 +311,24 @@ export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<T
     activeDrag = null;
   }
 
-  function setPlayersToStart(): void {
-    for (const player of players) {
-      player.current = { ...player.start };
-      setTokenWorldPosition(player, mapper);
-    }
-  }
-
   function stepPlayback(deltaMs: number): void {
     if (!isPlaying) return;
     playElapsedMs += deltaMs;
     const progress = Math.max(0, Math.min(1, playElapsedMs / PLAY_DURATION_MS));
 
     for (const player of players) {
+      const playStart = playStartPositions[player.id];
+      const playTarget = playTargetPositions[player.id];
       player.current = {
-        x: player.start.x + (player.target.x - player.start.x) * progress,
-        y: player.start.y + (player.target.y - player.start.y) * progress,
+        x: playStart.x + (playTarget.x - playStart.x) * progress,
+        y: playStart.y + (playTarget.y - playStart.y) * progress,
       };
       setTokenWorldPosition(player, mapper);
     }
 
     if (progress >= 1) {
-      isPlaying = false;
-      playElapsedMs = 0;
+      applyCurrentPositions(playTargetPositions);
+      cancelPlayback();
     }
   }
 
@@ -298,22 +366,42 @@ export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<T
 
   return {
     setStart: () => {
-      if (isPlaying) return;
-      for (const player of players) {
-        player.start = { ...player.current };
-      }
+      releaseDrag();
+      cancelPlayback();
+
+      // Snapshot current player positions as a fresh immutable start state.
+      startPositions = readCurrentPositions();
+      targetPositions = clonePositionMap(startPositions);
+      applyStartPositions(startPositions);
+      applyTargetPositions(targetPositions);
     },
     play: () => {
       releaseDrag();
+      cancelPlayback();
+
+      const currentPositions = readCurrentPositions();
+      const hasCurrentOffsetFromStart = players.some(
+        (player) => !positionsEqual(currentPositions[player.id], startPositions[player.id]),
+      );
+      if (hasCurrentOffsetFromStart) {
+        // Preserve the latest dragged layout as animation target.
+        targetPositions = clonePositionMap(currentPositions);
+      }
+
+      playStartPositions = clonePositionMap(startPositions);
+      playTargetPositions = clonePositionMap(targetPositions);
+      applyStartPositions(playStartPositions);
+      applyTargetPositions(playTargetPositions);
+      applyCurrentPositions(playStartPositions);
+
       isPlaying = true;
       playElapsedMs = 0;
-      setPlayersToStart();
     },
     reset: () => {
       releaseDrag();
-      isPlaying = false;
-      playElapsedMs = 0;
-      setPlayersToStart();
+      cancelPlayback();
+      applyStartPositions(startPositions);
+      applyCurrentPositions(startPositions);
     },
     getCurrentPlayerPositions: () =>
       players.map((player) => ({
