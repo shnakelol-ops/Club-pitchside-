@@ -6,13 +6,20 @@
   font-family: Inter, system-ui, sans-serif;
 }
 
-.tactical-pad-lite__content {
+.tactical-pad-lite__frame {
   height: 100%;
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
   gap: 10px;
   padding: 12px;
   box-sizing: border-box;
+}
+
+.tactical-pad-lite__pitch-area {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 8px;
 }
 
 .tactical-pad-lite__pitch-shell {
@@ -30,24 +37,100 @@
   background: #13221d;
 }
 
-.tactical-pad-lite__safe-controls {
-  display: grid;
-  gap: 8px;
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 2px);
-}
-
 .tactical-pad-lite__playback-strip {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex-wrap: nowrap;
   align-items: center;
-  padding: 8px 10px;
+  gap: 6px;
+  min-height: 44px;
+  max-height: 56px;
+  padding: 5px 8px;
   border-radius: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.22);
+  border: 1px solid rgba(148, 163, 184, 0.24);
   background: rgba(10, 20, 35, 0.74);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   box-shadow: 0 8px 18px rgba(4, 12, 24, 0.22);
+}
+
+.tactical-pad-lite__tools-rail {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 8px;
+}
+
+.tactical-pad-lite__tools-rail-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tactical-pad-lite__tools-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #dbeafe;
+}
+
+.tactical-pad-lite__bubble {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  border: 1px solid rgba(125, 211, 252, 0.3);
+  background: rgba(15, 23, 42, 0.74);
+  color: #dbeafe;
+  box-shadow:
+    0 0 0 1px rgba(96, 165, 250, 0.12),
+    0 0 8px rgba(96, 165, 250, 0.14);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.tactical-pad-lite__bubble-icon {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.tactical-pad-lite__drawer {
+  max-height: 0;
+  overflow: hidden;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(10, 20, 35, 0.74);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 8px 18px rgba(4, 12, 24, 0.26);
+  transition:
+    max-height 180ms ease,
+    border-color 180ms ease;
+}
+
+.tactical-pad-lite__drawer.is-open {
+  max-height: min(42vh, 300px);
+  border-color: rgba(148, 163, 184, 0.32);
+}
+
+.tactical-pad-lite__drawer-inner {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  max-height: min(42vh, 300px);
+  overflow: auto;
+}
+
+.tactical-pad-lite__drawer-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: max-content;
+  overflow-x: auto;
+  padding-bottom: 2px;
 }
 
 .tactical-pad-lite__button {
@@ -61,7 +144,7 @@
   line-height: 1.1;
   letter-spacing: 0.2px;
   text-transform: uppercase;
-  padding: 7px 11px;
+  padding: 6px 10px;
   cursor: pointer;
   white-space: nowrap;
 }
@@ -70,45 +153,6 @@
 .tactical-pad-lite__button--muted {
   cursor: not-allowed;
   opacity: 0.58;
-}
-
-.tactical-pad-lite__drawer {
-  max-height: 0;
-  overflow: hidden;
-  border-top-left-radius: 16px;
-  border-top-right-radius: 16px;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  background: rgba(10, 20, 35, 0.74);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  box-shadow: 0 8px 18px rgba(4, 12, 24, 0.26);
-  transition:
-    max-height 180ms ease,
-    border-color 180ms ease,
-    transform 180ms ease,
-    opacity 180ms ease;
-}
-
-.tactical-pad-lite__drawer.is-open {
-  max-height: min(36vh, 270px);
-  border-color: rgba(148, 163, 184, 0.3);
-}
-
-.tactical-pad-lite__drawer-inner {
-  display: grid;
-  gap: 10px;
-  padding: 10px;
-  max-height: min(36vh, 270px);
-  overflow: auto;
-}
-
-.tactical-pad-lite__drawer-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  min-width: max-content;
-  overflow-x: auto;
-  padding-bottom: 2px;
 }
 
 .tactical-pad-lite__phase-count {
@@ -121,7 +165,7 @@
   line-height: 1.1;
   letter-spacing: 0.2px;
   text-transform: uppercase;
-  padding: 7px 11px;
+  padding: 6px 10px;
   white-space: nowrap;
 }
 
@@ -156,116 +200,41 @@
   padding-inline: 10px;
 }
 
-.tactical-pad-lite__bubble {
-  position: fixed;
-  width: 42px;
-  height: 42px;
-  border-radius: 999px;
-  border: 1px solid rgba(125, 211, 252, 0.3);
-  background: rgba(15, 23, 42, 0.74);
-  color: #dbeafe;
-  box-shadow:
-    0 0 0 1px rgba(96, 165, 250, 0.12),
-    0 0 8px rgba(96, 165, 250, 0.14);
-  display: grid;
-  place-items: center;
-  cursor: grab;
-  touch-action: none;
-  z-index: 10;
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-}
-
-.tactical-pad-lite__bubble:active {
-  cursor: grabbing;
-}
-
-.tactical-pad-lite__bubble-icon {
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: 0.02em;
-}
-
-.tactical-pad-lite.is-landscape .tactical-pad-lite__content {
-  grid-template-columns: minmax(0, 1fr) 0;
-  grid-template-rows: minmax(0, 1fr) auto;
+.tactical-pad-lite.is-landscape .tactical-pad-lite__frame {
+  grid-template-columns: minmax(0, 1fr) clamp(200px, 22vw, 260px);
+  grid-template-rows: minmax(0, 1fr);
   align-items: stretch;
 }
 
-.tactical-pad-lite.is-landscape.is-tools-open .tactical-pad-lite__content {
-  grid-template-columns: minmax(0, 1fr) clamp(200px, 30vw, 260px);
-}
-
-.tactical-pad-lite.is-landscape .tactical-pad-lite__safe-controls {
-  grid-column: 1;
-  grid-row: 2;
-  gap: 6px;
-  padding-bottom: 0;
-}
-
-.tactical-pad-lite.is-landscape .tactical-pad-lite__drawer {
+.tactical-pad-lite.is-landscape .tactical-pad-lite__tools-rail {
   grid-column: 2;
-  grid-row: 1 / span 2;
-  width: 100%;
-  max-height: 100%;
-  min-height: 0;
-  border-radius: 16px;
-  border-color: transparent;
-  transform: translateX(100%);
-  opacity: 0;
-  pointer-events: none;
-  transition:
-    transform 180ms ease,
-    opacity 180ms ease,
-    border-color 180ms ease;
+  grid-row: 1;
 }
 
 .tactical-pad-lite.is-landscape .tactical-pad-lite__drawer {
+  max-height: 0;
+  height: auto;
+}
+
+.tactical-pad-lite.is-landscape.is-tools-open .tactical-pad-lite__drawer {
+  max-height: 100%;
   height: 100%;
+  border-color: rgba(148, 163, 184, 0.32);
 }
 
 .tactical-pad-lite.is-landscape .tactical-pad-lite__drawer-inner {
   max-height: 100%;
-  padding: 8px;
-  gap: 8px;
 }
 
-.tactical-pad-lite.is-landscape .tactical-pad-lite__drawer-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-}
-
-.tactical-pad-lite.is-landscape .tactical-pad-lite__drawer-title {
-  font-size: 13px;
-  letter-spacing: 0.01em;
-}
-
-.tactical-pad-lite.is-landscape .tactical-pad-lite__drawer-close {
-  margin-left: auto;
-}
-
-.tactical-pad-lite.is-landscape.is-tools-open .tactical-pad-lite__drawer {
-  transform: translateX(0);
-  opacity: 1;
-  pointer-events: auto;
-  border-color: rgba(148, 163, 184, 0.3);
-}
-
-.tactical-pad-lite.is-landscape .tactical-pad-lite__playback-strip {
-  flex-wrap: nowrap;
-  min-height: 42px;
-  max-height: 56px;
-  padding: 5px 8px;
-  gap: 6px;
+.tactical-pad-lite.is-landscape .tactical-pad-lite__drawer-row {
+  flex-wrap: wrap;
+  min-width: 0;
+  overflow-x: visible;
 }
 
 .tactical-pad-lite.is-landscape .tactical-pad-lite__playback-strip .tactical-pad-lite__button {
   font-size: 11px;
   padding: 5px 8px;
-  border-radius: 8px;
 }
 
 .tactical-pad-lite.is-landscape .tactical-pad-lite__bubble {
@@ -277,35 +246,6 @@
   font-size: 12px;
 }
 
-/* Fallback: if side space is too small, keep controls below pitch. */
-.tactical-pad-lite.is-landscape.is-landscape-bottom-fallback .tactical-pad-lite__content {
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr) auto;
-}
-
-.tactical-pad-lite.is-landscape.is-landscape-bottom-fallback .tactical-pad-lite__safe-controls {
-  grid-column: 1;
-  grid-row: 2;
-}
-
-.tactical-pad-lite.is-landscape.is-landscape-bottom-fallback .tactical-pad-lite__drawer {
-  grid-column: 1;
-  grid-row: 2;
-  height: auto;
-  max-height: 0;
-  border-radius: 14px 14px 0 0;
-  transform: translateY(100%);
-}
-
-.tactical-pad-lite.is-landscape.is-landscape-bottom-fallback.is-tools-open .tactical-pad-lite__drawer {
-  max-height: min(34vh, 220px);
-  transform: translateY(0);
-}
-
-.tactical-pad-lite.is-landscape.is-landscape-bottom-fallback .tactical-pad-lite__drawer-inner {
-  max-height: min(34vh, 220px);
-}
-
-.tactical-pad-lite.is-landscape.is-landscape-bottom-fallback .tactical-pad-lite__playback-strip {
-  margin-bottom: 0;
+.tactical-pad-lite.is-tools-closed .tactical-pad-lite__tools-title {
+  opacity: 0.8;
 }
