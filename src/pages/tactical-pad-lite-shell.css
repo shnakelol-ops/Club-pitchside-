@@ -179,7 +179,7 @@
 }
 
 .tactical-pad-lite.is-landscape.is-tools-open .tactical-pad-lite__content {
-  grid-template-columns: minmax(0, 1fr) clamp(220px, 26vw, 260px);
+  grid-template-columns: minmax(0, 1fr) min(240px, 30vw);
 }
 
 .tactical-pad-lite.is-landscape .tactical-pad-lite__safe-controls {

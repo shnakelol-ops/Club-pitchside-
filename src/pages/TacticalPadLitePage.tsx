@@ -10,9 +10,7 @@ const PORTRAIT_BUBBLE_SIZE_PX = 54;
 const LANDSCAPE_BUBBLE_SIZE_PX = 44;
 const BUBBLE_MARGIN_PX = 12;
 const SAFE_GAP_PX = 8;
-const LANDSCAPE_PANEL_TARGET_WIDTH_PX = 240;
-const MIN_PITCH_WIDTH_FOR_SIDE_PANEL_PX = 520;
-const LANDSCAPE_LAYOUT_GUTTER_PX = 34;
+const MIN_LANDSCAPE_WIDTH_FOR_SIDE_PANEL_PX = 600;
 
 type BubblePosition = {
   x: number;
@@ -33,9 +31,7 @@ function isLandscapeViewport(): boolean {
 }
 
 function shouldUseLandscapeSidePanel(): boolean {
-  if (!isLandscapeViewport()) return false;
-  const usableWidth = window.innerWidth - LANDSCAPE_LAYOUT_GUTTER_PX;
-  return usableWidth - LANDSCAPE_PANEL_TARGET_WIDTH_PX >= MIN_PITCH_WIDTH_FOR_SIDE_PANEL_PX;
+  return isLandscapeViewport() && window.innerWidth >= MIN_LANDSCAPE_WIDTH_FOR_SIDE_PANEL_PX;
 }
 
 function clampBubbleToViewport(position: BubblePosition, bubbleSizePx: number): BubblePosition {
