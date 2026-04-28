@@ -16,10 +16,16 @@ type TacticalPlayer = {
   token: Container;
 };
 
+export type TacticalPlayerPositionSnapshot = {
+  id: TacticalPlayer["id"];
+  current: NormalizedPoint;
+};
+
 export type TacticalPadLiteSurface = {
   setStart: () => void;
   play: () => void;
   reset: () => void;
+  getCurrentPlayerPositions: () => TacticalPlayerPositionSnapshot[];
   destroy: () => void;
 };
 
@@ -309,6 +315,11 @@ export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<T
       playElapsedMs = 0;
       setPlayersToStart();
     },
+    getCurrentPlayerPositions: () =>
+      players.map((player) => ({
+        id: player.id,
+        current: { ...player.current },
+      })),
     destroy: () => {
       resizeObserver.disconnect();
       app.stage.removeAllListeners();
