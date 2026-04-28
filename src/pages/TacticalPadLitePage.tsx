@@ -13,7 +13,6 @@ function isLandscapeViewport(): boolean {
 export default function TacticalPadLitePage() {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const surfaceRef = useRef<TacticalPadLiteSurface | null>(null);
-  const wasLandscapeRef = useRef<boolean>(typeof window !== "undefined" ? isLandscapeViewport() : false);
   const [phaseCount, setPhaseCount] = useState(0);
   const [isLandscape, setIsLandscape] = useState(() =>
     typeof window === "undefined" ? false : isLandscapeViewport(),
@@ -58,10 +57,10 @@ export default function TacticalPadLitePage() {
     const handleResize = () => {
       const landscape = isLandscapeViewport();
       setIsLandscape(landscape);
-      if (landscape && !wasLandscapeRef.current) {
+      setIsToolsOpen((previous) => (landscape ? previous : false));
+      if (landscape) {
         setIsToolsOpen(true);
       }
-      wasLandscapeRef.current = landscape;
     };
     handleResize();
     window.addEventListener("resize", handleResize);
@@ -80,8 +79,8 @@ export default function TacticalPadLitePage() {
 
   return (
     <div className={rootClassName}>
-      <div className="tactical-pad-lite__frame">
-        <section className="tactical-pad-lite__pitch-area">
+      <div className="tactical-pad-lite__layout">
+        <section className="tactical-pad-lite__pitch-column">
           <div className="tactical-pad-lite__pitch-shell">
             <div ref={hostRef} className="tactical-pad-lite__pitch-host" />
           </div>
@@ -98,23 +97,9 @@ export default function TacticalPadLitePage() {
           </section>
         </section>
 
-        <aside className="tactical-pad-lite__tools-rail" aria-label="Edit tools">
-          <div className="tactical-pad-lite__tools-rail-header">
-            <button
-              type="button"
-              className="tactical-pad-lite__bubble"
-              aria-label={isToolsOpen ? "Close tactical tools menu" : "Open tactical tools menu"}
-              aria-expanded={isToolsOpen}
-              onClick={() => setIsToolsOpen((isOpen) => !isOpen)}
-            >
-              <span className="tactical-pad-lite__bubble-icon" aria-hidden="true">
-                {isToolsOpen ? "×" : "☰"}
-              </span>
-            </button>
-            <span className="tactical-pad-lite__tools-title">Edit Tools</span>
-          </div>
-          <div className={`tactical-pad-lite__drawer ${isToolsOpen ? "is-open" : ""}`}>
-            <div className="tactical-pad-lite__drawer-inner">
+        <aside className="tactical-pad-lite__tools-column" aria-label="Edit tools">
+          <div className={`tactical-pad-lite__tools-panel ${isToolsOpen ? "is-open" : ""}`}>
+            <div className="tactical-pad-lite__tools-inner">
               <div className="tactical-pad-lite__drawer-row">
                 <button type="button" className={buttonClass} onClick={() => surfaceRef.current?.setStart()}>
                   Set Start
@@ -141,6 +126,18 @@ export default function TacticalPadLitePage() {
           </div>
         </aside>
       </div>
+
+      <button
+        type="button"
+        className="tactical-pad-lite__hamburger"
+        aria-label={isToolsOpen ? "Close tactical tools menu" : "Open tactical tools menu"}
+        aria-expanded={isToolsOpen}
+        onClick={() => setIsToolsOpen((isOpen) => !isOpen)}
+      >
+        <span className="tactical-pad-lite__hamburger-icon" aria-hidden="true">
+          {isToolsOpen ? "×" : "☰"}
+        </span>
+      </button>
     </div>
   );
 }
