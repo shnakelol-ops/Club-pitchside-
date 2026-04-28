@@ -1,0 +1,173 @@
+.tactical-pad-lite {
+  position: fixed;
+  inset: 0;
+  background: #0b1110;
+  color: #e7f6ee;
+  font-family: Inter, system-ui, sans-serif;
+}
+
+.tactical-pad-lite__content {
+  height: 100%;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 10px;
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+.tactical-pad-lite__pitch-shell {
+  min-height: 0;
+  display: flex;
+}
+
+.tactical-pad-lite__pitch-host {
+  width: 100%;
+  height: 100%;
+  min-height: 220px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.38);
+  background: #13221d;
+}
+
+.tactical-pad-lite__safe-controls {
+  display: grid;
+  gap: 8px;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 2px);
+}
+
+.tactical-pad-lite__playback-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(216, 236, 228, 0.2);
+  background: rgba(10, 22, 18, 0.75);
+  backdrop-filter: blur(10px);
+}
+
+.tactical-pad-lite__button {
+  border: 1px solid rgba(225, 243, 235, 0.48);
+  border-radius: 10px;
+  background: rgba(10, 22, 18, 0.88);
+  color: #e7f6ee;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tactical-pad-lite__button:disabled,
+.tactical-pad-lite__button--muted {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.tactical-pad-lite__drawer {
+  max-height: 0;
+  overflow: hidden;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  border: 1px solid transparent;
+  background: rgba(10, 22, 18, 0.7);
+  backdrop-filter: blur(12px);
+  transition:
+    max-height 180ms ease,
+    border-color 180ms ease;
+}
+
+.tactical-pad-lite__drawer.is-open {
+  max-height: min(36vh, 270px);
+  border-color: rgba(216, 236, 228, 0.22);
+}
+
+.tactical-pad-lite__drawer-inner {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  max-height: min(36vh, 270px);
+  overflow: auto;
+}
+
+.tactical-pad-lite__drawer-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-width: max-content;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.tactical-pad-lite__phase-count {
+  border: 1px solid rgba(225, 243, 235, 0.3);
+  border-radius: 10px;
+  background: rgba(10, 22, 18, 0.72);
+  color: #e7f6ee;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 13px;
+  white-space: nowrap;
+}
+
+.tactical-pad-lite__phase-dots-scroll {
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.tactical-pad-lite__phase-dots {
+  display: flex;
+  gap: 8px;
+  width: max-content;
+  min-height: 32px;
+}
+
+.tactical-pad-lite__phase-dot {
+  min-width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid rgba(225, 243, 235, 0.42);
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #d8eee2;
+  background: rgba(16, 34, 27, 0.86);
+}
+
+.tactical-pad-lite__phase-dot--placeholder {
+  border-style: dashed;
+  min-width: fit-content;
+  padding-inline: 10px;
+}
+
+.tactical-pad-lite__bubble {
+  position: fixed;
+  width: 54px;
+  height: 54px;
+  border-radius: 999px;
+  border: 1px solid rgba(225, 243, 235, 0.48);
+  background: rgba(15, 30, 24, 0.9);
+  color: #eef9f2;
+  box-shadow:
+    0 12px 24px rgba(0, 0, 0, 0.36),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  display: grid;
+  place-items: center;
+  cursor: grab;
+  touch-action: none;
+  z-index: 10;
+}
+
+.tactical-pad-lite__bubble:active {
+  cursor: grabbing;
+}
+
+.tactical-pad-lite__bubble-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
