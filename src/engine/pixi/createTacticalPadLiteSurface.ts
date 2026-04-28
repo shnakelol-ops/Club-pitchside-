@@ -11,17 +11,22 @@ type TacticalPlayer = {
   id: "P1" | "P2" | "P3";
   number: number;
   current: NormalizedPoint;
-  start: NormalizedPoint;
-  target: NormalizedPoint;
   token: Container;
 };
 
 export type TacticalPadLiteSurface = {
   setStart: () => void;
+  addPhase: () => void;
   play: () => void;
   reset: () => void;
   destroy: () => void;
 };
+
+type TacticalPadLiteSurfaceOptions = {
+  onPhaseCountChange?: (count: number) => void;
+};
+
+type PhaseSnapshot = NormalizedPoint[];
 
 const WORLD_SIZE = { width: 160, height: 100 } as const;
 const PLAYER_RADIUS = 4.1;
@@ -117,12 +122,19 @@ function setPlayerTouchHitArea(
   };
 }
 
-function setTokenWorldPosition(player: TacticalPlayer, mapper: ReturnType<typeof createWorldViewport>): void {
-  const world = mapper.normalizedToWorld(player.current);
+function setTokenWorldPositionForPoint(
+  player: TacticalPlayer,
+  point: NormalizedPoint,
+  mapper: ReturnType<typeof createWorldViewport>,
+): void {
+  const world = mapper.normalizedToWorld(point);
   player.token.position.set(world.x, world.y);
 }
 
-export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<TacticalPadLiteSurface> {
+export async function createTacticalPadLiteSurface(
+  host: HTMLElement,
+  options: TacticalPadLiteSurfaceOptions = {},
+): Promise<TacticalPadLiteSurface> {
   const app = new Application();
   await app.init({
     width: host.clientWidth || 800,
@@ -165,8 +177,6 @@ export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<T
       id: base.id,
       number: base.number,
       current: { ...base.position },
-      start: { ...base.position },
-      target: { ...base.position },
       token,
     };
   });
@@ -174,6 +184,10 @@ export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<T
   const PLAY_DURATION_MS = 1200;
   let isPlaying = false;
   let playElapsedMs = 0;
+  let playbackPath: PhaseSnapshot = [];
+  let activeSegmentIndex = 0;
+  let startPositions: PhaseSnapshot = players.map((player) => ({ ...player.current }));
+  let phases: PhaseSnapshot[] = [];
 
   let activeDrag:
     | {
@@ -195,7 +209,7 @@ export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<T
 
     for (const player of players) {
       setPlayerTouchHitArea(player, mapper);
-      setTokenWorldPosition(player, mapper);
+      setTokenWorldPositionForPoint(player, player.current, mapper);
     }
   }
 
@@ -222,8 +236,7 @@ export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<T
       x: Math.max(NORMALIZED_MIN, Math.min(NORMALIZED_MAX, normalized.x)),
       y: Math.max(NORMALIZED_MIN, Math.min(NORMALIZED_MAX, normalized.y)),
     };
-    activeDrag.player.target = { ...activeDrag.player.current };
-    setTokenWorldPosition(activeDrag.player, mapper);
+    setTokenWorldPositionForPoint(activeDrag.player, activeDrag.player.current, mapper);
   }
 
   function releaseDrag(): void {
@@ -232,35 +245,83 @@ export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<T
     activeDrag = null;
   }
 
-  function setPlayersToStart(): void {
+  function cloneSnapshot(snapshot: PhaseSnapshot): PhaseSnapshot {
+    return snapshot.map((point) => ({ x: point.x, y: point.y }));
+  }
+
+  function captureCurrentSnapshot(): PhaseSnapshot {
+    return players.map((player) => ({ x: player.current.x, y: player.current.y }));
+  }
+
+  function applySnapshotToPlayers(snapshot: PhaseSnapshot): void {
     for (const player of players) {
-      player.current = { ...player.start };
-      setTokenWorldPosition(player, mapper);
+      const point = snapshot[players.indexOf(player)];
+      if (!point) continue;
+      player.current = { x: point.x, y: point.y };
+      setTokenWorldPositionForPoint(player, player.current, mapper);
     }
   }
 
+  function cancelPlaybackAnimation(): void {
+    isPlaying = false;
+    playElapsedMs = 0;
+    playbackPath = [];
+    activeSegmentIndex = 0;
+  }
+
+  function startPlayback(path: PhaseSnapshot[]): void {
+    if (path.length < 2) return;
+    cancelPlaybackAnimation();
+    playbackPath = path;
+    activeSegmentIndex = 0;
+    isPlaying = true;
+    applySnapshotToPlayers(path[0]!);
+  }
+
   function stepPlayback(deltaMs: number): void {
-    if (!isPlaying) return;
-    playElapsedMs += deltaMs;
-    const progress = Math.max(0, Math.min(1, playElapsedMs / PLAY_DURATION_MS));
+    if (!isPlaying || playbackPath.length < 2) return;
 
-    for (const player of players) {
-      player.current = {
-        x: player.start.x + (player.target.x - player.start.x) * progress,
-        y: player.start.y + (player.target.y - player.start.y) * progress,
-      };
-      setTokenWorldPosition(player, mapper);
-    }
+    let remainingMs = deltaMs;
+    while (remainingMs > 0 && isPlaying) {
+      const fromSnapshot = playbackPath[activeSegmentIndex];
+      const toSnapshot = playbackPath[activeSegmentIndex + 1];
+      if (!fromSnapshot || !toSnapshot) {
+        cancelPlaybackAnimation();
+        return;
+      }
 
-    if (progress >= 1) {
-      isPlaying = false;
-      playElapsedMs = 0;
+      const stepMs = Math.min(remainingMs, PLAY_DURATION_MS - playElapsedMs);
+      playElapsedMs += stepMs;
+      remainingMs -= stepMs;
+      const progress = Math.max(0, Math.min(1, playElapsedMs / PLAY_DURATION_MS));
+
+      for (const player of players) {
+        const idx = players.indexOf(player);
+        const fromPoint = fromSnapshot[idx];
+        const toPoint = toSnapshot[idx];
+        if (!fromPoint || !toPoint) continue;
+        player.current = {
+          x: fromPoint.x + (toPoint.x - fromPoint.x) * progress,
+          y: fromPoint.y + (toPoint.y - fromPoint.y) * progress,
+        };
+        setTokenWorldPositionForPoint(player, player.current, mapper);
+      }
+
+      if (progress >= 1) {
+        applySnapshotToPlayers(toSnapshot);
+        activeSegmentIndex += 1;
+        playElapsedMs = 0;
+        if (activeSegmentIndex >= playbackPath.length - 1) {
+          cancelPlaybackAnimation();
+          return;
+        }
+      }
     }
   }
 
   for (const player of players) {
     setPlayerTouchHitArea(player, mapper);
-    setTokenWorldPosition(player, mapper);
+    setTokenWorldPositionForPoint(player, player.current, mapper);
 
     player.token.on("pointerdown", (event) => {
       if (isPlaying) return;
@@ -289,25 +350,35 @@ export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<T
   });
   resizeObserver.observe(host);
   fitToHost();
+  options.onPhaseCountChange?.(0);
 
   return {
     setStart: () => {
-      if (isPlaying) return;
-      for (const player of players) {
-        player.start = { ...player.current };
-      }
+      releaseDrag();
+      cancelPlaybackAnimation();
+      startPositions = captureCurrentSnapshot();
+      phases = [];
+      options.onPhaseCountChange?.(0);
+    },
+    addPhase: () => {
+      releaseDrag();
+      cancelPlaybackAnimation();
+      phases = [...phases, captureCurrentSnapshot()];
+      options.onPhaseCountChange?.(phases.length);
     },
     play: () => {
       releaseDrag();
-      isPlaying = true;
-      playElapsedMs = 0;
-      setPlayersToStart();
+      if (phases.length === 0) {
+        const playbackTarget = captureCurrentSnapshot();
+        startPlayback([cloneSnapshot(startPositions), playbackTarget]);
+        return;
+      }
+      startPlayback([cloneSnapshot(startPositions), ...phases.map((phase) => cloneSnapshot(phase))]);
     },
     reset: () => {
       releaseDrag();
-      isPlaying = false;
-      playElapsedMs = 0;
-      setPlayersToStart();
+      cancelPlaybackAnimation();
+      applySnapshotToPlayers(startPositions);
     },
     destroy: () => {
       resizeObserver.disconnect();
