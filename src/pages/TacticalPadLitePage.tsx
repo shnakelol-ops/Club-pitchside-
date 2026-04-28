@@ -24,6 +24,17 @@ type DragState = {
   moved: boolean;
 };
 
+function isLandscapeViewport(): boolean {
+  return window.innerWidth > window.innerHeight;
+}
+
+function defaultBubblePosition(): BubblePosition {
+  return {
+    x: window.innerWidth - BUBBLE_SIZE_PX - BUBBLE_MARGIN_PX,
+    y: Math.round(window.innerHeight * (isLandscapeViewport() ? 0.48 : 0.62)),
+  };
+}
+
 function clampBubbleToViewport(position: BubblePosition): BubblePosition {
   const maxX = Math.max(BUBBLE_MARGIN_PX, window.innerWidth - BUBBLE_MARGIN_PX - BUBBLE_SIZE_PX);
   const maxY = Math.max(BUBBLE_MARGIN_PX, window.innerHeight - BUBBLE_MARGIN_PX - BUBBLE_SIZE_PX);
@@ -83,14 +94,14 @@ export default function TacticalPadLitePage() {
   const dragStateRef = useRef<DragState | null>(null);
   const [phaseCount, setPhaseCount] = useState(0);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isLandscape, setIsLandscape] = useState(() =>
+    typeof window === "undefined" ? false : isLandscapeViewport(),
+  );
   const [bubblePosition, setBubblePosition] = useState<BubblePosition>(() => {
     if (typeof window === "undefined") {
       return { x: BUBBLE_MARGIN_PX, y: BUBBLE_MARGIN_PX };
     }
-    return {
-      x: window.innerWidth - BUBBLE_SIZE_PX - BUBBLE_MARGIN_PX,
-      y: Math.round(window.innerHeight * 0.62),
-    };
+    return defaultBubblePosition();
   });
 
   const phaseDots = useMemo(() => Array.from({ length: phaseCount }, (_, index) => index + 1), [phaseCount]);
@@ -131,15 +142,26 @@ export default function TacticalPadLitePage() {
   }, []);
 
   useEffect(() => {
-    updateBubbleForViewport();
     const handleResize = () => {
+      setIsLandscape(isLandscapeViewport());
       updateBubbleForViewport();
     };
+    handleResize();
     window.addEventListener("resize", handleResize);
     return () => {
       window.removeEventListener("resize", handleResize);
     };
   }, [updateBubbleForViewport]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setBubblePosition((previous) => {
+      if (!isLandscape) {
+        return keepBubbleAwayFromPitch(previous, pitchRectGetter());
+      }
+      return keepBubbleAwayFromPitch(defaultBubblePosition(), pitchRectGetter());
+    });
+  }, [isLandscape, pitchRectGetter]);
 
   const handleBubblePointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
     if (event.button !== 0) return;
@@ -193,12 +215,14 @@ export default function TacticalPadLitePage() {
   };
 
   return (
-    <div className="tactical-pad-lite">
+    <div
+      className={`tactical-pad-lite ${isLandscape ? "is-landscape" : "is-portrait"} ${isDrawerOpen ? "is-tools-open" : "is-tools-closed"}`}
+    >
       <div className="tactical-pad-lite__content">
-        <div className="tactical-pad-lite__pitch-shell">
-          <div ref={hostRef} className="tactical-pad-lite__pitch-host" />
-        </div>
-        <div className="tactical-pad-lite__safe-controls">
+        <div className="tactical-pad-lite__pitch-area">
+          <div className="tactical-pad-lite__pitch-shell">
+            <div ref={hostRef} className="tactical-pad-lite__pitch-host" />
+          </div>
           <div className="tactical-pad-lite__playback-strip">
             <button type="button" className={buttonClass} onClick={() => surfaceRef.current?.play()}>
               Play
@@ -210,29 +234,39 @@ export default function TacticalPadLitePage() {
               Reset
             </button>
           </div>
-          <div className={`tactical-pad-lite__drawer ${isDrawerOpen ? "is-open" : ""}`}>
-            <div className="tactical-pad-lite__drawer-inner">
-              <div className="tactical-pad-lite__drawer-row">
-                <button type="button" className={buttonClass} onClick={() => surfaceRef.current?.setStart()}>
-                  Set Start
-                </button>
-                <button type="button" className={buttonClass} onClick={() => surfaceRef.current?.addPhase()}>
-                  Add Phase
-                </button>
-                <div className="tactical-pad-lite__phase-count">Phases: {phaseCount}</div>
-              </div>
-              <div className="tactical-pad-lite__phase-dots-scroll">
-                <div className="tactical-pad-lite__phase-dots">
-                  {phaseDots.length > 0 ? (
-                    phaseDots.map((phase) => (
-                      <span key={phase} className="tactical-pad-lite__phase-dot" aria-label={`Phase ${phase}`}>
-                        {phase}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="tactical-pad-lite__phase-dot tactical-pad-lite__phase-dot--placeholder">No phases</span>
-                  )}
-                </div>
+        </div>
+        <div className={`tactical-pad-lite__drawer ${isDrawerOpen ? "is-open" : ""}`}>
+          <div className="tactical-pad-lite__drawer-inner">
+            <div className="tactical-pad-lite__drawer-header">
+              <strong className="tactical-pad-lite__drawer-title">Edit Tools</strong>
+              <button
+                type="button"
+                className={`${buttonClass} tactical-pad-lite__drawer-close`}
+                onClick={() => setIsDrawerOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+            <div className="tactical-pad-lite__drawer-row">
+              <button type="button" className={buttonClass} onClick={() => surfaceRef.current?.setStart()}>
+                Set Start
+              </button>
+              <button type="button" className={buttonClass} onClick={() => surfaceRef.current?.addPhase()}>
+                Add Phase
+              </button>
+              <div className="tactical-pad-lite__phase-count">Phases: {phaseCount}</div>
+            </div>
+            <div className="tactical-pad-lite__phase-dots-scroll">
+              <div className="tactical-pad-lite__phase-dots">
+                {phaseDots.length > 0 ? (
+                  phaseDots.map((phase) => (
+                    <span key={phase} className="tactical-pad-lite__phase-dot" aria-label={`Phase ${phase}`}>
+                      {phase}
+                    </span>
+                  ))
+                ) : (
+                  <span className="tactical-pad-lite__phase-dot tactical-pad-lite__phase-dot--placeholder">No phases</span>
+                )}
               </div>
             </div>
           </div>
