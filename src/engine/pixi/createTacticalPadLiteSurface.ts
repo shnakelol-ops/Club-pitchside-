@@ -184,7 +184,7 @@ export async function createTacticalPadLiteSurface(
   const PLAY_DURATION_MS = 1200;
   let isPlaying = false;
   let playElapsedMs = 0;
-  let playbackPath: PhaseSnapshot = [];
+  let playbackPath: PhaseSnapshot[] = [];
   let activeSegmentIndex = 0;
   let startPositions: PhaseSnapshot = players.map((player) => ({ ...player.current }));
   let phases: PhaseSnapshot[] = [];
