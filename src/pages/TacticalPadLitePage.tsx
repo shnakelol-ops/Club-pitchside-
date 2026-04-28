@@ -1,6 +1,9 @@
 import { useEffect, useRef, type CSSProperties } from "react";
 
-import { createTacticalPadLiteSurface } from "../engine/pixi/createTacticalPadLiteSurface";
+import {
+  createTacticalPadLiteSurface,
+  type TacticalPadLiteSurface,
+} from "../engine/pixi/createTacticalPadLiteSurface";
 
 const ROOT_STYLE: CSSProperties = {
   position: "fixed",
@@ -20,8 +23,31 @@ const BOARD_STYLE: CSSProperties = {
   background: "#13221d",
 };
 
+const CONTROLS_STYLE: CSSProperties = {
+  position: "fixed",
+  left: "50%",
+  bottom: "22px",
+  transform: "translateX(-50%)",
+  display: "flex",
+  gap: "10px",
+  zIndex: 5,
+};
+
+const BUTTON_STYLE: CSSProperties = {
+  border: "1px solid rgba(225, 243, 235, 0.48)",
+  borderRadius: "10px",
+  background: "rgba(10, 22, 18, 0.88)",
+  color: "#e7f6ee",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "13px",
+  fontWeight: 600,
+  padding: "8px 13px",
+  cursor: "pointer",
+};
+
 export default function TacticalPadLitePage() {
   const hostRef = useRef<HTMLDivElement | null>(null);
+  const surfaceRef = useRef<TacticalPadLiteSurface | null>(null);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -35,11 +61,13 @@ export default function TacticalPadLitePage() {
         surface.destroy();
         return;
       }
+      surfaceRef.current = surface;
       destroySurface = surface.destroy;
     });
 
     return () => {
       disposed = true;
+      surfaceRef.current = null;
       destroySurface?.();
     };
   }, []);
@@ -47,6 +75,17 @@ export default function TacticalPadLitePage() {
   return (
     <div style={ROOT_STYLE}>
       <div ref={hostRef} style={BOARD_STYLE} />
+      <div style={CONTROLS_STYLE}>
+        <button type="button" style={BUTTON_STYLE} onClick={() => surfaceRef.current?.setStart()}>
+          Set Start
+        </button>
+        <button type="button" style={BUTTON_STYLE} onClick={() => surfaceRef.current?.play()}>
+          Play
+        </button>
+        <button type="button" style={BUTTON_STYLE} onClick={() => surfaceRef.current?.reset()}>
+          Reset
+        </button>
+      </div>
     </div>
   );
 }
