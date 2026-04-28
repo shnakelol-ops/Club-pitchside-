@@ -10,11 +10,16 @@ import {
 type TacticalPlayer = {
   id: "P1" | "P2" | "P3";
   number: number;
-  position: NormalizedPoint;
+  current: NormalizedPoint;
+  start: NormalizedPoint;
+  target: NormalizedPoint;
   token: Container;
 };
 
 export type TacticalPadLiteSurface = {
+  setStart: () => void;
+  play: () => void;
+  reset: () => void;
   destroy: () => void;
 };
 
@@ -100,7 +105,7 @@ function createPlayerToken(number: number): Container {
 }
 
 function setTokenWorldPosition(player: TacticalPlayer, mapper: ReturnType<typeof createWorldViewport>): void {
-  const world = mapper.normalizedToWorld(player.position);
+  const world = mapper.normalizedToWorld(player.current);
   player.token.position.set(world.x, world.y);
 }
 
@@ -146,10 +151,16 @@ export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<T
     return {
       id: base.id,
       number: base.number,
-      position: { ...base.position },
+      current: { ...base.position },
+      start: { ...base.position },
+      target: { ...base.position },
       token,
     };
   });
+
+  const PLAY_DURATION_MS = 1200;
+  let isPlaying = false;
+  let playElapsedMs = 0;
 
   let activeDrag:
     | {
@@ -175,7 +186,7 @@ export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<T
   }
 
   function updateDraggedPlayerFromEvent(event: unknown): void {
-    if (!activeDrag) return;
+    if (!activeDrag || isPlaying) return;
 
     const stagePoint = (event as {
       data?: { getLocalPosition?: (target: Container) => { x: number; y: number } };
@@ -193,10 +204,11 @@ export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<T
     };
 
     const normalized = mapper.worldToNormalized(boundedWorld);
-    activeDrag.player.position = {
+    activeDrag.player.current = {
       x: Math.max(NORMALIZED_MIN, Math.min(NORMALIZED_MAX, normalized.x)),
       y: Math.max(NORMALIZED_MIN, Math.min(NORMALIZED_MAX, normalized.y)),
     };
+    activeDrag.player.target = { ...activeDrag.player.current };
     setTokenWorldPosition(activeDrag.player, mapper);
   }
 
@@ -206,10 +218,37 @@ export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<T
     activeDrag = null;
   }
 
+  function setPlayersToStart(): void {
+    for (const player of players) {
+      player.current = { ...player.start };
+      setTokenWorldPosition(player, mapper);
+    }
+  }
+
+  function stepPlayback(deltaMs: number): void {
+    if (!isPlaying) return;
+    playElapsedMs += deltaMs;
+    const progress = Math.max(0, Math.min(1, playElapsedMs / PLAY_DURATION_MS));
+
+    for (const player of players) {
+      player.current = {
+        x: player.start.x + (player.target.x - player.start.x) * progress,
+        y: player.start.y + (player.target.y - player.start.y) * progress,
+      };
+      setTokenWorldPosition(player, mapper);
+    }
+
+    if (progress >= 1) {
+      isPlaying = false;
+      playElapsedMs = 0;
+    }
+  }
+
   for (const player of players) {
     setTokenWorldPosition(player, mapper);
 
     player.token.on("pointerdown", (event) => {
+      if (isPlaying) return;
       activeDrag = { player };
       player.token.cursor = "grabbing";
       updateDraggedPlayerFromEvent(event);
@@ -226,6 +265,9 @@ export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<T
   app.stage.on("pointerupoutside", () => {
     releaseDrag();
   });
+  app.ticker.add(() => {
+    stepPlayback(app.ticker.deltaMS);
+  });
 
   const resizeObserver = new ResizeObserver(() => {
     fitToHost();
@@ -234,9 +276,28 @@ export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<T
   fitToHost();
 
   return {
+    setStart: () => {
+      if (isPlaying) return;
+      for (const player of players) {
+        player.start = { ...player.current };
+      }
+    },
+    play: () => {
+      releaseDrag();
+      isPlaying = true;
+      playElapsedMs = 0;
+      setPlayersToStart();
+    },
+    reset: () => {
+      releaseDrag();
+      isPlaying = false;
+      playElapsedMs = 0;
+      setPlayersToStart();
+    },
     destroy: () => {
       resizeObserver.disconnect();
       app.stage.removeAllListeners();
+      app.ticker.stop();
       for (const player of players) {
         player.token.removeAllListeners();
       }
