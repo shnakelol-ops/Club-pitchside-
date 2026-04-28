@@ -1,7 +1,8 @@
-import { useEffect, useRef, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 
 import {
   createTacticalPadLiteSurface,
+  type TacticalPlayerPositionSnapshot,
   type TacticalPadLiteSurface,
 } from "../engine/pixi/createTacticalPadLiteSurface";
 
@@ -29,7 +30,12 @@ const CONTROLS_STYLE: CSSProperties = {
   bottom: "22px",
   transform: "translateX(-50%)",
   display: "flex",
+  justifyContent: "center",
+  flexWrap: "wrap",
   gap: "10px",
+  rowGap: "8px",
+  width: "calc(100vw - 16px)",
+  maxWidth: "min(96vw, 1200px)",
   zIndex: 5,
 };
 
@@ -45,9 +51,26 @@ const BUTTON_STYLE: CSSProperties = {
   cursor: "pointer",
 };
 
+const PHASE_COUNT_STYLE: CSSProperties = {
+  position: "fixed",
+  top: "16px",
+  left: "16px",
+  zIndex: 5,
+  color: "#e7f6ee",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "13px",
+  fontWeight: 600,
+  background: "rgba(10, 22, 18, 0.78)",
+  border: "1px solid rgba(225, 243, 235, 0.35)",
+  borderRadius: "9px",
+  padding: "6px 10px",
+};
+
 export default function TacticalPadLitePage() {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const surfaceRef = useRef<TacticalPadLiteSurface | null>(null);
+  const phasesRef = useRef<TacticalPlayerPositionSnapshot[][]>([]);
+  const [phaseCount, setPhaseCount] = useState(0);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -75,7 +98,24 @@ export default function TacticalPadLitePage() {
   return (
     <div style={ROOT_STYLE}>
       <div ref={hostRef} style={BOARD_STYLE} />
+      <div style={PHASE_COUNT_STYLE}>Phases: {phaseCount}</div>
       <div style={CONTROLS_STYLE}>
+        <button
+          type="button"
+          style={BUTTON_STYLE}
+          onClick={() => {
+            const snapshot = surfaceRef.current?.getCurrentPlayerPositions();
+            if (!snapshot) return;
+            const deepCopiedSnapshot: TacticalPlayerPositionSnapshot[] = snapshot.map((player) => ({
+              id: player.id,
+              current: { ...player.current },
+            }));
+            phasesRef.current = [...phasesRef.current, deepCopiedSnapshot];
+            setPhaseCount(phasesRef.current.length);
+          }}
+        >
+          Add Phase
+        </button>
         <button type="button" style={BUTTON_STYLE} onClick={() => surfaceRef.current?.setStart()}>
           Set Start
         </button>
