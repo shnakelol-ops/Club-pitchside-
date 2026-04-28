@@ -30,7 +30,12 @@ const CONTROLS_STYLE: CSSProperties = {
   bottom: "22px",
   transform: "translateX(-50%)",
   display: "flex",
+  justifyContent: "center",
+  flexWrap: "wrap",
   gap: "10px",
+  rowGap: "8px",
+  width: "calc(100vw - 16px)",
+  maxWidth: "min(96vw, 1200px)",
   zIndex: 5,
 };
 
@@ -101,7 +106,11 @@ export default function TacticalPadLitePage() {
           onClick={() => {
             const snapshot = surfaceRef.current?.getCurrentPlayerPositions();
             if (!snapshot) return;
-            phasesRef.current = [...phasesRef.current, snapshot];
+            const deepCopiedSnapshot: TacticalPlayerPositionSnapshot[] = snapshot.map((player) => ({
+              id: player.id,
+              current: { ...player.current },
+            }));
+            phasesRef.current = [...phasesRef.current, deepCopiedSnapshot];
             setPhaseCount(phasesRef.current.length);
           }}
         >
