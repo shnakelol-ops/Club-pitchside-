@@ -2,6 +2,7 @@ import { Application, Container, Graphics, Text } from "pixi.js";
 
 import { createWorldViewport } from "./createWorldViewport";
 import {
+  clampNormalizedPoint,
   NORMALIZED_MAX,
   NORMALIZED_MIN,
   type NormalizedPoint,
@@ -20,6 +21,9 @@ export type TacticalPadLiteSurface = {
 
 const WORLD_SIZE = { width: 160, height: 100 } as const;
 const PLAYER_RADIUS = 4.1;
+const PATH_STROKE_WIDTH = 1.15;
+const PATH_STROKE_COLOR = 0xffe07a;
+const PATH_STROKE_ALPHA = 0.98;
 
 const INITIAL_PLAYERS: Array<{ id: "P1" | "P2" | "P3"; number: number; position: NormalizedPoint }> = [
   { id: "P1", number: 1, position: { x: 30, y: 50 } },
@@ -104,6 +108,19 @@ function setTokenWorldPosition(player: TacticalPlayer, mapper: ReturnType<typeof
   player.token.position.set(world.x, world.y);
 }
 
+function isWorldPointInsidePitch(point: { x: number; y: number }): boolean {
+  return point.x >= 0 && point.x <= WORLD_SIZE.width && point.y >= 0 && point.y <= WORLD_SIZE.height;
+}
+
+function getStagePointFromEvent(event: unknown, stage: Container): { x: number; y: number } | null {
+  const stagePoint = (event as {
+    data?: { getLocalPosition?: (target: Container) => { x: number; y: number } };
+    getLocalPosition?: (target: Container) => { x: number; y: number };
+  }).data?.getLocalPosition?.(stage) ??
+    (event as { getLocalPosition?: (target: Container) => { x: number; y: number } }).getLocalPosition?.(stage);
+  return stagePoint ?? null;
+}
+
 export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<TacticalPadLiteSurface> {
   const app = new Application();
   await app.init({
@@ -132,6 +149,9 @@ export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<T
   world.addChild(pitch);
   drawPitchBackground(pitch);
 
+  const pathGraphics = new Graphics();
+  world.addChild(pathGraphics);
+
   const playersLayer = new Container();
   world.addChild(playersLayer);
 
@@ -156,34 +176,166 @@ export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<T
         player: TacticalPlayer;
       }
     | null = null;
+  let isPathDrawing = false;
+  let activePathPoints: NormalizedPoint[] = [];
+  let hasClampedOutsidePoint = false;
 
-  function fitToHost(): void {
-    const width = host.clientWidth;
-    const height = host.clientHeight;
-    if (width <= 0 || height <= 0) return;
+  function drawPathLine(points: readonly NormalizedPoint[]): void {
+    pathGraphics.clear();
+    if (points.length < 2) return;
 
-    app.renderer.resolution = Math.min(2, window.devicePixelRatio || 1);
-    app.renderer.resize(width, height);
+    const worldPoints = points.map((point) => mapper.normalizedToWorld(point));
+    const firstPoint = worldPoints[0];
+    pathGraphics.moveTo(firstPoint.x, firstPoint.y);
 
-    mapper = createWorldViewport(WORLD_SIZE, { width, height });
-    world.scale.set(mapper.transform.scale, mapper.transform.scale);
-    world.position.set(mapper.transform.offsetX, mapper.transform.offsetY);
+    if (worldPoints.length === 2) {
+      const endPoint = worldPoints[1];
+      pathGraphics.lineTo(endPoint.x, endPoint.y);
+    } else {
+      for (let index = 1; index < worldPoints.length - 1; index += 1) {
+        const control = worldPoints[index];
+        const next = worldPoints[index + 1];
+        const midpointX = (control.x + next.x) * 0.5;
+        const midpointY = (control.y + next.y) * 0.5;
+        pathGraphics.quadraticCurveTo(control.x, control.y, midpointX, midpointY);
+      }
+      const penultimate = worldPoints[worldPoints.length - 2];
+      const last = worldPoints[worldPoints.length - 1];
+      pathGraphics.quadraticCurveTo(penultimate.x, penultimate.y, last.x, last.y);
+    }
 
+    pathGraphics.stroke({
+      color: PATH_STROKE_COLOR,
+      alpha: PATH_STROKE_ALPHA,
+      width: PATH_STROKE_WIDTH,
+      cap: "round",
+      join: "round",
+    });
+  }
+
+  function getNormalizedPointFromPointerEvent(
+    event: unknown,
+  ): { point: NormalizedPoint; wasClamped: boolean } | null {
+    const stagePoint = getStagePointFromEvent(event, app.stage);
+    if (!stagePoint) return null;
+
+    const worldPoint = mapper.viewportToWorld(stagePoint);
+    const isInside = isWorldPointInsidePitch(worldPoint);
+    const boundedWorld = isInside
+      ? worldPoint
+      : {
+          x: clampWorld(worldPoint.x, WORLD_SIZE.width),
+          y: clampWorld(worldPoint.y, WORLD_SIZE.height),
+        };
+
+    return {
+      point: clampNormalizedPoint(mapper.worldToNormalized(boundedWorld)),
+      wasClamped: !isInside,
+    };
+  }
+
+  function getPlayerAtPointerEvent(event: unknown): TacticalPlayer | null {
+    const stagePoint = getStagePointFromEvent(event, app.stage);
+    if (!stagePoint) return null;
+
+    const worldPoint = mapper.viewportToWorld(stagePoint);
     for (const player of players) {
-      setTokenWorldPosition(player, mapper);
+      const playerWorld = mapper.normalizedToWorld(player.position);
+      const dx = worldPoint.x - playerWorld.x;
+      const dy = worldPoint.y - playerWorld.y;
+      if (dx * dx + dy * dy <= PLAYER_RADIUS * PLAYER_RADIUS) {
+        return player;
+      }
+    }
+    return null;
+  }
+
+  function setPlayerInteractionEnabled(enabled: boolean): void {
+    const nextEventMode: Container["eventMode"] = enabled ? "static" : "none";
+    const nextCursor = enabled ? "grab" : "default";
+    for (const player of players) {
+      player.token.eventMode = nextEventMode;
+      if (!activeDrag || activeDrag.player !== player) {
+        player.token.cursor = nextCursor;
+      }
     }
   }
 
-  function updateDraggedPlayerFromEvent(event: unknown): void {
-    if (!activeDrag) return;
+  function startDragFromEvent(player: TacticalPlayer, event: unknown): void {
+    if (isPathDrawing) return;
+    activeDrag = { player };
+    player.token.cursor = "grabbing";
+    updateDraggedPlayerFromEvent(event);
+  }
 
-    const stagePoint = (event as {
-      data?: { getLocalPosition?: (target: Container) => { x: number; y: number } };
-      getLocalPosition?: (target: Container) => { x: number; y: number };
-    }).data?.getLocalPosition?.(app.stage) ??
-      (event as { getLocalPosition?: (target: Container) => { x: number; y: number } }).getLocalPosition?.(
-        app.stage,
-      );
+  function startPathFromEvent(event: unknown): void {
+    if (activeDrag) return;
+    const pointData = getNormalizedPointFromPointerEvent(event);
+    if (!pointData || pointData.wasClamped) return;
+    activePathPoints = [pointData.point];
+    isPathDrawing = true;
+    hasClampedOutsidePoint = false;
+    setPlayerInteractionEnabled(false);
+    drawPathLine(activePathPoints);
+  }
+
+  function extendPathFromEvent(event: unknown): void {
+    if (!isPathDrawing || activeDrag) return;
+    const pointData = getNormalizedPointFromPointerEvent(event);
+    if (!pointData) return;
+    if (pointData.wasClamped) {
+      if (hasClampedOutsidePoint) return;
+      hasClampedOutsidePoint = true;
+    } else {
+      hasClampedOutsidePoint = false;
+    }
+
+    const nextPoint = pointData.point;
+    const previous = activePathPoints[activePathPoints.length - 1];
+    if (!previous || (previous.x === nextPoint.x && previous.y === nextPoint.y)) {
+      return;
+    }
+    activePathPoints.push(nextPoint);
+    drawPathLine(activePathPoints);
+  }
+
+  function finishPath(): void {
+    if (!isPathDrawing) return;
+    isPathDrawing = false;
+    hasClampedOutsidePoint = false;
+    setPlayerInteractionEnabled(true);
+  }
+
+  function handleStagePointerDown(event: unknown): void {
+    if (activeDrag || isPathDrawing) return;
+    const hitPlayer = getPlayerAtPointerEvent(event);
+    if (hitPlayer) {
+      startDragFromEvent(hitPlayer, event);
+      return;
+    }
+    startPathFromEvent(event);
+  }
+
+  function releaseDrag(): void {
+    if (!activeDrag) return;
+    activeDrag.player.token.cursor = "grab";
+    activeDrag = null;
+  }
+
+  function handleStagePointerMove(event: unknown): void {
+    updateDraggedPlayerFromEvent(event);
+    extendPathFromEvent(event);
+  }
+
+  function handleStagePointerUp(): void {
+    releaseDrag();
+    finishPath();
+  }
+
+  function updateDraggedPlayerFromEvent(event: unknown): void {
+    if (!activeDrag || isPathDrawing) return;
+
+    const stagePoint = getStagePointFromEvent(event, app.stage);
     if (!stagePoint) return;
 
     const worldPoint = mapper.viewportToWorld({ x: stagePoint.x, y: stagePoint.y });
@@ -200,31 +352,48 @@ export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<T
     setTokenWorldPosition(activeDrag.player, mapper);
   }
 
-  function releaseDrag(): void {
-    if (!activeDrag) return;
-    activeDrag.player.token.cursor = "grab";
-    activeDrag = null;
+  function fitToHost(): void {
+    const width = host.clientWidth;
+    const height = host.clientHeight;
+    if (width <= 0 || height <= 0) return;
+
+    app.renderer.resolution = Math.min(2, window.devicePixelRatio || 1);
+    app.renderer.resize(width, height);
+
+    mapper = createWorldViewport(WORLD_SIZE, { width, height });
+    world.scale.set(mapper.transform.scale, mapper.transform.scale);
+    world.position.set(mapper.transform.offsetX, mapper.transform.offsetY);
+
+    for (const player of players) {
+      setTokenWorldPosition(player, mapper);
+    }
+    drawPathLine(activePathPoints);
   }
 
   for (const player of players) {
     setTokenWorldPosition(player, mapper);
-
     player.token.on("pointerdown", (event) => {
-      activeDrag = { player };
-      player.token.cursor = "grabbing";
-      updateDraggedPlayerFromEvent(event);
+      if (isPathDrawing) {
+        (event as { stopPropagation?: () => void }).stopPropagation?.();
+        return;
+      }
+      startDragFromEvent(player, event);
       (event as { stopPropagation?: () => void }).stopPropagation?.();
     });
   }
+  setPlayerInteractionEnabled(true);
 
   app.stage.on("pointermove", (event) => {
-    updateDraggedPlayerFromEvent(event);
+    handleStagePointerMove(event);
+  });
+  app.stage.on("pointerdown", (event) => {
+    handleStagePointerDown(event);
   });
   app.stage.on("pointerup", () => {
-    releaseDrag();
+    handleStagePointerUp();
   });
   app.stage.on("pointerupoutside", () => {
-    releaseDrag();
+    handleStagePointerUp();
   });
 
   const resizeObserver = new ResizeObserver(() => {
