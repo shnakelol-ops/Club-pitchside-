@@ -1,6 +1,7 @@
 import { Application, Container, Graphics, Text } from "pixi.js";
 
 import { createWorldViewport } from "./createWorldViewport";
+import { createTacticalPitchVisualRoot } from "../../tactical-lite/pixi/renderTacticalPitch";
 import {
   NORMALIZED_MAX,
   NORMALIZED_MIN,
@@ -43,30 +44,6 @@ function clampWorld(value: number, max: number): number {
   if (value < 0) return 0;
   if (value > max) return max;
   return value;
-}
-
-function drawPitchBackground(pitch: Graphics): void {
-  pitch.clear();
-  pitch.roundRect(0, 0, WORLD_SIZE.width, WORLD_SIZE.height, 3.5).fill({ color: 0x204e39 });
-
-  pitch.roundRect(0.8, 0.8, WORLD_SIZE.width - 1.6, WORLD_SIZE.height - 1.6, 2.9).stroke({
-    color: 0xe2f7ea,
-    alpha: 0.95,
-    width: 0.6,
-  });
-
-  const centerLineX = WORLD_SIZE.width * 0.5;
-  pitch.moveTo(centerLineX, 1.4).lineTo(centerLineX, WORLD_SIZE.height - 1.4).stroke({
-    color: 0xe2f7ea,
-    alpha: 0.85,
-    width: 0.45,
-  });
-
-  pitch.circle(centerLineX, WORLD_SIZE.height * 0.5, 9.5).stroke({
-    color: 0xe2f7ea,
-    alpha: 0.8,
-    width: 0.45,
-  });
 }
 
 function createPlayerToken(number: number): Container {
@@ -158,9 +135,8 @@ export async function createTacticalPadLiteSurface(
   const world = new Container();
   app.stage.addChild(world);
 
-  const pitch = new Graphics();
-  world.addChild(pitch);
-  drawPitchBackground(pitch);
+  const pitchMount = createTacticalPitchVisualRoot("gaelic");
+  world.addChild(pitchMount.root);
 
   const playersLayer = new Container();
   world.addChild(playersLayer);
@@ -411,6 +387,7 @@ export async function createTacticalPadLiteSurface(
       resizeObserver.disconnect();
       app.stage.removeAllListeners();
       app.ticker.stop();
+      pitchMount.dispose();
       for (const player of players) {
         player.token.removeAllListeners();
       }
