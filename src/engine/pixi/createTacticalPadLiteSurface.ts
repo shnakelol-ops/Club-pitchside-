@@ -25,6 +25,7 @@ export type TacticalPadLiteSurface = {
 
 const WORLD_SIZE = { width: 160, height: 100 } as const;
 const PLAYER_RADIUS = 4.1;
+const PLAYER_TOUCH_HIT_DIAMETER_PX = 48;
 
 const INITIAL_PLAYERS: Array<{ id: "P1" | "P2" | "P3"; number: number; position: NormalizedPoint }> = [
   { id: "P1", number: 1, position: { x: 30, y: 50 } },
@@ -104,6 +105,18 @@ function createPlayerToken(number: number): Container {
   return token;
 }
 
+function setPlayerTouchHitArea(
+  player: TacticalPlayer,
+  mapper: ReturnType<typeof createWorldViewport>,
+): void {
+  const touchRadiusInWorld = (PLAYER_TOUCH_HIT_DIAMETER_PX * 0.5) / mapper.transform.scale;
+  const hitRadius = Math.max(PLAYER_RADIUS, touchRadiusInWorld);
+  const hitRadiusSquared = hitRadius * hitRadius;
+  player.token.hitArea = {
+    contains: (x: number, y: number) => x * x + y * y <= hitRadiusSquared,
+  };
+}
+
 function setTokenWorldPosition(player: TacticalPlayer, mapper: ReturnType<typeof createWorldViewport>): void {
   const world = mapper.normalizedToWorld(player.current);
   player.token.position.set(world.x, world.y);
@@ -181,6 +194,7 @@ export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<T
     world.position.set(mapper.transform.offsetX, mapper.transform.offsetY);
 
     for (const player of players) {
+      setPlayerTouchHitArea(player, mapper);
       setTokenWorldPosition(player, mapper);
     }
   }
@@ -245,6 +259,7 @@ export async function createTacticalPadLiteSurface(host: HTMLElement): Promise<T
   }
 
   for (const player of players) {
+    setPlayerTouchHitArea(player, mapper);
     setTokenWorldPosition(player, mapper);
 
     player.token.on("pointerdown", (event) => {
