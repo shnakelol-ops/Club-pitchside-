@@ -15,13 +15,6 @@
   box-sizing: border-box;
 }
 
-.tactical-pad-lite__pitch-area {
-  min-height: 0;
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
-  gap: 8px;
-}
-
 .tactical-pad-lite__pitch-shell {
   min-height: 0;
   display: flex;
@@ -35,6 +28,12 @@
   overflow: hidden;
   box-shadow: 0 20px 44px rgba(0, 0, 0, 0.38);
   background: #13221d;
+}
+
+.tactical-pad-lite__safe-controls {
+  display: grid;
+  gap: 8px;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 2px);
 }
 
 .tactical-pad-lite__playback-strip {
@@ -69,10 +68,8 @@
 }
 
 .tactical-pad-lite__drawer {
-  min-height: 0;
   max-height: 0;
   overflow: hidden;
-  width: 100%;
   border-top-left-radius: 16px;
   border-top-right-radius: 16px;
   border: 1px solid transparent;
@@ -94,22 +91,6 @@
   padding: 10px;
   max-height: min(36vh, 270px);
   overflow: auto;
-}
-
-.tactical-pad-lite__drawer-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-}
-
-.tactical-pad-lite__drawer-title {
-  font-size: 13px;
-  letter-spacing: 0.01em;
-}
-
-.tactical-pad-lite__drawer-close {
-  margin-left: auto;
 }
 
 .tactical-pad-lite__drawer-row {
@@ -193,7 +174,7 @@
 
 .tactical-pad-lite.is-landscape .tactical-pad-lite__content {
   grid-template-columns: minmax(0, 1fr) 0;
-  grid-template-rows: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
   align-items: stretch;
 }
 
@@ -201,9 +182,17 @@
   grid-template-columns: minmax(0, 1fr) clamp(260px, 30vw, 320px);
 }
 
+.tactical-pad-lite.is-landscape .tactical-pad-lite__safe-controls {
+  grid-column: 1;
+  grid-row: 2;
+}
+
 .tactical-pad-lite.is-landscape .tactical-pad-lite__drawer {
-  height: 100%;
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  width: 100%;
   max-height: 100%;
+  min-height: 0;
   border-radius: 16px;
   border-color: transparent;
   transform: translateX(100%);
@@ -215,15 +204,35 @@
     border-color 180ms ease;
 }
 
+.tactical-pad-lite.is-landscape .tactical-pad-lite__drawer {
+  height: 100%;
+}
+
+.tactical-pad-lite.is-landscape .tactical-pad-lite__drawer-inner {
+  max-height: 100%;
+}
+
+.tactical-pad-lite.is-landscape .tactical-pad-lite__drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.tactical-pad-lite.is-landscape .tactical-pad-lite__drawer-title {
+  font-size: 13px;
+  letter-spacing: 0.01em;
+}
+
+.tactical-pad-lite.is-landscape .tactical-pad-lite__drawer-close {
+  margin-left: auto;
+}
+
 .tactical-pad-lite.is-landscape.is-tools-open .tactical-pad-lite__drawer {
   transform: translateX(0);
   opacity: 1;
   pointer-events: auto;
   border-color: rgba(216, 236, 228, 0.22);
-}
-
-.tactical-pad-lite.is-landscape .tactical-pad-lite__drawer-inner {
-  max-height: 100%;
 }
 
 .tactical-pad-lite.is-landscape .tactical-pad-lite__playback-strip {
