@@ -10,7 +10,8 @@ const PORTRAIT_BUBBLE_SIZE_PX = 42;
 const LANDSCAPE_BUBBLE_SIZE_PX = 38;
 const BUBBLE_MARGIN_PX = 12;
 const SAFE_GAP_PX = 8;
-const MIN_LANDSCAPE_WIDTH_FOR_SIDE_PANEL_PX = 600;
+const MIN_SPACE_RIGHT_FOR_SIDE_PANEL_PX = 200;
+const PLAYABLE_PITCH_ASPECT_RATIO = 160 / 100;
 
 type BubblePosition = {
   x: number;
@@ -26,12 +27,29 @@ type DragState = {
   moved: boolean;
 };
 
+type PitchMetrics = {
+  left: number;
+  right: number;
+  width: number;
+  availableRight: number;
+  availableBelow: number;
+};
+
 function isLandscapeViewport(): boolean {
   return window.innerWidth > window.innerHeight;
 }
 
-function shouldUseLandscapeSidePanel(): boolean {
-  return isLandscapeViewport() && window.innerWidth >= MIN_LANDSCAPE_WIDTH_FOR_SIDE_PANEL_PX;
+function getPlayablePitchRect(hostRect: DOMRect): DOMRect {
+  const hostAspect = hostRect.width / Math.max(1, hostRect.height);
+  if (hostAspect >= PLAYABLE_PITCH_ASPECT_RATIO) {
+    const width = hostRect.height * PLAYABLE_PITCH_ASPECT_RATIO;
+    const left = hostRect.left + (hostRect.width - width) * 0.5;
+    return new DOMRect(left, hostRect.top, width, hostRect.height);
+  }
+
+  const height = hostRect.width / PLAYABLE_PITCH_ASPECT_RATIO;
+  const top = hostRect.top + (hostRect.height - height) * 0.5;
+  return new DOMRect(hostRect.left, top, hostRect.width, height);
 }
 
 function clampBubbleToViewport(position: BubblePosition, bubbleSizePx: number): BubblePosition {
@@ -104,15 +122,14 @@ export default function TacticalPadLitePage() {
   const surfaceRef = useRef<TacticalPadLiteSurface | null>(null);
   const playbackStripRef = useRef<HTMLDivElement | null>(null);
   const drawerRef = useRef<HTMLDivElement | null>(null);
+  const pitchMetricsRef = useRef<PitchMetrics | null>(null);
   const dragStateRef = useRef<DragState | null>(null);
   const [phaseCount, setPhaseCount] = useState(0);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isLandscape, setIsLandscape] = useState(() =>
     typeof window === "undefined" ? false : isLandscapeViewport(),
   );
-  const [usesLandscapeSidePanel, setUsesLandscapeSidePanel] = useState(() =>
-    typeof window === "undefined" ? false : shouldUseLandscapeSidePanel(),
-  );
+  const [usesLandscapeSidePanel, setUsesLandscapeSidePanel] = useState(false);
   const [bubblePosition, setBubblePosition] = useState<BubblePosition>(() => {
     if (typeof window === "undefined") {
       return { x: BUBBLE_MARGIN_PX, y: BUBBLE_MARGIN_PX };
@@ -127,11 +144,41 @@ export default function TacticalPadLitePage() {
   const buttonClass = "tactical-pad-lite__button";
   const bubbleSizePx = isLandscape ? LANDSCAPE_BUBBLE_SIZE_PX : PORTRAIT_BUBBLE_SIZE_PX;
 
+  const getPitchMeasurement = useCallback((): { pitchRect: DOMRect; metrics: PitchMetrics } | null => {
+    const hostRect = hostRef.current?.getBoundingClientRect();
+    if (!hostRect) {
+      pitchMetricsRef.current = null;
+      return null;
+    }
+    const pitchRect = getPlayablePitchRect(hostRect);
+    const metrics: PitchMetrics = {
+      left: pitchRect.left,
+      right: pitchRect.right,
+      width: pitchRect.width,
+      availableRight: Math.max(0, window.innerWidth - pitchRect.right - BUBBLE_MARGIN_PX),
+      availableBelow: Math.max(0, window.innerHeight - pitchRect.bottom - BUBBLE_MARGIN_PX),
+    };
+    pitchMetricsRef.current = metrics;
+    return { pitchRect, metrics };
+  }, []);
+
+  const evaluateLandscapeLayout = useCallback(() => {
+    const landscape = isLandscapeViewport();
+    setIsLandscape(landscape);
+    if (!landscape) {
+      setUsesLandscapeSidePanel(false);
+      return;
+    }
+    const measurement = getPitchMeasurement();
+    const availableRight = measurement?.metrics.availableRight ?? 0;
+    setUsesLandscapeSidePanel(availableRight >= MIN_SPACE_RIGHT_FOR_SIDE_PANEL_PX);
+  }, [getPitchMeasurement]);
+
   const getBlockedRects = useCallback((): DOMRect[] => {
     const blockedRects: DOMRect[] = [];
-    const pitchRect = hostRef.current?.getBoundingClientRect();
-    if (pitchRect) {
-      blockedRects.push(pitchRect);
+    const measurement = getPitchMeasurement();
+    if (measurement) {
+      blockedRects.push(measurement.pitchRect);
     }
     if (!isLandscape) {
       return blockedRects;
@@ -147,7 +194,7 @@ export default function TacticalPadLitePage() {
       }
     }
     return blockedRects;
-  }, [isDrawerOpen, isLandscape, usesLandscapeSidePanel]);
+  }, [getPitchMeasurement, isDrawerOpen, isLandscape, usesLandscapeSidePanel]);
 
   const updateBubbleForViewport = useCallback(() => {
     setBubblePosition((previous) => keepBubbleAwayFromRects(previous, bubbleSizePx, getBlockedRects()));
@@ -184,8 +231,7 @@ export default function TacticalPadLitePage() {
 
   useEffect(() => {
     const handleResize = () => {
-      setIsLandscape(isLandscapeViewport());
-      setUsesLandscapeSidePanel(shouldUseLandscapeSidePanel());
+      evaluateLandscapeLayout();
       updateBubbleForViewport();
     };
     handleResize();
@@ -193,7 +239,20 @@ export default function TacticalPadLitePage() {
     return () => {
       window.removeEventListener("resize", handleResize);
     };
-  }, [updateBubbleForViewport]);
+  }, [evaluateLandscapeLayout, updateBubbleForViewport]);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+    const resizeObserver = new ResizeObserver(() => {
+      evaluateLandscapeLayout();
+      updateBubbleForViewport();
+    });
+    resizeObserver.observe(host);
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [evaluateLandscapeLayout, updateBubbleForViewport]);
 
   useEffect(() => {
     if (!isLandscape) return;
@@ -268,7 +327,7 @@ export default function TacticalPadLitePage() {
     isLandscape ? "is-landscape" : "",
     isLandscape ? (isDrawerOpen ? "is-tools-open" : "is-tools-closed") : "",
     isLandscape && usesLandscapeSidePanel ? "is-landscape-side" : "",
-    isLandscape && !usesLandscapeSidePanel ? "is-landscape-compact" : "",
+    isLandscape && !usesLandscapeSidePanel ? "is-landscape-bottom-fallback" : "",
   ]
     .filter(Boolean)
     .join(" ");
