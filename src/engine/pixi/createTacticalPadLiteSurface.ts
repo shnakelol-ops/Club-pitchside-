@@ -345,6 +345,11 @@ export async function createTacticalPadLiteSurface(
           cancelPlaybackAnimation();
           return;
         }
+        // Avoid a boundary stall when a segment ends exactly on a frame.
+        // Carry a tiny delta so the next segment begins in the same tick.
+        if (remainingMs <= 0) {
+          remainingMs = 0.0001;
+        }
       }
     }
   }
