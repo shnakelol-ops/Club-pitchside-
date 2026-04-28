@@ -179,12 +179,14 @@
 }
 
 .tactical-pad-lite.is-landscape.is-tools-open .tactical-pad-lite__content {
-  grid-template-columns: minmax(0, 1fr) clamp(260px, 30vw, 320px);
+  grid-template-columns: minmax(0, 1fr) clamp(220px, 26vw, 260px);
 }
 
 .tactical-pad-lite.is-landscape .tactical-pad-lite__safe-controls {
   grid-column: 1;
   grid-row: 2;
+  gap: 6px;
+  padding-bottom: 0;
 }
 
 .tactical-pad-lite.is-landscape .tactical-pad-lite__drawer {
@@ -210,6 +212,8 @@
 
 .tactical-pad-lite.is-landscape .tactical-pad-lite__drawer-inner {
   max-height: 100%;
+  padding: 8px;
+  gap: 8px;
 }
 
 .tactical-pad-lite.is-landscape .tactical-pad-lite__drawer-header {
@@ -237,4 +241,56 @@
 
 .tactical-pad-lite.is-landscape .tactical-pad-lite__playback-strip {
   flex-wrap: nowrap;
+  min-height: 42px;
+  max-height: 56px;
+  padding: 5px 8px;
+  gap: 6px;
+}
+
+.tactical-pad-lite.is-landscape .tactical-pad-lite__playback-strip .tactical-pad-lite__button {
+  font-size: 12px;
+  padding: 6px 9px;
+  border-radius: 8px;
+}
+
+.tactical-pad-lite.is-landscape .tactical-pad-lite__bubble {
+  width: 44px;
+  height: 44px;
+}
+
+.tactical-pad-lite.is-landscape .tactical-pad-lite__bubble-label {
+  font-size: 10px;
+}
+
+/* Fallback: if side panel would squeeze pitch, keep controls below pitch. */
+.tactical-pad-lite.is-landscape.is-landscape-compact .tactical-pad-lite__content {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+
+.tactical-pad-lite.is-landscape.is-landscape-compact .tactical-pad-lite__safe-controls {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.tactical-pad-lite.is-landscape.is-landscape-compact .tactical-pad-lite__drawer {
+  grid-column: 1;
+  grid-row: 2;
+  height: auto;
+  max-height: 0;
+  border-radius: 14px 14px 0 0;
+  transform: translateY(100%);
+}
+
+.tactical-pad-lite.is-landscape.is-landscape-compact.is-tools-open .tactical-pad-lite__drawer {
+  max-height: min(34vh, 220px);
+  transform: translateY(0);
+}
+
+.tactical-pad-lite.is-landscape.is-landscape-compact .tactical-pad-lite__drawer-inner {
+  max-height: min(34vh, 220px);
+}
+
+.tactical-pad-lite.is-landscape.is-landscape-compact .tactical-pad-lite__playback-strip {
+  margin-bottom: 0;
 }

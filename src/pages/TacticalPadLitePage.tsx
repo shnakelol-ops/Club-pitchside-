@@ -6,9 +6,13 @@ import {
 } from "../engine/pixi/createTacticalPadLiteSurface";
 import "./tactical-pad-lite-shell.css";
 
-const BUBBLE_SIZE_PX = 54;
+const PORTRAIT_BUBBLE_SIZE_PX = 54;
+const LANDSCAPE_BUBBLE_SIZE_PX = 44;
 const BUBBLE_MARGIN_PX = 12;
 const SAFE_GAP_PX = 8;
+const LANDSCAPE_PANEL_TARGET_WIDTH_PX = 240;
+const MIN_PITCH_WIDTH_FOR_SIDE_PANEL_PX = 520;
+const LANDSCAPE_LAYOUT_GUTTER_PX = 34;
 
 type BubblePosition = {
   x: number;
@@ -28,85 +32,130 @@ function isLandscapeViewport(): boolean {
   return window.innerWidth > window.innerHeight;
 }
 
-function clampBubbleToViewport(position: BubblePosition): BubblePosition {
-  const maxX = Math.max(BUBBLE_MARGIN_PX, window.innerWidth - BUBBLE_MARGIN_PX - BUBBLE_SIZE_PX);
-  const maxY = Math.max(BUBBLE_MARGIN_PX, window.innerHeight - BUBBLE_MARGIN_PX - BUBBLE_SIZE_PX);
+function shouldUseLandscapeSidePanel(): boolean {
+  if (!isLandscapeViewport()) return false;
+  const usableWidth = window.innerWidth - LANDSCAPE_LAYOUT_GUTTER_PX;
+  return usableWidth - LANDSCAPE_PANEL_TARGET_WIDTH_PX >= MIN_PITCH_WIDTH_FOR_SIDE_PANEL_PX;
+}
+
+function clampBubbleToViewport(position: BubblePosition, bubbleSizePx: number): BubblePosition {
+  const maxX = Math.max(BUBBLE_MARGIN_PX, window.innerWidth - BUBBLE_MARGIN_PX - bubbleSizePx);
+  const maxY = Math.max(BUBBLE_MARGIN_PX, window.innerHeight - BUBBLE_MARGIN_PX - bubbleSizePx);
   return {
     x: Math.min(Math.max(position.x, BUBBLE_MARGIN_PX), maxX),
     y: Math.min(Math.max(position.y, BUBBLE_MARGIN_PX), maxY),
   };
 }
 
-function intersectsPitch(position: BubblePosition, pitchRect: DOMRect): boolean {
+function intersectsRect(position: BubblePosition, bubbleSizePx: number, blockedRect: DOMRect): boolean {
   const bubbleLeft = position.x;
   const bubbleTop = position.y;
-  const bubbleRight = bubbleLeft + BUBBLE_SIZE_PX;
-  const bubbleBottom = bubbleTop + BUBBLE_SIZE_PX;
+  const bubbleRight = bubbleLeft + bubbleSizePx;
+  const bubbleBottom = bubbleTop + bubbleSizePx;
   return !(
-    bubbleRight <= pitchRect.left ||
-    bubbleLeft >= pitchRect.right ||
-    bubbleBottom <= pitchRect.top ||
-    bubbleTop >= pitchRect.bottom
+    bubbleRight <= blockedRect.left ||
+    bubbleLeft >= blockedRect.right ||
+    bubbleBottom <= blockedRect.top ||
+    bubbleTop >= blockedRect.bottom
   );
 }
 
-function keepBubbleAwayFromPitch(position: BubblePosition, pitchRect: DOMRect | null): BubblePosition {
-  const clamped = clampBubbleToViewport(position);
-  if (!pitchRect || !intersectsPitch(clamped, pitchRect)) {
+function keepBubbleAwayFromRects(
+  position: BubblePosition,
+  bubbleSizePx: number,
+  blockedRects: DOMRect[],
+): BubblePosition {
+  const clamped = clampBubbleToViewport(position, bubbleSizePx);
+  if (blockedRects.length === 0 || blockedRects.every((rect) => !intersectsRect(clamped, bubbleSizePx, rect))) {
     return clamped;
   }
 
-  const maxX = Math.max(BUBBLE_MARGIN_PX, window.innerWidth - BUBBLE_MARGIN_PX - BUBBLE_SIZE_PX);
-  const maxY = Math.max(BUBBLE_MARGIN_PX, window.innerHeight - BUBBLE_MARGIN_PX - BUBBLE_SIZE_PX);
-  const candidates: BubblePosition[] = [
-    {
-      x: Math.min(Math.max(pitchRect.right + SAFE_GAP_PX, BUBBLE_MARGIN_PX), maxX),
-      y: clamped.y,
-    },
-    {
-      x: Math.min(Math.max(pitchRect.left - BUBBLE_SIZE_PX - SAFE_GAP_PX, BUBBLE_MARGIN_PX), maxX),
-      y: clamped.y,
-    },
-    {
-      x: clamped.x,
-      y: Math.min(Math.max(pitchRect.bottom + SAFE_GAP_PX, BUBBLE_MARGIN_PX), maxY),
-    },
-    {
-      x: clamped.x,
-      y: Math.min(Math.max(pitchRect.top - BUBBLE_SIZE_PX - SAFE_GAP_PX, BUBBLE_MARGIN_PX), maxY),
-    },
-  ];
-
-  const safeCandidate = candidates.find((candidate) => !intersectsPitch(candidate, pitchRect));
-  return safeCandidate ?? clamped;
+  const maxX = Math.max(BUBBLE_MARGIN_PX, window.innerWidth - BUBBLE_MARGIN_PX - bubbleSizePx);
+  const maxY = Math.max(BUBBLE_MARGIN_PX, window.innerHeight - BUBBLE_MARGIN_PX - bubbleSizePx);
+  let resolved = clamped;
+  for (const blockedRect of blockedRects) {
+    if (!intersectsRect(resolved, bubbleSizePx, blockedRect)) continue;
+    const candidates: BubblePosition[] = [
+      {
+        x: Math.min(Math.max(blockedRect.right + SAFE_GAP_PX, BUBBLE_MARGIN_PX), maxX),
+        y: resolved.y,
+      },
+      {
+        x: Math.min(Math.max(blockedRect.left - bubbleSizePx - SAFE_GAP_PX, BUBBLE_MARGIN_PX), maxX),
+        y: resolved.y,
+      },
+      {
+        x: resolved.x,
+        y: Math.min(Math.max(blockedRect.top - bubbleSizePx - SAFE_GAP_PX, BUBBLE_MARGIN_PX), maxY),
+      },
+      {
+        x: resolved.x,
+        y: Math.min(Math.max(blockedRect.bottom + SAFE_GAP_PX, BUBBLE_MARGIN_PX), maxY),
+      },
+    ];
+    const safeCandidate = candidates.find((candidate) =>
+      blockedRects.every((rect) => !intersectsRect(candidate, bubbleSizePx, rect)),
+    );
+    if (safeCandidate) {
+      resolved = safeCandidate;
+    }
+  }
+  return resolved;
 }
 
 export default function TacticalPadLitePage() {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const surfaceRef = useRef<TacticalPadLiteSurface | null>(null);
+  const playbackStripRef = useRef<HTMLDivElement | null>(null);
+  const drawerRef = useRef<HTMLDivElement | null>(null);
   const dragStateRef = useRef<DragState | null>(null);
   const [phaseCount, setPhaseCount] = useState(0);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isLandscape, setIsLandscape] = useState(() =>
     typeof window === "undefined" ? false : isLandscapeViewport(),
   );
+  const [usesLandscapeSidePanel, setUsesLandscapeSidePanel] = useState(() =>
+    typeof window === "undefined" ? false : shouldUseLandscapeSidePanel(),
+  );
   const [bubblePosition, setBubblePosition] = useState<BubblePosition>(() => {
     if (typeof window === "undefined") {
       return { x: BUBBLE_MARGIN_PX, y: BUBBLE_MARGIN_PX };
     }
     return {
-      x: window.innerWidth - BUBBLE_SIZE_PX - BUBBLE_MARGIN_PX,
+      x: window.innerWidth - PORTRAIT_BUBBLE_SIZE_PX - BUBBLE_MARGIN_PX,
       y: Math.round(window.innerHeight * 0.62),
     };
   });
 
   const phaseDots = useMemo(() => Array.from({ length: phaseCount }, (_, index) => index + 1), [phaseCount]);
   const buttonClass = "tactical-pad-lite__button";
-  const pitchRectGetter = useCallback(() => hostRef.current?.getBoundingClientRect() ?? null, []);
+  const bubbleSizePx = isLandscape ? LANDSCAPE_BUBBLE_SIZE_PX : PORTRAIT_BUBBLE_SIZE_PX;
+
+  const getBlockedRects = useCallback((): DOMRect[] => {
+    const blockedRects: DOMRect[] = [];
+    const pitchRect = hostRef.current?.getBoundingClientRect();
+    if (pitchRect) {
+      blockedRects.push(pitchRect);
+    }
+    if (!isLandscape) {
+      return blockedRects;
+    }
+    const playbackRect = playbackStripRef.current?.getBoundingClientRect();
+    if (playbackRect) {
+      blockedRects.push(playbackRect);
+    }
+    if (usesLandscapeSidePanel && isDrawerOpen) {
+      const drawerRect = drawerRef.current?.getBoundingClientRect();
+      if (drawerRect) {
+        blockedRects.push(drawerRect);
+      }
+    }
+    return blockedRects;
+  }, [isDrawerOpen, isLandscape, usesLandscapeSidePanel]);
 
   const updateBubbleForViewport = useCallback(() => {
-    setBubblePosition((previous) => keepBubbleAwayFromPitch(previous, pitchRectGetter()));
-  }, [pitchRectGetter]);
+    setBubblePosition((previous) => keepBubbleAwayFromRects(previous, bubbleSizePx, getBlockedRects()));
+  }, [bubbleSizePx, getBlockedRects]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -140,6 +189,7 @@ export default function TacticalPadLitePage() {
   useEffect(() => {
     const handleResize = () => {
       setIsLandscape(isLandscapeViewport());
+      setUsesLandscapeSidePanel(shouldUseLandscapeSidePanel());
       updateBubbleForViewport();
     };
     handleResize();
@@ -152,15 +202,16 @@ export default function TacticalPadLitePage() {
   useEffect(() => {
     if (!isLandscape) return;
     setBubblePosition(() =>
-      keepBubbleAwayFromPitch(
+      keepBubbleAwayFromRects(
         {
-          x: window.innerWidth - BUBBLE_SIZE_PX - BUBBLE_MARGIN_PX,
-          y: Math.round(window.innerHeight * 0.48),
+          x: window.innerWidth - LANDSCAPE_BUBBLE_SIZE_PX - BUBBLE_MARGIN_PX,
+          y: Math.round(window.innerHeight * 0.34),
         },
-        pitchRectGetter(),
+        LANDSCAPE_BUBBLE_SIZE_PX,
+        getBlockedRects(),
       ),
     );
-  }, [isLandscape, pitchRectGetter]);
+  }, [getBlockedRects, isLandscape, usesLandscapeSidePanel]);
 
   const handleBubblePointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
     if (event.button !== 0) return;
@@ -179,10 +230,13 @@ export default function TacticalPadLitePage() {
     const dragState = dragStateRef.current;
     if (!dragState || event.pointerId !== dragState.pointerId) return;
 
-    const nextPosition = clampBubbleToViewport({
-      x: dragState.bubbleStartX + (event.clientX - dragState.pointerStartX),
-      y: dragState.bubbleStartY + (event.clientY - dragState.pointerStartY),
-    });
+    const nextPosition = clampBubbleToViewport(
+      {
+        x: dragState.bubbleStartX + (event.clientX - dragState.pointerStartX),
+        y: dragState.bubbleStartY + (event.clientY - dragState.pointerStartY),
+      },
+      bubbleSizePx,
+    );
     const movedDistance = Math.abs(event.clientX - dragState.pointerStartX) + Math.abs(event.clientY - dragState.pointerStartY);
     dragStateRef.current = {
       ...dragState,
@@ -202,7 +256,7 @@ export default function TacticalPadLitePage() {
       setIsDrawerOpen((isOpen) => !isOpen);
       return;
     }
-    setBubblePosition((previous) => keepBubbleAwayFromPitch(previous, pitchRectGetter()));
+    setBubblePosition((previous) => keepBubbleAwayFromRects(previous, bubbleSizePx, getBlockedRects()));
   };
 
   const cancelBubbleInteraction = (event: ReactPointerEvent<HTMLButtonElement>) => {
@@ -210,13 +264,15 @@ export default function TacticalPadLitePage() {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
     dragStateRef.current = null;
-    setBubblePosition((previous) => keepBubbleAwayFromPitch(previous, pitchRectGetter()));
+    setBubblePosition((previous) => keepBubbleAwayFromRects(previous, bubbleSizePx, getBlockedRects()));
   };
 
   const rootClassName = [
     "tactical-pad-lite",
     isLandscape ? "is-landscape" : "",
     isLandscape ? (isDrawerOpen ? "is-tools-open" : "is-tools-closed") : "",
+    isLandscape && usesLandscapeSidePanel ? "is-landscape-side" : "",
+    isLandscape && !usesLandscapeSidePanel ? "is-landscape-compact" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -228,7 +284,7 @@ export default function TacticalPadLitePage() {
           <div ref={hostRef} className="tactical-pad-lite__pitch-host" />
         </div>
         <div className="tactical-pad-lite__safe-controls">
-          <div className="tactical-pad-lite__playback-strip">
+          <div ref={playbackStripRef} className="tactical-pad-lite__playback-strip">
             <button type="button" className={buttonClass} onClick={() => surfaceRef.current?.play()}>
               Play
             </button>
@@ -239,7 +295,7 @@ export default function TacticalPadLitePage() {
               Reset
             </button>
           </div>
-          <div className={`tactical-pad-lite__drawer ${isDrawerOpen ? "is-open" : ""}`}>
+          <div ref={drawerRef} className={`tactical-pad-lite__drawer ${isDrawerOpen ? "is-open" : ""}`}>
             <div className="tactical-pad-lite__drawer-inner">
               <div className="tactical-pad-lite__drawer-row">
                 <button type="button" className={buttonClass} onClick={() => surfaceRef.current?.setStart()}>
