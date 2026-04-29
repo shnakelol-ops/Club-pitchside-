@@ -8,7 +8,7 @@ import {
 const ROOT_STYLE: CSSProperties = {
   position: "fixed",
   inset: 0,
-  background: "#0b1110",
+  background: "linear-gradient(to bottom, #030914, #02070d)",
   margin: 0,
   padding: "4px",
   boxSizing: "border-box",
@@ -30,38 +30,38 @@ const BACKGROUND_BASE_STYLE: CSSProperties = {
   position: "absolute",
   inset: 0,
   background:
-    "radial-gradient(circle at center, rgba(34, 197, 94, 0.15) 0%, rgba(0, 0, 0, 0.9) 70%), linear-gradient(to bottom, #020617, #020617)",
+    "radial-gradient(circle at 50% 46%, rgba(56, 189, 112, 0.24) 0%, rgba(12, 28, 22, 0.28) 32%, rgba(3, 8, 14, 0.9) 74%), radial-gradient(ellipse at 50% 78%, rgba(20, 82, 52, 0.24) 0%, rgba(2, 8, 12, 0) 68%), linear-gradient(to bottom, #020617, #020617)",
 };
 
 const BACKGROUND_VIGNETTE_STYLE: CSSProperties = {
   position: "absolute",
   inset: 0,
   background:
-    "radial-gradient(circle at center, rgba(0, 0, 0, 0) 45%, rgba(0, 0, 0, 0.42) 100%)",
+    "radial-gradient(circle at center, rgba(0, 0, 0, 0) 42%, rgba(0, 0, 0, 0.56) 100%)",
 };
 
 const STADIUM_LIGHT_BASE_STYLE: CSSProperties = {
   position: "absolute",
-  width: "42vw",
-  height: "42vw",
-  minWidth: "220px",
-  minHeight: "220px",
+  width: "48vw",
+  height: "48vw",
+  minWidth: "260px",
+  minHeight: "260px",
   borderRadius: "999px",
-  filter: "blur(96px)",
-  opacity: 0.2,
-  background: "radial-gradient(circle, rgba(168, 243, 192, 0.35) 0%, rgba(34, 197, 94, 0) 72%)",
+  filter: "blur(110px)",
+  opacity: 0.24,
+  background: "radial-gradient(circle, rgba(187, 247, 208, 0.46) 0%, rgba(52, 211, 153, 0.08) 38%, rgba(34, 197, 94, 0) 74%)",
 };
 
 const STADIUM_LIGHT_LEFT_STYLE: CSSProperties = {
   ...STADIUM_LIGHT_BASE_STYLE,
-  top: "-14vw",
-  left: "-10vw",
+  top: "-18vw",
+  left: "-13vw",
 };
 
 const STADIUM_LIGHT_RIGHT_STYLE: CSSProperties = {
   ...STADIUM_LIGHT_BASE_STYLE,
-  top: "-14vw",
-  right: "-10vw",
+  top: "-18vw",
+  right: "-13vw",
 };
 
 const CONTENT_STYLE: CSSProperties = {
