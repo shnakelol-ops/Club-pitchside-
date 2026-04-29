@@ -105,6 +105,18 @@ const STADIUM_FLOODLIGHT_CSS = `
   transform: rotate(-24deg);
 }
 
+.simulator-container::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background:
+    radial-gradient(ellipse at 15% 0%, rgba(255, 255, 255, 0.18), transparent 35%),
+    radial-gradient(ellipse at 85% 0%, rgba(255, 255, 255, 0.18), transparent 35%),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.18), transparent 40%);
+}
+
 @media (max-width: 700px) and (orientation: portrait) {
   .stadium-light {
     top: 5%;
