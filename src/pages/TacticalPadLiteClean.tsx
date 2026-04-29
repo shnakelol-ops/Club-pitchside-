@@ -117,6 +117,55 @@ const STADIUM_FLOODLIGHT_CSS = `
     linear-gradient(to bottom, rgba(0, 0, 0, 0.18), transparent 40%);
 }
 
+.floating-bubble {
+  transition: transform 140ms ease, filter 140ms ease;
+}
+
+.floating-bubble:hover,
+.floating-bubble:active {
+  transform: scale(1.04);
+  filter: brightness(1.1);
+}
+
+.floating-bubble-tool {
+  background: rgba(5, 8, 10, 0.92);
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.55),
+    inset 0 1px 2px rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.96);
+}
+
+.floating-bubble-tool:hover,
+.floating-bubble-tool:active {
+  transform: scale(0.96);
+  filter: brightness(1.15);
+}
+
+.tool-bubble-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.tool-bubble-mark-svg {
+  width: 24px;
+  height: 24px;
+  display: block;
+}
+
+.control-button {
+  transition: transform 140ms ease, filter 140ms ease;
+}
+
+.control-button:hover,
+.control-button:active {
+  transform: scale(1.04);
+  filter: brightness(1.1);
+}
+
 @media (max-width: 700px) and (orientation: portrait) {
   .stadium-light {
     top: 5%;
@@ -195,14 +244,17 @@ const BUBBLE_BASE_STYLE: CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  color: "#e7f4ee",
+  color: "rgba(255, 255, 255, 0.95)",
   fontFamily: "Inter, system-ui, sans-serif",
   fontSize: "10.5px",
   fontWeight: 600,
-  border: "1px solid rgba(216, 226, 222, 0.22)",
-  backdropFilter: "blur(10px)",
-  WebkitBackdropFilter: "blur(10px)",
-  boxShadow: "0 8px 20px rgba(0, 0, 0, 0.22)",
+  letterSpacing: "0.3px",
+  border: "1px solid rgba(255, 255, 255, 0.25)",
+  background: "rgba(20, 25, 30, 0.65)",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+  boxShadow:
+    "0 6px 20px rgba(0, 0, 0, 0.45), 0 0 18px rgba(255, 255, 255, 0.12), inset 0 1px 2px rgba(255, 255, 255, 0.25)",
   cursor: "pointer",
   zIndex: 20,
 };
@@ -211,16 +263,19 @@ const LEFT_BUBBLE_STYLE: CSSProperties = {
   ...BUBBLE_BASE_STYLE,
   left: "max(12px, calc(env(safe-area-inset-left, 0px) + 10px))",
   bottom: "max(12px, calc(env(safe-area-inset-bottom, 0px) + 10px))",
-  background: "rgba(255, 80, 80, 0.08)",
-  border: "1px solid rgba(255, 114, 114, 0.25)",
 };
 
 const RIGHT_BUBBLE_STYLE: CSSProperties = {
   ...BUBBLE_BASE_STYLE,
   right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
   bottom: "max(12px, calc(env(safe-area-inset-bottom, 0px) + 10px))",
-  background: "rgba(80, 255, 140, 0.08)",
-  border: "1px solid rgba(110, 230, 156, 0.25)",
+};
+
+const TOOL_BUBBLE_STYLE: CSSProperties = {
+  ...RIGHT_BUBBLE_STYLE,
+  background: "rgba(5, 8, 10, 0.92)",
+  border: "2px solid rgba(255, 255, 255, 0.18)",
+  boxShadow: "0 8px 24px rgba(0, 0, 0, 0.55), inset 0 1px 2px rgba(255, 255, 255, 0.18)",
 };
 
 const POPOUT_BASE_STYLE: CSSProperties = {
@@ -272,16 +327,19 @@ const CONTROL_BUTTON_STYLE: CSSProperties = {
   height: "34px",
   minWidth: "78px",
   borderRadius: "10px",
-  border: "1px solid rgba(233, 146, 146, 0.2)",
-  background: "rgba(26, 20, 20, 0.52)",
-  color: "#f0e7e7",
+  border: "1px solid rgba(255, 255, 255, 0.25)",
+  background: "rgba(20, 25, 30, 0.65)",
+  color: "rgba(255, 255, 255, 0.95)",
   fontFamily: "Inter, system-ui, sans-serif",
   fontSize: "11px",
-  fontWeight: 560,
-  letterSpacing: "0.01em",
+  fontWeight: 600,
+  letterSpacing: "0.3px",
   padding: "0 10px",
   cursor: "pointer",
-  boxShadow: "inset 0 0 0 1px rgba(236, 154, 154, 0.05)",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+  boxShadow:
+    "0 6px 20px rgba(0, 0, 0, 0.45), 0 0 18px rgba(255, 255, 255, 0.12), inset 0 1px 2px rgba(255, 255, 255, 0.25)",
   flex: "0 0 auto",
 };
 
@@ -289,6 +347,33 @@ const DISABLED_CONTROL_BUTTON_STYLE: CSSProperties = {
   ...CONTROL_BUTTON_STYLE,
   opacity: 0.4,
   cursor: "not-allowed",
+};
+
+const SET_START_BUTTON_STYLE: CSSProperties = {
+  ...CONTROL_BUTTON_STYLE,
+  boxShadow:
+    "0 6px 20px rgba(0, 0, 0, 0.45), 0 0 20px rgba(255, 255, 255, 0.2), inset 0 1px 2px rgba(255, 255, 255, 0.25)",
+};
+
+const ADD_PHASE_BUTTON_STYLE: CSSProperties = {
+  ...CONTROL_BUTTON_STYLE,
+  border: "1px solid rgba(59, 130, 246, 0.6)",
+  boxShadow:
+    "0 6px 20px rgba(0, 0, 0, 0.45), 0 0 18px rgba(59, 130, 246, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.25)",
+};
+
+const PLAY_BUTTON_STYLE: CSSProperties = {
+  ...CONTROL_BUTTON_STYLE,
+  border: "1px solid rgba(34, 197, 94, 0.6)",
+  boxShadow:
+    "0 6px 20px rgba(0, 0, 0, 0.45), 0 0 18px rgba(34, 197, 94, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.25)",
+};
+
+const RESET_BUTTON_STYLE: CSSProperties = {
+  ...CONTROL_BUTTON_STYLE,
+  border: "1px solid rgba(239, 68, 68, 0.6)",
+  boxShadow:
+    "0 6px 20px rgba(0, 0, 0, 0.45), 0 0 18px rgba(239, 68, 68, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.25)",
 };
 
 const TOOLS_BUTTON_STYLE: CSSProperties = {
@@ -463,8 +548,9 @@ export default function TacticalPadLiteClean() {
         <div style={CONTROLS_POPOUT_STYLE}>
           <button
             type="button"
+            className="control-button"
             disabled={isPlaying}
-            style={isPlaying ? DISABLED_CONTROL_BUTTON_STYLE : CONTROL_BUTTON_STYLE}
+            style={isPlaying ? DISABLED_CONTROL_BUTTON_STYLE : SET_START_BUTTON_STYLE}
             onClick={() => {
               surfaceRef.current?.setStart();
               closeControlsMenu();
@@ -474,8 +560,9 @@ export default function TacticalPadLiteClean() {
           </button>
           <button
             type="button"
+            className="control-button"
             disabled={isPlaying}
-            style={isPlaying ? DISABLED_CONTROL_BUTTON_STYLE : CONTROL_BUTTON_STYLE}
+            style={isPlaying ? DISABLED_CONTROL_BUTTON_STYLE : ADD_PHASE_BUTTON_STYLE}
             onClick={() => {
               surfaceRef.current?.addPhase();
               closeControlsMenu();
@@ -483,12 +570,13 @@ export default function TacticalPadLiteClean() {
           >
             Add Phase
           </button>
-          <button type="button" style={CONTROL_BUTTON_STYLE} onClick={togglePlay}>
+          <button type="button" className="control-button" style={PLAY_BUTTON_STYLE} onClick={togglePlay}>
             Play
           </button>
           <button
             type="button"
-            style={CONTROL_BUTTON_STYLE}
+            className="control-button"
+            style={RESET_BUTTON_STYLE}
             onClick={() => {
               surfaceRef.current?.reset();
               setIsPlaying(false);
@@ -520,6 +608,7 @@ export default function TacticalPadLiteClean() {
       ) : null}
       <button
         type="button"
+        className="floating-bubble"
         style={LEFT_BUBBLE_STYLE}
         aria-label="Open controls"
         onClick={() => setControlsOpen((open) => !open)}
@@ -528,11 +617,55 @@ export default function TacticalPadLiteClean() {
       </button>
       <button
         type="button"
-        style={RIGHT_BUBBLE_STYLE}
+        className="floating-bubble floating-bubble-tool"
+        style={TOOL_BUBBLE_STYLE}
         aria-label="Open tools"
         onClick={() => setToolsOpen((open) => !open)}
       >
-        Tool
+        <span className="tool-bubble-icon" aria-hidden="true">
+          <svg className="tool-bubble-mark-svg" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M7 8h9.2c4.5 0 7.4 2.8 7.4 6.6 0 3.8-2.9 6.5-7.4 6.5H12.4"
+              fill="none"
+              stroke="rgba(255,255,255,0.94)"
+              strokeWidth="2.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M7 8v2.7M12.4 10.8v16.2"
+              fill="none"
+              stroke="rgba(255,255,255,0.94)"
+              strokeWidth="2.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M4.8 28.4C4.8 21 8.8 14.5 15.8 14.5 22.8 14.5 27.2 18.8 27.2 24.5"
+              fill="none"
+              stroke="rgba(255,255,255,0.9)"
+              strokeWidth="2.1"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M8.8 28.7c-2.3-0.1-4.2-1.7-4.2-4.2 0-2.9 2.2-5 5.3-5h9.2"
+              fill="none"
+              stroke="rgba(255,255,255,0.9)"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M20.7 22.4l3.1 1.8-3.5 1.1"
+              fill="none"
+              stroke="#F4C542"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </span>
       </button>
     </div>
   );
