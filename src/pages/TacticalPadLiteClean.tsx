@@ -10,12 +10,12 @@ const ROOT_STYLE: CSSProperties = {
   width: "100%",
   minHeight: "100vh",
   background: "#0b1110",
-  padding: "16px",
+  padding: "8px",
   boxSizing: "border-box",
 };
 
 const CONTENT_STYLE: CSSProperties = {
-  width: "min(96vw, 1200px)",
+  width: "min(98vw, 1280px)",
   margin: "0 auto",
   display: "flex",
   flexDirection: "column",
@@ -23,7 +23,7 @@ const CONTENT_STYLE: CSSProperties = {
 
 const PITCH_STYLE: CSSProperties = {
   width: "100%",
-  height: "min(80vh, 760px)",
+  height: "min(calc(100vh - 94px), 860px)",
   borderRadius: "12px",
   overflow: "hidden",
   boxShadow: "0 20px 44px rgba(0, 0, 0, 0.38)",
