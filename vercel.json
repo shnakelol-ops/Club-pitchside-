@@ -7,6 +7,14 @@
     {
       "source": "/tacticalpad-lite/(.*)",
       "destination": "/index.html"
+    },
+    {
+      "source": "/tacticalpad-lite-clean",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/tacticalpad-lite-clean/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
