@@ -31,14 +31,14 @@ const BACKGROUND_BASE_STYLE: CSSProperties = {
   position: "absolute",
   inset: 0,
   background:
-    "linear-gradient(135deg, rgba(220, 238, 242, 1) 0%, rgba(180, 210, 220, 1) 45%, rgba(120, 170, 195, 1) 100%)",
+    "radial-gradient(circle at top left, rgba(0, 120, 100, 0.08), transparent 60%), radial-gradient(circle at top right, rgba(0, 120, 100, 0.08), transparent 60%), linear-gradient(to bottom, rgba(0, 0, 0, 0) 60%, rgba(0, 80, 60, 0.12) 100%), linear-gradient(135deg, rgba(220, 238, 242, 1) 0%, rgba(180, 210, 220, 1) 45%, rgba(120, 170, 195, 1) 100%)",
 };
 
 const BACKGROUND_VIGNETTE_STYLE: CSSProperties = {
   position: "absolute",
   inset: 0,
   background:
-    "radial-gradient(circle at center, rgba(0, 0, 0, 0) 60%, rgba(0, 0, 0, 0.08) 100%)",
+    "radial-gradient(circle at center, rgba(0, 0, 0, 0) 65%, rgba(0, 0, 0, 0.1) 100%)",
 };
 
 const STADIUM_LIGHT_BASE_STYLE: CSSProperties = {
@@ -47,25 +47,22 @@ const STADIUM_LIGHT_BASE_STYLE: CSSProperties = {
   height: "72vw",
   minWidth: "300px",
   minHeight: "300px",
-  filter: "blur(2px)",
-  opacity: 0.38,
+  filter: "blur(18px)",
+  opacity: 0.3,
   background:
-    "linear-gradient(145deg, rgba(255, 255, 255, 0.42) 0%, rgba(224, 241, 247, 0.18) 46%, rgba(197, 224, 234, 0) 86%)",
-  clipPath: "polygon(10% 0%, 100% 0%, 78% 78%, 0% 100%)",
+    "radial-gradient(circle, rgba(0, 120, 100, 0.08) 0%, rgba(0, 120, 100, 0) 60%)",
 };
 
 const STADIUM_LIGHT_LEFT_STYLE: CSSProperties = {
   ...STADIUM_LIGHT_BASE_STYLE,
-  top: "-30vw",
-  left: "-24vw",
-  transform: "rotate(-13deg)",
+  top: "-34vw",
+  left: "-30vw",
 };
 
 const STADIUM_LIGHT_RIGHT_STYLE: CSSProperties = {
   ...STADIUM_LIGHT_BASE_STYLE,
-  top: "-30vw",
-  right: "-24vw",
-  transform: "rotate(13deg)",
+  top: "-34vw",
+  right: "-30vw",
 };
 
 const STADIUM_BEAM_BASE_STYLE: CSSProperties = {
