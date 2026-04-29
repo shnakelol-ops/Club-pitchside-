@@ -11,8 +11,9 @@ const ROOT_STYLE: CSSProperties = {
   minHeight: "100vh",
   background: "#0b1110",
   display: "flex",
+  flexDirection: "column",
   alignItems: "center",
-  justifyContent: "center",
+  justifyContent: "flex-start",
   padding: "16px",
   boxSizing: "border-box",
 };
@@ -34,6 +35,7 @@ const PITCH_STYLE: CSSProperties = {
 };
 
 const CONTROL_BAR_STYLE: CSSProperties = {
+  position: "static",
   display: "flex",
   gap: "8px",
   maxWidth: "90%",
