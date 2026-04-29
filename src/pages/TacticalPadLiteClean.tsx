@@ -96,8 +96,8 @@ const CONTROLS_POPOUT_STYLE: CSSProperties = {
   overflowY: "hidden",
   whiteSpace: "nowrap",
   flexWrap: "nowrap",
-  background: "rgba(22, 17, 18, 0.66)",
-  border: "1px solid rgba(255, 118, 118, 0.22)",
+  background: "rgba(20, 16, 17, 0.58)",
+  border: "1px solid rgba(238, 146, 146, 0.16)",
 };
 
 const TOOLS_POPOUT_STYLE: CSSProperties = {
@@ -111,16 +111,16 @@ const TOOLS_POPOUT_STYLE: CSSProperties = {
   overflowX: "hidden",
   right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
   bottom: "max(60px, calc(env(safe-area-inset-bottom, 0px) + 58px))",
-  background: "rgba(11, 20, 16, 0.66)",
-  border: "1px solid rgba(108, 226, 150, 0.22)",
+  background: "rgba(14, 24, 19, 0.56)",
+  border: "1px solid rgba(126, 192, 150, 0.16)",
 };
 
 const CONTROL_BUTTON_STYLE: CSSProperties = {
   height: "34px",
   minWidth: "78px",
   borderRadius: "10px",
-  border: "1px solid rgba(255, 124, 124, 0.28)",
-  background: "rgba(28, 20, 21, 0.56)",
+  border: "1px solid rgba(233, 146, 146, 0.2)",
+  background: "rgba(26, 20, 20, 0.52)",
   color: "#f0e7e7",
   fontFamily: "Inter, system-ui, sans-serif",
   fontSize: "11px",
@@ -128,7 +128,7 @@ const CONTROL_BUTTON_STYLE: CSSProperties = {
   letterSpacing: "0.01em",
   padding: "0 10px",
   cursor: "pointer",
-  boxShadow: "inset 0 0 0 1px rgba(255, 142, 142, 0.08)",
+  boxShadow: "inset 0 0 0 1px rgba(236, 154, 154, 0.05)",
   flex: "0 0 auto",
 };
 
@@ -142,8 +142,8 @@ const TOOLS_BUTTON_STYLE: CSSProperties = {
   height: "32px",
   minWidth: "100%",
   borderRadius: "9px",
-  border: "1px solid rgba(110, 226, 150, 0.24)",
-  background: "rgba(13, 24, 18, 0.56)",
+  border: "1px solid rgba(129, 192, 151, 0.16)",
+  background: "rgba(14, 25, 19, 0.5)",
   color: "#dff3e6",
   fontFamily: "Inter, system-ui, sans-serif",
   fontSize: "10px",
@@ -259,6 +259,7 @@ export default function TacticalPadLiteClean() {
   };
 
   const phaseItems = Array.from({ length: phaseCount }, (_, index) => index + 1);
+  const closeControlsMenu = () => setControlsOpen(false);
   const closeToolsMenu = () => setToolsOpen(false);
 
   return (
@@ -293,7 +294,10 @@ export default function TacticalPadLiteClean() {
             type="button"
             disabled={isPlaying}
             style={isPlaying ? DISABLED_CONTROL_BUTTON_STYLE : CONTROL_BUTTON_STYLE}
-            onClick={() => surfaceRef.current?.setStart()}
+            onClick={() => {
+              surfaceRef.current?.setStart();
+              closeControlsMenu();
+            }}
           >
             Set Start
           </button>
@@ -301,7 +305,10 @@ export default function TacticalPadLiteClean() {
             type="button"
             disabled={isPlaying}
             style={isPlaying ? DISABLED_CONTROL_BUTTON_STYLE : CONTROL_BUTTON_STYLE}
-            onClick={() => surfaceRef.current?.addPhase()}
+            onClick={() => {
+              surfaceRef.current?.addPhase();
+              closeControlsMenu();
+            }}
           >
             Add Phase
           </button>
@@ -314,6 +321,7 @@ export default function TacticalPadLiteClean() {
             onClick={() => {
               surfaceRef.current?.reset();
               setIsPlaying(false);
+              closeControlsMenu();
             }}
           >
             Reset
