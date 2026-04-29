@@ -659,7 +659,7 @@ export default function TacticalPadLiteClean() {
             <path
               d="M20.7 22.4l3.1 1.8-3.5 1.1"
               fill="none"
-              stroke="rgba(255,255,255,0.92)"
+              stroke="#F4C542"
               strokeWidth="1.8"
               strokeLinecap="round"
               strokeLinejoin="round"
