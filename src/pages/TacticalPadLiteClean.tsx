@@ -38,17 +38,93 @@ const BACKGROUND_VIGNETTE_STYLE: CSSProperties = {
   position: "absolute",
   inset: 0,
   background:
-    "radial-gradient(circle at center, rgba(0, 0, 0, 0) 60%, rgba(0, 0, 0, 0.18) 100%)",
+    "radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 42%, rgba(4, 12, 18, 0.28) 68%, rgba(0, 0, 0, 0.62) 100%)",
 };
 
-const STADIUM_LIGHT_OVERLAY_STYLE: CSSProperties = {
-  position: "absolute",
-  inset: 0,
-  pointerEvents: "none",
-  zIndex: 0,
-  background:
-    "radial-gradient(circle at 20% 5%, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 22%), radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0) 28%), radial-gradient(circle at 80% 5%, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 22%)",
-};
+const STADIUM_FLOODLIGHT_CSS = `
+.stadium-light {
+  position: absolute;
+  top: 6%;
+  width: 88px;
+  height: 70px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 7px;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.95;
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.75))
+    drop-shadow(0 0 28px rgba(180, 235, 255, 0.55));
+}
+
+.stadium-light span {
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow:
+    0 0 10px rgba(255, 255, 255, 0.9),
+    0 0 22px rgba(185, 235, 255, 0.65);
+}
+
+.stadium-light-left {
+  left: 2.5%;
+  transform: rotate(14deg);
+}
+
+.stadium-light-right {
+  right: 2.5%;
+  transform: rotate(-14deg);
+}
+
+.stadium-light::before {
+  content: "";
+  position: absolute;
+  top: 18px;
+  width: 210px;
+  height: 220px;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at top,
+    rgba(210, 240, 255, 0.28) 0%,
+    rgba(160, 220, 235, 0.16) 35%,
+    rgba(100, 180, 190, 0.08) 58%,
+    transparent 78%
+  );
+  filter: blur(22px);
+  z-index: -1;
+}
+
+.stadium-light-left::before {
+  left: -25px;
+  transform: rotate(24deg);
+}
+
+.stadium-light-right::before {
+  right: -25px;
+  transform: rotate(-24deg);
+}
+
+@media (max-width: 700px) and (orientation: portrait) {
+  .stadium-light {
+    top: 5%;
+    width: 62px;
+    height: 50px;
+    gap: 5px;
+  }
+
+  .stadium-light span {
+    width: 8px;
+    height: 8px;
+  }
+
+  .stadium-light::before {
+    width: 150px;
+    height: 160px;
+    top: 14px;
+  }
+}
+`;
 
 const STADIUM_BEAM_BASE_STYLE: CSSProperties = {
   position: "absolute",
@@ -324,14 +400,25 @@ export default function TacticalPadLiteClean() {
   };
 
   const phaseItems = Array.from({ length: phaseCount }, (_, index) => index + 1);
+  const floodlightDots = Array.from({ length: 12 }, (_, index) => index);
   const closeControlsMenu = () => setControlsOpen(false);
   const closeToolsMenu = () => setToolsOpen(false);
 
   return (
-    <div style={ROOT_STYLE}>
+    <div style={ROOT_STYLE} className="simulator-container">
+      <style>{STADIUM_FLOODLIGHT_CSS}</style>
       <div style={BACKGROUND_LAYER_STYLE} aria-hidden="true">
         <div style={BACKGROUND_BASE_STYLE} />
-        <div style={STADIUM_LIGHT_OVERLAY_STYLE} />
+        <div className="stadium-light stadium-light-left" aria-hidden="true">
+          {floodlightDots.map((dot) => (
+            <span key={`left-light-${dot}`} />
+          ))}
+        </div>
+        <div className="stadium-light stadium-light-right" aria-hidden="true">
+          {floodlightDots.map((dot) => (
+            <span key={`right-light-${dot}`} />
+          ))}
+        </div>
         <div style={STADIUM_BEAM_LEFT_STYLE} />
         <div style={STADIUM_BEAM_RIGHT_STYLE} />
         <div style={BACKGROUND_VIGNETTE_STYLE} />
