@@ -41,23 +41,13 @@ const BACKGROUND_VIGNETTE_STYLE: CSSProperties = {
     "radial-gradient(circle at center, rgba(0, 0, 0, 0) 60%, rgba(0, 0, 0, 0.18) 100%)",
 };
 
-const STADIUM_LIGHT_BASE_STYLE: CSSProperties = {
+const STADIUM_LIGHT_OVERLAY_STYLE: CSSProperties = {
   position: "absolute",
   inset: 0,
   pointerEvents: "none",
   zIndex: 0,
-};
-
-const STADIUM_LIGHT_LEFT_STYLE: CSSProperties = {
-  ...STADIUM_LIGHT_BASE_STYLE,
   background:
-    "radial-gradient(circle at 18% 8%, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0) 20%)",
-};
-
-const STADIUM_LIGHT_RIGHT_STYLE: CSSProperties = {
-  ...STADIUM_LIGHT_BASE_STYLE,
-  background:
-    "radial-gradient(circle at 82% 8%, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0) 20%)",
+    "radial-gradient(circle at 20% 5%, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 22%), radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0) 28%), radial-gradient(circle at 80% 5%, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 22%)",
 };
 
 const STADIUM_BEAM_BASE_STYLE: CSSProperties = {
@@ -341,8 +331,7 @@ export default function TacticalPadLiteClean() {
     <div style={ROOT_STYLE}>
       <div style={BACKGROUND_LAYER_STYLE} aria-hidden="true">
         <div style={BACKGROUND_BASE_STYLE} />
-        <div style={STADIUM_LIGHT_LEFT_STYLE} />
-        <div style={STADIUM_LIGHT_RIGHT_STYLE} />
+        <div style={STADIUM_LIGHT_OVERLAY_STYLE} />
         <div style={STADIUM_BEAM_LEFT_STYLE} />
         <div style={STADIUM_BEAM_RIGHT_STYLE} />
         <div style={BACKGROUND_VIGNETTE_STYLE} />
