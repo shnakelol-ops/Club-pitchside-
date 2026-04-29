@@ -625,25 +625,42 @@ export default function TacticalPadLiteClean() {
         <span className="tool-bubble-icon" aria-hidden="true">
           <svg className="tool-bubble-mark-svg" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
             <path
-              d="M10 25V6.5h8.7c4.7 0 7.5 2.7 7.5 6.6s-2.8 6.5-7.5 6.5H14.2"
+              d="M7 8h9.2c4.5 0 7.4 2.8 7.4 6.6 0 3.8-2.9 6.5-7.4 6.5H12.4"
               fill="none"
               stroke="rgba(255,255,255,0.94)"
-              strokeWidth="3.1"
+              strokeWidth="2.8"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
             <path
-              d="M9.2 22.8c4.1 3.3 10.1 3.6 14.8 0.7"
+              d="M7 8v2.7M12.4 10.8v16.2"
+              fill="none"
+              stroke="rgba(255,255,255,0.94)"
+              strokeWidth="2.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M4.8 28.4C4.8 21 8.8 14.5 15.8 14.5 22.8 14.5 27.2 18.8 27.2 24.5"
+              fill="none"
+              stroke="rgba(255,255,255,0.9)"
+              strokeWidth="2.1"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M8.8 28.7c-2.3-0.1-4.2-1.7-4.2-4.2 0-2.9 2.2-5 5.3-5h9.2"
               fill="none"
               stroke="rgba(255,255,255,0.9)"
               strokeWidth="2"
               strokeLinecap="round"
+              strokeLinejoin="round"
             />
             <path
-              d="M21.4 20.6l2.9 2.9-4 .2"
+              d="M20.7 22.4l3.1 1.8-3.5 1.1"
               fill="none"
-              stroke="rgba(255,255,255,0.9)"
-              strokeWidth="1.9"
+              stroke="rgba(255,255,255,0.92)"
+              strokeWidth="1.8"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
