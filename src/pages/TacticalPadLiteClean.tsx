@@ -8,7 +8,7 @@ import {
 const ROOT_STYLE: CSSProperties = {
   position: "fixed",
   inset: 0,
-  background: "linear-gradient(to bottom, #0d261c, #0b2118)",
+  background: "#123c2a",
   margin: 0,
   padding: "4px",
   boxSizing: "border-box",
@@ -30,14 +30,14 @@ const BACKGROUND_BASE_STYLE: CSSProperties = {
   position: "absolute",
   inset: 0,
   background:
-    "radial-gradient(circle at 50% 45%, rgba(34, 197, 94, 0.45) 0%, rgba(30, 115, 70, 0.38) 34%, rgba(11, 33, 24, 0.72) 74%), radial-gradient(ellipse at 50% 83%, rgba(22, 163, 74, 0.32) 0%, rgba(22, 163, 74, 0.14) 40%, rgba(11, 33, 24, 0) 74%), linear-gradient(to bottom, #0d261c, #0b2118)",
+    "radial-gradient(circle at center, rgba(34, 197, 94, 0.75) 0%, rgba(34, 197, 94, 0.45) 30%, rgba(16, 185, 129, 0.25) 55%, rgba(0, 0, 0, 0.25) 100%), radial-gradient(circle at top left, rgba(220, 255, 230, 0.55) 0%, rgba(220, 255, 230, 0) 50%), radial-gradient(circle at top right, rgba(220, 255, 230, 0.55) 0%, rgba(220, 255, 230, 0) 50%), radial-gradient(circle at bottom center, rgba(34, 197, 94, 0.55) 0%, rgba(34, 197, 94, 0) 60%), linear-gradient(to bottom, #123c2a, #123c2a)",
 };
 
 const BACKGROUND_VIGNETTE_STYLE: CSSProperties = {
   position: "absolute",
   inset: 0,
   background:
-    "radial-gradient(circle at center, rgba(0, 0, 0, 0) 46%, rgba(0, 0, 0, 0.35) 100%)",
+    "radial-gradient(circle at center, rgba(0, 0, 0, 0) 52%, rgba(0, 0, 0, 0.25) 100%)",
 };
 
 const STADIUM_LIGHT_BASE_STYLE: CSSProperties = {
