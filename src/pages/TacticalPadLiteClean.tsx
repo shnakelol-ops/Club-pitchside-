@@ -6,20 +6,26 @@ import {
 } from "../engine/pixi/createTacticalPadLiteSurface";
 
 const ROOT_STYLE: CSSProperties = {
-  position: "fixed",
-  inset: 0,
   margin: 0,
+  width: "100%",
+  minHeight: "100vh",
   background: "#0b1110",
   display: "flex",
-  flexDirection: "column",
   alignItems: "center",
   justifyContent: "center",
   padding: "16px",
   boxSizing: "border-box",
 };
 
-const PITCH_STYLE: CSSProperties = {
+const STACK_STYLE: CSSProperties = {
   width: "min(96vw, 1200px)",
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+};
+
+const PITCH_STYLE: CSSProperties = {
+  width: "100%",
   height: "min(80vh, 760px)",
   borderRadius: "12px",
   overflow: "hidden",
@@ -100,37 +106,39 @@ export default function TacticalPadLiteClean() {
 
   return (
     <div style={ROOT_STYLE}>
-      <div ref={hostRef} style={PITCH_STYLE} />
-      <div style={CONTROL_BAR_STYLE}>
-        <button
-          type="button"
-          disabled={isPlaying}
-          style={isPlaying ? DISABLED_BUTTON_STYLE : BUTTON_STYLE}
-          onClick={() => surfaceRef.current?.setStart()}
-        >
-          SET START
-        </button>
-        <button
-          type="button"
-          disabled={isPlaying}
-          style={isPlaying ? DISABLED_BUTTON_STYLE : BUTTON_STYLE}
-          onClick={() => surfaceRef.current?.addPhase()}
-        >
-          ADD PHASE
-        </button>
-        <button type="button" style={BUTTON_STYLE} onClick={togglePlay}>
-          {isPlaying ? "PAUSE" : "PLAY"}
-        </button>
-        <button
-          type="button"
-          style={BUTTON_STYLE}
-          onClick={() => {
-            surfaceRef.current?.reset();
-            setIsPlaying(false);
-          }}
-        >
-          RESET
-        </button>
+      <div style={STACK_STYLE}>
+        <div ref={hostRef} style={PITCH_STYLE} />
+        <div style={CONTROL_BAR_STYLE}>
+          <button
+            type="button"
+            disabled={isPlaying}
+            style={isPlaying ? DISABLED_BUTTON_STYLE : BUTTON_STYLE}
+            onClick={() => surfaceRef.current?.setStart()}
+          >
+            SET START
+          </button>
+          <button
+            type="button"
+            disabled={isPlaying}
+            style={isPlaying ? DISABLED_BUTTON_STYLE : BUTTON_STYLE}
+            onClick={() => surfaceRef.current?.addPhase()}
+          >
+            ADD PHASE
+          </button>
+          <button type="button" style={BUTTON_STYLE} onClick={togglePlay}>
+            {isPlaying ? "PAUSE" : "PLAY"}
+          </button>
+          <button
+            type="button"
+            style={BUTTON_STYLE}
+            onClick={() => {
+              surfaceRef.current?.reset();
+              setIsPlaying(false);
+            }}
+          >
+            RESET
+          </button>
+        </div>
       </div>
     </div>
   );
