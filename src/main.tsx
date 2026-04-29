@@ -7,11 +7,11 @@ import TacticalPadLitePage from "./pages/TacticalPadLitePage";
 
 function pickRootComponent() {
   const normalizedPath = window.location.pathname.replace(/\/+$/, "") || "/";
+  if (normalizedPath === "/" || normalizedPath === "/tacticalpad-lite-clean") {
+    return TacticalPadLiteClean;
+  }
   if (normalizedPath === "/tacticalpad-lite") {
     return TacticalPadLitePage;
-  }
-  if (normalizedPath === "/tacticalpad-lite-clean") {
-    return TacticalPadLiteClean;
   }
   return App;
 }
