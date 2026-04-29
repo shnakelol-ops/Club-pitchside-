@@ -10,20 +10,25 @@ const ROOT_STYLE: CSSProperties = {
   width: "100%",
   minHeight: "100vh",
   background: "#0b1110",
-  padding: "8px",
+  padding: "4px 6px",
   boxSizing: "border-box",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
 };
 
 const CONTENT_STYLE: CSSProperties = {
-  width: "min(98vw, 1280px)",
-  margin: "0 auto",
+  width: "100%",
   display: "flex",
   flexDirection: "column",
+  alignItems: "center",
 };
 
 const PITCH_STYLE: CSSProperties = {
-  width: "100%",
-  height: "min(calc(100vh - 94px), 860px)",
+  width: "min(98vw, calc((100vh - 82px) * 1.6), 1360px)",
+  aspectRatio: "16 / 10",
+  height: "auto",
+  maxHeight: "calc(100vh - 82px)",
   borderRadius: "12px",
   overflow: "hidden",
   boxShadow: "0 20px 44px rgba(0, 0, 0, 0.38)",
@@ -31,42 +36,61 @@ const PITCH_STYLE: CSSProperties = {
 };
 
 const CONTROL_BAR_STYLE: CSSProperties = {
+  position: "static",
   display: "flex",
-  gap: "8px",
-  maxWidth: "100%",
-  margin: "0 auto",
-  marginTop: "12px",
-  padding: "10px 12px",
-  borderRadius: "16px",
-  background: "rgba(10, 20, 30, 0.7)",
-  border: "1px solid rgba(190, 208, 222, 0.2)",
-  boxShadow: "0 10px 26px rgba(0, 0, 0, 0.28)",
+  gap: "6px",
+  width: "fit-content",
+  maxWidth: "96%",
+  marginTop: "8px",
+  padding: "6px 10px",
+  borderRadius: "14px",
+  background: "rgba(8, 16, 14, 0.64)",
+  border: "1px solid rgba(92, 196, 132, 0.24)",
+  boxShadow: "0 10px 24px rgba(0, 0, 0, 0.22), 0 0 18px rgba(72, 184, 118, 0.12)",
   backdropFilter: "blur(8px)",
   WebkitBackdropFilter: "blur(8px)",
 };
 
 const BUTTON_STYLE: CSSProperties = {
-  border: "1px solid rgba(215, 221, 228, 0.36)",
+  border: "1px solid rgba(95, 205, 138, 0.34)",
   borderRadius: "10px",
-  background: "rgba(223, 230, 236, 0.1)",
-  color: "#e7edf2",
+  background: "rgba(8, 23, 16, 0.58)",
+  color: "#dcf6e5",
   fontFamily: "Inter, system-ui, sans-serif",
-  fontSize: "12px",
-  fontWeight: 600,
-  padding: "8px 14px",
-  minWidth: "92px",
+  fontSize: "11.5px",
+  fontWeight: 550,
+  letterSpacing: "0.01em",
+  height: "40px",
+  padding: "0 13px",
+  minWidth: "84px",
   cursor: "pointer",
+  boxShadow: "inset 0 0 0 1px rgba(111, 220, 153, 0.08), 0 0 10px rgba(68, 178, 112, 0.1)",
 };
 
 const DISABLED_BUTTON_STYLE: CSSProperties = {
   ...BUTTON_STYLE,
-  opacity: 0.4,
+  opacity: 0.42,
   cursor: "not-allowed",
+};
+
+const PHASE_COUNT_STYLE: CSSProperties = {
+  height: "40px",
+  display: "flex",
+  alignItems: "center",
+  border: "1px solid rgba(95, 205, 138, 0.28)",
+  borderRadius: "10px",
+  background: "rgba(6, 19, 13, 0.58)",
+  color: "rgba(213, 244, 224, 0.95)",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "11px",
+  fontWeight: 560,
+  padding: "0 10px",
 };
 
 export default function TacticalPadLiteClean() {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const surfaceRef = useRef<TacticalPadLiteSurface | null>(null);
+  const [phaseCount, setPhaseCount] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
@@ -76,7 +100,13 @@ export default function TacticalPadLiteClean() {
     let disposed = false;
     let destroySurface: (() => void) | null = null;
 
-    void createTacticalPadLiteSurface(host).then((surface) => {
+    void createTacticalPadLiteSurface(host, {
+      onPhaseCountChange: (count) => {
+        if (!disposed) {
+          setPhaseCount(count);
+        }
+      },
+    }).then((surface) => {
       if (disposed) {
         surface.destroy();
         return;
@@ -135,6 +165,7 @@ export default function TacticalPadLiteClean() {
           >
             Reset
           </button>
+          <div style={PHASE_COUNT_STYLE}>Phases: {phaseCount}</div>
         </div>
       </div>
     </div>
