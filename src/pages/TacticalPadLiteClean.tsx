@@ -10,19 +10,15 @@ const ROOT_STYLE: CSSProperties = {
   width: "100%",
   minHeight: "100vh",
   background: "#0b1110",
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  justifyContent: "flex-start",
   padding: "16px",
   boxSizing: "border-box",
 };
 
-const STACK_STYLE: CSSProperties = {
+const CONTENT_STYLE: CSSProperties = {
   width: "min(96vw, 1200px)",
+  margin: "0 auto",
   display: "flex",
   flexDirection: "column",
-  alignItems: "center",
 };
 
 const PITCH_STYLE: CSSProperties = {
@@ -35,10 +31,9 @@ const PITCH_STYLE: CSSProperties = {
 };
 
 const CONTROL_BAR_STYLE: CSSProperties = {
-  position: "static",
   display: "flex",
   gap: "8px",
-  maxWidth: "90%",
+  maxWidth: "100%",
   margin: "0 auto",
   marginTop: "12px",
   padding: "10px 12px",
@@ -108,7 +103,7 @@ export default function TacticalPadLiteClean() {
 
   return (
     <div style={ROOT_STYLE}>
-      <div style={STACK_STYLE}>
+      <div style={CONTENT_STYLE}>
         <div ref={hostRef} style={PITCH_STYLE} />
         <div style={CONTROL_BAR_STYLE}>
           <button
@@ -117,7 +112,7 @@ export default function TacticalPadLiteClean() {
             style={isPlaying ? DISABLED_BUTTON_STYLE : BUTTON_STYLE}
             onClick={() => surfaceRef.current?.setStart()}
           >
-            SET START
+            Set Start
           </button>
           <button
             type="button"
@@ -125,10 +120,10 @@ export default function TacticalPadLiteClean() {
             style={isPlaying ? DISABLED_BUTTON_STYLE : BUTTON_STYLE}
             onClick={() => surfaceRef.current?.addPhase()}
           >
-            ADD PHASE
+            Add Phase
           </button>
           <button type="button" style={BUTTON_STYLE} onClick={togglePlay}>
-            {isPlaying ? "PAUSE" : "PLAY"}
+            Play
           </button>
           <button
             type="button"
@@ -138,7 +133,7 @@ export default function TacticalPadLiteClean() {
               setIsPlaying(false);
             }}
           >
-            RESET
+            Reset
           </button>
         </div>
       </div>
