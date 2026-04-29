@@ -117,6 +117,16 @@ const STADIUM_FLOODLIGHT_CSS = `
     linear-gradient(to bottom, rgba(0, 0, 0, 0.18), transparent 40%);
 }
 
+.floating-bubble {
+  transition: transform 140ms ease, filter 140ms ease;
+}
+
+.floating-bubble:hover,
+.floating-bubble:active {
+  transform: scale(1.03);
+  filter: brightness(1.1);
+}
+
 @media (max-width: 700px) and (orientation: portrait) {
   .stadium-light {
     top: 5%;
@@ -195,14 +205,16 @@ const BUBBLE_BASE_STYLE: CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  color: "#e7f4ee",
+  color: "rgba(255, 255, 255, 0.9)",
   fontFamily: "Inter, system-ui, sans-serif",
   fontSize: "10.5px",
   fontWeight: 600,
-  border: "1px solid rgba(216, 226, 222, 0.22)",
+  border: "1px solid rgba(255, 255, 255, 0.25)",
+  background: "rgba(20, 25, 30, 0.55)",
   backdropFilter: "blur(10px)",
   WebkitBackdropFilter: "blur(10px)",
-  boxShadow: "0 8px 20px rgba(0, 0, 0, 0.22)",
+  boxShadow:
+    "0 4px 20px rgba(0, 0, 0, 0.4), 0 0 12px rgba(255, 255, 255, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.2)",
   cursor: "pointer",
   zIndex: 20,
 };
@@ -211,16 +223,12 @@ const LEFT_BUBBLE_STYLE: CSSProperties = {
   ...BUBBLE_BASE_STYLE,
   left: "max(12px, calc(env(safe-area-inset-left, 0px) + 10px))",
   bottom: "max(12px, calc(env(safe-area-inset-bottom, 0px) + 10px))",
-  background: "rgba(255, 80, 80, 0.08)",
-  border: "1px solid rgba(255, 114, 114, 0.25)",
 };
 
 const RIGHT_BUBBLE_STYLE: CSSProperties = {
   ...BUBBLE_BASE_STYLE,
   right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
   bottom: "max(12px, calc(env(safe-area-inset-bottom, 0px) + 10px))",
-  background: "rgba(80, 255, 140, 0.08)",
-  border: "1px solid rgba(110, 230, 156, 0.25)",
 };
 
 const POPOUT_BASE_STYLE: CSSProperties = {
@@ -520,6 +528,7 @@ export default function TacticalPadLiteClean() {
       ) : null}
       <button
         type="button"
+        className="floating-bubble"
         style={LEFT_BUBBLE_STYLE}
         aria-label="Open controls"
         onClick={() => setControlsOpen((open) => !open)}
@@ -528,6 +537,7 @@ export default function TacticalPadLiteClean() {
       </button>
       <button
         type="button"
+        className="floating-bubble"
         style={RIGHT_BUBBLE_STYLE}
         aria-label="Open tools"
         onClick={() => setToolsOpen((open) => !open)}
