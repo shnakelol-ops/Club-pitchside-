@@ -15,10 +15,12 @@ const ROOT_STYLE: CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
+  overflowX: "hidden",
 };
 
 const CONTENT_STYLE: CSSProperties = {
-  width: "min(99vw, calc((100vh - 10px) * 1.6), 1360px)",
+  width: "min(calc(100vw - 8px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), calc((100vh - 10px) * 1.6), 1360px)",
+  maxWidth: "100%",
   aspectRatio: "16 / 10",
   maxHeight: "calc(100vh - 10px)",
   display: "flex",
