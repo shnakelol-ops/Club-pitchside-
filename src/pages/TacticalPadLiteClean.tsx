@@ -67,28 +67,36 @@ const STADIUM_LIGHT_RIGHT_STYLE: CSSProperties = {
 
 const STADIUM_BEAM_BASE_STYLE: CSSProperties = {
   position: "absolute",
-  width: "86vw",
-  height: "72vh",
-  minWidth: "340px",
-  minHeight: "340px",
-  filter: "blur(0px)",
-  opacity: 0.18,
-  background: "linear-gradient(135deg, rgba(0, 140, 160, 0.16), rgba(0, 90, 120, 0.24))",
-  clipPath: "polygon(0% 18%, 100% 0%, 90% 86%, 8% 100%)",
+  left: "50%",
+  transform: "translateX(-50%)",
+  bottom: "-18%",
+  width: "105%",
+  height: "70%",
+  pointerEvents: "none",
+  filter: "blur(28px)",
+  opacity: 1,
+  background:
+    "radial-gradient(ellipse at center, rgba(0, 0, 0, 0.48) 0%, rgba(0, 0, 0, 0.32) 35%, rgba(0, 0, 0, 0.16) 60%, transparent 78%)",
+  zIndex: 0,
 };
 
 const STADIUM_BEAM_LEFT_STYLE: CSSProperties = {
   ...STADIUM_BEAM_BASE_STYLE,
-  top: "-18vh",
-  left: "-18vw",
-  transform: "rotate(-9deg)",
+  top: "auto",
+  right: "auto",
 };
 
 const STADIUM_BEAM_RIGHT_STYLE: CSSProperties = {
   ...STADIUM_BEAM_BASE_STYLE,
-  top: "30vh",
-  right: "-24vw",
-  transform: "rotate(18deg)",
+  top: "auto",
+  right: "auto",
+  bottom: "-26%",
+  width: "118%",
+  height: "82%",
+  filter: "blur(40px)",
+  opacity: 0.72,
+  background:
+    "radial-gradient(ellipse at center, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.2) 40%, rgba(0, 0, 0, 0.08) 64%, transparent 82%)",
 };
 
 const CONTENT_STYLE: CSSProperties = {
@@ -108,7 +116,7 @@ const PITCH_STYLE: CSSProperties = {
   height: "100%",
   borderRadius: "12px",
   overflow: "hidden",
-  boxShadow: "0 20px 44px rgba(0, 0, 0, 0.38)",
+  boxShadow: "0 42px 95px rgba(0, 0, 0, 0.5), 0 16px 38px rgba(0, 0, 0, 0.34)",
   background: "#13221d",
 };
 
