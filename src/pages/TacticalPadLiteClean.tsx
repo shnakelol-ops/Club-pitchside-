@@ -18,12 +18,60 @@ const ROOT_STYLE: CSSProperties = {
   overflow: "hidden",
 };
 
+const BACKGROUND_LAYER_STYLE: CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  zIndex: 0,
+  pointerEvents: "none",
+  overflow: "hidden",
+};
+
+const BACKGROUND_BASE_STYLE: CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  background:
+    "radial-gradient(circle at center, rgba(34, 197, 94, 0.15) 0%, rgba(0, 0, 0, 0.9) 70%), linear-gradient(to bottom, #020617, #020617)",
+};
+
+const BACKGROUND_VIGNETTE_STYLE: CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  background:
+    "radial-gradient(circle at center, rgba(0, 0, 0, 0) 45%, rgba(0, 0, 0, 0.42) 100%)",
+};
+
+const STADIUM_LIGHT_BASE_STYLE: CSSProperties = {
+  position: "absolute",
+  width: "42vw",
+  height: "42vw",
+  minWidth: "220px",
+  minHeight: "220px",
+  borderRadius: "999px",
+  filter: "blur(96px)",
+  opacity: 0.2,
+  background: "radial-gradient(circle, rgba(168, 243, 192, 0.35) 0%, rgba(34, 197, 94, 0) 72%)",
+};
+
+const STADIUM_LIGHT_LEFT_STYLE: CSSProperties = {
+  ...STADIUM_LIGHT_BASE_STYLE,
+  top: "-14vw",
+  left: "-10vw",
+};
+
+const STADIUM_LIGHT_RIGHT_STYLE: CSSProperties = {
+  ...STADIUM_LIGHT_BASE_STYLE,
+  top: "-14vw",
+  right: "-10vw",
+};
+
 const CONTENT_STYLE: CSSProperties = {
   width: "min(calc(100dvw - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), calc(100vw - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), calc((100dvh - 10px) * 1.6), calc((100vh - 10px) * 1.6), 1360px)",
   maxWidth: "calc(100vw - 24px)",
   aspectRatio: "16 / 10",
   maxHeight: "min(calc(100dvh - 10px), calc(100vh - 10px))",
   boxSizing: "border-box",
+  position: "relative",
+  zIndex: 1,
   display: "flex",
   alignItems: "stretch",
 };
@@ -267,6 +315,12 @@ export default function TacticalPadLiteClean() {
 
   return (
     <div style={ROOT_STYLE}>
+      <div style={BACKGROUND_LAYER_STYLE} aria-hidden="true">
+        <div style={BACKGROUND_BASE_STYLE} />
+        <div style={STADIUM_LIGHT_LEFT_STYLE} />
+        <div style={STADIUM_LIGHT_RIGHT_STYLE} />
+        <div style={BACKGROUND_VIGNETTE_STYLE} />
+      </div>
       <div style={CONTENT_STYLE}>
         <div ref={hostRef} style={PITCH_STYLE} />
       </div>
