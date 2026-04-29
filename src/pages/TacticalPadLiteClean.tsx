@@ -145,35 +145,15 @@ const STADIUM_FLOODLIGHT_CSS = `
 .tool-bubble-icon {
   display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
 }
 
-.tool-bubble-mark {
-  font-family: "Times New Roman", Georgia, serif;
-  font-weight: 800;
-  font-style: italic;
-  letter-spacing: -1px;
-  font-size: 15px;
-  line-height: 1;
-  color: rgba(255, 255, 255, 0.95);
-}
-
-.tool-bubble-lines {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.tool-bubble-lines span {
+.tool-bubble-mark-svg {
+  width: 24px;
+  height: 24px;
   display: block;
-  width: 9px;
-  height: 2px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.95);
-}
-
-.tool-bubble-lines span:nth-child(2) {
-  width: 7px;
 }
 
 .control-button {
@@ -643,12 +623,31 @@ export default function TacticalPadLiteClean() {
         onClick={() => setToolsOpen((open) => !open)}
       >
         <span className="tool-bubble-icon" aria-hidden="true">
-          <span className="tool-bubble-mark">P</span>
-          <span className="tool-bubble-lines">
-            <span />
-            <span />
-            <span />
-          </span>
+          <svg className="tool-bubble-mark-svg" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M10 25V6.5h8.7c4.7 0 7.5 2.7 7.5 6.6s-2.8 6.5-7.5 6.5H14.2"
+              fill="none"
+              stroke="rgba(255,255,255,0.94)"
+              strokeWidth="3.1"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M9.2 22.8c4.1 3.3 10.1 3.6 14.8 0.7"
+              fill="none"
+              stroke="rgba(255,255,255,0.9)"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
+            <path
+              d="M21.4 20.6l2.9 2.9-4 .2"
+              fill="none"
+              stroke="rgba(255,255,255,0.9)"
+              strokeWidth="1.9"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
         </span>
       </button>
     </div>
