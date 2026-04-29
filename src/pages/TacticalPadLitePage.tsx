@@ -4,6 +4,7 @@ import {
   createTacticalPadLiteSurface,
   type TacticalPadLiteSurface,
 } from "../engine/pixi/createTacticalPadLiteSurface";
+import "./tactical-pad-lite-shell.css";
 
 const ROOT_STYLE: CSSProperties = {
   position: "fixed",
@@ -113,40 +114,6 @@ export default function TacticalPadLitePage() {
     };
   }, []);
 
-  const controlsBarStyle: CSSProperties = isPlaybackVisualActive
-    ? {
-        ...CONTROLS_STYLE,
-        border: "1px solid rgba(148, 163, 184, 0.12)",
-        background: "rgba(10, 20, 35, 0.3)",
-        boxShadow: "0 4px 10px rgba(4, 12, 24, 0.12)",
-        opacity: 1,
-        transform: "scale(0.95)",
-      }
-    : CONTROLS_STYLE;
-
-  const ghostedButtonStyle: CSSProperties = isPlaybackVisualActive
-    ? {
-        opacity: 0.3,
-        boxShadow: "none",
-      }
-    : {};
-
-  const pauseButtonStyle: CSSProperties = isPlaybackVisualActive
-    ? {
-        border: "1px solid rgba(125, 211, 252, 0.72)",
-        background: "rgba(15, 23, 42, 0.98)",
-        color: "#eef7ff",
-        opacity: 1,
-      }
-    : {};
-
-  const phaseCountStyle: CSSProperties = isPlaybackVisualActive
-    ? {
-        ...PHASE_COUNT_STYLE,
-        opacity: 0.3,
-      }
-    : PHASE_COUNT_STYLE;
-
   const handleSetStart = () => {
     setIsPlaybackVisualActive(false);
     surfaceRef.current?.setStart();
@@ -174,23 +141,53 @@ export default function TacticalPadLitePage() {
   return (
     <div style={ROOT_STYLE}>
       <div ref={hostRef} style={BOARD_STYLE} />
-      <div style={controlsBarStyle}>
-        <button type="button" style={{ ...BUTTON_STYLE, ...ghostedButtonStyle }} onClick={handleSetStart}>
+      <div
+        style={CONTROLS_STYLE}
+        className={`tactical-lite-controls ${isPlaybackVisualActive ? "is-playing" : ""}`}
+      >
+        <button
+          type="button"
+          style={BUTTON_STYLE}
+          className="tactical-lite-control tactical-lite-control--ghost"
+          onClick={handleSetStart}
+        >
           Set Start
         </button>
-        <button type="button" style={{ ...BUTTON_STYLE, ...ghostedButtonStyle }} onClick={handleAddPhase}>
+        <button
+          type="button"
+          style={BUTTON_STYLE}
+          className="tactical-lite-control tactical-lite-control--ghost"
+          onClick={handleAddPhase}
+        >
           Add Phase
         </button>
-        <button type="button" style={{ ...BUTTON_STYLE, ...ghostedButtonStyle }} onClick={handlePlay}>
+        <button
+          type="button"
+          style={BUTTON_STYLE}
+          className="tactical-lite-control tactical-lite-control--ghost"
+          onClick={handlePlay}
+        >
           Play
         </button>
-        <button type="button" style={{ ...BUTTON_STYLE, ...pauseButtonStyle }} onClick={handlePause}>
+        <button
+          type="button"
+          style={BUTTON_STYLE}
+          className="tactical-lite-control tactical-lite-control--pause"
+          onClick={handlePause}
+        >
           Pause
         </button>
-        <button type="button" style={{ ...BUTTON_STYLE, ...ghostedButtonStyle }} onClick={handleReset}>
+        <button
+          type="button"
+          style={BUTTON_STYLE}
+          className="tactical-lite-control tactical-lite-control--ghost"
+          onClick={handleReset}
+        >
           Reset
         </button>
-        <div style={phaseCountStyle}>Phases: {phaseCount}</div>
+        <div style={PHASE_COUNT_STYLE} className="tactical-lite-control tactical-lite-control--ghost">
+          Phases: {phaseCount}
+        </div>
       </div>
     </div>
   );

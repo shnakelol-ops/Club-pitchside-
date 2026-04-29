@@ -1,0 +1,38 @@
+.tactical-pad-lite__controls {
+  width: min(96vw, 1200px);
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 6px 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: rgba(10, 20, 35, 0.74);
+  box-shadow: 0 8px 18px rgba(4, 12, 24, 0.22);
+  box-sizing: border-box;
+  transition: opacity 180ms ease, transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.tactical-pad-lite__controls.is-playing {
+  border-color: rgba(148, 163, 184, 0.12);
+  background: rgba(10, 20, 35, 0.3);
+  box-shadow: 0 4px 10px rgba(4, 12, 24, 0.12);
+  transform: scale(0.95);
+}
+
+.tactical-pad-lite__controls.is-playing .tactical-pad-lite__control {
+  opacity: 0.3;
+  box-shadow: none;
+}
+
+.tactical-pad-lite__controls.is-playing .tactical-pad-lite__phase-count {
+  opacity: 0.3;
+}
+
+.tactical-pad-lite__controls.is-playing .tactical-pad-lite__control--pause {
+  border: 1px solid rgba(125, 211, 252, 0.72);
+  background: rgba(15, 23, 42, 0.98);
+  color: #eef7ff;
+  opacity: 1;
+}
