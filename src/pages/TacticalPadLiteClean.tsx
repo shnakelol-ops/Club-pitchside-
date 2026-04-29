@@ -15,14 +15,15 @@ const ROOT_STYLE: CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  overflowX: "hidden",
+  overflow: "hidden",
 };
 
 const CONTENT_STYLE: CSSProperties = {
-  width: "min(calc(100vw - 8px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), calc((100vh - 10px) * 1.6), 1360px)",
-  maxWidth: "100%",
+  width: "min(calc(100dvw - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), calc(100vw - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), calc((100dvh - 10px) * 1.6), calc((100vh - 10px) * 1.6), 1360px)",
+  maxWidth: "calc(100vw - 24px)",
   aspectRatio: "16 / 10",
-  maxHeight: "calc(100vh - 10px)",
+  maxHeight: "min(calc(100dvh - 10px), calc(100vh - 10px))",
+  boxSizing: "border-box",
   display: "flex",
   alignItems: "stretch",
 };
