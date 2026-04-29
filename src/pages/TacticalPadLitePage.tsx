@@ -40,7 +40,9 @@ const CONTROLS_STYLE: CSSProperties = {
   borderRadius: "12px",
   border: "1px solid rgba(148, 163, 184, 0.24)",
   background: "rgba(10, 20, 35, 0.74)",
+  boxShadow: "0 8px 18px rgba(4, 12, 24, 0.22)",
   boxSizing: "border-box",
+  transition: "opacity 180ms ease, transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease",
 };
 
 const BUTTON_STYLE: CSSProperties = {
@@ -80,6 +82,7 @@ export default function TacticalPadLitePage() {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const surfaceRef = useRef<TacticalPadLiteSurface | null>(null);
   const [phaseCount, setPhaseCount] = useState(0);
+  const [isPlaybackVisualActive, setIsPlaybackVisualActive] = useState(false);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -110,23 +113,84 @@ export default function TacticalPadLitePage() {
     };
   }, []);
 
+  const controlsBarStyle: CSSProperties = isPlaybackVisualActive
+    ? {
+        ...CONTROLS_STYLE,
+        border: "1px solid rgba(148, 163, 184, 0.12)",
+        background: "rgba(10, 20, 35, 0.3)",
+        boxShadow: "0 4px 10px rgba(4, 12, 24, 0.12)",
+        opacity: 1,
+        transform: "scale(0.95)",
+      }
+    : CONTROLS_STYLE;
+
+  const ghostedButtonStyle: CSSProperties = isPlaybackVisualActive
+    ? {
+        opacity: 0.3,
+        boxShadow: "none",
+      }
+    : {};
+
+  const pauseButtonStyle: CSSProperties = isPlaybackVisualActive
+    ? {
+        border: "1px solid rgba(125, 211, 252, 0.72)",
+        background: "rgba(15, 23, 42, 0.98)",
+        color: "#eef7ff",
+        opacity: 1,
+      }
+    : {};
+
+  const phaseCountStyle: CSSProperties = isPlaybackVisualActive
+    ? {
+        ...PHASE_COUNT_STYLE,
+        opacity: 0.3,
+      }
+    : PHASE_COUNT_STYLE;
+
+  const handleSetStart = () => {
+    setIsPlaybackVisualActive(false);
+    surfaceRef.current?.setStart();
+  };
+
+  const handleAddPhase = () => {
+    setIsPlaybackVisualActive(false);
+    surfaceRef.current?.addPhase();
+  };
+
+  const handlePlay = () => {
+    setIsPlaybackVisualActive(true);
+    surfaceRef.current?.play();
+  };
+
+  const handlePause = () => {
+    setIsPlaybackVisualActive(false);
+  };
+
+  const handleReset = () => {
+    setIsPlaybackVisualActive(false);
+    surfaceRef.current?.reset();
+  };
+
   return (
     <div style={ROOT_STYLE}>
       <div ref={hostRef} style={BOARD_STYLE} />
-      <div style={CONTROLS_STYLE}>
-        <button type="button" style={BUTTON_STYLE} onClick={() => surfaceRef.current?.setStart()}>
+      <div style={controlsBarStyle}>
+        <button type="button" style={{ ...BUTTON_STYLE, ...ghostedButtonStyle }} onClick={handleSetStart}>
           Set Start
         </button>
-        <button type="button" style={BUTTON_STYLE} onClick={() => surfaceRef.current?.addPhase()}>
+        <button type="button" style={{ ...BUTTON_STYLE, ...ghostedButtonStyle }} onClick={handleAddPhase}>
           Add Phase
         </button>
-        <button type="button" style={BUTTON_STYLE} onClick={() => surfaceRef.current?.play()}>
+        <button type="button" style={{ ...BUTTON_STYLE, ...ghostedButtonStyle }} onClick={handlePlay}>
           Play
         </button>
-        <button type="button" style={BUTTON_STYLE} onClick={() => surfaceRef.current?.reset()}>
+        <button type="button" style={{ ...BUTTON_STYLE, ...pauseButtonStyle }} onClick={handlePause}>
+          Pause
+        </button>
+        <button type="button" style={{ ...BUTTON_STYLE, ...ghostedButtonStyle }} onClick={handleReset}>
           Reset
         </button>
-        <div style={PHASE_COUNT_STYLE}>Phases: {phaseCount}</div>
+        <div style={phaseCountStyle}>Phases: {phaseCount}</div>
       </div>
     </div>
   );
