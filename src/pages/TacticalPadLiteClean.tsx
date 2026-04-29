@@ -43,60 +43,49 @@ const BACKGROUND_VIGNETTE_STYLE: CSSProperties = {
 
 const STADIUM_LIGHT_BASE_STYLE: CSSProperties = {
   position: "absolute",
-  width: "72vw",
-  height: "72vw",
-  minWidth: "300px",
-  minHeight: "300px",
-  filter: "blur(18px)",
-  opacity: 0.3,
-  background:
-    "radial-gradient(circle, rgba(0, 120, 100, 0.08) 0%, rgba(0, 120, 100, 0) 60%)",
+  inset: 0,
+  pointerEvents: "none",
+  zIndex: 0,
 };
 
 const STADIUM_LIGHT_LEFT_STYLE: CSSProperties = {
   ...STADIUM_LIGHT_BASE_STYLE,
-  top: "-34vw",
-  left: "-30vw",
+  background:
+    "radial-gradient(circle at 18% 8%, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0) 20%)",
 };
 
 const STADIUM_LIGHT_RIGHT_STYLE: CSSProperties = {
   ...STADIUM_LIGHT_BASE_STYLE,
-  top: "-34vw",
-  right: "-30vw",
+  background:
+    "radial-gradient(circle at 82% 8%, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0) 20%)",
 };
 
 const STADIUM_BEAM_BASE_STYLE: CSSProperties = {
   position: "absolute",
   left: "50%",
   transform: "translateX(-50%)",
-  bottom: "-18%",
-  width: "105%",
-  height: "70%",
+  bottom: "-20%",
+  width: "115%",
+  height: "75%",
   pointerEvents: "none",
-  filter: "blur(28px)",
+  filter: "blur(32px)",
   opacity: 1,
   background:
-    "radial-gradient(ellipse at center, rgba(0, 0, 0, 0.48) 0%, rgba(0, 0, 0, 0.32) 35%, rgba(0, 0, 0, 0.16) 60%, transparent 78%)",
+    "radial-gradient(ellipse at center, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0.38) 35%, rgba(0, 0, 0, 0.2) 60%, rgba(0, 0, 0, 0.08) 75%, transparent 85%)",
   zIndex: 0,
 };
 
 const STADIUM_BEAM_LEFT_STYLE: CSSProperties = {
   ...STADIUM_BEAM_BASE_STYLE,
-  top: "auto",
-  right: "auto",
 };
 
 const STADIUM_BEAM_RIGHT_STYLE: CSSProperties = {
-  ...STADIUM_BEAM_BASE_STYLE,
-  top: "auto",
-  right: "auto",
-  bottom: "-26%",
-  width: "118%",
-  height: "82%",
-  filter: "blur(40px)",
-  opacity: 0.72,
+  position: "absolute",
+  inset: 0,
+  pointerEvents: "none",
+  zIndex: 0,
   background:
-    "radial-gradient(ellipse at center, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.2) 40%, rgba(0, 0, 0, 0.08) 64%, transparent 82%)",
+    "linear-gradient(to bottom, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0) 30%), linear-gradient(to top, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0) 50%)",
 };
 
 const CONTENT_STYLE: CSSProperties = {
@@ -116,7 +105,7 @@ const PITCH_STYLE: CSSProperties = {
   height: "100%",
   borderRadius: "12px",
   overflow: "hidden",
-  boxShadow: "0 42px 95px rgba(0, 0, 0, 0.5), 0 16px 38px rgba(0, 0, 0, 0.34)",
+  boxShadow: "0 50px 110px rgba(0, 0, 0, 0.55), 0 18px 45px rgba(0, 0, 0, 0.35)",
   background: "#13221d",
 };
 
