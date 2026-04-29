@@ -87,22 +87,28 @@ const POPOUT_BASE_STYLE: CSSProperties = {
 
 const CONTROLS_POPOUT_STYLE: CSSProperties = {
   ...POPOUT_BASE_STYLE,
-  left: "max(60px, calc(env(safe-area-inset-left, 0px) + 58px))",
-  right: "max(62px, calc(env(safe-area-inset-right, 0px) + 60px))",
+  left: "50%",
+  transform: "translateX(-50%)",
   bottom: "max(12px, calc(env(safe-area-inset-bottom, 0px) + 10px))",
+  width: "fit-content",
+  maxWidth: "calc(100vw - 128px)",
   overflowX: "auto",
   overflowY: "hidden",
   whiteSpace: "nowrap",
+  flexWrap: "nowrap",
   background: "rgba(22, 17, 18, 0.66)",
   border: "1px solid rgba(255, 118, 118, 0.22)",
 };
 
 const TOOLS_POPOUT_STYLE: CSSProperties = {
   ...POPOUT_BASE_STYLE,
-  display: "grid",
-  gridTemplateColumns: "repeat(3, minmax(58px, 1fr))",
+  display: "flex",
+  flexDirection: "column",
   gap: "5px",
-  width: "min(220px, calc(100vw - 24px))",
+  width: "112px",
+  maxHeight: "60vh",
+  overflowY: "auto",
+  overflowX: "hidden",
   right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
   bottom: "max(60px, calc(env(safe-area-inset-bottom, 0px) + 58px))",
   background: "rgba(11, 20, 16, 0.66)",
@@ -133,8 +139,8 @@ const DISABLED_CONTROL_BUTTON_STYLE: CSSProperties = {
 };
 
 const TOOLS_BUTTON_STYLE: CSSProperties = {
-  height: "30px",
-  minWidth: "0",
+  height: "32px",
+  minWidth: "100%",
   borderRadius: "9px",
   border: "1px solid rgba(110, 226, 150, 0.24)",
   background: "rgba(13, 24, 18, 0.56)",
@@ -253,6 +259,7 @@ export default function TacticalPadLiteClean() {
   };
 
   const phaseItems = Array.from({ length: phaseCount }, (_, index) => index + 1);
+  const closeToolsMenu = () => setToolsOpen(false);
 
   return (
     <div style={ROOT_STYLE}>
@@ -315,19 +322,19 @@ export default function TacticalPadLiteClean() {
       ) : null}
       {toolsOpen ? (
         <div style={TOOLS_POPOUT_STYLE}>
-          <button type="button" style={TOOLS_BUTTON_STYLE}>
+          <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
             Select
           </button>
-          <button type="button" style={TOOLS_BUTTON_STYLE}>
+          <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
             Arrow
           </button>
-          <button type="button" style={TOOLS_BUTTON_STYLE}>
+          <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
             Dashed
           </button>
-          <button type="button" style={TOOLS_BUTTON_STYLE}>
+          <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
             Zone
           </button>
-          <button type="button" style={TOOLS_BUTTON_STYLE}>
+          <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
             Clear
           </button>
         </div>
