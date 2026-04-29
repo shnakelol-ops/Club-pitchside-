@@ -8,7 +8,7 @@ import {
 const ROOT_STYLE: CSSProperties = {
   position: "fixed",
   inset: 0,
-  background: "linear-gradient(to bottom, #030914, #02070d)",
+  background: "linear-gradient(to bottom, #071b14, #061611)",
   margin: 0,
   padding: "4px",
   boxSizing: "border-box",
@@ -30,14 +30,14 @@ const BACKGROUND_BASE_STYLE: CSSProperties = {
   position: "absolute",
   inset: 0,
   background:
-    "radial-gradient(circle at 50% 45%, rgba(74, 222, 128, 0.34) 0%, rgba(18, 52, 37, 0.34) 34%, rgba(3, 9, 15, 0.92) 76%), radial-gradient(ellipse at 50% 82%, rgba(26, 108, 66, 0.28) 0%, rgba(3, 10, 14, 0) 70%), linear-gradient(to bottom, #020612, #01040b)",
+    "radial-gradient(circle at 50% 45%, rgba(34, 197, 94, 0.36) 0%, rgba(24, 91, 60, 0.34) 34%, rgba(7, 27, 20, 0.78) 74%), radial-gradient(ellipse at 50% 82%, rgba(16, 185, 129, 0.24) 0%, rgba(16, 185, 129, 0.09) 36%, rgba(7, 27, 20, 0) 72%), linear-gradient(to bottom, #071b14, #061611)",
 };
 
 const BACKGROUND_VIGNETTE_STYLE: CSSProperties = {
   position: "absolute",
   inset: 0,
   background:
-    "radial-gradient(circle at center, rgba(0, 0, 0, 0) 38%, rgba(0, 0, 0, 0.64) 100%)",
+    "radial-gradient(circle at center, rgba(0, 0, 0, 0) 44%, rgba(0, 0, 0, 0.45) 100%)",
 };
 
 const STADIUM_LIGHT_BASE_STYLE: CSSProperties = {
@@ -48,9 +48,9 @@ const STADIUM_LIGHT_BASE_STYLE: CSSProperties = {
   minHeight: "260px",
   borderRadius: "999px",
   filter: "blur(110px)",
-  opacity: 0.28,
+  opacity: 0.34,
   background:
-    "radial-gradient(circle, rgba(187, 247, 208, 0.52) 0%, rgba(52, 211, 153, 0.14) 36%, rgba(34, 197, 94, 0) 74%)",
+    "radial-gradient(circle, rgba(209, 250, 229, 0.56) 0%, rgba(74, 222, 128, 0.2) 36%, rgba(34, 197, 94, 0) 74%)",
 };
 
 const STADIUM_LIGHT_LEFT_STYLE: CSSProperties = {
@@ -72,9 +72,9 @@ const STADIUM_BEAM_BASE_STYLE: CSSProperties = {
   minWidth: "220px",
   minHeight: "280px",
   filter: "blur(54px)",
-  opacity: 0.2,
+  opacity: 0.26,
   background:
-    "linear-gradient(to bottom, rgba(222, 255, 236, 0.26) 0%, rgba(95, 210, 141, 0.11) 26%, rgba(12, 34, 24, 0) 72%)",
+    "linear-gradient(to bottom, rgba(228, 255, 239, 0.34) 0%, rgba(111, 225, 160, 0.17) 28%, rgba(12, 34, 24, 0) 74%)",
   mixBlendMode: "screen",
 };
 
