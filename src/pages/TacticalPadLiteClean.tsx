@@ -9,7 +9,7 @@ const ROOT_STYLE: CSSProperties = {
   position: "fixed",
   inset: 0,
   background:
-    "linear-gradient(135deg, rgba(236, 248, 250, 1) 0%, rgba(198, 224, 232, 1) 45%, rgba(146, 190, 207, 1) 100%)",
+    "linear-gradient(135deg, rgba(220, 238, 242, 1) 0%, rgba(180, 210, 220, 1) 45%, rgba(120, 170, 195, 1) 100%)",
   margin: 0,
   padding: "4px",
   boxSizing: "border-box",
@@ -31,14 +31,14 @@ const BACKGROUND_BASE_STYLE: CSSProperties = {
   position: "absolute",
   inset: 0,
   background:
-    "linear-gradient(135deg, rgba(236, 248, 250, 1) 0%, rgba(198, 224, 232, 1) 45%, rgba(146, 190, 207, 1) 100%)",
+    "linear-gradient(135deg, rgba(220, 238, 242, 1) 0%, rgba(180, 210, 220, 1) 45%, rgba(120, 170, 195, 1) 100%)",
 };
 
 const BACKGROUND_VIGNETTE_STYLE: CSSProperties = {
   position: "absolute",
   inset: 0,
   background:
-    "radial-gradient(circle at center, rgba(255, 255, 255, 0) 44%, rgba(74, 104, 126, 0.18) 100%)",
+    "radial-gradient(circle at center, rgba(0, 0, 0, 0) 60%, rgba(0, 0, 0, 0.08) 100%)",
 };
 
 const STADIUM_LIGHT_BASE_STYLE: CSSProperties = {
@@ -75,9 +75,8 @@ const STADIUM_BEAM_BASE_STYLE: CSSProperties = {
   minWidth: "340px",
   minHeight: "340px",
   filter: "blur(0px)",
-  opacity: 0.26,
-  background:
-    "linear-gradient(128deg, rgba(130, 166, 184, 0.3) 0%, rgba(193, 218, 229, 0.14) 52%, rgba(193, 218, 229, 0) 100%)",
+  opacity: 0.14,
+  background: "linear-gradient(135deg, rgba(0, 140, 160, 0.12), rgba(0, 90, 120, 0.18))",
   clipPath: "polygon(0% 18%, 100% 0%, 90% 86%, 8% 100%)",
 };
 
