@@ -6,11 +6,11 @@ import {
 } from "../engine/pixi/createTacticalPadLiteSurface";
 
 const ROOT_STYLE: CSSProperties = {
-  margin: 0,
-  width: "100%",
-  minHeight: "100vh",
+  position: "fixed",
+  inset: 0,
   background: "#0b1110",
-  padding: "4px 6px",
+  margin: 0,
+  padding: "4px",
   boxSizing: "border-box",
   display: "flex",
   alignItems: "center",
@@ -18,73 +18,150 @@ const ROOT_STYLE: CSSProperties = {
 };
 
 const CONTENT_STYLE: CSSProperties = {
-  width: "100%",
+  width: "min(99vw, calc((100vh - 10px) * 1.6), 1360px)",
+  aspectRatio: "16 / 10",
+  maxHeight: "calc(100vh - 10px)",
   display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
+  alignItems: "stretch",
 };
 
 const PITCH_STYLE: CSSProperties = {
-  width: "min(98vw, calc((100vh - 82px) * 1.6), 1360px)",
-  aspectRatio: "16 / 10",
-  height: "auto",
-  maxHeight: "calc(100vh - 82px)",
+  width: "100%",
+  height: "100%",
   borderRadius: "12px",
   overflow: "hidden",
   boxShadow: "0 20px 44px rgba(0, 0, 0, 0.38)",
   background: "#13221d",
 };
 
-const CONTROL_BAR_STYLE: CSSProperties = {
-  position: "static",
+const BUBBLE_BASE_STYLE: CSSProperties = {
+  position: "fixed",
+  width: "44px",
+  height: "44px",
+  borderRadius: "999px",
   display: "flex",
-  gap: "6px",
-  width: "fit-content",
-  maxWidth: "96%",
-  marginTop: "8px",
-  padding: "6px 10px",
-  borderRadius: "14px",
-  background: "rgba(8, 16, 14, 0.64)",
-  border: "1px solid rgba(92, 196, 132, 0.24)",
-  boxShadow: "0 10px 24px rgba(0, 0, 0, 0.22), 0 0 18px rgba(72, 184, 118, 0.12)",
-  backdropFilter: "blur(8px)",
-  WebkitBackdropFilter: "blur(8px)",
+  alignItems: "center",
+  justifyContent: "center",
+  color: "#e7f4ee",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "11px",
+  fontWeight: 600,
+  border: "1px solid rgba(216, 226, 222, 0.22)",
+  backdropFilter: "blur(10px)",
+  WebkitBackdropFilter: "blur(10px)",
+  boxShadow: "0 8px 22px rgba(0, 0, 0, 0.24)",
+  cursor: "pointer",
+  zIndex: 20,
 };
 
-const BUTTON_STYLE: CSSProperties = {
-  border: "1px solid rgba(95, 205, 138, 0.34)",
+const LEFT_BUBBLE_STYLE: CSSProperties = {
+  ...BUBBLE_BASE_STYLE,
+  left: "max(12px, calc(env(safe-area-inset-left, 0px) + 10px))",
+  bottom: "max(12px, calc(env(safe-area-inset-bottom, 0px) + 10px))",
+  background: "rgba(255, 80, 80, 0.08)",
+  border: "1px solid rgba(255, 114, 114, 0.25)",
+};
+
+const RIGHT_BUBBLE_STYLE: CSSProperties = {
+  ...BUBBLE_BASE_STYLE,
+  right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
+  bottom: "max(12px, calc(env(safe-area-inset-bottom, 0px) + 10px))",
+  background: "rgba(80, 255, 140, 0.08)",
+  border: "1px solid rgba(110, 230, 156, 0.25)",
+};
+
+const POPOUT_BASE_STYLE: CSSProperties = {
+  position: "fixed",
+  display: "flex",
+  flexDirection: "column",
+  gap: "6px",
+  padding: "10px",
+  borderRadius: "14px",
+  background: "rgba(10, 20, 25, 0.62)",
+  border: "1px solid rgba(215, 228, 224, 0.18)",
+  backdropFilter: "blur(10px)",
+  WebkitBackdropFilter: "blur(10px)",
+  boxShadow: "0 12px 30px rgba(0, 0, 0, 0.22)",
+  zIndex: 19,
+};
+
+const CONTROLS_POPOUT_STYLE: CSSProperties = {
+  ...POPOUT_BASE_STYLE,
+  left: "max(12px, calc(env(safe-area-inset-left, 0px) + 10px))",
+  bottom: "max(64px, calc(env(safe-area-inset-bottom, 0px) + 62px))",
+  background: "rgba(22, 17, 18, 0.66)",
+  border: "1px solid rgba(255, 118, 118, 0.22)",
+};
+
+const TOOLS_POPOUT_STYLE: CSSProperties = {
+  ...POPOUT_BASE_STYLE,
+  right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
+  bottom: "max(64px, calc(env(safe-area-inset-bottom, 0px) + 62px))",
+  background: "rgba(11, 20, 16, 0.66)",
+  border: "1px solid rgba(108, 226, 150, 0.22)",
+};
+
+const CONTROL_BUTTON_STYLE: CSSProperties = {
+  height: "38px",
+  minWidth: "104px",
   borderRadius: "10px",
-  background: "rgba(8, 23, 16, 0.58)",
-  color: "#dcf6e5",
+  border: "1px solid rgba(255, 124, 124, 0.28)",
+  background: "rgba(28, 20, 21, 0.56)",
+  color: "#f0e7e7",
   fontFamily: "Inter, system-ui, sans-serif",
   fontSize: "11.5px",
-  fontWeight: 550,
+  fontWeight: 560,
   letterSpacing: "0.01em",
-  height: "40px",
-  padding: "0 13px",
-  minWidth: "84px",
+  padding: "0 12px",
   cursor: "pointer",
-  boxShadow: "inset 0 0 0 1px rgba(111, 220, 153, 0.08), 0 0 10px rgba(68, 178, 112, 0.1)",
+  boxShadow: "inset 0 0 0 1px rgba(255, 142, 142, 0.08)",
 };
 
-const DISABLED_BUTTON_STYLE: CSSProperties = {
-  ...BUTTON_STYLE,
-  opacity: 0.42,
+const DISABLED_CONTROL_BUTTON_STYLE: CSSProperties = {
+  ...CONTROL_BUTTON_STYLE,
+  opacity: 0.4,
   cursor: "not-allowed",
 };
 
 const PHASE_COUNT_STYLE: CSSProperties = {
-  height: "40px",
+  height: "34px",
   display: "flex",
   alignItems: "center",
-  border: "1px solid rgba(95, 205, 138, 0.28)",
+  justifyContent: "center",
+  border: "1px solid rgba(255, 133, 133, 0.22)",
   borderRadius: "10px",
-  background: "rgba(6, 19, 13, 0.58)",
-  color: "rgba(213, 244, 224, 0.95)",
+  background: "rgba(30, 21, 22, 0.52)",
+  color: "rgba(247, 228, 228, 0.92)",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "10.5px",
+  fontWeight: 550,
+  padding: "0 9px",
+};
+
+const TOOLS_BUTTON_STYLE: CSSProperties = {
+  height: "34px",
+  minWidth: "86px",
+  borderRadius: "10px",
+  border: "1px solid rgba(110, 226, 150, 0.24)",
+  background: "rgba(13, 24, 18, 0.56)",
+  color: "#dff3e6",
   fontFamily: "Inter, system-ui, sans-serif",
   fontSize: "11px",
-  fontWeight: 560,
+  fontWeight: 550,
   padding: "0 10px",
+  cursor: "pointer",
+};
+
+const CLOSE_BUTTON_STYLE: CSSProperties = {
+  height: "28px",
+  borderRadius: "8px",
+  border: "1px solid rgba(220, 228, 224, 0.2)",
+  background: "rgba(16, 22, 24, 0.44)",
+  color: "#d6e3df",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "10px",
+  fontWeight: 560,
+  cursor: "pointer",
 };
 
 export default function TacticalPadLiteClean() {
@@ -92,6 +169,8 @@ export default function TacticalPadLiteClean() {
   const surfaceRef = useRef<TacticalPadLiteSurface | null>(null);
   const [phaseCount, setPhaseCount] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [controlsOpen, setControlsOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -126,20 +205,24 @@ export default function TacticalPadLiteClean() {
     if (!isPlaying) {
       surfaceRef.current?.play();
       setIsPlaying(true);
+      setControlsOpen(false);
       return;
     }
     setIsPlaying(false);
+    setControlsOpen(false);
   };
 
   return (
     <div style={ROOT_STYLE}>
       <div style={CONTENT_STYLE}>
         <div ref={hostRef} style={PITCH_STYLE} />
-        <div style={CONTROL_BAR_STYLE}>
+      </div>
+      {controlsOpen ? (
+        <div style={CONTROLS_POPOUT_STYLE}>
           <button
             type="button"
             disabled={isPlaying}
-            style={isPlaying ? DISABLED_BUTTON_STYLE : BUTTON_STYLE}
+            style={isPlaying ? DISABLED_CONTROL_BUTTON_STYLE : CONTROL_BUTTON_STYLE}
             onClick={() => surfaceRef.current?.setStart()}
           >
             Set Start
@@ -147,17 +230,17 @@ export default function TacticalPadLiteClean() {
           <button
             type="button"
             disabled={isPlaying}
-            style={isPlaying ? DISABLED_BUTTON_STYLE : BUTTON_STYLE}
+            style={isPlaying ? DISABLED_CONTROL_BUTTON_STYLE : CONTROL_BUTTON_STYLE}
             onClick={() => surfaceRef.current?.addPhase()}
           >
             Add Phase
           </button>
-          <button type="button" style={BUTTON_STYLE} onClick={togglePlay}>
+          <button type="button" style={CONTROL_BUTTON_STYLE} onClick={togglePlay}>
             Play
           </button>
           <button
             type="button"
-            style={BUTTON_STYLE}
+            style={CONTROL_BUTTON_STYLE}
             onClick={() => {
               surfaceRef.current?.reset();
               setIsPlaying(false);
@@ -166,8 +249,49 @@ export default function TacticalPadLiteClean() {
             Reset
           </button>
           <div style={PHASE_COUNT_STYLE}>Phases: {phaseCount}</div>
+          <button type="button" style={CLOSE_BUTTON_STYLE} onClick={() => setControlsOpen(false)}>
+            Close
+          </button>
         </div>
-      </div>
+      ) : null}
+      {toolsOpen ? (
+        <div style={TOOLS_POPOUT_STYLE}>
+          <button type="button" style={TOOLS_BUTTON_STYLE}>
+            Select
+          </button>
+          <button type="button" style={TOOLS_BUTTON_STYLE}>
+            Arrow
+          </button>
+          <button type="button" style={TOOLS_BUTTON_STYLE}>
+            Dashed
+          </button>
+          <button type="button" style={TOOLS_BUTTON_STYLE}>
+            Zone
+          </button>
+          <button type="button" style={TOOLS_BUTTON_STYLE}>
+            Clear
+          </button>
+          <button type="button" style={CLOSE_BUTTON_STYLE} onClick={() => setToolsOpen(false)}>
+            Close
+          </button>
+        </div>
+      ) : null}
+      <button
+        type="button"
+        style={LEFT_BUBBLE_STYLE}
+        aria-label="Open controls"
+        onClick={() => setControlsOpen((open) => !open)}
+      >
+        Ctrl
+      </button>
+      <button
+        type="button"
+        style={RIGHT_BUBBLE_STYLE}
+        aria-label="Open tools"
+        onClick={() => setToolsOpen((open) => !open)}
+      >
+        Tool
+      </button>
     </div>
   );
 }
