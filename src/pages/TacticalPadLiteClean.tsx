@@ -127,6 +127,55 @@ const STADIUM_FLOODLIGHT_CSS = `
   filter: brightness(1.1);
 }
 
+.floating-bubble-tool {
+  background: rgba(5, 8, 10, 0.92);
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.55),
+    inset 0 1px 2px rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.96);
+}
+
+.floating-bubble-tool:hover,
+.floating-bubble-tool:active {
+  transform: scale(0.96);
+  filter: brightness(1.15);
+}
+
+.tool-bubble-icon {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tool-bubble-mark {
+  font-family: "Times New Roman", Georgia, serif;
+  font-weight: 800;
+  font-style: italic;
+  letter-spacing: -1px;
+  font-size: 15px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.tool-bubble-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tool-bubble-lines span {
+  display: block;
+  width: 9px;
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.tool-bubble-lines span:nth-child(2) {
+  width: 7px;
+}
+
 .control-button {
   transition: transform 140ms ease, filter 140ms ease;
 }
@@ -240,6 +289,13 @@ const RIGHT_BUBBLE_STYLE: CSSProperties = {
   ...BUBBLE_BASE_STYLE,
   right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
   bottom: "max(12px, calc(env(safe-area-inset-bottom, 0px) + 10px))",
+};
+
+const TOOL_BUBBLE_STYLE: CSSProperties = {
+  ...RIGHT_BUBBLE_STYLE,
+  background: "rgba(5, 8, 10, 0.92)",
+  border: "2px solid rgba(255, 255, 255, 0.18)",
+  boxShadow: "0 8px 24px rgba(0, 0, 0, 0.55), inset 0 1px 2px rgba(255, 255, 255, 0.18)",
 };
 
 const POPOUT_BASE_STYLE: CSSProperties = {
@@ -581,12 +637,19 @@ export default function TacticalPadLiteClean() {
       </button>
       <button
         type="button"
-        className="floating-bubble"
-        style={RIGHT_BUBBLE_STYLE}
+        className="floating-bubble floating-bubble-tool"
+        style={TOOL_BUBBLE_STYLE}
         aria-label="Open tools"
         onClick={() => setToolsOpen((open) => !open)}
       >
-        Tool
+        <span className="tool-bubble-icon" aria-hidden="true">
+          <span className="tool-bubble-mark">P</span>
+          <span className="tool-bubble-lines">
+            <span />
+            <span />
+            <span />
+          </span>
+        </span>
       </button>
     </div>
   );
