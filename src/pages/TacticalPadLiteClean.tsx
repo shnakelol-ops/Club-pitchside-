@@ -30,14 +30,14 @@ const BACKGROUND_BASE_STYLE: CSSProperties = {
   position: "absolute",
   inset: 0,
   background:
-    "radial-gradient(circle at 50% 46%, rgba(56, 189, 112, 0.24) 0%, rgba(12, 28, 22, 0.28) 32%, rgba(3, 8, 14, 0.9) 74%), radial-gradient(ellipse at 50% 78%, rgba(20, 82, 52, 0.24) 0%, rgba(2, 8, 12, 0) 68%), linear-gradient(to bottom, #020617, #020617)",
+    "radial-gradient(circle at 50% 45%, rgba(74, 222, 128, 0.34) 0%, rgba(18, 52, 37, 0.34) 34%, rgba(3, 9, 15, 0.92) 76%), radial-gradient(ellipse at 50% 82%, rgba(26, 108, 66, 0.28) 0%, rgba(3, 10, 14, 0) 70%), linear-gradient(to bottom, #020612, #01040b)",
 };
 
 const BACKGROUND_VIGNETTE_STYLE: CSSProperties = {
   position: "absolute",
   inset: 0,
   background:
-    "radial-gradient(circle at center, rgba(0, 0, 0, 0) 42%, rgba(0, 0, 0, 0.56) 100%)",
+    "radial-gradient(circle at center, rgba(0, 0, 0, 0) 38%, rgba(0, 0, 0, 0.64) 100%)",
 };
 
 const STADIUM_LIGHT_BASE_STYLE: CSSProperties = {
@@ -48,8 +48,9 @@ const STADIUM_LIGHT_BASE_STYLE: CSSProperties = {
   minHeight: "260px",
   borderRadius: "999px",
   filter: "blur(110px)",
-  opacity: 0.24,
-  background: "radial-gradient(circle, rgba(187, 247, 208, 0.46) 0%, rgba(52, 211, 153, 0.08) 38%, rgba(34, 197, 94, 0) 74%)",
+  opacity: 0.28,
+  background:
+    "radial-gradient(circle, rgba(187, 247, 208, 0.52) 0%, rgba(52, 211, 153, 0.14) 36%, rgba(34, 197, 94, 0) 74%)",
 };
 
 const STADIUM_LIGHT_LEFT_STYLE: CSSProperties = {
@@ -62,6 +63,33 @@ const STADIUM_LIGHT_RIGHT_STYLE: CSSProperties = {
   ...STADIUM_LIGHT_BASE_STYLE,
   top: "-18vw",
   right: "-13vw",
+};
+
+const STADIUM_BEAM_BASE_STYLE: CSSProperties = {
+  position: "absolute",
+  width: "42vw",
+  height: "74vh",
+  minWidth: "220px",
+  minHeight: "280px",
+  filter: "blur(54px)",
+  opacity: 0.2,
+  background:
+    "linear-gradient(to bottom, rgba(222, 255, 236, 0.26) 0%, rgba(95, 210, 141, 0.11) 26%, rgba(12, 34, 24, 0) 72%)",
+  mixBlendMode: "screen",
+};
+
+const STADIUM_BEAM_LEFT_STYLE: CSSProperties = {
+  ...STADIUM_BEAM_BASE_STYLE,
+  top: "-22vh",
+  left: "-8vw",
+  transform: "rotate(22deg)",
+};
+
+const STADIUM_BEAM_RIGHT_STYLE: CSSProperties = {
+  ...STADIUM_BEAM_BASE_STYLE,
+  top: "-22vh",
+  right: "-8vw",
+  transform: "rotate(-22deg)",
 };
 
 const CONTENT_STYLE: CSSProperties = {
@@ -319,6 +347,8 @@ export default function TacticalPadLiteClean() {
         <div style={BACKGROUND_BASE_STYLE} />
         <div style={STADIUM_LIGHT_LEFT_STYLE} />
         <div style={STADIUM_LIGHT_RIGHT_STYLE} />
+        <div style={STADIUM_BEAM_LEFT_STYLE} />
+        <div style={STADIUM_BEAM_RIGHT_STYLE} />
         <div style={BACKGROUND_VIGNETTE_STYLE} />
       </div>
       <div style={CONTENT_STYLE}>
