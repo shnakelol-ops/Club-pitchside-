@@ -123,7 +123,17 @@ const STADIUM_FLOODLIGHT_CSS = `
 
 .floating-bubble:hover,
 .floating-bubble:active {
-  transform: scale(1.03);
+  transform: scale(1.04);
+  filter: brightness(1.1);
+}
+
+.control-button {
+  transition: transform 140ms ease, filter 140ms ease;
+}
+
+.control-button:hover,
+.control-button:active {
+  transform: scale(1.04);
   filter: brightness(1.1);
 }
 
@@ -205,16 +215,17 @@ const BUBBLE_BASE_STYLE: CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  color: "rgba(255, 255, 255, 0.9)",
+  color: "rgba(255, 255, 255, 0.95)",
   fontFamily: "Inter, system-ui, sans-serif",
   fontSize: "10.5px",
   fontWeight: 600,
+  letterSpacing: "0.3px",
   border: "1px solid rgba(255, 255, 255, 0.25)",
-  background: "rgba(20, 25, 30, 0.55)",
-  backdropFilter: "blur(10px)",
-  WebkitBackdropFilter: "blur(10px)",
+  background: "rgba(20, 25, 30, 0.65)",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
   boxShadow:
-    "0 4px 20px rgba(0, 0, 0, 0.4), 0 0 12px rgba(255, 255, 255, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.2)",
+    "0 6px 20px rgba(0, 0, 0, 0.45), 0 0 18px rgba(255, 255, 255, 0.12), inset 0 1px 2px rgba(255, 255, 255, 0.25)",
   cursor: "pointer",
   zIndex: 20,
 };
@@ -280,16 +291,19 @@ const CONTROL_BUTTON_STYLE: CSSProperties = {
   height: "34px",
   minWidth: "78px",
   borderRadius: "10px",
-  border: "1px solid rgba(233, 146, 146, 0.2)",
-  background: "rgba(26, 20, 20, 0.52)",
-  color: "#f0e7e7",
+  border: "1px solid rgba(255, 255, 255, 0.25)",
+  background: "rgba(20, 25, 30, 0.65)",
+  color: "rgba(255, 255, 255, 0.95)",
   fontFamily: "Inter, system-ui, sans-serif",
   fontSize: "11px",
-  fontWeight: 560,
-  letterSpacing: "0.01em",
+  fontWeight: 600,
+  letterSpacing: "0.3px",
   padding: "0 10px",
   cursor: "pointer",
-  boxShadow: "inset 0 0 0 1px rgba(236, 154, 154, 0.05)",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+  boxShadow:
+    "0 6px 20px rgba(0, 0, 0, 0.45), 0 0 18px rgba(255, 255, 255, 0.12), inset 0 1px 2px rgba(255, 255, 255, 0.25)",
   flex: "0 0 auto",
 };
 
@@ -297,6 +311,33 @@ const DISABLED_CONTROL_BUTTON_STYLE: CSSProperties = {
   ...CONTROL_BUTTON_STYLE,
   opacity: 0.4,
   cursor: "not-allowed",
+};
+
+const SET_START_BUTTON_STYLE: CSSProperties = {
+  ...CONTROL_BUTTON_STYLE,
+  boxShadow:
+    "0 6px 20px rgba(0, 0, 0, 0.45), 0 0 20px rgba(255, 255, 255, 0.2), inset 0 1px 2px rgba(255, 255, 255, 0.25)",
+};
+
+const ADD_PHASE_BUTTON_STYLE: CSSProperties = {
+  ...CONTROL_BUTTON_STYLE,
+  border: "1px solid rgba(59, 130, 246, 0.6)",
+  boxShadow:
+    "0 6px 20px rgba(0, 0, 0, 0.45), 0 0 18px rgba(59, 130, 246, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.25)",
+};
+
+const PLAY_BUTTON_STYLE: CSSProperties = {
+  ...CONTROL_BUTTON_STYLE,
+  border: "1px solid rgba(34, 197, 94, 0.6)",
+  boxShadow:
+    "0 6px 20px rgba(0, 0, 0, 0.45), 0 0 18px rgba(34, 197, 94, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.25)",
+};
+
+const RESET_BUTTON_STYLE: CSSProperties = {
+  ...CONTROL_BUTTON_STYLE,
+  border: "1px solid rgba(239, 68, 68, 0.6)",
+  boxShadow:
+    "0 6px 20px rgba(0, 0, 0, 0.45), 0 0 18px rgba(239, 68, 68, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.25)",
 };
 
 const TOOLS_BUTTON_STYLE: CSSProperties = {
@@ -471,8 +512,9 @@ export default function TacticalPadLiteClean() {
         <div style={CONTROLS_POPOUT_STYLE}>
           <button
             type="button"
+            className="control-button"
             disabled={isPlaying}
-            style={isPlaying ? DISABLED_CONTROL_BUTTON_STYLE : CONTROL_BUTTON_STYLE}
+            style={isPlaying ? DISABLED_CONTROL_BUTTON_STYLE : SET_START_BUTTON_STYLE}
             onClick={() => {
               surfaceRef.current?.setStart();
               closeControlsMenu();
@@ -482,8 +524,9 @@ export default function TacticalPadLiteClean() {
           </button>
           <button
             type="button"
+            className="control-button"
             disabled={isPlaying}
-            style={isPlaying ? DISABLED_CONTROL_BUTTON_STYLE : CONTROL_BUTTON_STYLE}
+            style={isPlaying ? DISABLED_CONTROL_BUTTON_STYLE : ADD_PHASE_BUTTON_STYLE}
             onClick={() => {
               surfaceRef.current?.addPhase();
               closeControlsMenu();
@@ -491,12 +534,13 @@ export default function TacticalPadLiteClean() {
           >
             Add Phase
           </button>
-          <button type="button" style={CONTROL_BUTTON_STYLE} onClick={togglePlay}>
+          <button type="button" className="control-button" style={PLAY_BUTTON_STYLE} onClick={togglePlay}>
             Play
           </button>
           <button
             type="button"
-            style={CONTROL_BUTTON_STYLE}
+            className="control-button"
+            style={RESET_BUTTON_STYLE}
             onClick={() => {
               surfaceRef.current?.reset();
               setIsPlaying(false);
