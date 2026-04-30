@@ -637,6 +637,11 @@ const MODE_TAB_STYLE: CSSProperties = {
   zIndex: 21,
 };
 
+const WHITEBOARD_MODE_TAB_STYLE: CSSProperties = {
+  ...MODE_TAB_STYLE,
+  right: "max(134px, calc(env(safe-area-inset-right, 0px) + 132px))",
+};
+
 const MODE_MENU_STYLE: CSSProperties = {
   position: "fixed",
   top: "max(48px, calc(env(safe-area-inset-top, 0px) + 46px))",
@@ -653,6 +658,11 @@ const MODE_MENU_STYLE: CSSProperties = {
   display: "flex",
   flexDirection: "column",
   gap: "4px",
+};
+
+const WHITEBOARD_MODE_MENU_STYLE: CSSProperties = {
+  ...MODE_MENU_STYLE,
+  right: "max(134px, calc(env(safe-area-inset-right, 0px) + 132px))",
 };
 
 const MODE_MENU_ITEM_STYLE: CSSProperties = {
@@ -854,7 +864,7 @@ export default function TacticalPadLiteClean() {
   };
 
   const modeMenu = modeMenuOpen ? (
-    <div style={MODE_MENU_STYLE}>
+    <div style={isWhiteboardMode ? WHITEBOARD_MODE_MENU_STYLE : MODE_MENU_STYLE}>
       <button
         type="button"
         style={isTacticalMode ? MODE_MENU_ITEM_ACTIVE_STYLE : MODE_MENU_ITEM_STYLE}
@@ -882,7 +892,7 @@ export default function TacticalPadLiteClean() {
   const modeButton = (
     <button
       type="button"
-      style={MODE_TAB_STYLE}
+      style={isWhiteboardMode ? WHITEBOARD_MODE_TAB_STYLE : MODE_TAB_STYLE}
       aria-label="Open mode menu"
       aria-expanded={modeMenuOpen}
       onClick={() => setModeMenuOpen((open) => !open)}
