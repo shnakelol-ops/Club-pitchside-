@@ -294,22 +294,25 @@ const TOOL_BUBBLE_STYLE: CSSProperties = {
   boxShadow: "0 8px 24px rgba(0, 0, 0, 0.55), inset 0 1px 2px rgba(255, 255, 255, 0.18)",
 };
 
-const TOOL_BUBBLE_WORDMARK_STYLE: CSSProperties = {
-  fontFamily: "\"Arial Narrow\", \"Roboto Condensed\", Inter, system-ui, sans-serif",
-  fontWeight: 800,
-  fontSize: "10px",
-  letterSpacing: "0.65px",
-  color: "rgba(248, 251, 250, 0.98)",
-  lineHeight: 1,
+const TOOL_BUBBLE_MONOGRAM_WRAP_STYLE: CSSProperties = {
   display: "inline-flex",
   flexDirection: "column",
   alignItems: "center",
   justifyContent: "center",
-  gap: "3px",
+  gap: "2px",
 };
 
-const TOOL_BUBBLE_WORDMARK_ACCENT_STYLE: CSSProperties = {
-  width: "16px",
+const TOOL_BUBBLE_MONOGRAM_STYLE: CSSProperties = {
+  fontFamily: "\"Arial Narrow\", \"Roboto Condensed\", Inter, system-ui, sans-serif",
+  fontWeight: 800,
+  fontSize: "14px",
+  letterSpacing: "0.18px",
+  color: "rgba(248, 251, 250, 0.98)",
+  lineHeight: 1,
+};
+
+const TOOL_BUBBLE_MONOGRAM_ACCENT_STYLE: CSSProperties = {
+  width: "12px",
   height: "2px",
   borderRadius: "999px",
   background: "#F2C94C",
@@ -678,6 +681,7 @@ const MODE_MENU_ITEM_ACTIVE_STYLE: CSSProperties = {
 export default function TacticalPadLiteClean() {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const surfaceRef = useRef<TacticalPadLiteSurface | null>(null);
+  const [surfaceRefreshKey, setSurfaceRefreshKey] = useState(0);
   const [mode, setMode] = useState<PadMode>("tactical");
   const [whiteboardBlueCount, setWhiteboardBlueCount] = useState(1);
   const [whiteboardRedCount, setWhiteboardRedCount] = useState(1);
@@ -694,6 +698,54 @@ export default function TacticalPadLiteClean() {
   const isTacticalMode = mode === "tactical";
   const isStatsMode = mode === "stats";
   const isWhiteboardMode = mode === "whiteboard";
+
+  useEffect(() => {
+    const media = window.matchMedia("(orientation: landscape)");
+    let rafA = 0;
+    let rafB = 0;
+    let wasLandscape = media.matches || window.innerWidth > window.innerHeight;
+
+    const runDoubleRafReflow = (triggerRemount: boolean) => {
+      rafA = window.requestAnimationFrame(() => {
+        rafB = window.requestAnimationFrame(() => {
+          surfaceRef.current?.reflow();
+          if (triggerRemount) {
+            setSurfaceRefreshKey((value) => value + 1);
+          }
+        });
+      });
+    };
+
+    const handleViewportChange = () => {
+      const isLandscape = media.matches || window.innerWidth > window.innerHeight;
+      if (isLandscape && !wasLandscape) {
+        runDoubleRafReflow(true);
+      } else if (isLandscape) {
+        runDoubleRafReflow(false);
+      }
+      wasLandscape = isLandscape;
+    };
+
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", handleViewportChange);
+    } else {
+      media.addListener(handleViewportChange);
+    }
+    window.addEventListener("orientationchange", handleViewportChange);
+    window.addEventListener("resize", handleViewportChange);
+
+    return () => {
+      window.cancelAnimationFrame(rafA);
+      window.cancelAnimationFrame(rafB);
+      if (typeof media.removeEventListener === "function") {
+        media.removeEventListener("change", handleViewportChange);
+      } else {
+        media.removeListener(handleViewportChange);
+      }
+      window.removeEventListener("orientationchange", handleViewportChange);
+      window.removeEventListener("resize", handleViewportChange);
+    };
+  }, []);
 
   useEffect(() => {
     if (isStatsMode) return;
@@ -723,6 +775,11 @@ export default function TacticalPadLiteClean() {
       }
       surfaceRef.current = surface;
       destroySurface = surface.destroy;
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          surface.reflow();
+        });
+      });
     });
 
     return () => {
@@ -730,7 +787,7 @@ export default function TacticalPadLiteClean() {
       surfaceRef.current = null;
       destroySurface?.();
     };
-  }, [isStatsMode, isWhiteboardMode, whiteboardBlueCount, whiteboardRedCount]);
+  }, [isStatsMode, isWhiteboardMode, whiteboardBlueCount, whiteboardRedCount, surfaceRefreshKey]);
 
   const togglePlay = () => {
     if (!isPlaying) {
@@ -1085,9 +1142,9 @@ export default function TacticalPadLiteClean() {
           onClick={() => setToolsOpen((open) => !open)}
         >
           <span className="tool-bubble-icon" aria-hidden="true">
-            <span style={TOOL_BUBBLE_WORDMARK_STYLE}>
-              <span>PITCHSIDE</span>
-              <span style={TOOL_BUBBLE_WORDMARK_ACCENT_STYLE} />
+            <span style={TOOL_BUBBLE_MONOGRAM_WRAP_STYLE}>
+              <span style={TOOL_BUBBLE_MONOGRAM_STYLE}>P</span>
+              <span style={TOOL_BUBBLE_MONOGRAM_ACCENT_STYLE} />
             </span>
           </span>
         </button>

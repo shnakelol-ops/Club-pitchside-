@@ -26,6 +26,7 @@ export type TacticalPadLiteSurface = {
   addPhase: () => void;
   play: () => void;
   reset: () => void;
+  reflow: () => void;
   setWhiteboardDrawTool: (tool: WhiteboardDrawTool) => void;
   undoWhiteboardStroke: () => void;
   clearWhiteboardStrokes: () => void;
@@ -340,25 +341,25 @@ export async function createTacticalPadLiteSurface(
 
   if (surfaceVariant === "whiteboard") {
     const watermarkLabel = new Text({
-      text: "PITCHSIDE",
+      text: "P",
       style: {
         fill: 0x202934,
-        fontSize: 2.55,
+        fontSize: 3.3,
         fontWeight: "800",
         fontFamily: "Inter, Arial Narrow, Arial, system-ui, sans-serif",
-        letterSpacing: 0.58,
+        letterSpacing: 0.32,
       },
     });
     watermarkLabel.anchor.set(1, 1);
     watermarkLabel.position.set(WORLD_SIZE.width - 2.2, WORLD_SIZE.height - 1.8);
-    watermarkLabel.alpha = 0.16;
+    watermarkLabel.alpha = 0.15;
     watermarkLabel.eventMode = "none";
     world.addChild(watermarkLabel);
 
     const watermarkAccent = new Graphics();
     watermarkAccent
-      .roundRect(WORLD_SIZE.width - 21.8, WORLD_SIZE.height - 1.35, 19.6, 0.38, 0.2)
-      .fill({ color: 0xf2c94c, alpha: 0.16 });
+      .roundRect(WORLD_SIZE.width - 6.1, WORLD_SIZE.height - 1.35, 3.9, 0.34, 0.2)
+      .fill({ color: 0xf2c94c, alpha: 0.15 });
     watermarkAccent.eventMode = "none";
     world.addChild(watermarkAccent);
   }
@@ -728,6 +729,9 @@ export async function createTacticalPadLiteSurface(
       releaseDrag();
       cancelPlaybackAnimation();
       applySnapshotToPlayers(startPositions);
+    },
+    reflow: () => {
+      fitToHost();
     },
     setWhiteboardDrawTool: (tool) => {
       if (!isWhiteboardSurface) return;
