@@ -18,6 +18,7 @@ import {
   NORMALIZED_MIN,
   type NormalizedPoint,
 } from "../shared/normalization";
+import type { FlowPreset } from "../../config/flowLabPresets";
 
 type TacticalPlayer = {
   id: string;
@@ -47,6 +48,8 @@ export type TacticalPadLiteSurface = {
   setWhiteboardDrawColor: (color: number) => void;
   undoWhiteboardStroke: () => void;
   clearWhiteboardStrokes: () => void;
+  whiteboardHasTemplateContent: () => boolean;
+  applyWhiteboardFlowPreset: (preset: FlowPreset) => void;
   destroy: () => void;
 };
 
@@ -71,6 +74,10 @@ type WhiteboardStrokeDescriptor = {
   tool: WhiteboardDrawingTool;
   color: number;
   points: WhiteboardPoint[];
+};
+type WhiteboardReplacementOptions = {
+  clearDrawings: boolean;
+  setAsBaseline: boolean;
 };
 
 const WORLD_SIZE = { width: 160, height: 100 } as const;
@@ -105,6 +112,10 @@ function clampWorld(value: number, max: number): number {
 function clampTeamCount(value: number | undefined): number {
   const parsed = Number.isFinite(value) ? Math.floor(value as number) : 1;
   return Math.max(1, Math.min(15, parsed));
+}
+
+function almostEqualPoint(a: number, b: number): boolean {
+  return Math.abs(a - b) < 0.0001;
 }
 
 function createWhiteboardPlayerSeeds(
@@ -369,6 +380,10 @@ export async function createTacticalPadLiteSurface(
   whiteboardPreviewLayer.addChild(whiteboardPreviewGraphic);
   const completedWhiteboardDrawings: WhiteboardStrokeDescriptor[] = [];
   let activeWhiteboardStroke: WhiteboardStrokeDescriptor | null = null;
+  let whiteboardBaselineSeeds: PlayerSeed[] = playerSeeds.map((seed) => ({
+    ...seed,
+    position: { ...seed.position },
+  }));
 
   function fitToHost(): void {
     const width = host.clientWidth;
@@ -718,27 +733,92 @@ export async function createTacticalPadLiteSurface(
   }
 
   function rebuildWhiteboardPlayers(
-    counts: TacticalPadLiteSurfaceOptions["whiteboardTeamCounts"],
-    colors: TacticalPadLiteSurfaceOptions["whiteboardTeamColors"],
+    nextSeeds: PlayerSeed[],
+    options: WhiteboardReplacementOptions,
   ): void {
     if (!isWhiteboardSurface) return;
     releaseDrag();
-    // Preserve committed drawings; only clear in-progress preview state.
     resetActiveWhiteboardStroke();
+    if (options.clearDrawings) {
+      completedWhiteboardDrawings.length = 0;
+    }
     for (const player of players) {
       player.token.removeAllListeners();
       player.token.destroy({ children: true });
     }
     players.length = 0;
-    const nextSeeds = createWhiteboardPlayerSeeds(counts, colors);
     for (const seed of nextSeeds) {
       const nextPlayer = createSurfacePlayer(seed);
       players.push(nextPlayer);
       bindPlayerPointerDown(nextPlayer);
     }
+    if (options.setAsBaseline) {
+      whiteboardBaselineSeeds = nextSeeds.map((seed) => ({
+        ...seed,
+        position: { ...seed.position },
+      }));
+    }
     syncPlayersToViewport();
     syncWhiteboardTokenInputMode();
     renderAllWhiteboardDrawings();
+  }
+
+  function createSeedsFromFlowPreset(preset: FlowPreset): PlayerSeed[] {
+    return preset.players.map((player, index) => {
+      const isBlue = player.team === "blue";
+      return {
+        id: `FLOW_${index + 1}`,
+        number: player.number,
+        team: isBlue ? "BLUE" : "RED",
+        color: isBlue ? "blue" : "red",
+        position: {
+          x: Math.max(NORMALIZED_MIN, Math.min(NORMALIZED_MAX, player.x)),
+          y: Math.max(NORMALIZED_MIN, Math.min(NORMALIZED_MAX, player.y)),
+        },
+      };
+    });
+  }
+
+  function applyFlowPresetDrawings(preset: FlowPreset): void {
+    completedWhiteboardDrawings.length = 0;
+    for (const drawing of preset.drawings) {
+      const tool: WhiteboardDrawingTool = drawing.type;
+      completedWhiteboardDrawings.push({
+        tool,
+        color: WHITEBOARD_DEFAULT_STROKE_COLOR,
+        points: [
+          {
+            x: Math.max(NORMALIZED_MIN, Math.min(NORMALIZED_MAX, drawing.from.x)),
+            y: Math.max(NORMALIZED_MIN, Math.min(NORMALIZED_MAX, drawing.from.y)),
+          },
+          {
+            x: Math.max(NORMALIZED_MIN, Math.min(NORMALIZED_MAX, drawing.to.x)),
+            y: Math.max(NORMALIZED_MIN, Math.min(NORMALIZED_MAX, drawing.to.y)),
+          },
+        ],
+      });
+    }
+  }
+
+  function whiteboardHasTemplateContent(): boolean {
+    if (!isWhiteboardSurface) return false;
+    if (completedWhiteboardDrawings.length > 0) return true;
+    if (players.length !== whiteboardBaselineSeeds.length) return true;
+    for (let index = 0; index < players.length; index += 1) {
+      const player = players[index];
+      const baseline = whiteboardBaselineSeeds[index];
+      if (!player || !baseline) return true;
+      if (player.team !== baseline.team || player.number !== baseline.number) {
+        return true;
+      }
+      if (
+        !almostEqualPoint(player.current.x, baseline.position.x) ||
+        !almostEqualPoint(player.current.y, baseline.position.y)
+      ) {
+        return true;
+      }
+    }
+    return false;
   }
 
   for (const player of players) {
@@ -800,7 +880,8 @@ export async function createTacticalPadLiteSurface(
     },
     setWhiteboardTeamConfig: (config) => {
       if (!isWhiteboardSurface) return;
-      rebuildWhiteboardPlayers(config.counts, config.colors);
+      const nextSeeds = createWhiteboardPlayerSeeds(config.counts, config.colors);
+      rebuildWhiteboardPlayers(nextSeeds, { clearDrawings: false, setAsBaseline: true });
     },
     setWhiteboardDrawTool: (tool) => {
       if (!isWhiteboardSurface) return;
@@ -830,6 +911,15 @@ export async function createTacticalPadLiteSurface(
       resetActiveWhiteboardStroke();
       completedWhiteboardDrawings.length = 0;
       renderAllWhiteboardDrawings();
+    },
+    whiteboardHasTemplateContent: () => whiteboardHasTemplateContent(),
+    applyWhiteboardFlowPreset: (preset) => {
+      if (!isWhiteboardSurface) return;
+      const flowSeeds = createSeedsFromFlowPreset(preset);
+      rebuildWhiteboardPlayers(flowSeeds, { clearDrawings: true, setAsBaseline: false });
+      applyFlowPresetDrawings(preset);
+      renderAllWhiteboardDrawings();
+      cancelPlaybackAnimation();
     },
     destroy: () => {
       resizeObserver.disconnect();
