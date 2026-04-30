@@ -25,6 +25,7 @@ export type TacticalPadLiteSurface = {
 
 type TacticalPadLiteSurfaceOptions = {
   onPhaseCountChange?: (count: number) => void;
+  surfaceVariant?: "tactical" | "whiteboard";
 };
 
 type PhaseSnapshot = NormalizedPoint[];
@@ -135,8 +136,25 @@ export async function createTacticalPadLiteSurface(
   const world = new Container();
   app.stage.addChild(world);
 
-  const pitchMount = createTacticalPitchVisualRoot("gaelic");
-  world.addChild(pitchMount.root);
+  const surfaceVariant = options.surfaceVariant ?? "tactical";
+  const pitchMount =
+    surfaceVariant === "tactical" ? createTacticalPitchVisualRoot("gaelic") : null;
+  if (pitchMount) {
+    world.addChild(pitchMount.root);
+  } else {
+    const whiteboardBackground = new Graphics();
+    whiteboardBackground.rect(0, 0, WORLD_SIZE.width, WORLD_SIZE.height).fill({
+      color: 0xffffff,
+      alpha: 1,
+    });
+    whiteboardBackground.rect(0, 0, WORLD_SIZE.width, WORLD_SIZE.height).stroke({
+      color: 0xd6dce2,
+      alpha: 1,
+      width: 0.7,
+    });
+    whiteboardBackground.eventMode = "none";
+    world.addChild(whiteboardBackground);
+  }
 
   const playersLayer = new Container();
   world.addChild(playersLayer);
@@ -387,7 +405,7 @@ export async function createTacticalPadLiteSurface(
       resizeObserver.disconnect();
       app.stage.removeAllListeners();
       app.ticker.stop();
-      pitchMount.dispose();
+      pitchMount?.dispose();
       for (const player of players) {
         player.token.removeAllListeners();
       }

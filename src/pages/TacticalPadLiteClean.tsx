@@ -5,8 +5,9 @@ import {
   type TacticalPadLiteSurface,
 } from "../engine/pixi/createTacticalPadLiteSurface";
 import StatsModeSurface from "../StatsModeSurface";
+import WhiteboardModeSurface from "./WhiteboardModeSurface";
 
-type PadMode = "tactical" | "stats";
+type PadMode = "tactical" | "stats" | "whiteboard";
 
 const ROOT_STYLE: CSSProperties = {
   position: "fixed",
@@ -494,6 +495,13 @@ const MODE_BUTTON_ACTIVE_STYLE: CSSProperties = {
   color: "rgba(255, 255, 255, 0.96)",
 };
 
+const MODE_BUTTON_WHITEBOARD_ACTIVE_STYLE: CSSProperties = {
+  ...MODE_BUTTON_BASE_STYLE,
+  background: "rgba(50, 70, 88, 0.62)",
+  border: "1px solid rgba(170, 194, 212, 0.68)",
+  color: "rgba(255, 255, 255, 0.97)",
+};
+
 export default function TacticalPadLiteClean() {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const surfaceRef = useRef<TacticalPadLiteSurface | null>(null);
@@ -505,6 +513,7 @@ export default function TacticalPadLiteClean() {
   const [phasesOpen, setPhasesOpen] = useState(false);
   const isTacticalMode = mode === "tactical";
   const isStatsMode = mode === "stats";
+  const isWhiteboardMode = mode === "whiteboard";
 
   useEffect(() => {
     if (!isTacticalMode) return;
@@ -560,6 +569,10 @@ export default function TacticalPadLiteClean() {
       setIsPlaying(false);
       setPhaseCount(0);
     }
+    if (nextMode === "whiteboard") {
+      setIsPlaying(false);
+      setPhaseCount(0);
+    }
     setMode(nextMode);
   };
 
@@ -571,6 +584,13 @@ export default function TacticalPadLiteClean() {
         onClick={() => setPadMode("tactical")}
       >
         Tactical
+      </button>
+      <button
+        type="button"
+        style={isWhiteboardMode ? MODE_BUTTON_WHITEBOARD_ACTIVE_STYLE : MODE_BUTTON_BASE_STYLE}
+        onClick={() => setPadMode("whiteboard")}
+      >
+        Whiteboard
       </button>
       <button
         type="button"
@@ -586,6 +606,14 @@ export default function TacticalPadLiteClean() {
     return (
       <>
         <StatsModeSurface onRequestPadModeChange={setPadMode} />
+      </>
+    );
+  }
+
+  if (isWhiteboardMode) {
+    return (
+      <>
+        <WhiteboardModeSurface onRequestPadModeChange={setPadMode} />
       </>
     );
   }
