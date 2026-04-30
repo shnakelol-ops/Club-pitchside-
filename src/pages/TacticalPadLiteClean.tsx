@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   createTacticalPadLiteSurface,
   type TacticalPadLiteSurface,
+  type WhiteboardTokenColor,
 } from "../engine/pixi/createTacticalPadLiteSurface";
 import StatsModeSurface from "../StatsModeSurface";
 import OrientationGate from "../components/OrientationGate";
@@ -14,6 +15,14 @@ const CONTENT_WIDTH_EXPR =
 const WHITEBOARD_RIGHT_COLUMN_LEFT = `calc(50vw + (${CONTENT_WIDTH_EXPR} / 2) + 10px)`;
 const WHITEBOARD_LEFT_MODE_LEFT = `calc(50vw - (${CONTENT_WIDTH_EXPR} / 2) - 74px)`;
 const WHITEBOARD_LEFT_MODE_MENU_LEFT = `calc(50vw - (${CONTENT_WIDTH_EXPR} / 2) - 132px)`;
+const WHITEBOARD_DRAW_COLOR_DEFAULT = 0x111111;
+const WHITEBOARD_DRAW_COLOR_CHOICES = [
+  { value: 0x111111, css: "#111111" },
+  { value: 0x2563eb, css: "#2563eb" },
+  { value: 0xdc2626, css: "#dc2626" },
+  { value: 0xfacc15, css: "#facc15" },
+] as const;
+const WHITEBOARD_TOKEN_COLOR_ORDER: WhiteboardTokenColor[] = ["blue", "red", "yellow", "black"];
 
 const ROOT_STYLE: CSSProperties = {
   position: "fixed",
@@ -450,6 +459,31 @@ const WHITEBOARD_TOOLS_BUTTON_STYLE: CSSProperties = {
   fontWeight: 600,
 };
 
+const WHITEBOARD_DRAW_COLOR_DOTS_STYLE: CSSProperties = {
+  position: "fixed",
+  left: WHITEBOARD_RIGHT_COLUMN_LEFT,
+  bottom: "max(286px, calc(env(safe-area-inset-bottom, 0px) + 284px))",
+  display: "flex",
+  gap: "8px",
+  padding: "8px",
+  borderRadius: "10px",
+  border: "1px solid rgba(130, 150, 170, 0.24)",
+  background: "rgba(242, 246, 251, 0.92)",
+  backdropFilter: "blur(8px)",
+  WebkitBackdropFilter: "blur(8px)",
+  boxShadow: "0 10px 22px rgba(27, 38, 51, 0.18)",
+  zIndex: 21,
+};
+
+const WHITEBOARD_DRAW_COLOR_DOT_STYLE: CSSProperties = {
+  width: "20px",
+  height: "20px",
+  borderRadius: "999px",
+  border: "1px solid rgba(36, 46, 58, 0.18)",
+  padding: 0,
+  cursor: "pointer",
+};
+
 const PHASES_CHIP_STYLE: CSSProperties = {
   position: "fixed",
   left: "max(12px, calc(env(safe-area-inset-left, 0px) + 10px))",
@@ -562,7 +596,8 @@ const WHITEBOARD_HEAD_COUNT_BADGE_STYLE: CSSProperties = {
   alignItems: "center",
   justifyContent: "center",
   padding: "0 5px",
-  pointerEvents: "none",
+  pointerEvents: "auto",
+  cursor: "pointer",
 };
 
 const WHITEBOARD_COUNT_SELECTOR_STYLE: CSSProperties = {
@@ -714,6 +749,9 @@ export default function TacticalPadLiteClean() {
   const [whiteboardBlueCount, setWhiteboardBlueCount] = useState(1);
   const [whiteboardRedCount, setWhiteboardRedCount] = useState(1);
   const [whiteboardCountPickerTeam, setWhiteboardCountPickerTeam] = useState<"BLUE" | "RED" | null>(null);
+  const [whiteboardBlueTokenColor, setWhiteboardBlueTokenColor] = useState<WhiteboardTokenColor>("blue");
+  const [whiteboardRedTokenColor, setWhiteboardRedTokenColor] = useState<WhiteboardTokenColor>("red");
+  const [currentDrawColor, setCurrentDrawColor] = useState<number>(WHITEBOARD_DRAW_COLOR_DEFAULT);
   const [whiteboardTool, setWhiteboardTool] = useState<"move" | "pen" | "line" | "arrow" | "dashed">(
     "move",
   );
@@ -791,6 +829,13 @@ export default function TacticalPadLiteClean() {
             red: whiteboardRedCount,
           }
         : undefined,
+      whiteboardTeamColors: isWhiteboardMode
+        ? {
+            blue: whiteboardBlueTokenColor,
+            red: whiteboardRedTokenColor,
+          }
+        : undefined,
+      whiteboardDrawColor: isWhiteboardMode ? currentDrawColor : undefined,
       onPhaseCountChange: (count) => {
         if (!disposed) {
           setPhaseCount(count);
@@ -805,6 +850,7 @@ export default function TacticalPadLiteClean() {
       destroySurface = surface.destroy;
       if (isWhiteboardMode) {
         surface.setWhiteboardDrawTool(whiteboardTool);
+        surface.setWhiteboardDrawColor(currentDrawColor);
       }
       window.requestAnimationFrame(() => {
         window.requestAnimationFrame(() => {
@@ -818,7 +864,16 @@ export default function TacticalPadLiteClean() {
       surfaceRef.current = null;
       destroySurface?.();
     };
-  }, [isStatsMode, isWhiteboardMode, whiteboardBlueCount, whiteboardRedCount, surfaceRefreshKey]);
+  }, [
+    isStatsMode,
+    isWhiteboardMode,
+    whiteboardBlueCount,
+    whiteboardRedCount,
+    whiteboardBlueTokenColor,
+    whiteboardRedTokenColor,
+    currentDrawColor,
+    surfaceRefreshKey,
+  ]);
 
   const togglePlay = () => {
     if (!isPlaying) {
@@ -861,6 +916,35 @@ export default function TacticalPadLiteClean() {
       setWhiteboardRedCount(clamped);
     }
     setWhiteboardCountPickerTeam(null);
+  };
+
+  const cycleWhiteboardTokenColor = (team: "BLUE" | "RED") => {
+    const setter = team === "BLUE" ? setWhiteboardBlueTokenColor : setWhiteboardRedTokenColor;
+    const current = team === "BLUE" ? whiteboardBlueTokenColor : whiteboardRedTokenColor;
+    const nextIndex = (WHITEBOARD_TOKEN_COLOR_ORDER.indexOf(current) + 1) % WHITEBOARD_TOKEN_COLOR_ORDER.length;
+    setter(WHITEBOARD_TOKEN_COLOR_ORDER[nextIndex] ?? current);
+  };
+
+  const setWhiteboardDrawColor = (color: number) => {
+    setCurrentDrawColor(color);
+    surfaceRef.current?.setWhiteboardDrawColor(color);
+  };
+
+  const getHeadButtonStyle = (color: WhiteboardTokenColor): CSSProperties => {
+    if (color === "blue") return WHITEBOARD_HEAD_BUTTON_BLUE_STYLE;
+    if (color === "red") return WHITEBOARD_HEAD_BUTTON_RED_STYLE;
+    if (color === "yellow") {
+      return {
+        ...WHITEBOARD_HEAD_BUTTON_BASE_STYLE,
+        color: "#fef3c7",
+        boxShadow: "0 0 0 1px rgba(250, 204, 21, 0.58), 0 0 9px rgba(250, 204, 21, 0.24)",
+      };
+    }
+    return {
+      ...WHITEBOARD_HEAD_BUTTON_BASE_STYLE,
+      color: "#e5e7eb",
+      boxShadow: "0 0 0 1px rgba(75, 85, 99, 0.58), 0 0 9px rgba(55, 65, 81, 0.24)",
+    };
   };
 
   const applyWhiteboardTool = (tool: "move" | "pen" | "line" | "arrow" | "dashed" | "undo" | "clear") => {
@@ -957,28 +1041,80 @@ export default function TacticalPadLiteClean() {
         </div>
         {isWhiteboardMode ? (
           <>
+            <div style={WHITEBOARD_DRAW_COLOR_DOTS_STYLE}>
+              {WHITEBOARD_DRAW_COLOR_CHOICES.map((choice) => {
+                const isActive = currentDrawColor === choice.value;
+                return (
+                  <button
+                    key={`whiteboard-draw-color-${choice.value}`}
+                    type="button"
+                    aria-label="Set drawing color"
+                    style={{
+                      ...WHITEBOARD_DRAW_COLOR_DOT_STYLE,
+                      background: choice.css,
+                      boxShadow: isActive
+                        ? "0 0 0 2px rgba(255,255,255,0.95), 0 0 0 4px rgba(44, 64, 84, 0.45)"
+                        : "0 0 0 1px rgba(0, 0, 0, 0.14)",
+                    }}
+                    onClick={() => setWhiteboardDrawColor(choice.value)}
+                  />
+                );
+              })}
+            </div>
             <div style={WHITEBOARD_HEAD_CONTROLS_STYLE}>
               <button
                 type="button"
-                aria-label="Open blue team player count selector"
-                style={WHITEBOARD_HEAD_BUTTON_BLUE_STYLE}
-                onClick={() =>
-                  setWhiteboardCountPickerTeam((current) => (current === "BLUE" ? null : "BLUE"))
-                }
+                aria-label="Cycle blue team token color"
+                style={getHeadButtonStyle(whiteboardBlueTokenColor)}
+                onClick={() => cycleWhiteboardTokenColor("BLUE")}
               >
                 👤
-                <span style={WHITEBOARD_HEAD_COUNT_BADGE_STYLE}>{whiteboardBlueCount}</span>
+                <span
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Open blue team player count selector"
+                  style={WHITEBOARD_HEAD_COUNT_BADGE_STYLE}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setWhiteboardCountPickerTeam((current) => (current === "BLUE" ? null : "BLUE"));
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setWhiteboardCountPickerTeam((current) => (current === "BLUE" ? null : "BLUE"));
+                    }
+                  }}
+                >
+                  {whiteboardBlueCount}
+                </span>
               </button>
               <button
                 type="button"
-                aria-label="Open red team player count selector"
-                style={WHITEBOARD_HEAD_BUTTON_RED_STYLE}
-                onClick={() =>
-                  setWhiteboardCountPickerTeam((current) => (current === "RED" ? null : "RED"))
-                }
+                aria-label="Cycle red team token color"
+                style={getHeadButtonStyle(whiteboardRedTokenColor)}
+                onClick={() => cycleWhiteboardTokenColor("RED")}
               >
                 👤
-                <span style={WHITEBOARD_HEAD_COUNT_BADGE_STYLE}>{whiteboardRedCount}</span>
+                <span
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Open red team player count selector"
+                  style={WHITEBOARD_HEAD_COUNT_BADGE_STYLE}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setWhiteboardCountPickerTeam((current) => (current === "RED" ? null : "RED"));
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setWhiteboardCountPickerTeam((current) => (current === "RED" ? null : "RED"));
+                    }
+                  }}
+                >
+                  {whiteboardRedCount}
+                </span>
               </button>
             </div>
             {whiteboardCountPickerTeam ? (

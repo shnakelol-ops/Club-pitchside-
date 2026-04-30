@@ -20,6 +20,7 @@ type TacticalPlayer = {
 };
 
 export type WhiteboardDrawTool = "move" | "pen" | "line" | "arrow" | "dashed";
+export type WhiteboardTokenColor = "blue" | "red" | "yellow" | "black";
 
 export type TacticalPadLiteSurface = {
   setStart: () => void;
@@ -28,6 +29,7 @@ export type TacticalPadLiteSurface = {
   reset: () => void;
   reflow: () => void;
   setWhiteboardDrawTool: (tool: WhiteboardDrawTool) => void;
+  setWhiteboardDrawColor: (color: number) => void;
   undoWhiteboardStroke: () => void;
   clearWhiteboardStrokes: () => void;
   destroy: () => void;
@@ -40,6 +42,11 @@ type TacticalPadLiteSurfaceOptions = {
     blue: number;
     red: number;
   };
+  whiteboardTeamColors?: {
+    blue: WhiteboardTokenColor;
+    red: WhiteboardTokenColor;
+  };
+  whiteboardDrawColor?: number;
 };
 
 type PhaseSnapshot = NormalizedPoint[];
@@ -47,7 +54,7 @@ type PhaseSnapshot = NormalizedPoint[];
 const WORLD_SIZE = { width: 160, height: 100 } as const;
 const PLAYER_RADIUS = 4.1;
 const PLAYER_TOUCH_HIT_DIAMETER_PX = 48;
-const WHITEBOARD_STROKE_COLOR = 0x29333d;
+const WHITEBOARD_DEFAULT_STROKE_COLOR = 0x111111;
 const WHITEBOARD_STROKE_WIDTH = 1.1;
 const WHITEBOARD_BLUE_START_X = 30;
 const WHITEBOARD_RED_START_X = 70;
@@ -56,13 +63,14 @@ type PlayerSeed = {
   id: string;
   number: number;
   team: "BLUE" | "RED";
+  color: WhiteboardTokenColor;
   position: NormalizedPoint;
 };
 
 const TACTICAL_INITIAL_PLAYERS: PlayerSeed[] = [
-  { id: "P1", number: 1, team: "BLUE", position: { x: 30, y: 50 } },
-  { id: "P2", number: 2, team: "BLUE", position: { x: 50, y: 50 } },
-  { id: "P3", number: 3, team: "BLUE", position: { x: 70, y: 50 } },
+  { id: "P1", number: 1, team: "BLUE", color: "blue", position: { x: 30, y: 50 } },
+  { id: "P2", number: 2, team: "BLUE", color: "blue", position: { x: 50, y: 50 } },
+  { id: "P3", number: 3, team: "BLUE", color: "blue", position: { x: 70, y: 50 } },
 ];
 
 function clampWorld(value: number, max: number): number {
@@ -120,14 +128,18 @@ function clampTeamCount(value: number | undefined): number {
 
 function createWhiteboardPlayerSeeds(
   counts: TacticalPadLiteSurfaceOptions["whiteboardTeamCounts"],
+  colors: TacticalPadLiteSurfaceOptions["whiteboardTeamColors"],
 ): PlayerSeed[] {
   const blueCount = clampTeamCount(counts?.blue);
   const redCount = clampTeamCount(counts?.red);
+  const blueColor = colors?.blue ?? "blue";
+  const redColor = colors?.red ?? "red";
 
   const bluePlayers: PlayerSeed[] = Array.from({ length: blueCount }, (_, index) => ({
     id: `B${index + 1}`,
     number: index + 1,
     team: "BLUE",
+    color: blueColor,
     position: {
       x: WHITEBOARD_BLUE_START_X,
       y: ((index + 1) * WORLD_SIZE.height) / (blueCount + 1),
@@ -138,6 +150,7 @@ function createWhiteboardPlayerSeeds(
     id: `R${index + 1}`,
     number: index + 1,
     team: "RED",
+    color: redColor,
     position: {
       x: WHITEBOARD_RED_START_X,
       y: ((index + 1) * WORLD_SIZE.height) / (redCount + 1),
@@ -148,28 +161,50 @@ function createWhiteboardPlayerSeeds(
 }
 
 function createWhiteboardPlayerToken({
-  team,
+  color,
   number,
 }: {
-  team: "BLUE" | "RED";
+  color: WhiteboardTokenColor;
   number: number;
 }): Container {
   const token = new Container();
   token.eventMode = "static";
   token.cursor = "grab";
 
-  const palette =
-    team === "BLUE"
-      ? {
-          base: 0x2563eb,
-          highlight: 0x60a5fa,
-          edge: 0x1e3a8a,
-        }
-      : {
-          base: 0xdc2626,
-          highlight: 0xf87171,
-          edge: 0x7f1d1d,
-        };
+  const paletteByColor: Record<
+    WhiteboardTokenColor,
+    { base: number; highlight: number; edge: number; numberFill: number; numberStroke: number }
+  > = {
+    blue: {
+      base: 0x2563eb,
+      highlight: 0x60a5fa,
+      edge: 0x1e3a8a,
+      numberFill: 0xffffff,
+      numberStroke: 0x0f172a,
+    },
+    red: {
+      base: 0xdc2626,
+      highlight: 0xf87171,
+      edge: 0x7f1d1d,
+      numberFill: 0xffffff,
+      numberStroke: 0x240f12,
+    },
+    yellow: {
+      base: 0xeab308,
+      highlight: 0xfde047,
+      edge: 0xa16207,
+      numberFill: 0x111111,
+      numberStroke: 0xfef3c7,
+    },
+    black: {
+      base: 0x1f2937,
+      highlight: 0x4b5563,
+      edge: 0x030712,
+      numberFill: 0xffffff,
+      numberStroke: 0x020406,
+    },
+  };
+  const palette = paletteByColor[color];
 
   const shadow = new Graphics();
   shadow.ellipse(0.6, 3.45, PLAYER_RADIUS * 1.02, PLAYER_RADIUS * 0.64).fill({ color: 0x030507, alpha: 0.22 });
@@ -199,13 +234,13 @@ function createWhiteboardPlayerToken({
   const numberLabel = new Text({
     text: String(number),
     style: {
-      fill: 0xffffff,
+      fill: palette.numberFill,
       fontSize: 3.6,
       fontWeight: "800",
       align: "center",
       fontFamily: "Inter, system-ui, sans-serif",
       stroke: {
-        color: 0x10161e,
+        color: palette.numberStroke,
         width: 0.42,
         join: "round",
       },
@@ -263,9 +298,10 @@ function drawSolidSegment(
   g: Graphics,
   from: { x: number; y: number },
   to: { x: number; y: number },
+  color: number,
 ): void {
   g.moveTo(from.x, from.y).lineTo(to.x, to.y).stroke({
-    color: WHITEBOARD_STROKE_COLOR,
+    color,
     width: WHITEBOARD_STROKE_WIDTH,
     cap: "round",
     join: "round",
@@ -277,6 +313,7 @@ function drawDashedSegment(
   g: Graphics,
   from: { x: number; y: number },
   to: { x: number; y: number },
+  color: number,
 ): void {
   const dx = to.x - from.x;
   const dy = to.y - from.y;
@@ -294,6 +331,7 @@ function drawDashedSegment(
       g,
       { x: from.x + ux * segStart, y: from.y + uy * segStart },
       { x: from.x + ux * segEnd, y: from.y + uy * segEnd },
+      color,
     );
     offset += dash + gap;
   }
@@ -303,8 +341,9 @@ function drawArrowSegment(
   g: Graphics,
   from: { x: number; y: number },
   to: { x: number; y: number },
+  color: number,
 ): void {
-  drawSolidSegment(g, from, to);
+  drawSolidSegment(g, from, to, color);
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const length = Math.hypot(dx, dy);
@@ -322,8 +361,8 @@ function drawArrowSegment(
     x: to.x - ux * headLength - sideX * 1.05,
     y: to.y - uy * headLength - sideY * 1.05,
   };
-  drawSolidSegment(g, to, left);
-  drawSolidSegment(g, to, right);
+  drawSolidSegment(g, to, left, color);
+  drawSolidSegment(g, to, right, color);
 }
 
 export async function createTacticalPadLiteSurface(
@@ -394,13 +433,13 @@ export async function createTacticalPadLiteSurface(
 
   const playerSeeds =
     surfaceVariant === "whiteboard"
-      ? createWhiteboardPlayerSeeds(options.whiteboardTeamCounts)
+      ? createWhiteboardPlayerSeeds(options.whiteboardTeamCounts, options.whiteboardTeamColors)
       : TACTICAL_INITIAL_PLAYERS;
 
   const players: TacticalPlayer[] = playerSeeds.map((base) => {
     const token =
       surfaceVariant === "whiteboard"
-        ? createWhiteboardPlayerToken({ team: base.team, number: base.number })
+        ? createWhiteboardPlayerToken({ color: base.color, number: base.number })
         : createPlayerToken(base.number);
     playersLayer.addChild(token);
     return {
@@ -428,6 +467,7 @@ export async function createTacticalPadLiteSurface(
     | null = null;
   const isWhiteboardSurface = surfaceVariant === "whiteboard";
   let activeWhiteboardTool: WhiteboardDrawTool = "move";
+  let activeWhiteboardColor = options.whiteboardDrawColor ?? WHITEBOARD_DEFAULT_STROKE_COLOR;
   const whiteboardDrawingLayer = new Container();
   whiteboardDrawingLayer.eventMode = "none";
   world.addChild(whiteboardDrawingLayer);
@@ -499,16 +539,17 @@ export async function createTacticalPadLiteSurface(
     graphics: Graphics,
     from: { x: number; y: number },
     to: { x: number; y: number },
+    color: number,
   ): void {
     if (tool === "dashed") {
-      drawDashedSegment(graphics, from, to);
+      drawDashedSegment(graphics, from, to, color);
       return;
     }
     if (tool === "arrow") {
-      drawArrowSegment(graphics, from, to);
+      drawArrowSegment(graphics, from, to, color);
       return;
     }
-    drawSolidSegment(graphics, from, to);
+    drawSolidSegment(graphics, from, to, color);
   }
 
   function resetActiveWhiteboardStroke(): void {
@@ -552,14 +593,20 @@ export async function createTacticalPadLiteSurface(
 
     if (activeWhiteboardTool === "pen") {
       if (!whiteboardPenStroke || !whiteboardPenLastPoint) return;
-      drawSolidSegment(whiteboardPenStroke, whiteboardPenLastPoint, worldPoint);
+      drawSolidSegment(whiteboardPenStroke, whiteboardPenLastPoint, worldPoint, activeWhiteboardColor);
       whiteboardPenLastPoint = worldPoint;
       return;
     }
 
     if (!whiteboardLineStartPoint || !whiteboardLinePreview) return;
     whiteboardLinePreview.clear();
-    drawLineWithTool(activeWhiteboardTool, whiteboardLinePreview, whiteboardLineStartPoint, worldPoint);
+    drawLineWithTool(
+      activeWhiteboardTool,
+      whiteboardLinePreview,
+      whiteboardLineStartPoint,
+      worldPoint,
+      activeWhiteboardColor,
+    );
   }
 
   function endWhiteboardDrawing(event?: unknown): void {
@@ -583,7 +630,13 @@ export async function createTacticalPadLiteSurface(
       return;
     }
     whiteboardLinePreview.clear();
-    drawLineWithTool(activeWhiteboardTool, whiteboardLinePreview, whiteboardLineStartPoint, worldPoint);
+    drawLineWithTool(
+      activeWhiteboardTool,
+      whiteboardLinePreview,
+      whiteboardLineStartPoint,
+      worldPoint,
+      activeWhiteboardColor,
+    );
     whiteboardStrokes.push(whiteboardLinePreview);
     whiteboardLinePreview = null;
     whiteboardLineStartPoint = null;
@@ -792,6 +845,10 @@ export async function createTacticalPadLiteSurface(
       activeWhiteboardTool = tool;
       resetActiveWhiteboardStroke();
       syncWhiteboardTokenInputMode();
+    },
+    setWhiteboardDrawColor: (color) => {
+      if (!isWhiteboardSurface) return;
+      activeWhiteboardColor = color;
     },
     undoWhiteboardStroke: () => {
       if (!isWhiteboardSurface) return;
