@@ -19,7 +19,7 @@ type TacticalPlayer = {
   token: Container;
 };
 
-export type WhiteboardDrawTool = "pen" | "line" | "arrow" | "dashed";
+export type WhiteboardDrawTool = "move" | "pen" | "line" | "arrow" | "dashed";
 
 export type TacticalPadLiteSurface = {
   setStart: () => void;
@@ -49,6 +49,7 @@ const PLAYER_RADIUS = 4.1;
 const PLAYER_TOUCH_HIT_DIAMETER_PX = 48;
 const WHITEBOARD_STROKE_COLOR = 0x29333d;
 const WHITEBOARD_STROKE_WIDTH = 1.1;
+const WHITEBOARD_RED_START_X = 143;
 
 type PlayerSeed = {
   id: string;
@@ -137,7 +138,7 @@ function createWhiteboardPlayerSeeds(
     number: index + 1,
     team: "RED",
     position: {
-      x: WORLD_SIZE.width - 34,
+      x: WHITEBOARD_RED_START_X,
       y: ((index + 1) * WORLD_SIZE.height) / (redCount + 1),
     },
   }));
@@ -198,15 +199,20 @@ function createWhiteboardPlayerToken({
     text: String(number),
     style: {
       fill: 0xffffff,
-      fontSize: 3.35,
+      fontSize: 3.6,
       fontWeight: "800",
       align: "center",
       fontFamily: "Inter, system-ui, sans-serif",
+      stroke: {
+        color: 0x10161e,
+        width: 0.42,
+        join: "round",
+      },
       dropShadow: {
-        alpha: 0.46,
-        blur: 0.9,
+        alpha: 0.54,
+        blur: 1.15,
         color: 0x020406,
-        distance: 0.25,
+        distance: 0.3,
         angle: Math.PI / 2,
       },
     },
@@ -420,7 +426,7 @@ export async function createTacticalPadLiteSurface(
       }
     | null = null;
   const isWhiteboardSurface = surfaceVariant === "whiteboard";
-  let activeWhiteboardTool: WhiteboardDrawTool = "pen";
+  let activeWhiteboardTool: WhiteboardDrawTool = "move";
   const whiteboardDrawingLayer = new Container();
   whiteboardDrawingLayer.eventMode = "none";
   world.addChild(whiteboardDrawingLayer);
@@ -468,6 +474,15 @@ export async function createTacticalPadLiteSurface(
     setTokenWorldPositionForPoint(activeDrag.player, activeDrag.player.current, mapper);
   }
 
+  function syncWhiteboardTokenInputMode(): void {
+    if (!isWhiteboardSurface) return;
+    const canDragPlayers = activeWhiteboardTool === "move";
+    for (const player of players) {
+      player.token.eventMode = canDragPlayers ? "static" : "none";
+      player.token.cursor = canDragPlayers ? "grab" : "default";
+    }
+  }
+
   function getBoundedWorldPointFromEvent(event: unknown): { x: number; y: number } | null {
     const stagePoint = getStagePointFromEvent(event, app.stage);
     if (!stagePoint) return null;
@@ -507,6 +522,7 @@ export async function createTacticalPadLiteSurface(
 
   function startWhiteboardDrawing(event: unknown): void {
     if (!isWhiteboardSurface || isPlaying || activeDrag) return;
+    if (activeWhiteboardTool === "move") return;
     const worldPoint = getBoundedWorldPointFromEvent(event);
     if (!worldPoint) return;
 
@@ -529,6 +545,7 @@ export async function createTacticalPadLiteSurface(
 
   function updateWhiteboardDrawing(event: unknown): void {
     if (!isWhiteboardSurface || isPlaying || activeDrag) return;
+    if (activeWhiteboardTool === "move") return;
     const worldPoint = getBoundedWorldPointFromEvent(event);
     if (!worldPoint) return;
 
@@ -546,6 +563,7 @@ export async function createTacticalPadLiteSurface(
 
   function endWhiteboardDrawing(event?: unknown): void {
     if (!isWhiteboardSurface || isPlaying || activeDrag) return;
+    if (activeWhiteboardTool === "move") return;
 
     if (activeWhiteboardTool === "pen") {
       whiteboardPenStroke = null;
@@ -697,6 +715,9 @@ export async function createTacticalPadLiteSurface(
 
     player.token.on("pointerdown", (event) => {
       if (isPlaying) return;
+      if (isWhiteboardSurface && activeWhiteboardTool !== "move") {
+        return;
+      }
       activeDrag = { player };
       if (isWhiteboardSurface) {
         player.token.scale.set(1.06, 1.06);
@@ -730,6 +751,8 @@ export async function createTacticalPadLiteSurface(
     stepPlayback(app.ticker.deltaMS);
   });
 
+  syncWhiteboardTokenInputMode();
+
   const resizeObserver = new ResizeObserver(() => {
     fitToHost();
   });
@@ -762,8 +785,12 @@ export async function createTacticalPadLiteSurface(
     },
     setWhiteboardDrawTool: (tool) => {
       if (!isWhiteboardSurface) return;
+      if (tool !== "move") {
+        releaseDrag();
+      }
       activeWhiteboardTool = tool;
       resetActiveWhiteboardStroke();
+      syncWhiteboardTokenInputMode();
     },
     undoWhiteboardStroke: () => {
       if (!isWhiteboardSurface) return;

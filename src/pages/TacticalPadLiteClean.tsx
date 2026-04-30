@@ -686,9 +686,9 @@ export default function TacticalPadLiteClean() {
   const [whiteboardBlueCount, setWhiteboardBlueCount] = useState(1);
   const [whiteboardRedCount, setWhiteboardRedCount] = useState(1);
   const [whiteboardCountPickerTeam, setWhiteboardCountPickerTeam] = useState<"BLUE" | "RED" | null>(null);
-  const [whiteboardTool, setWhiteboardTool] = useState<
-    "pen" | "line" | "arrow" | "dashed" | "undo" | "clear"
-  >("pen");
+  const [whiteboardTool, setWhiteboardTool] = useState<"move" | "pen" | "line" | "arrow" | "dashed">(
+    "move",
+  );
   const [phaseCount, setPhaseCount] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(false);
@@ -775,6 +775,9 @@ export default function TacticalPadLiteClean() {
       }
       surfaceRef.current = surface;
       destroySurface = surface.destroy;
+      if (isWhiteboardMode) {
+        surface.setWhiteboardDrawTool(whiteboardTool);
+      }
       window.requestAnimationFrame(() => {
         window.requestAnimationFrame(() => {
           surface.reflow();
@@ -832,8 +835,7 @@ export default function TacticalPadLiteClean() {
     setWhiteboardCountPickerTeam(null);
   };
 
-  const applyWhiteboardTool = (tool: "pen" | "line" | "arrow" | "dashed" | "undo" | "clear") => {
-    setWhiteboardTool(tool);
+  const applyWhiteboardTool = (tool: "move" | "pen" | "line" | "arrow" | "dashed" | "undo" | "clear") => {
     const surface = surfaceRef.current;
     if (!surface) return;
     if (tool === "undo") {
@@ -846,6 +848,7 @@ export default function TacticalPadLiteClean() {
       closeToolsMenu();
       return;
     }
+    setWhiteboardTool(tool);
     surface.setWhiteboardDrawTool(tool);
     closeToolsMenu();
   };
@@ -1047,6 +1050,18 @@ export default function TacticalPadLiteClean() {
           <div style={isWhiteboardMode ? WHITEBOARD_TOOLS_POPOUT_STYLE : TOOLS_POPOUT_STYLE}>
             {isWhiteboardMode ? (
               <>
+                <button
+                  type="button"
+                  style={{
+                    ...WHITEBOARD_TOOLS_BUTTON_STYLE,
+                    ...(whiteboardTool === "move"
+                      ? { border: "1px solid rgba(43, 95, 150, 0.58)", background: "rgba(196, 214, 232, 0.9)" }
+                      : null),
+                  }}
+                  onClick={() => applyWhiteboardTool("move")}
+                >
+                  Move
+                </button>
                 <button
                   type="button"
                   style={{
