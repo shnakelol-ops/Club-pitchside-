@@ -463,6 +463,67 @@ const PHASES_EMPTY_STYLE: CSSProperties = {
   opacity: 0.75,
 };
 
+const WHITEBOARD_TEAM_CONTROLS_STYLE: CSSProperties = {
+  position: "fixed",
+  left: "50%",
+  top: "max(12px, calc(env(safe-area-inset-top, 0px) + 10px))",
+  transform: "translateX(-50%)",
+  display: "flex",
+  gap: "8px",
+  zIndex: 22,
+};
+
+const WHITEBOARD_TEAM_CONTROL_STYLE: CSSProperties = {
+  height: "32px",
+  borderRadius: "10px",
+  border: "1px solid rgba(136, 153, 171, 0.42)",
+  background: "rgba(247, 250, 253, 0.92)",
+  boxShadow: "0 8px 18px rgba(28, 38, 49, 0.14)",
+  display: "flex",
+  alignItems: "center",
+  gap: "7px",
+  padding: "0 9px",
+  color: "#243342",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "10.5px",
+  fontWeight: 650,
+  letterSpacing: "0.2px",
+};
+
+const WHITEBOARD_TEAM_ICON_BASE_STYLE: CSSProperties = {
+  width: "16px",
+  height: "16px",
+  borderRadius: "999px",
+  border: "1px solid rgba(255, 255, 255, 0.72)",
+  boxShadow: "0 1px 4px rgba(6, 14, 24, 0.24), inset 0 1px 1px rgba(255, 255, 255, 0.35)",
+};
+
+const WHITEBOARD_TEAM_ICON_BLUE_STYLE: CSSProperties = {
+  ...WHITEBOARD_TEAM_ICON_BASE_STYLE,
+  background: "linear-gradient(165deg, #55a6ff 0%, #2f7deb 68%, #2b68c6 100%)",
+};
+
+const WHITEBOARD_TEAM_ICON_RED_STYLE: CSSProperties = {
+  ...WHITEBOARD_TEAM_ICON_BASE_STYLE,
+  background: "linear-gradient(165deg, #ff7078 0%, #e64050 68%, #b83340 100%)",
+};
+
+const WHITEBOARD_TEAM_PENCIL_STYLE: CSSProperties = {
+  border: "none",
+  background: "transparent",
+  color: "#3a4d62",
+  width: "18px",
+  height: "18px",
+  borderRadius: "6px",
+  cursor: "pointer",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: 0,
+  fontSize: "12px",
+  lineHeight: 1,
+};
+
 const MODE_TOGGLE_STYLE: CSSProperties = {
   position: "fixed",
   top: "max(12px, calc(env(safe-area-inset-top, 0px) + 10px))",
@@ -518,6 +579,8 @@ export default function TacticalPadLiteClean() {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const surfaceRef = useRef<TacticalPadLiteSurface | null>(null);
   const [mode, setMode] = useState<PadMode>("tactical");
+  const [whiteboardBlueCount, setWhiteboardBlueCount] = useState(1);
+  const [whiteboardRedCount, setWhiteboardRedCount] = useState(1);
   const [phaseCount, setPhaseCount] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(false);
@@ -537,6 +600,12 @@ export default function TacticalPadLiteClean() {
 
     void createTacticalPadLiteSurface(host, {
       surfaceVariant: isWhiteboardMode ? "whiteboard" : "tactical",
+      whiteboardTeamCounts: isWhiteboardMode
+        ? {
+            blue: whiteboardBlueCount,
+            red: whiteboardRedCount,
+          }
+        : undefined,
       onPhaseCountChange: (count) => {
         if (!disposed) {
           setPhaseCount(count);
@@ -556,7 +625,7 @@ export default function TacticalPadLiteClean() {
       surfaceRef.current = null;
       destroySurface?.();
     };
-  }, [isStatsMode, isWhiteboardMode]);
+  }, [isStatsMode, isWhiteboardMode, whiteboardBlueCount, whiteboardRedCount]);
 
   const togglePlay = () => {
     if (!isPlaying) {
@@ -651,6 +720,46 @@ export default function TacticalPadLiteClean() {
         <div style={CONTENT_STYLE}>
           <div ref={hostRef} style={isWhiteboardMode ? PITCH_WHITEBOARD_STYLE : PITCH_STYLE} />
         </div>
+        {isWhiteboardMode ? (
+          <div style={WHITEBOARD_TEAM_CONTROLS_STYLE}>
+            <div style={WHITEBOARD_TEAM_CONTROL_STYLE}>
+              <span style={WHITEBOARD_TEAM_ICON_BLUE_STYLE} aria-hidden="true" />
+              <span>Blue {whiteboardBlueCount}</span>
+              <button
+                type="button"
+                aria-label="Edit blue team player count"
+                style={WHITEBOARD_TEAM_PENCIL_STYLE}
+                onClick={() => {
+                  const value = window.prompt("Blue player count (1-15)", String(whiteboardBlueCount));
+                  if (value == null) return;
+                  const parsed = Number.parseInt(value.trim(), 10);
+                  if (!Number.isFinite(parsed)) return;
+                  setWhiteboardBlueCount(Math.max(1, Math.min(15, parsed)));
+                }}
+              >
+                ✎
+              </button>
+            </div>
+            <div style={WHITEBOARD_TEAM_CONTROL_STYLE}>
+              <span style={WHITEBOARD_TEAM_ICON_RED_STYLE} aria-hidden="true" />
+              <span>Red {whiteboardRedCount}</span>
+              <button
+                type="button"
+                aria-label="Edit red team player count"
+                style={WHITEBOARD_TEAM_PENCIL_STYLE}
+                onClick={() => {
+                  const value = window.prompt("Red player count (1-15)", String(whiteboardRedCount));
+                  if (value == null) return;
+                  const parsed = Number.parseInt(value.trim(), 10);
+                  if (!Number.isFinite(parsed)) return;
+                  setWhiteboardRedCount(Math.max(1, Math.min(15, parsed)));
+                }}
+              >
+                ✎
+              </button>
+            </div>
+          </div>
+        ) : null}
         <button
           type="button"
           style={PHASES_CHIP_STYLE}
@@ -717,46 +826,21 @@ export default function TacticalPadLiteClean() {
         ) : null}
         {toolsOpen ? (
           <div style={TOOLS_POPOUT_STYLE}>
-            {isWhiteboardMode ? (
-              <>
-                <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
-                  Pen
-                </button>
-                <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
-                  Line
-                </button>
-                <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
-                  Arrow
-                </button>
-                <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
-                  Dashed
-                </button>
-                <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
-                  Undo
-                </button>
-                <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
-                  Clear
-                </button>
-              </>
-            ) : (
-              <>
-                <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
-                  Select
-                </button>
-                <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
-                  Arrow
-                </button>
-                <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
-                  Dashed
-                </button>
-                <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
-                  Zone
-                </button>
-                <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
-                  Clear
-                </button>
-              </>
-            )}
+            <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
+              Select
+            </button>
+            <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
+              Arrow
+            </button>
+            <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
+              Dashed
+            </button>
+            <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
+              Zone
+            </button>
+            <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
+              Clear
+            </button>
           </div>
         ) : null}
         <button

@@ -12,8 +12,9 @@ import {
 } from "../shared/normalization";
 
 type TacticalPlayer = {
-  id: "P1" | "P2" | "P3";
+  id: string;
   number: number;
+  team: "BLUE" | "RED";
   current: NormalizedPoint;
   token: Container;
 };
@@ -29,6 +30,10 @@ export type TacticalPadLiteSurface = {
 type TacticalPadLiteSurfaceOptions = {
   onPhaseCountChange?: (count: number) => void;
   surfaceVariant?: "tactical" | "whiteboard";
+  whiteboardTeamCounts?: {
+    blue: number;
+    red: number;
+  };
 };
 
 type PhaseSnapshot = NormalizedPoint[];
@@ -37,10 +42,17 @@ const WORLD_SIZE = { width: 160, height: 100 } as const;
 const PLAYER_RADIUS = 4.1;
 const PLAYER_TOUCH_HIT_DIAMETER_PX = 48;
 
-const INITIAL_PLAYERS: Array<{ id: "P1" | "P2" | "P3"; number: number; position: NormalizedPoint }> = [
-  { id: "P1", number: 1, position: { x: 30, y: 50 } },
-  { id: "P2", number: 2, position: { x: 50, y: 50 } },
-  { id: "P3", number: 3, position: { x: 70, y: 50 } },
+type PlayerSeed = {
+  id: string;
+  number: number;
+  team: "BLUE" | "RED";
+  position: NormalizedPoint;
+};
+
+const TACTICAL_INITIAL_PLAYERS: PlayerSeed[] = [
+  { id: "P1", number: 1, team: "BLUE", position: { x: 30, y: 50 } },
+  { id: "P2", number: 2, team: "BLUE", position: { x: 50, y: 50 } },
+  { id: "P3", number: 3, team: "BLUE", position: { x: 70, y: 50 } },
 ];
 
 function clampWorld(value: number, max: number): number {
@@ -86,6 +98,95 @@ function createPlayerToken(number: number): Container {
     },
   });
   numberLabel.anchor.set(0.5, 0.54);
+  token.addChild(numberLabel);
+
+  return token;
+}
+
+function clampTeamCount(value: number | undefined): number {
+  const parsed = Number.isFinite(value) ? Math.floor(value as number) : 1;
+  return Math.max(1, Math.min(15, parsed));
+}
+
+function createWhiteboardPlayerSeeds(
+  counts: TacticalPadLiteSurfaceOptions["whiteboardTeamCounts"],
+): PlayerSeed[] {
+  const blueCount = clampTeamCount(counts?.blue);
+  const redCount = clampTeamCount(counts?.red);
+
+  const bluePlayers: PlayerSeed[] = Array.from({ length: blueCount }, (_, index) => ({
+    id: `B${index + 1}`,
+    number: index + 1,
+    team: "BLUE",
+    position: {
+      x: 34,
+      y: ((index + 1) * WORLD_SIZE.height) / (blueCount + 1),
+    },
+  }));
+
+  const redPlayers: PlayerSeed[] = Array.from({ length: redCount }, (_, index) => ({
+    id: `R${index + 1}`,
+    number: index + 1,
+    team: "RED",
+    position: {
+      x: WORLD_SIZE.width - 34,
+      y: ((index + 1) * WORLD_SIZE.height) / (redCount + 1),
+    },
+  }));
+
+  return [...bluePlayers, ...redPlayers];
+}
+
+function createWhiteboardPlayerToken(team: "BLUE" | "RED", number: number): Container {
+  const token = new Container();
+  token.eventMode = "static";
+  token.cursor = "grab";
+
+  const teamColor = team === "BLUE" ? 0x2f7df3 : 0xe14f4f;
+  const rimColor = team === "BLUE" ? 0x0f3b79 : 0x7f1d1d;
+
+  const shadow = new Graphics();
+  shadow.ellipse(0.75, 3.25, PLAYER_RADIUS * 0.98, PLAYER_RADIUS * 0.62).fill({
+    color: 0x020406,
+    alpha: 0.24,
+  });
+  token.addChild(shadow);
+
+  const jersey = new Graphics();
+  jersey.circle(0, 0, PLAYER_RADIUS).fill({ color: teamColor, alpha: 1 });
+  jersey.circle(0, 0, PLAYER_RADIUS).stroke({
+    color: rimColor,
+    alpha: 0.9,
+    width: 0.56,
+  });
+  jersey.circle(0, 0, PLAYER_RADIUS - 0.68).stroke({
+    color: 0xffffff,
+    alpha: 0.32,
+    width: 0.42,
+  });
+  jersey
+    .ellipse(-0.9, -1.45, PLAYER_RADIUS * 0.58, PLAYER_RADIUS * 0.42)
+    .fill({ color: 0xffffff, alpha: 0.22 });
+  token.addChild(jersey);
+
+  const numberLabel = new Text({
+    text: String(number),
+    style: {
+      fill: 0xffffff,
+      fontSize: 3.25,
+      fontWeight: "700",
+      align: "center",
+      fontFamily: "Inter, system-ui, sans-serif",
+      dropShadow: {
+        alpha: 0.35,
+        blur: 0.9,
+        color: 0x020406,
+        distance: 0.15,
+        angle: Math.PI / 2,
+      },
+    },
+  });
+  numberLabel.anchor.set(0.5, 0.53);
   token.addChild(numberLabel);
 
   return token;
@@ -178,12 +279,21 @@ export async function createTacticalPadLiteSurface(
     { width: host.clientWidth || 800, height: host.clientHeight || 520 },
   );
 
-  const players: TacticalPlayer[] = INITIAL_PLAYERS.map((base) => {
-    const token = createPlayerToken(base.number);
+  const playerSeeds =
+    surfaceVariant === "whiteboard"
+      ? createWhiteboardPlayerSeeds(options.whiteboardTeamCounts)
+      : TACTICAL_INITIAL_PLAYERS;
+
+  const players: TacticalPlayer[] = playerSeeds.map((base) => {
+    const token =
+      surfaceVariant === "whiteboard"
+        ? createWhiteboardPlayerToken(base.team, base.number)
+        : createPlayerToken(base.number);
     playersLayer.addChild(token);
     return {
       id: base.id,
       number: base.number,
+      team: base.team,
       current: { ...base.position },
       token,
     };
