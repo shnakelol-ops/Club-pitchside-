@@ -66,19 +66,12 @@ type TacticalPadLiteSurfaceOptions = {
 
 type PhaseSnapshot = NormalizedPoint[];
 type WhiteboardPoint = { x: number; y: number };
-type WhiteboardLineTool = Exclude<WhiteboardDrawTool, "move" | "pen">;
-type WhiteboardStrokeDescriptor =
-  | {
-      tool: "pen";
-      color: number;
-      points: WhiteboardPoint[];
-    }
-  | {
-      tool: WhiteboardLineTool;
-      color: number;
-      from: WhiteboardPoint;
-      to: WhiteboardPoint;
-    };
+type WhiteboardDrawingTool = Exclude<WhiteboardDrawTool, "move">;
+type WhiteboardStrokeDescriptor = {
+  tool: WhiteboardDrawingTool;
+  color: number;
+  points: WhiteboardPoint[];
+};
 
 const WORLD_SIZE = { width: 160, height: 100 } as const;
 const PLAYER_RADIUS = 4.1;
@@ -374,7 +367,7 @@ export async function createTacticalPadLiteSurface(
   const whiteboardPreviewGraphic = new Graphics();
   whiteboardPreviewGraphic.eventMode = "none";
   whiteboardPreviewLayer.addChild(whiteboardPreviewGraphic);
-  const whiteboardStrokes: Graphics[] = [];
+  const completedWhiteboardDrawings: WhiteboardStrokeDescriptor[] = [];
   let activeWhiteboardStroke: WhiteboardStrokeDescriptor | null = null;
 
   function fitToHost(): void {
@@ -393,6 +386,7 @@ export async function createTacticalPadLiteSurface(
       setPlayerTouchHitArea(player, mapper);
       setTokenWorldPositionForPoint(player, player.current, mapper);
     }
+    renderAllWhiteboardDrawings();
   }
 
   function updateDraggedPlayerFromEvent(event: unknown): void {
@@ -452,6 +446,14 @@ export async function createTacticalPadLiteSurface(
     drawSolidSegment(graphics, from, to, color);
   }
 
+  function cloneWhiteboardStroke(stroke: WhiteboardStrokeDescriptor): WhiteboardStrokeDescriptor {
+    return {
+      tool: stroke.tool,
+      color: stroke.color,
+      points: stroke.points.map((point) => ({ x: point.x, y: point.y })),
+    };
+  }
+
   function renderWhiteboardStroke(graphics: Graphics, stroke: WhiteboardStrokeDescriptor): void {
     if (stroke.tool === "pen") {
       if (stroke.points.length < 2) return;
@@ -463,7 +465,25 @@ export async function createTacticalPadLiteSurface(
       }
       return;
     }
-    drawLineWithTool(stroke.tool, graphics, stroke.from, stroke.to, stroke.color);
+    if (stroke.points.length < 2) return;
+    const from = stroke.points[0];
+    const to = stroke.points[stroke.points.length - 1];
+    if (!from || !to) return;
+    drawLineWithTool(stroke.tool, graphics, from, to, stroke.color);
+  }
+
+  function renderAllWhiteboardDrawings(): void {
+    if (!isWhiteboardSurface) return;
+    const existingChildren = whiteboardDrawingsLayer.removeChildren();
+    for (const child of existingChildren) {
+      child.destroy({ children: true });
+    }
+    for (const drawing of completedWhiteboardDrawings) {
+      const strokeGraphic = new Graphics();
+      strokeGraphic.eventMode = "none";
+      renderWhiteboardStroke(strokeGraphic, drawing);
+      whiteboardDrawingsLayer.addChild(strokeGraphic);
+    }
   }
 
   function resetActiveWhiteboardStroke(): void {
@@ -488,8 +508,7 @@ export async function createTacticalPadLiteSurface(
     activeWhiteboardStroke = {
       tool: activeWhiteboardTool,
       color: activeWhiteboardColor,
-      from: worldPoint,
-      to: worldPoint,
+      points: [worldPoint, worldPoint],
     };
     whiteboardPreviewGraphic.clear();
   }
@@ -503,7 +522,11 @@ export async function createTacticalPadLiteSurface(
     if (activeWhiteboardStroke.tool === "pen") {
       activeWhiteboardStroke.points.push(worldPoint);
     } else {
-      activeWhiteboardStroke.to = worldPoint;
+      if (activeWhiteboardStroke.points.length < 2) {
+        activeWhiteboardStroke.points.push(worldPoint);
+      } else {
+        activeWhiteboardStroke.points[activeWhiteboardStroke.points.length - 1] = worldPoint;
+      }
     }
     whiteboardPreviewGraphic.clear();
     renderWhiteboardStroke(whiteboardPreviewGraphic, activeWhiteboardStroke);
@@ -519,7 +542,11 @@ export async function createTacticalPadLiteSurface(
         if (activeWhiteboardStroke.tool === "pen") {
           activeWhiteboardStroke.points.push(worldPoint);
         } else {
-          activeWhiteboardStroke.to = worldPoint;
+          if (activeWhiteboardStroke.points.length < 2) {
+            activeWhiteboardStroke.points.push(worldPoint);
+          } else {
+            activeWhiteboardStroke.points[activeWhiteboardStroke.points.length - 1] = worldPoint;
+          }
         }
       }
     }
@@ -529,11 +556,8 @@ export async function createTacticalPadLiteSurface(
       return;
     }
 
-    const committedStroke = new Graphics();
-    committedStroke.eventMode = "none";
-    renderWhiteboardStroke(committedStroke, activeWhiteboardStroke);
-    whiteboardDrawingsLayer.addChild(committedStroke);
-    whiteboardStrokes.push(committedStroke);
+    completedWhiteboardDrawings.push(cloneWhiteboardStroke(activeWhiteboardStroke));
+    renderAllWhiteboardDrawings();
     resetActiveWhiteboardStroke();
   }
 
@@ -714,6 +738,7 @@ export async function createTacticalPadLiteSurface(
     }
     syncPlayersToViewport();
     syncWhiteboardTokenInputMode();
+    renderAllWhiteboardDrawings();
   }
 
   for (const player of players) {
@@ -785,25 +810,26 @@ export async function createTacticalPadLiteSurface(
       activeWhiteboardTool = tool;
       resetActiveWhiteboardStroke();
       syncWhiteboardTokenInputMode();
+      renderAllWhiteboardDrawings();
     },
     setWhiteboardDrawColor: (color) => {
       if (!isWhiteboardSurface) return;
       activeWhiteboardColor = color;
+      resetActiveWhiteboardStroke();
+      renderAllWhiteboardDrawings();
     },
     undoWhiteboardStroke: () => {
       if (!isWhiteboardSurface) return;
       resetActiveWhiteboardStroke();
-      const stroke = whiteboardStrokes.pop();
-      if (!stroke) return;
-      stroke.destroy();
+      if (completedWhiteboardDrawings.length === 0) return;
+      completedWhiteboardDrawings.pop();
+      renderAllWhiteboardDrawings();
     },
     clearWhiteboardStrokes: () => {
       if (!isWhiteboardSurface) return;
       resetActiveWhiteboardStroke();
-      while (whiteboardStrokes.length > 0) {
-        const stroke = whiteboardStrokes.pop();
-        stroke?.destroy();
-      }
+      completedWhiteboardDrawings.length = 0;
+      renderAllWhiteboardDrawings();
     },
     destroy: () => {
       resizeObserver.disconnect();
