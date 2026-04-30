@@ -1,4 +1,5 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import pitchsidePMark from "../assets/pitchside-p-mark.svg";
 
 type OrientationGateProps = {
   modeLabel: string;
@@ -85,61 +86,6 @@ function usePortraitOrientation(): boolean {
   return isPortrait;
 }
 
-function PitchsidePLogo() {
-  return (
-    <svg viewBox="0 0 260 260" xmlns="http://www.w3.org/2000/svg" style={LOGO_STYLE} aria-hidden="true">
-      <path
-        d="M55 56h82c39 0 63 24 63 56 0 34-26 58-63 58h-35"
-        fill="none"
-        stroke="rgba(245, 248, 247, 0.96)"
-        strokeWidth="10"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M55 56v24M102 80v122"
-        fill="none"
-        stroke="rgba(245, 248, 247, 0.96)"
-        strokeWidth="10"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M42 225c0-60 33-112 90-112 58 0 95 34 95 83"
-        fill="none"
-        stroke="rgba(236, 243, 240, 0.92)"
-        strokeWidth="8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M70 227c-19-1-34-14-34-34 0-24 18-42 44-42h72"
-        fill="none"
-        stroke="rgba(236, 243, 240, 0.92)"
-        strokeWidth="7.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M102 150c30 0 47-8 82 10"
-        fill="none"
-        stroke="#e7c24b"
-        strokeWidth="7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M183 160l17-8-3 19"
-        fill="none"
-        stroke="#e7c24b"
-        strokeWidth="7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 export default function OrientationGate({ modeLabel, children }: OrientationGateProps) {
   const isPortrait = usePortraitOrientation();
   if (!isPortrait) return <>{children}</>;
@@ -148,7 +94,7 @@ export default function OrientationGate({ modeLabel, children }: OrientationGate
     <div style={ROOT_STYLE}>
       <div style={TEXTURE_STYLE} aria-hidden="true" />
       <div style={CONTENT_STYLE}>
-        <PitchsidePLogo />
+        <img src={pitchsidePMark} style={LOGO_STYLE} alt="" aria-hidden="true" />
         <p style={MESSAGE_STYLE}>Rotate to landscape to use {modeLabel}</p>
       </div>
     </div>

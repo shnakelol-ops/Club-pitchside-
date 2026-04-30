@@ -6,6 +6,7 @@ import {
 } from "../engine/pixi/createTacticalPadLiteSurface";
 import StatsModeSurface from "../StatsModeSurface";
 import OrientationGate from "../components/OrientationGate";
+import pitchsidePMark from "../assets/pitchside-p-mark.svg";
 
 type PadMode = "tactical" | "stats" | "whiteboard";
 
@@ -292,6 +293,12 @@ const TOOL_BUBBLE_STYLE: CSSProperties = {
   background: "rgba(5, 8, 10, 0.92)",
   border: "2px solid rgba(255, 255, 255, 0.18)",
   boxShadow: "0 8px 24px rgba(0, 0, 0, 0.55), inset 0 1px 2px rgba(255, 255, 255, 0.18)",
+};
+
+const TOOL_BUBBLE_MARK_STYLE: CSSProperties = {
+  width: "24px",
+  height: "24px",
+  display: "block",
 };
 
 const POPOUT_BASE_STYLE: CSSProperties = {
@@ -968,48 +975,7 @@ export default function TacticalPadLiteClean() {
           onClick={() => setToolsOpen((open) => !open)}
         >
           <span className="tool-bubble-icon" aria-hidden="true">
-            <svg className="tool-bubble-mark-svg" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-              <path
-                d="M7 8h9.2c4.5 0 7.4 2.8 7.4 6.6 0 3.8-2.9 6.5-7.4 6.5H12.4"
-                fill="none"
-                stroke="rgba(255,255,255,0.94)"
-                strokeWidth="2.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M7 8v2.7M12.4 10.8v16.2"
-                fill="none"
-                stroke="rgba(255,255,255,0.94)"
-                strokeWidth="2.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M4.8 28.4C4.8 21 8.8 14.5 15.8 14.5 22.8 14.5 27.2 18.8 27.2 24.5"
-                fill="none"
-                stroke="rgba(255,255,255,0.9)"
-                strokeWidth="2.1"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M8.8 28.7c-2.3-0.1-4.2-1.7-4.2-4.2 0-2.9 2.2-5 5.3-5h9.2"
-                fill="none"
-                stroke="rgba(255,255,255,0.9)"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M20.7 22.4l3.1 1.8-3.5 1.1"
-                fill="none"
-                stroke="#F4C542"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+            <img src={pitchsidePMark} alt="" style={TOOL_BUBBLE_MARK_STYLE} />
           </span>
         </button>
         {modeButton}
