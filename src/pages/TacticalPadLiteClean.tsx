@@ -15,6 +15,8 @@ const CONTENT_WIDTH_EXPR =
 const WHITEBOARD_RIGHT_COLUMN_LEFT = `calc(50vw + (${CONTENT_WIDTH_EXPR} / 2) + 10px)`;
 const WHITEBOARD_LEFT_MODE_LEFT = `calc(50vw - (${CONTENT_WIDTH_EXPR} / 2) - 74px)`;
 const WHITEBOARD_LEFT_MODE_MENU_LEFT = `calc(50vw - (${CONTENT_WIDTH_EXPR} / 2) - 132px)`;
+const WHITEBOARD_DEFAULT_TEAM_A_NAME = "Team A";
+const WHITEBOARD_DEFAULT_TEAM_B_NAME = "Team B";
 const WHITEBOARD_PLAYER_COLOR_CHOICES: ReadonlyArray<{
   value: WhiteboardTokenColor;
   css: string;
@@ -640,6 +642,53 @@ const WHITEBOARD_TEAM_OPTION_ACTIVE_STYLE: CSSProperties = {
   color: "#f8fcff",
 };
 
+const WHITEBOARD_TEAM_OPTION_CONTENT_STYLE: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: "4px",
+  width: "100%",
+  minWidth: 0,
+};
+
+const WHITEBOARD_TEAM_NAME_TEXT_STYLE: CSSProperties = {
+  flex: 1,
+  minWidth: 0,
+  overflow: "hidden",
+  whiteSpace: "nowrap",
+  textOverflow: "ellipsis",
+  textAlign: "left",
+};
+
+const WHITEBOARD_TEAM_NAME_INPUT_STYLE: CSSProperties = {
+  flex: 1,
+  minWidth: 0,
+  height: "18px",
+  borderRadius: "5px",
+  border: "1px solid rgba(125, 211, 252, 0.62)",
+  background: "rgba(8, 16, 28, 0.72)",
+  color: "#f8fcff",
+  fontSize: "10px",
+  fontWeight: 600,
+  fontFamily: "Inter, system-ui, sans-serif",
+  padding: "0 5px",
+  outline: "none",
+};
+
+const WHITEBOARD_TEAM_EDIT_ICON_STYLE: CSSProperties = {
+  width: "14px",
+  height: "14px",
+  borderRadius: "999px",
+  border: "1px solid rgba(171, 212, 232, 0.45)",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontSize: "9px",
+  lineHeight: 1,
+  color: "#dbe7f5",
+  cursor: "pointer",
+  flex: "0 0 auto",
+};
+
 const WHITEBOARD_COUNT_SELECTOR_GRID_STYLE: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
@@ -799,6 +848,10 @@ export default function TacticalPadLiteClean() {
   const [whiteboardRedCount, setWhiteboardRedCount] = useState(1);
   const [whiteboardCountPickerOpen, setWhiteboardCountPickerOpen] = useState(false);
   const [whiteboardCountPickerTeam, setWhiteboardCountPickerTeam] = useState<"BLUE" | "RED">("BLUE");
+  const [teamAName, setTeamAName] = useState(WHITEBOARD_DEFAULT_TEAM_A_NAME);
+  const [teamBName, setTeamBName] = useState(WHITEBOARD_DEFAULT_TEAM_B_NAME);
+  const [editingTeamName, setEditingTeamName] = useState<"A" | "B" | null>(null);
+  const [editingTeamDraft, setEditingTeamDraft] = useState("");
   const [currentPlayerColor, setCurrentPlayerColor] = useState<WhiteboardTokenColor>("blue");
   const [whiteboardColorPickerOpen, setWhiteboardColorPickerOpen] = useState(false);
   const [currentToolColor, setCurrentToolColor] = useState<WhiteboardTokenColor>("black");
@@ -948,6 +1001,7 @@ export default function TacticalPadLiteClean() {
     if (nextMode === mode) return;
     setWhiteboardCountPickerOpen(false);
     setWhiteboardColorPickerOpen(false);
+    setEditingTeamName(null);
     setControlsOpen(false);
     setToolsOpen(false);
     setPhasesOpen(false);
@@ -970,6 +1024,23 @@ export default function TacticalPadLiteClean() {
       setWhiteboardRedCount(clamped);
     }
     setWhiteboardCountPickerOpen(false);
+  };
+
+  const openTeamNameEditor = (team: "A" | "B") => {
+    setEditingTeamName(team);
+    setEditingTeamDraft(team === "A" ? teamAName : teamBName);
+  };
+
+  const commitTeamNameEditor = (team: "A" | "B", rawValue: string) => {
+    const trimmed = rawValue.trim();
+    const fallback = team === "A" ? WHITEBOARD_DEFAULT_TEAM_A_NAME : WHITEBOARD_DEFAULT_TEAM_B_NAME;
+    const next = trimmed.length > 0 ? trimmed : fallback;
+    if (team === "A") {
+      setTeamAName(next);
+    } else {
+      setTeamBName(next);
+    }
+    setEditingTeamName(null);
   };
 
   const setToolColor = (color: WhiteboardTokenColor) => {
@@ -1133,8 +1204,47 @@ export default function TacticalPadLiteClean() {
                         : WHITEBOARD_TEAM_OPTION_STYLE
                     }
                     onClick={() => setWhiteboardCountPickerTeam("BLUE")}
+                    aria-label={`Select ${teamAName}`}
                   >
-                    Blue
+                    <span style={WHITEBOARD_TEAM_OPTION_CONTENT_STYLE}>
+                      {editingTeamName === "A" ? (
+                        <input
+                          value={editingTeamDraft}
+                          autoFocus
+                          style={WHITEBOARD_TEAM_NAME_INPUT_STYLE}
+                          onClick={(event) => event.stopPropagation()}
+                          onChange={(event) => setEditingTeamDraft(event.target.value)}
+                          onBlur={() => commitTeamNameEditor("A", editingTeamDraft)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              commitTeamNameEditor("A", editingTeamDraft);
+                            }
+                          }}
+                        />
+                      ) : (
+                        <span style={WHITEBOARD_TEAM_NAME_TEXT_STYLE}>{teamAName}</span>
+                      )}
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        aria-label="Edit Team A name"
+                        style={WHITEBOARD_TEAM_EDIT_ICON_STYLE}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openTeamNameEditor("A");
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            openTeamNameEditor("A");
+                          }
+                        }}
+                      >
+                        ✎
+                      </span>
+                    </span>
                   </button>
                   <button
                     type="button"
@@ -1144,8 +1254,47 @@ export default function TacticalPadLiteClean() {
                         : WHITEBOARD_TEAM_OPTION_STYLE
                     }
                     onClick={() => setWhiteboardCountPickerTeam("RED")}
+                    aria-label={`Select ${teamBName}`}
                   >
-                    Red
+                    <span style={WHITEBOARD_TEAM_OPTION_CONTENT_STYLE}>
+                      {editingTeamName === "B" ? (
+                        <input
+                          value={editingTeamDraft}
+                          autoFocus
+                          style={WHITEBOARD_TEAM_NAME_INPUT_STYLE}
+                          onClick={(event) => event.stopPropagation()}
+                          onChange={(event) => setEditingTeamDraft(event.target.value)}
+                          onBlur={() => commitTeamNameEditor("B", editingTeamDraft)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              commitTeamNameEditor("B", editingTeamDraft);
+                            }
+                          }}
+                        />
+                      ) : (
+                        <span style={WHITEBOARD_TEAM_NAME_TEXT_STYLE}>{teamBName}</span>
+                      )}
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        aria-label="Edit Team B name"
+                        style={WHITEBOARD_TEAM_EDIT_ICON_STYLE}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openTeamNameEditor("B");
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            openTeamNameEditor("B");
+                          }
+                        }}
+                      >
+                        ✎
+                      </span>
+                    </span>
                   </button>
                 </div>
                 <p style={WHITEBOARD_COUNT_SELECTOR_TITLE_STYLE}>Players</p>
