@@ -1,7 +1,10 @@
 import { Application, Container, Graphics, Text } from "pixi.js";
 
 import { createWorldViewport } from "./createWorldViewport";
-import { createTacticalPitchVisualRoot } from "../../tactical-lite/pixi/renderTacticalPitch";
+import {
+  createTacticalPitchVisualRoot,
+  type TacticalPitchTheme,
+} from "../../tactical-lite/pixi/renderTacticalPitch";
 import {
   NORMALIZED_MAX,
   NORMALIZED_MIN,
@@ -137,23 +140,34 @@ export async function createTacticalPadLiteSurface(
   app.stage.addChild(world);
 
   const surfaceVariant = options.surfaceVariant ?? "tactical";
-  const pitchMount =
-    surfaceVariant === "tactical" ? createTacticalPitchVisualRoot("gaelic") : null;
-  if (pitchMount) {
-    world.addChild(pitchMount.root);
-  } else {
-    const whiteboardBackground = new Graphics();
-    whiteboardBackground.rect(0, 0, WORLD_SIZE.width, WORLD_SIZE.height).fill({
-      color: 0xffffff,
-      alpha: 1,
+  const pitchTheme: TacticalPitchTheme =
+    surfaceVariant === "whiteboard" ? "whiteboard" : "default";
+  const pitchMount = createTacticalPitchVisualRoot("gaelic", { theme: pitchTheme });
+  world.addChild(pitchMount.root);
+
+  if (surfaceVariant === "whiteboard") {
+    const watermarkBadge = new Graphics();
+    watermarkBadge
+      .roundRect(WORLD_SIZE.width - 13.8, WORLD_SIZE.height - 10.8, 10.2, 7.2, 1.6)
+      .fill({ color: 0xf2f5f8, alpha: 0.8 })
+      .stroke({ color: 0x69717a, alpha: 0.38, width: 0.36 });
+    watermarkBadge.eventMode = "none";
+    world.addChild(watermarkBadge);
+
+    const watermarkLabel = new Text({
+      text: "P",
+      style: {
+        fill: 0x313a44,
+        fontSize: 3.8,
+        fontWeight: "700",
+        fontFamily: "Inter, system-ui, sans-serif",
+      },
     });
-    whiteboardBackground.rect(0, 0, WORLD_SIZE.width, WORLD_SIZE.height).stroke({
-      color: 0xd6dce2,
-      alpha: 1,
-      width: 0.7,
-    });
-    whiteboardBackground.eventMode = "none";
-    world.addChild(whiteboardBackground);
+    watermarkLabel.anchor.set(0.5, 0.5);
+    watermarkLabel.position.set(WORLD_SIZE.width - 8.7, WORLD_SIZE.height - 7.2);
+    watermarkLabel.alpha = 0.55;
+    watermarkLabel.eventMode = "none";
+    world.addChild(watermarkLabel);
   }
 
   const playersLayer = new Container();

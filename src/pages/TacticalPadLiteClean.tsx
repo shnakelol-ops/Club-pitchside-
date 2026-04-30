@@ -5,7 +5,6 @@ import {
   type TacticalPadLiteSurface,
 } from "../engine/pixi/createTacticalPadLiteSurface";
 import StatsModeSurface from "../StatsModeSurface";
-import WhiteboardModeSurface from "./WhiteboardModeSurface";
 import OrientationGate from "../components/OrientationGate";
 
 type PadMode = "tactical" | "stats" | "whiteboard";
@@ -22,6 +21,12 @@ const ROOT_STYLE: CSSProperties = {
   alignItems: "center",
   justifyContent: "center",
   overflow: "hidden",
+};
+
+const ROOT_WHITEBOARD_STYLE: CSSProperties = {
+  ...ROOT_STYLE,
+  background:
+    "linear-gradient(165deg, rgba(245, 248, 251, 1) 0%, rgba(236, 241, 246, 1) 52%, rgba(228, 235, 242, 1) 100%)",
 };
 
 const BACKGROUND_LAYER_STYLE: CSSProperties = {
@@ -239,6 +244,12 @@ const PITCH_STYLE: CSSProperties = {
   overflow: "hidden",
   boxShadow: "0 50px 110px rgba(0, 0, 0, 0.55), 0 18px 45px rgba(0, 0, 0, 0.35)",
   background: "#13221d",
+};
+
+const PITCH_WHITEBOARD_STYLE: CSSProperties = {
+  ...PITCH_STYLE,
+  background: "#f8f9fb",
+  boxShadow: "0 40px 90px rgba(34, 42, 51, 0.22), 0 14px 30px rgba(45, 56, 68, 0.17)",
 };
 
 const BUBBLE_BASE_STYLE: CSSProperties = {
@@ -517,7 +528,7 @@ export default function TacticalPadLiteClean() {
   const isWhiteboardMode = mode === "whiteboard";
 
   useEffect(() => {
-    if (!isTacticalMode) return;
+    if (isStatsMode) return;
     const host = hostRef.current;
     if (!host) return;
 
@@ -525,6 +536,7 @@ export default function TacticalPadLiteClean() {
     let destroySurface: (() => void) | null = null;
 
     void createTacticalPadLiteSurface(host, {
+      surfaceVariant: isWhiteboardMode ? "whiteboard" : "tactical",
       onPhaseCountChange: (count) => {
         if (!disposed) {
           setPhaseCount(count);
@@ -544,7 +556,7 @@ export default function TacticalPadLiteClean() {
       surfaceRef.current = null;
       destroySurface?.();
     };
-  }, [isTacticalMode]);
+  }, [isStatsMode, isWhiteboardMode]);
 
   const togglePlay = () => {
     if (!isPlaying) {
@@ -611,38 +623,33 @@ export default function TacticalPadLiteClean() {
     );
   }
 
-  if (isWhiteboardMode) {
-    return (
-      <>
-        <OrientationGate modeLabel="Whiteboard Mode">
-          <WhiteboardModeSurface onRequestPadModeChange={setPadMode} />
-        </OrientationGate>
-      </>
-    );
-  }
-
   return (
-    <OrientationGate modeLabel="Tactical Sim Lite">
-      <div style={ROOT_STYLE} className="simulator-container">
-        <style>{STADIUM_FLOODLIGHT_CSS}</style>
-        <div style={BACKGROUND_LAYER_STYLE} aria-hidden="true">
-          <div style={BACKGROUND_BASE_STYLE} />
-          <div className="stadium-light stadium-light-left" aria-hidden="true">
-            {floodlightDots.map((dot) => (
-              <span key={`left-light-${dot}`} />
-            ))}
+    <OrientationGate modeLabel={isWhiteboardMode ? "Whiteboard Mode" : "Tactical Sim Lite"}>
+      <div
+        style={isWhiteboardMode ? ROOT_WHITEBOARD_STYLE : ROOT_STYLE}
+        className={isWhiteboardMode ? undefined : "simulator-container"}
+      >
+        {!isWhiteboardMode ? <style>{STADIUM_FLOODLIGHT_CSS}</style> : null}
+        {!isWhiteboardMode ? (
+          <div style={BACKGROUND_LAYER_STYLE} aria-hidden="true">
+            <div style={BACKGROUND_BASE_STYLE} />
+            <div className="stadium-light stadium-light-left" aria-hidden="true">
+              {floodlightDots.map((dot) => (
+                <span key={`left-light-${dot}`} />
+              ))}
+            </div>
+            <div className="stadium-light stadium-light-right" aria-hidden="true">
+              {floodlightDots.map((dot) => (
+                <span key={`right-light-${dot}`} />
+              ))}
+            </div>
+            <div style={STADIUM_BEAM_LEFT_STYLE} />
+            <div style={STADIUM_BEAM_RIGHT_STYLE} />
+            <div style={BACKGROUND_VIGNETTE_STYLE} />
           </div>
-          <div className="stadium-light stadium-light-right" aria-hidden="true">
-            {floodlightDots.map((dot) => (
-              <span key={`right-light-${dot}`} />
-            ))}
-          </div>
-          <div style={STADIUM_BEAM_LEFT_STYLE} />
-          <div style={STADIUM_BEAM_RIGHT_STYLE} />
-          <div style={BACKGROUND_VIGNETTE_STYLE} />
-        </div>
+        ) : null}
         <div style={CONTENT_STYLE}>
-          <div ref={hostRef} style={PITCH_STYLE} />
+          <div ref={hostRef} style={isWhiteboardMode ? PITCH_WHITEBOARD_STYLE : PITCH_STYLE} />
         </div>
         <button
           type="button"
@@ -710,21 +717,46 @@ export default function TacticalPadLiteClean() {
         ) : null}
         {toolsOpen ? (
           <div style={TOOLS_POPOUT_STYLE}>
-            <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
-              Select
-            </button>
-            <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
-              Arrow
-            </button>
-            <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
-              Dashed
-            </button>
-            <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
-              Zone
-            </button>
-            <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
-              Clear
-            </button>
+            {isWhiteboardMode ? (
+              <>
+                <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
+                  Pen
+                </button>
+                <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
+                  Line
+                </button>
+                <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
+                  Arrow
+                </button>
+                <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
+                  Dashed
+                </button>
+                <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
+                  Undo
+                </button>
+                <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
+                  Clear
+                </button>
+              </>
+            ) : (
+              <>
+                <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
+                  Select
+                </button>
+                <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
+                  Arrow
+                </button>
+                <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
+                  Dashed
+                </button>
+                <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
+                  Zone
+                </button>
+                <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
+                  Clear
+                </button>
+              </>
+            )}
           </div>
         ) : null}
         <button

@@ -8,6 +8,8 @@ export type TacticalPitchVisualMount = {
   dispose: () => void;
 };
 
+export type TacticalPitchTheme = "default" | "whiteboard";
+
 function createStripeTexture(sport: PitchSport): Texture {
   const canvas = document.createElement("canvas");
   const W = 56;
@@ -288,10 +290,15 @@ function drawMarkings(
   }
 }
 
-export function createTacticalPitchVisualRoot(sport: PitchSport = "gaelic"): TacticalPitchVisualMount {
+export function createTacticalPitchVisualRoot(
+  sport: PitchSport = "gaelic",
+  options: { theme?: TacticalPitchTheme } = {},
+): TacticalPitchVisualMount {
   const root = new Container();
   const disposers: Array<() => void> = [];
   const { w: vbW, h: vbH } = BOARD_PITCH_VIEWBOX;
+  const theme = options.theme ?? "default";
+  const isWhiteboardTheme = theme === "whiteboard";
 
   const panel = new Container();
   root.addChild(panel);
@@ -300,7 +307,7 @@ export function createTacticalPitchVisualRoot(sport: PitchSport = "gaelic"): Tac
   const pad = 2.95;
   const cornerR = 2.35;
   chassis.roundRect(-pad, -pad, vbW + pad * 2, vbH + pad * 2, cornerR).fill({
-    color: 0x020706,
+    color: isWhiteboardTheme ? 0xd6dbe1 : 0x020706,
     alpha: 1,
   });
   panel.addChild(chassis);
@@ -309,114 +316,136 @@ export function createTacticalPitchVisualRoot(sport: PitchSport = "gaelic"): Tac
   face.sortableChildren = true;
   panel.addChild(face);
 
-  const washTex = bakeTurfWashTexture(sport);
-  disposers.push(() => washTex.destroy());
-  const wash = new Sprite(washTex);
-  wash.width = vbW;
-  wash.height = vbH;
-  wash.zIndex = 0;
-  face.addChild(wash);
-
-  const stripeTex = createStripeTexture(sport);
-  disposers.push(() => stripeTex.destroy());
-  const stripes = new TilingSprite({
-    texture: stripeTex,
-    width: vbW,
-    height: vbH,
-  });
-  const verticalBands = turfRecipe(sport).verticalBands;
-  const density = 2.15 / Math.max(2.8, verticalBands);
-  stripes.tileScale.set(2.05, density);
-  stripes.alpha = sport === "soccer" ? 0.36 : 0.31;
-  stripes.blendMode = "multiply";
-  stripes.zIndex = 1;
-  face.addChild(stripes);
-
   const isSoccer = sport === "soccer";
-  const vignette = new FillGradient({
-    type: "radial",
-    center: { x: 0.5, y: 0.48 },
-    innerRadius: 0,
-    outerRadius: 1,
-    outerCenter: { x: 0.5, y: 0.48 },
-    textureSpace: "local",
-    colorStops: isSoccer
-      ? [
-          { offset: 0.32, color: "#00000000" },
-          { offset: 0.78, color: "rgba(0, 14, 10, 0.1)" },
-          { offset: 1, color: "rgba(0, 18, 12, 0.2)" },
-        ]
-      : [
-          { offset: 0.34, color: "#00000000" },
-          { offset: 0.82, color: "rgba(0, 12, 9, 0.075)" },
-          { offset: 1, color: "rgba(0, 16, 11, 0.14)" },
-        ],
-  });
-  disposers.push(() => vignette.destroy());
-  const depth = new Graphics();
-  depth.zIndex = 2;
-  depth.rect(0, 0, vbW, vbH).fill(vignette);
-  depth.blendMode = "multiply";
-  depth.alpha = sport === "soccer" ? 0.38 : 0.24;
-  face.addChild(depth);
+  if (isWhiteboardTheme) {
+    const whiteboardFace = new Graphics();
+    whiteboardFace.zIndex = 0;
+    whiteboardFace.rect(0, 0, vbW, vbH).fill({
+      color: 0xf8f9fb,
+      alpha: 1,
+    });
+    face.addChild(whiteboardFace);
+  } else {
+    const washTex = bakeTurfWashTexture(sport);
+    disposers.push(() => washTex.destroy());
+    const wash = new Sprite(washTex);
+    wash.width = vbW;
+    wash.height = vbH;
+    wash.zIndex = 0;
+    face.addChild(wash);
 
-  if (!isSoccer) {
-    const centreLift = new FillGradient({
+    const stripeTex = createStripeTexture(sport);
+    disposers.push(() => stripeTex.destroy());
+    const stripes = new TilingSprite({
+      texture: stripeTex,
+      width: vbW,
+      height: vbH,
+    });
+    const verticalBands = turfRecipe(sport).verticalBands;
+    const density = 2.15 / Math.max(2.8, verticalBands);
+    stripes.tileScale.set(2.05, density);
+    stripes.alpha = sport === "soccer" ? 0.36 : 0.31;
+    stripes.blendMode = "multiply";
+    stripes.zIndex = 1;
+    face.addChild(stripes);
+
+    const vignette = new FillGradient({
       type: "radial",
       center: { x: 0.5, y: 0.48 },
       innerRadius: 0,
       outerRadius: 1,
       outerCenter: { x: 0.5, y: 0.48 },
       textureSpace: "local",
-      colorStops: [
-        { offset: 0, color: "rgba(234, 255, 242, 0.13)" },
-        { offset: 0.42, color: "rgba(222, 255, 236, 0.05)" },
-        { offset: 1, color: "rgba(255, 255, 255, 0)" },
-      ],
+      colorStops: isSoccer
+        ? [
+            { offset: 0.32, color: "#00000000" },
+            { offset: 0.78, color: "rgba(0, 14, 10, 0.1)" },
+            { offset: 1, color: "rgba(0, 18, 12, 0.2)" },
+          ]
+        : [
+            { offset: 0.34, color: "#00000000" },
+            { offset: 0.82, color: "rgba(0, 12, 9, 0.075)" },
+            { offset: 1, color: "rgba(0, 16, 11, 0.14)" },
+          ],
     });
-    disposers.push(() => centreLift.destroy());
-    const lift = new Graphics();
-    lift.zIndex = 3;
-    lift.rect(0, 0, vbW, vbH).fill(centreLift);
-    lift.blendMode = "screen";
-    lift.alpha = 0.16;
-    face.addChild(lift);
+    disposers.push(() => vignette.destroy());
+    const depth = new Graphics();
+    depth.zIndex = 2;
+    depth.rect(0, 0, vbW, vbH).fill(vignette);
+    depth.blendMode = "multiply";
+    depth.alpha = sport === "soccer" ? 0.38 : 0.24;
+    face.addChild(depth);
+
+    if (!isSoccer) {
+      const centreLift = new FillGradient({
+        type: "radial",
+        center: { x: 0.5, y: 0.48 },
+        innerRadius: 0,
+        outerRadius: 1,
+        outerCenter: { x: 0.5, y: 0.48 },
+        textureSpace: "local",
+        colorStops: [
+          { offset: 0, color: "rgba(234, 255, 242, 0.13)" },
+          { offset: 0.42, color: "rgba(222, 255, 236, 0.05)" },
+          { offset: 1, color: "rgba(255, 255, 255, 0)" },
+        ],
+      });
+      disposers.push(() => centreLift.destroy());
+      const lift = new Graphics();
+      lift.zIndex = 3;
+      lift.rect(0, 0, vbW, vbH).fill(centreLift);
+      lift.blendMode = "screen";
+      lift.alpha = 0.16;
+      face.addChild(lift);
+    }
   }
 
   const markingsGraphics = new Graphics();
   markingsGraphics.zIndex = 4;
   const { markings } = getPitchConfig(sport);
   drawMarkings(markingsGraphics, markings);
-  if (!isSoccer) markingsGraphics.tint = 0xffffff;
+  if (isWhiteboardTheme) {
+    markingsGraphics.tint = 0x1d2731;
+  } else if (!isSoccer) {
+    markingsGraphics.tint = 0xffffff;
+  }
   face.addChild(markingsGraphics);
 
   const markingsClarity = new Graphics();
   markingsClarity.zIndex = 5;
   drawMarkings(markingsClarity, markings, { skipLineGlowMarked: true });
-  if (!isSoccer) markingsClarity.tint = 0xffffff;
-  markingsClarity.blendMode = "screen";
-  markingsClarity.alpha = isSoccer ? 0.12 : 0.16;
+  if (isWhiteboardTheme) {
+    markingsClarity.tint = 0x111920;
+    markingsClarity.blendMode = "normal";
+    markingsClarity.alpha = 0.08;
+  } else {
+    if (!isSoccer) markingsClarity.tint = 0xffffff;
+    markingsClarity.blendMode = "screen";
+    markingsClarity.alpha = isSoccer ? 0.12 : 0.16;
+  }
   face.addChild(markingsClarity);
 
-  const sheen = new FillGradient({
-    type: "linear",
-    start: { x: 0.5, y: 0 },
-    end: { x: 0.5, y: 1 },
-    textureSpace: "local",
-    colorStops: [
-      { offset: 0, color: "rgba(255, 255, 255, 0.055)" },
-      { offset: 0.12, color: "rgba(255, 255, 255, 0.018)" },
-      { offset: 0.55, color: "#00000000" },
-      { offset: 1, color: "rgba(2, 8, 6, 0.07)" },
-    ],
-  });
-  disposers.push(() => sheen.destroy());
-  const glass = new Graphics();
-  glass.zIndex = 7;
-  glass.rect(0, 0, vbW, vbH).fill(sheen);
-  glass.blendMode = "screen";
-  glass.alpha = isSoccer ? 0.16 : 0.14;
-  face.addChild(glass);
+  if (!isWhiteboardTheme) {
+    const sheen = new FillGradient({
+      type: "linear",
+      start: { x: 0.5, y: 0 },
+      end: { x: 0.5, y: 1 },
+      textureSpace: "local",
+      colorStops: [
+        { offset: 0, color: "rgba(255, 255, 255, 0.055)" },
+        { offset: 0.12, color: "rgba(255, 255, 255, 0.018)" },
+        { offset: 0.55, color: "#00000000" },
+        { offset: 1, color: "rgba(2, 8, 6, 0.07)" },
+      ],
+    });
+    disposers.push(() => sheen.destroy());
+    const glass = new Graphics();
+    glass.zIndex = 7;
+    glass.rect(0, 0, vbW, vbH).fill(sheen);
+    glass.blendMode = "screen";
+    glass.alpha = isSoccer ? 0.16 : 0.14;
+    face.addChild(glass);
+  }
 
   face.sortChildren();
 
