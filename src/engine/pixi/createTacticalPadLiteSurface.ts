@@ -39,6 +39,10 @@ export type TacticalPadLiteSurface = {
   play: () => void;
   reset: () => void;
   reflow: () => void;
+  setWhiteboardTeamConfig: (config: {
+    counts: { blue: number; red: number };
+    colors: { blue: WhiteboardTokenColor; red: WhiteboardTokenColor };
+  }) => void;
   setWhiteboardDrawTool: (tool: WhiteboardDrawTool) => void;
   setWhiteboardDrawColor: (color: number) => void;
   undoWhiteboardStroke: () => void;
@@ -307,7 +311,7 @@ export async function createTacticalPadLiteSurface(
       ? createWhiteboardPlayerSeeds(options.whiteboardTeamCounts, options.whiteboardTeamColors)
       : TACTICAL_INITIAL_PLAYERS;
 
-  const players: TacticalPlayer[] = playerSeeds.map((base) => {
+  function createSurfacePlayer(base: PlayerSeed): TacticalPlayer {
     const tokenColor: PremiumPlayerTokenColor =
       surfaceVariant === "whiteboard" ? base.color : base.team === "RED" ? "red" : "blue";
     const { token, shadow } = createPremiumPlayerToken({
@@ -326,7 +330,9 @@ export async function createTacticalPadLiteSurface(
       dragScaleTarget: PREMIUM_TOKEN_IDLE_SCALE,
       dragShadowAlphaTarget: PREMIUM_TOKEN_IDLE_SHADOW_ALPHA,
     };
-  });
+  }
+
+  const players: TacticalPlayer[] = playerSeeds.map(createSurfacePlayer);
 
   const PLAY_DURATION_MS = 1200;
   let isPlaying = false;
@@ -654,10 +660,7 @@ export async function createTacticalPadLiteSurface(
     }
   }
 
-  for (const player of players) {
-    setPlayerTouchHitArea(player, mapper);
-    setTokenWorldPositionForPoint(player, player.current, mapper);
-
+  function bindPlayerPointerDown(player: TacticalPlayer): void {
     player.token.on("pointerdown", (event) => {
       if (isPlaying) return;
       if (isWhiteboardSurface && activeWhiteboardTool !== "move") {
@@ -670,6 +673,41 @@ export async function createTacticalPadLiteSurface(
       (event as { stopPropagation?: () => void }).stopPropagation?.();
     });
   }
+
+  function syncPlayersToViewport(): void {
+    for (const player of players) {
+      setPlayerTouchHitArea(player, mapper);
+      setTokenWorldPositionForPoint(player, player.current, mapper);
+    }
+  }
+
+  function rebuildWhiteboardPlayers(
+    counts: TacticalPadLiteSurfaceOptions["whiteboardTeamCounts"],
+    colors: TacticalPadLiteSurfaceOptions["whiteboardTeamColors"],
+  ): void {
+    if (!isWhiteboardSurface) return;
+    releaseDrag();
+    // Preserve committed drawings; only clear in-progress preview state.
+    resetActiveWhiteboardStroke();
+    for (const player of players) {
+      player.token.removeAllListeners();
+      player.token.destroy({ children: true });
+    }
+    players.length = 0;
+    const nextSeeds = createWhiteboardPlayerSeeds(counts, colors);
+    for (const seed of nextSeeds) {
+      const nextPlayer = createSurfacePlayer(seed);
+      players.push(nextPlayer);
+      bindPlayerPointerDown(nextPlayer);
+    }
+    syncPlayersToViewport();
+    syncWhiteboardTokenInputMode();
+  }
+
+  for (const player of players) {
+    bindPlayerPointerDown(player);
+  }
+  syncPlayersToViewport();
 
   app.stage.on("pointermove", (event) => {
     updateDraggedPlayerFromEvent(event);
@@ -722,6 +760,10 @@ export async function createTacticalPadLiteSurface(
     },
     reflow: () => {
       fitToHost();
+    },
+    setWhiteboardTeamConfig: (config) => {
+      if (!isWhiteboardSurface) return;
+      rebuildWhiteboardPlayers(config.counts, config.colors);
     },
     setWhiteboardDrawTool: (tool) => {
       if (!isWhiteboardSurface) return;

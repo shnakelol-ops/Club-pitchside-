@@ -852,6 +852,11 @@ export default function TacticalPadLiteClean() {
   const [teamBName, setTeamBName] = useState(WHITEBOARD_DEFAULT_TEAM_B_NAME);
   const [editingTeamName, setEditingTeamName] = useState<"A" | "B" | null>(null);
   const [editingTeamDraft, setEditingTeamDraft] = useState("");
+  const whiteboardCountsRef = useRef({ blue: 1, red: 1 });
+  const whiteboardTeamColorsRef = useRef<{ blue: WhiteboardTokenColor; red: WhiteboardTokenColor }>({
+    blue: "blue",
+    red: "red",
+  });
   const [currentPlayerColor, setCurrentPlayerColor] = useState<WhiteboardTokenColor>("blue");
   const [whiteboardColorPickerOpen, setWhiteboardColorPickerOpen] = useState(false);
   const [currentToolColor, setCurrentToolColor] = useState<WhiteboardTokenColor>("black");
@@ -917,6 +922,20 @@ export default function TacticalPadLiteClean() {
   }, []);
 
   useEffect(() => {
+    whiteboardCountsRef.current = {
+      blue: whiteboardBlueCount,
+      red: whiteboardRedCount,
+    };
+  }, [whiteboardBlueCount, whiteboardRedCount]);
+
+  useEffect(() => {
+    whiteboardTeamColorsRef.current = {
+      blue: whiteboardCountPickerTeam === "BLUE" ? currentPlayerColor : "blue",
+      red: whiteboardCountPickerTeam === "RED" ? currentPlayerColor : "red",
+    };
+  }, [whiteboardCountPickerTeam, currentPlayerColor]);
+
+  useEffect(() => {
     if (isStatsMode) return;
     const host = hostRef.current;
     if (!host) return;
@@ -926,18 +945,8 @@ export default function TacticalPadLiteClean() {
 
     void createTacticalPadLiteSurface(host, {
       surfaceVariant: isWhiteboardMode ? "whiteboard" : "tactical",
-      whiteboardTeamCounts: isWhiteboardMode
-        ? {
-            blue: whiteboardBlueCount,
-            red: whiteboardRedCount,
-          }
-        : undefined,
-      whiteboardTeamColors: isWhiteboardMode
-        ? {
-            blue: whiteboardCountPickerTeam === "BLUE" ? currentPlayerColor : "blue",
-            red: whiteboardCountPickerTeam === "RED" ? currentPlayerColor : "red",
-          }
-        : undefined,
+      whiteboardTeamCounts: isWhiteboardMode ? whiteboardCountsRef.current : undefined,
+      whiteboardTeamColors: isWhiteboardMode ? whiteboardTeamColorsRef.current : undefined,
       whiteboardDrawColor: isWhiteboardMode
         ? (WHITEBOARD_TOOL_COLOR_CHOICES.find((choice) => choice.value === currentToolColor)?.drawColor ?? 0x111111)
         : undefined,
@@ -974,12 +983,19 @@ export default function TacticalPadLiteClean() {
   }, [
     isStatsMode,
     isWhiteboardMode,
-    whiteboardBlueCount,
-    whiteboardRedCount,
-    currentPlayerColor,
     currentToolColor,
     surfaceRefreshKey,
   ]);
+
+  useEffect(() => {
+    if (!isWhiteboardMode) return;
+    const surface = surfaceRef.current;
+    if (!surface) return;
+    surface.setWhiteboardTeamConfig({
+      counts: whiteboardCountsRef.current,
+      colors: whiteboardTeamColorsRef.current,
+    });
+  }, [isWhiteboardMode, whiteboardBlueCount, whiteboardRedCount, whiteboardCountPickerTeam, currentPlayerColor]);
 
   const togglePlay = () => {
     if (!isPlaying) {
