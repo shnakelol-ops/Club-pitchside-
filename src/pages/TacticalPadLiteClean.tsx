@@ -9,6 +9,11 @@ import OrientationGate from "../components/OrientationGate";
 
 type PadMode = "tactical" | "stats" | "whiteboard";
 
+const CONTENT_WIDTH_EXPR =
+  "min(calc(100dvw - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), calc(100vw - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), calc((100dvh - 10px) * 1.6), calc((100vh - 10px) * 1.6), 1360px)";
+const WHITEBOARD_RIGHT_COLUMN_LEFT = `calc(50vw + (${CONTENT_WIDTH_EXPR} / 2) + 10px)`;
+const WHITEBOARD_LEFT_BUBBLE_LEFT = `calc(50vw - (${CONTENT_WIDTH_EXPR} / 2) - 52px)`;
+
 const ROOT_STYLE: CSSProperties = {
   position: "fixed",
   inset: 0,
@@ -226,7 +231,7 @@ const STADIUM_BEAM_RIGHT_STYLE: CSSProperties = {
 };
 
 const CONTENT_STYLE: CSSProperties = {
-  width: "min(calc(100dvw - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), calc(100vw - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), calc((100dvh - 10px) * 1.6), calc((100vh - 10px) * 1.6), 1360px)",
+  width: CONTENT_WIDTH_EXPR,
   maxWidth: "calc(100vw - 24px)",
   aspectRatio: "16 / 10",
   maxHeight: "min(calc(100dvh - 10px), calc(100vh - 10px))",
@@ -432,6 +437,8 @@ const TOOLS_BUTTON_STYLE: CSSProperties = {
 
 const WHITEBOARD_TOOLS_POPOUT_STYLE: CSSProperties = {
   ...TOOLS_POPOUT_STYLE,
+  right: "auto",
+  left: WHITEBOARD_RIGHT_COLUMN_LEFT,
   background: "rgba(242, 246, 251, 0.92)",
   border: "1px solid rgba(130, 150, 170, 0.26)",
 };
@@ -639,7 +646,8 @@ const MODE_TAB_STYLE: CSSProperties = {
 
 const WHITEBOARD_MODE_TAB_STYLE: CSSProperties = {
   ...MODE_TAB_STYLE,
-  right: "max(134px, calc(env(safe-area-inset-right, 0px) + 132px))",
+  right: "auto",
+  left: WHITEBOARD_RIGHT_COLUMN_LEFT,
 };
 
 const MODE_MENU_STYLE: CSSProperties = {
@@ -662,7 +670,14 @@ const MODE_MENU_STYLE: CSSProperties = {
 
 const WHITEBOARD_MODE_MENU_STYLE: CSSProperties = {
   ...MODE_MENU_STYLE,
-  right: "max(134px, calc(env(safe-area-inset-right, 0px) + 132px))",
+  right: "auto",
+  left: WHITEBOARD_RIGHT_COLUMN_LEFT,
+};
+
+const WHITEBOARD_TOOL_BUBBLE_STYLE: CSSProperties = {
+  ...TOOL_BUBBLE_STYLE,
+  right: "auto",
+  left: WHITEBOARD_LEFT_BUBBLE_LEFT,
 };
 
 const MODE_MENU_ITEM_STYLE: CSSProperties = {
@@ -1162,7 +1177,7 @@ export default function TacticalPadLiteClean() {
         <button
           type="button"
           className="floating-bubble floating-bubble-tool"
-          style={TOOL_BUBBLE_STYLE}
+          style={isWhiteboardMode ? WHITEBOARD_TOOL_BUBBLE_STYLE : TOOL_BUBBLE_STYLE}
           aria-label="Open tools"
           onClick={() => setToolsOpen((open) => !open)}
         >
