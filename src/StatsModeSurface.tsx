@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 
 import {
   createInitialMatchEngineState,
@@ -43,6 +43,10 @@ type LoggedMatchEvent = MatchEvent & {
 
 type ReviewEventGroupOptionId = ReviewEventGroup | "ACTIVE";
 type StatsSurfacePadMode = "tactical" | "stats";
+type ViewportRect = { left: number; top: number; width: number; height: number };
+
+const UTILITY_BUBBLE_SIZE = 39;
+const UTILITY_BUBBLE_MARGIN = 12;
 const MODE_MENU_OPTIONS: ReadonlyArray<{ key: GaaModeKey; label: string }> = [
   { key: "football", label: "Football" },
   { key: "ladiesFootball", label: "Ladies Football" },
@@ -213,6 +217,50 @@ function getEffectiveAttackingDirection(
   half: 1 | 2,
 ): AttackingDirection {
   return half === 2 ? oppositeAttackingDirection(firstHalfAttackingDirection) : firstHalfAttackingDirection;
+}
+
+function getViewportRect(): ViewportRect {
+  if (typeof window === "undefined") {
+    return { left: 0, top: 0, width: 0, height: 0 };
+  }
+  const viewport = window.visualViewport;
+  if (!viewport) {
+    return {
+      left: 0,
+      top: 0,
+      width: window.innerWidth,
+      height: window.innerHeight,
+    };
+  }
+  return {
+    left: viewport.offsetLeft,
+    top: viewport.offsetTop,
+    width: viewport.width,
+    height: viewport.height,
+  };
+}
+
+function clampUtilityBubblePosition(
+  position: { left: number; top: number },
+  viewport: ViewportRect,
+): { left: number; top: number } {
+  const minLeft = viewport.left + UTILITY_BUBBLE_MARGIN;
+  const maxLeft = viewport.left + viewport.width - UTILITY_BUBBLE_MARGIN - UTILITY_BUBBLE_SIZE;
+  const clampedLeft = Math.min(Math.max(position.left, minLeft), Math.max(minLeft, maxLeft));
+  const minTop = viewport.top + UTILITY_BUBBLE_MARGIN;
+  const maxTop = viewport.top + viewport.height - UTILITY_BUBBLE_MARGIN - UTILITY_BUBBLE_SIZE;
+  const clampedTop = Math.min(Math.max(position.top, minTop), Math.max(minTop, maxTop));
+  return { left: clampedLeft, top: clampedTop };
+}
+
+function getDefaultUtilityBubblePosition(viewport: ViewportRect): { left: number; top: number } {
+  return clampUtilityBubblePosition(
+    {
+      left: viewport.left + 16,
+      top: viewport.top + viewport.height - 90 - UTILITY_BUBBLE_SIZE,
+    },
+    viewport,
+  );
 }
 
 const PANEL_CSS = `
@@ -1523,6 +1571,16 @@ type StatsModeSurfaceProps = {
 export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSurfaceProps = {}) {
   const hostRef = useRef<HTMLDivElement>(null);
   const floatingControlsRef = useRef<HTMLDivElement>(null);
+  const utilityMenuRef = useRef<HTMLDivElement>(null);
+  const utilityBubbleDragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    startLeft: number;
+    startTop: number;
+    moved: boolean;
+  } | null>(null);
+  const suppressUtilityBubbleClickRef = useRef(false);
   const [currentMode, setCurrentMode] = useState<GaaModeKey>("football");
   const mode = gaaModeConfig[currentMode];
   const [selectedEventKind, setSelectedEventKind] = useState<MatchEventKind>("POINT");
@@ -1566,6 +1624,11 @@ export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSu
   const [currentHalf, setCurrentHalf] = useState<1 | 2>(1);
   const [matchTimeSeconds, setMatchTimeSeconds] = useState(0);
   const [keyboardInset, setKeyboardInset] = useState(0);
+  const [utilityBubblePosition, setUtilityBubblePosition] = useState<{ left: number; top: number } | null>(null);
+  const [utilityMenuSize, setUtilityMenuSize] = useState<{ width: number; height: number }>({
+    width: 160,
+    height: 260,
+  });
   const [isLandscape, setIsLandscape] = useState(
     () =>
       typeof window !== "undefined" &&
@@ -2306,6 +2369,120 @@ export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSu
     };
   }, [isUtilityOpen]);
 
+  useEffect(() => {
+    const syncUtilityBubblePosition = () => {
+      const viewport = getViewportRect();
+      setUtilityBubblePosition((prev) => {
+        const next = prev == null ? getDefaultUtilityBubblePosition(viewport) : clampUtilityBubblePosition(prev, viewport);
+        if (prev && Math.abs(prev.left - next.left) < 0.5 && Math.abs(prev.top - next.top) < 0.5) {
+          return prev;
+        }
+        return next;
+      });
+    };
+
+    syncUtilityBubblePosition();
+    window.addEventListener("resize", syncUtilityBubblePosition);
+    const viewport = window.visualViewport;
+    viewport?.addEventListener("resize", syncUtilityBubblePosition);
+    viewport?.addEventListener("scroll", syncUtilityBubblePosition);
+
+    return () => {
+      window.removeEventListener("resize", syncUtilityBubblePosition);
+      viewport?.removeEventListener("resize", syncUtilityBubblePosition);
+      viewport?.removeEventListener("scroll", syncUtilityBubblePosition);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isUtilityOpen) return;
+
+    const measureMenu = () => {
+      const rect = utilityMenuRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setUtilityMenuSize((prev) => {
+        if (Math.abs(prev.width - rect.width) < 0.5 && Math.abs(prev.height - rect.height) < 0.5) {
+          return prev;
+        }
+        return { width: rect.width, height: rect.height };
+      });
+    };
+
+    measureMenu();
+    const rafId = window.requestAnimationFrame(measureMenu);
+    window.addEventListener("resize", measureMenu);
+    const viewport = window.visualViewport;
+    viewport?.addEventListener("resize", measureMenu);
+    viewport?.addEventListener("scroll", measureMenu);
+
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      window.removeEventListener("resize", measureMenu);
+      viewport?.removeEventListener("resize", measureMenu);
+      viewport?.removeEventListener("scroll", measureMenu);
+    };
+  }, [isUtilityOpen]);
+
+  const handleUtilityBubblePointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (event.button !== 0) return;
+    const viewport = getViewportRect();
+    const currentPosition =
+      utilityBubblePosition == null ? getDefaultUtilityBubblePosition(viewport) : utilityBubblePosition;
+
+    suppressUtilityBubbleClickRef.current = false;
+    utilityBubbleDragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      startLeft: currentPosition.left,
+      startTop: currentPosition.top,
+      moved: false,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handleUtilityBubblePointerMove = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const drag = utilityBubbleDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+
+    event.preventDefault();
+    const deltaX = event.clientX - drag.startX;
+    const deltaY = event.clientY - drag.startY;
+    if (!drag.moved && Math.hypot(deltaX, deltaY) >= 4) {
+      drag.moved = true;
+    }
+    const viewport = getViewportRect();
+    setUtilityBubblePosition(
+      clampUtilityBubblePosition(
+        {
+          left: drag.startLeft + deltaX,
+          top: drag.startTop + deltaY,
+        },
+        viewport,
+      ),
+    );
+  };
+
+  const finishUtilityBubbleDrag = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const drag = utilityBubbleDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    if (drag.moved) {
+      suppressUtilityBubbleClickRef.current = true;
+    }
+    utilityBubbleDragRef.current = null;
+  };
+
+  const handleUtilityBubbleClick = () => {
+    if (suppressUtilityBubbleClickRef.current) {
+      suppressUtilityBubbleClickRef.current = false;
+      return;
+    }
+    toggleCommandBubble();
+  };
+
   const matchStateToken =
     matchState === "FIRST_HALF" || matchState === "SECOND_HALF"
       ? `H${currentHalf}`
@@ -2783,6 +2960,44 @@ export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSu
   const utilityControlsClass = isLandscape
     ? "utility-controls utility-controls--landscape"
     : "utility-controls utility-controls--portrait";
+  const utilityBubbleStyle =
+    utilityBubblePosition == null
+      ? undefined
+      : {
+          left: `${utilityBubblePosition.left}px`,
+          top: `${utilityBubblePosition.top}px`,
+          right: "auto",
+          bottom: "auto",
+          touchAction: "none",
+          cursor: utilityBubbleDragRef.current ? "grabbing" : "grab",
+        };
+  const utilityMenuStyle = (() => {
+    if (utilityBubblePosition == null) return undefined;
+
+    const viewport = getViewportRect();
+    const minLeft = viewport.left + UTILITY_BUBBLE_MARGIN;
+    const maxLeft = viewport.left + viewport.width - UTILITY_BUBBLE_MARGIN - utilityMenuSize.width;
+    let left = utilityBubblePosition.left + UTILITY_BUBBLE_SIZE + 8;
+    if (left > maxLeft) {
+      left = utilityBubblePosition.left - utilityMenuSize.width - 8;
+    }
+    left = Math.min(Math.max(left, minLeft), Math.max(minLeft, maxLeft));
+
+    const minTop = viewport.top + UTILITY_BUBBLE_MARGIN;
+    const maxTop = viewport.top + viewport.height - UTILITY_BUBBLE_MARGIN - utilityMenuSize.height;
+    let top = utilityBubblePosition.top + UTILITY_BUBBLE_SIZE - utilityMenuSize.height;
+    top = Math.min(Math.max(top, minTop), Math.max(minTop, maxTop));
+
+    return {
+      position: "fixed",
+      left: `${left}px`,
+      top: `${top}px`,
+      marginLeft: 0,
+      marginBottom: 0,
+      maxHeight: `${Math.max(120, viewport.height - UTILITY_BUBBLE_MARGIN * 2)}px`,
+      overflowY: "auto",
+    } as const;
+  })();
   const utilityPanelClass = isLandscape
     ? "utility-overlay-panel utility-overlay-panel--landscape"
     : "utility-overlay-panel utility-overlay-panel--portrait";
@@ -3562,7 +3777,7 @@ export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSu
       {utilityPanel == null ? (
         <div className={utilityControlsClass}>
           {isUtilityOpen ? (
-            <div className="utility-menu">
+            <div className="utility-menu" ref={utilityMenuRef} style={utilityMenuStyle}>
               <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.86 }}>
                 Mode
               </div>
@@ -3624,14 +3839,14 @@ export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSu
           <button
             type="button"
             className="utility-bubble-btn"
+            style={utilityBubbleStyle}
             aria-label="Toggle utility menu"
             aria-expanded={isUtilityOpen}
-            onClick={() => {
-              toggleCommandBubble();
-            }}
-            style={{
-              boxShadow: "0 0 0 1px rgba(96,165,250,0.14), 0 0 7px rgba(96,165,250,0.14)",
-            }}
+            onPointerDown={handleUtilityBubblePointerDown}
+            onPointerMove={handleUtilityBubblePointerMove}
+            onPointerUp={finishUtilityBubbleDrag}
+            onPointerCancel={finishUtilityBubbleDrag}
+            onClick={handleUtilityBubbleClick}
           >
             ⋮
           </button>
