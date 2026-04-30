@@ -427,6 +427,20 @@ const TOOLS_BUTTON_STYLE: CSSProperties = {
   cursor: "pointer",
 };
 
+const WHITEBOARD_TOOLS_POPOUT_STYLE: CSSProperties = {
+  ...TOOLS_POPOUT_STYLE,
+  background: "rgba(242, 246, 251, 0.92)",
+  border: "1px solid rgba(130, 150, 170, 0.26)",
+};
+
+const WHITEBOARD_TOOLS_BUTTON_STYLE: CSSProperties = {
+  ...TOOLS_BUTTON_STYLE,
+  border: "1px solid rgba(123, 146, 172, 0.28)",
+  background: "rgba(224, 233, 242, 0.72)",
+  color: "#1f3348",
+  fontWeight: 600,
+};
+
 const PHASES_CHIP_STYLE: CSSProperties = {
   position: "fixed",
   left: "max(12px, calc(env(safe-area-inset-left, 0px) + 10px))",
@@ -668,6 +682,9 @@ export default function TacticalPadLiteClean() {
   const [whiteboardBlueCount, setWhiteboardBlueCount] = useState(1);
   const [whiteboardRedCount, setWhiteboardRedCount] = useState(1);
   const [whiteboardCountPickerTeam, setWhiteboardCountPickerTeam] = useState<"BLUE" | "RED" | null>(null);
+  const [whiteboardTool, setWhiteboardTool] = useState<
+    "pen" | "line" | "arrow" | "dashed" | "undo" | "clear"
+  >("pen");
   const [phaseCount, setPhaseCount] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(false);
@@ -756,6 +773,24 @@ export default function TacticalPadLiteClean() {
       setWhiteboardRedCount(clamped);
     }
     setWhiteboardCountPickerTeam(null);
+  };
+
+  const applyWhiteboardTool = (tool: "pen" | "line" | "arrow" | "dashed" | "undo" | "clear") => {
+    setWhiteboardTool(tool);
+    const surface = surfaceRef.current;
+    if (!surface) return;
+    if (tool === "undo") {
+      surface.undoWhiteboardStroke();
+      closeToolsMenu();
+      return;
+    }
+    if (tool === "clear") {
+      surface.clearWhiteboardStrokes();
+      closeToolsMenu();
+      return;
+    }
+    surface.setWhiteboardDrawTool(tool);
+    closeToolsMenu();
   };
 
   const modeMenu = modeMenuOpen ? (
@@ -952,22 +987,83 @@ export default function TacticalPadLiteClean() {
           </div>
         ) : null}
         {toolsOpen ? (
-          <div style={TOOLS_POPOUT_STYLE}>
-            <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
-              Select
-            </button>
-            <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
-              Arrow
-            </button>
-            <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
-              Dashed
-            </button>
-            <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
-              Zone
-            </button>
-            <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
-              Clear
-            </button>
+          <div style={isWhiteboardMode ? WHITEBOARD_TOOLS_POPOUT_STYLE : TOOLS_POPOUT_STYLE}>
+            {isWhiteboardMode ? (
+              <>
+                <button
+                  type="button"
+                  style={{
+                    ...WHITEBOARD_TOOLS_BUTTON_STYLE,
+                    ...(whiteboardTool === "pen"
+                      ? { border: "1px solid rgba(43, 95, 150, 0.58)", background: "rgba(196, 214, 232, 0.9)" }
+                      : null),
+                  }}
+                  onClick={() => applyWhiteboardTool("pen")}
+                >
+                  Pen
+                </button>
+                <button
+                  type="button"
+                  style={{
+                    ...WHITEBOARD_TOOLS_BUTTON_STYLE,
+                    ...(whiteboardTool === "line"
+                      ? { border: "1px solid rgba(43, 95, 150, 0.58)", background: "rgba(196, 214, 232, 0.9)" }
+                      : null),
+                  }}
+                  onClick={() => applyWhiteboardTool("line")}
+                >
+                  Line
+                </button>
+                <button
+                  type="button"
+                  style={{
+                    ...WHITEBOARD_TOOLS_BUTTON_STYLE,
+                    ...(whiteboardTool === "arrow"
+                      ? { border: "1px solid rgba(43, 95, 150, 0.58)", background: "rgba(196, 214, 232, 0.9)" }
+                      : null),
+                  }}
+                  onClick={() => applyWhiteboardTool("arrow")}
+                >
+                  Arrow
+                </button>
+                <button
+                  type="button"
+                  style={{
+                    ...WHITEBOARD_TOOLS_BUTTON_STYLE,
+                    ...(whiteboardTool === "dashed"
+                      ? { border: "1px solid rgba(43, 95, 150, 0.58)", background: "rgba(196, 214, 232, 0.9)" }
+                      : null),
+                  }}
+                  onClick={() => applyWhiteboardTool("dashed")}
+                >
+                  Dashed
+                </button>
+                <button type="button" style={WHITEBOARD_TOOLS_BUTTON_STYLE} onClick={() => applyWhiteboardTool("undo")}>
+                  Undo
+                </button>
+                <button type="button" style={WHITEBOARD_TOOLS_BUTTON_STYLE} onClick={() => applyWhiteboardTool("clear")}>
+                  Clear
+                </button>
+              </>
+            ) : (
+              <>
+                <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
+                  Select
+                </button>
+                <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
+                  Arrow
+                </button>
+                <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
+                  Dashed
+                </button>
+                <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
+                  Zone
+                </button>
+                <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
+                  Clear
+                </button>
+              </>
+            )}
           </div>
         ) : null}
         {!isWhiteboardMode ? (

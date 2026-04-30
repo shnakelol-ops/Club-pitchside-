@@ -19,11 +19,16 @@ type TacticalPlayer = {
   token: Container;
 };
 
+export type WhiteboardDrawTool = "pen" | "line" | "arrow" | "dashed";
+
 export type TacticalPadLiteSurface = {
   setStart: () => void;
   addPhase: () => void;
   play: () => void;
   reset: () => void;
+  setWhiteboardDrawTool: (tool: WhiteboardDrawTool) => void;
+  undoWhiteboardStroke: () => void;
+  clearWhiteboardStrokes: () => void;
   destroy: () => void;
 };
 
@@ -41,6 +46,8 @@ type PhaseSnapshot = NormalizedPoint[];
 const WORLD_SIZE = { width: 160, height: 100 } as const;
 const PLAYER_RADIUS = 4.1;
 const PLAYER_TOUCH_HIT_DIAMETER_PX = 48;
+const WHITEBOARD_STROKE_COLOR = 0x29333d;
+const WHITEBOARD_STROKE_WIDTH = 1.1;
 
 type PlayerSeed = {
   id: string;
@@ -217,6 +224,87 @@ function setTokenWorldPositionForPoint(
   player.token.position.set(world.x, world.y);
 }
 
+function getStagePointFromEvent(
+  event: unknown,
+  stage: Container,
+): { x: number; y: number } | null {
+  const stagePoint = (event as {
+    data?: { getLocalPosition?: (target: Container) => { x: number; y: number } };
+    getLocalPosition?: (target: Container) => { x: number; y: number };
+  }).data?.getLocalPosition?.(stage) ??
+    (event as { getLocalPosition?: (target: Container) => { x: number; y: number } }).getLocalPosition?.(
+      stage,
+    );
+  return stagePoint ?? null;
+}
+
+function drawSolidSegment(
+  g: Graphics,
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+): void {
+  g.moveTo(from.x, from.y).lineTo(to.x, to.y).stroke({
+    color: WHITEBOARD_STROKE_COLOR,
+    width: WHITEBOARD_STROKE_WIDTH,
+    cap: "round",
+    join: "round",
+    alignment: 0.5,
+  });
+}
+
+function drawDashedSegment(
+  g: Graphics,
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+): void {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const length = Math.hypot(dx, dy);
+  if (length < 1e-4) return;
+  const ux = dx / length;
+  const uy = dy / length;
+  const dash = 2.2;
+  const gap = 1.35;
+  let offset = 0;
+  while (offset < length) {
+    const segStart = offset;
+    const segEnd = Math.min(length, segStart + dash);
+    drawSolidSegment(
+      g,
+      { x: from.x + ux * segStart, y: from.y + uy * segStart },
+      { x: from.x + ux * segEnd, y: from.y + uy * segEnd },
+    );
+    offset += dash + gap;
+  }
+}
+
+function drawArrowSegment(
+  g: Graphics,
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+): void {
+  drawSolidSegment(g, from, to);
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const length = Math.hypot(dx, dy);
+  if (length < 1e-4) return;
+  const ux = dx / length;
+  const uy = dy / length;
+  const headLength = 2.6;
+  const sideX = -uy;
+  const sideY = ux;
+  const left = {
+    x: to.x - ux * headLength + sideX * 1.05,
+    y: to.y - uy * headLength + sideY * 1.05,
+  };
+  const right = {
+    x: to.x - ux * headLength - sideX * 1.05,
+    y: to.y - uy * headLength - sideY * 1.05,
+  };
+  drawSolidSegment(g, to, left);
+  drawSolidSegment(g, to, right);
+}
+
 export async function createTacticalPadLiteSurface(
   host: HTMLElement,
   options: TacticalPadLiteSurfaceOptions = {},
@@ -317,6 +405,16 @@ export async function createTacticalPadLiteSurface(
         player: TacticalPlayer;
       }
     | null = null;
+  const isWhiteboardSurface = surfaceVariant === "whiteboard";
+  let activeWhiteboardTool: WhiteboardDrawTool = "pen";
+  const whiteboardDrawingLayer = new Container();
+  whiteboardDrawingLayer.eventMode = "none";
+  world.addChild(whiteboardDrawingLayer);
+  const whiteboardStrokes: Graphics[] = [];
+  let whiteboardPenStroke: Graphics | null = null;
+  let whiteboardPenLastPoint: { x: number; y: number } | null = null;
+  let whiteboardLineStartPoint: { x: number; y: number } | null = null;
+  let whiteboardLinePreview: Graphics | null = null;
 
   function fitToHost(): void {
     const width = host.clientWidth;
@@ -339,13 +437,7 @@ export async function createTacticalPadLiteSurface(
   function updateDraggedPlayerFromEvent(event: unknown): void {
     if (!activeDrag || isPlaying) return;
 
-    const stagePoint = (event as {
-      data?: { getLocalPosition?: (target: Container) => { x: number; y: number } };
-      getLocalPosition?: (target: Container) => { x: number; y: number };
-    }).data?.getLocalPosition?.(app.stage) ??
-      (event as { getLocalPosition?: (target: Container) => { x: number; y: number } }).getLocalPosition?.(
-        app.stage,
-      );
+    const stagePoint = getStagePointFromEvent(event, app.stage);
     if (!stagePoint) return;
 
     const worldPoint = mapper.viewportToWorld({ x: stagePoint.x, y: stagePoint.y });
@@ -360,6 +452,108 @@ export async function createTacticalPadLiteSurface(
       y: Math.max(NORMALIZED_MIN, Math.min(NORMALIZED_MAX, normalized.y)),
     };
     setTokenWorldPositionForPoint(activeDrag.player, activeDrag.player.current, mapper);
+  }
+
+  function getBoundedWorldPointFromEvent(event: unknown): { x: number; y: number } | null {
+    const stagePoint = getStagePointFromEvent(event, app.stage);
+    if (!stagePoint) return null;
+    const worldPoint = mapper.viewportToWorld({ x: stagePoint.x, y: stagePoint.y });
+    return {
+      x: clampWorld(worldPoint.x, WORLD_SIZE.width),
+      y: clampWorld(worldPoint.y, WORLD_SIZE.height),
+    };
+  }
+
+  function drawLineWithTool(
+    tool: WhiteboardDrawTool,
+    graphics: Graphics,
+    from: { x: number; y: number },
+    to: { x: number; y: number },
+  ): void {
+    if (tool === "dashed") {
+      drawDashedSegment(graphics, from, to);
+      return;
+    }
+    if (tool === "arrow") {
+      drawArrowSegment(graphics, from, to);
+      return;
+    }
+    drawSolidSegment(graphics, from, to);
+  }
+
+  function resetActiveWhiteboardStroke(): void {
+    whiteboardPenStroke = null;
+    whiteboardPenLastPoint = null;
+    whiteboardLineStartPoint = null;
+    if (whiteboardLinePreview) {
+      whiteboardLinePreview.destroy();
+      whiteboardLinePreview = null;
+    }
+  }
+
+  function startWhiteboardDrawing(event: unknown): void {
+    if (!isWhiteboardSurface || isPlaying || activeDrag) return;
+    const worldPoint = getBoundedWorldPointFromEvent(event);
+    if (!worldPoint) return;
+
+    if (activeWhiteboardTool === "pen") {
+      const stroke = new Graphics();
+      stroke.eventMode = "none";
+      whiteboardDrawingLayer.addChild(stroke);
+      whiteboardStrokes.push(stroke);
+      whiteboardPenStroke = stroke;
+      whiteboardPenLastPoint = worldPoint;
+      return;
+    }
+
+    whiteboardLineStartPoint = worldPoint;
+    const preview = new Graphics();
+    preview.eventMode = "none";
+    whiteboardDrawingLayer.addChild(preview);
+    whiteboardLinePreview = preview;
+  }
+
+  function updateWhiteboardDrawing(event: unknown): void {
+    if (!isWhiteboardSurface || isPlaying || activeDrag) return;
+    const worldPoint = getBoundedWorldPointFromEvent(event);
+    if (!worldPoint) return;
+
+    if (activeWhiteboardTool === "pen") {
+      if (!whiteboardPenStroke || !whiteboardPenLastPoint) return;
+      drawSolidSegment(whiteboardPenStroke, whiteboardPenLastPoint, worldPoint);
+      whiteboardPenLastPoint = worldPoint;
+      return;
+    }
+
+    if (!whiteboardLineStartPoint || !whiteboardLinePreview) return;
+    whiteboardLinePreview.clear();
+    drawLineWithTool(activeWhiteboardTool, whiteboardLinePreview, whiteboardLineStartPoint, worldPoint);
+  }
+
+  function endWhiteboardDrawing(event?: unknown): void {
+    if (!isWhiteboardSurface || isPlaying || activeDrag) return;
+
+    if (activeWhiteboardTool === "pen") {
+      whiteboardPenStroke = null;
+      whiteboardPenLastPoint = null;
+      return;
+    }
+
+    if (!whiteboardLineStartPoint || !whiteboardLinePreview || event == null) {
+      resetActiveWhiteboardStroke();
+      return;
+    }
+
+    const worldPoint = getBoundedWorldPointFromEvent(event);
+    if (!worldPoint) {
+      resetActiveWhiteboardStroke();
+      return;
+    }
+    whiteboardLinePreview.clear();
+    drawLineWithTool(activeWhiteboardTool, whiteboardLinePreview, whiteboardLineStartPoint, worldPoint);
+    whiteboardStrokes.push(whiteboardLinePreview);
+    whiteboardLinePreview = null;
+    whiteboardLineStartPoint = null;
   }
 
   function releaseDrag(): void {
@@ -491,12 +685,18 @@ export async function createTacticalPadLiteSurface(
 
   app.stage.on("pointermove", (event) => {
     updateDraggedPlayerFromEvent(event);
+    updateWhiteboardDrawing(event);
   });
   app.stage.on("pointerup", () => {
+    endWhiteboardDrawing();
     releaseDrag();
   });
   app.stage.on("pointerupoutside", () => {
+    endWhiteboardDrawing();
     releaseDrag();
+  });
+  app.stage.on("pointerdown", (event) => {
+    startWhiteboardDrawing(event);
   });
   app.ticker.add(() => {
     stepPlayback(app.ticker.deltaMS);
@@ -528,6 +728,26 @@ export async function createTacticalPadLiteSurface(
       releaseDrag();
       cancelPlaybackAnimation();
       applySnapshotToPlayers(startPositions);
+    },
+    setWhiteboardDrawTool: (tool) => {
+      if (!isWhiteboardSurface) return;
+      activeWhiteboardTool = tool;
+      resetActiveWhiteboardStroke();
+    },
+    undoWhiteboardStroke: () => {
+      if (!isWhiteboardSurface) return;
+      resetActiveWhiteboardStroke();
+      const stroke = whiteboardStrokes.pop();
+      if (!stroke) return;
+      stroke.destroy();
+    },
+    clearWhiteboardStrokes: () => {
+      if (!isWhiteboardSurface) return;
+      resetActiveWhiteboardStroke();
+      while (whiteboardStrokes.length > 0) {
+        const stroke = whiteboardStrokes.pop();
+        stroke?.destroy();
+      }
     },
     destroy: () => {
       resizeObserver.disconnect();
