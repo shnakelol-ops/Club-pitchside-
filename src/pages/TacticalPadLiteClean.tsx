@@ -5,6 +5,7 @@ import {
   type TacticalPadLiteSurface,
   type WhiteboardTokenColor,
 } from "../engine/pixi/createTacticalPadLiteSurface";
+import { FLOW_PRESETS, type FlowPreset } from "../config/flowLabPresets";
 import StatsModeSurface from "../StatsModeSurface";
 import OrientationGate from "../components/OrientationGate";
 
@@ -27,6 +28,12 @@ const WHITEBOARD_PLAYER_COLOR_CHOICES: ReadonlyArray<{
   { value: "black", css: "#1f2937" },
 ];
 const WHITEBOARD_DRAW_COLOR = 0x111111;
+const FLOW_PRESET_CATEGORIES: ReadonlyArray<FlowPreset["category"]> = [
+  "Kickouts",
+  "Attack",
+  "Press",
+  "Support",
+];
 
 const ROOT_STYLE: CSSProperties = {
   position: "fixed",
@@ -463,6 +470,46 @@ const WHITEBOARD_TOOLS_BUTTON_STYLE: CSSProperties = {
   fontWeight: 600,
 };
 
+const WHITEBOARD_FLOWS_TRIGGER_BUTTON_STYLE: CSSProperties = {
+  ...WHITEBOARD_TOOLS_BUTTON_STYLE,
+  position: "fixed",
+  left: WHITEBOARD_RIGHT_COLUMN_LEFT,
+  bottom: "max(58px, calc(env(safe-area-inset-bottom, 0px) + 56px))",
+  height: "34px",
+  minWidth: "68px",
+  zIndex: 20,
+};
+
+const WHITEBOARD_FLOWS_POPOUT_STYLE: CSSProperties = {
+  ...WHITEBOARD_TOOLS_POPOUT_STYLE,
+  right: "auto",
+  left: WHITEBOARD_RIGHT_COLUMN_LEFT,
+  bottom: "max(98px, calc(env(safe-area-inset-bottom, 0px) + 96px))",
+  width: "226px",
+  maxHeight: "56vh",
+};
+
+const WHITEBOARD_FLOWS_GROUP_STYLE: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "4px",
+};
+
+const WHITEBOARD_FLOWS_GROUP_LABEL_STYLE: CSSProperties = {
+  color: "#34495f",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "10px",
+  fontWeight: 700,
+  letterSpacing: "0.16px",
+  marginTop: "4px",
+  paddingLeft: "2px",
+};
+
+const WHITEBOARD_FLOWS_BUTTON_STYLE: CSSProperties = {
+  ...WHITEBOARD_TOOLS_BUTTON_STYLE,
+  height: "30px",
+};
+
 const PHASES_CHIP_STYLE: CSSProperties = {
   position: "fixed",
   left: "max(12px, calc(env(safe-area-inset-left, 0px) + 10px))",
@@ -839,6 +886,7 @@ export default function TacticalPadLiteClean() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [flowsOpen, setFlowsOpen] = useState(false);
   const [phasesOpen, setPhasesOpen] = useState(false);
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
   const isTacticalMode = mode === "tactical";
@@ -979,6 +1027,12 @@ export default function TacticalPadLiteClean() {
   const floodlightDots = Array.from({ length: 12 }, (_, index) => index);
   const closeControlsMenu = () => setControlsOpen(false);
   const closeToolsMenu = () => setToolsOpen(false);
+  const toggleFlowsMenu = () => {
+    setToolsOpen(false);
+    setWhiteboardCountPickerOpen(false);
+    setWhiteboardColorPickerOpen(false);
+    setFlowsOpen((open) => !open);
+  };
   const setPadMode = (nextMode: PadMode) => {
     setModeMenuOpen(false);
     if (nextMode === mode) return;
@@ -987,6 +1041,7 @@ export default function TacticalPadLiteClean() {
     setEditingTeamName(null);
     setControlsOpen(false);
     setToolsOpen(false);
+    setFlowsOpen(false);
     setPhasesOpen(false);
     if (nextMode === "stats") {
       setIsPlaying(false);
@@ -1049,6 +1104,20 @@ export default function TacticalPadLiteClean() {
     closeToolsMenu();
   };
 
+  const applyFlowPreset = (preset: FlowPreset) => {
+    const surface = surfaceRef.current;
+    if (!surface || !isWhiteboardMode) return;
+    const boardHasTemplateContent = surface.whiteboardHasTemplateContent();
+    if (boardHasTemplateContent) {
+      const shouldReplace = window.confirm("Replace current whiteboard content with this flow?");
+      if (!shouldReplace) return;
+    }
+    surface.applyWhiteboardFlowPreset(preset);
+    setWhiteboardCountPickerOpen(false);
+    setWhiteboardColorPickerOpen(false);
+    setFlowsOpen(false);
+  };
+
   const modeMenu = modeMenuOpen ? (
     <div style={isWhiteboardMode ? WHITEBOARD_MODE_MENU_STYLE : MODE_MENU_STYLE}>
       <button
@@ -1081,11 +1150,44 @@ export default function TacticalPadLiteClean() {
       style={isWhiteboardMode ? WHITEBOARD_MODE_TAB_STYLE : MODE_TAB_STYLE}
       aria-label="Open mode menu"
       aria-expanded={modeMenuOpen}
-      onClick={() => setModeMenuOpen((open) => !open)}
+      onClick={() => {
+        if (isWhiteboardMode) {
+          setWhiteboardCountPickerOpen(false);
+          setWhiteboardColorPickerOpen(false);
+          setToolsOpen(false);
+          setFlowsOpen(false);
+        }
+        setModeMenuOpen((open) => !open);
+      }}
     >
       Mode
     </button>
   );
+
+  const groupedFlowPresets = FLOW_PRESET_CATEGORIES.map((category) => ({
+    category,
+    presets: FLOW_PRESETS.filter((preset) => preset.category === category),
+  })).filter((group) => group.presets.length > 0);
+
+  const whiteboardFlowsMenu = isWhiteboardMode && flowsOpen ? (
+    <div style={WHITEBOARD_FLOWS_POPOUT_STYLE}>
+      {groupedFlowPresets.map((group) => (
+        <div key={`flow-preset-category-${group.category}`} style={WHITEBOARD_FLOWS_GROUP_STYLE}>
+          <p style={WHITEBOARD_FLOWS_GROUP_LABEL_STYLE}>{group.category}</p>
+          {group.presets.map((preset) => (
+            <button
+              key={preset.id}
+              type="button"
+              style={WHITEBOARD_FLOWS_BUTTON_STYLE}
+              onClick={() => applyFlowPreset(preset)}
+            >
+              {preset.name}
+            </button>
+          ))}
+        </div>
+      ))}
+    </div>
+  ) : null;
 
   if (isStatsMode) {
     return (
@@ -1130,7 +1232,12 @@ export default function TacticalPadLiteClean() {
                 type="button"
                 aria-label="Open whiteboard player selector"
                 style={WHITEBOARD_HEAD_BUTTON_BASE_STYLE}
-                onClick={() => setWhiteboardCountPickerOpen((open) => !open)}
+                onClick={() => {
+                  setWhiteboardColorPickerOpen(false);
+                  setToolsOpen(false);
+                  setFlowsOpen(false);
+                  setWhiteboardCountPickerOpen((open) => !open);
+                }}
               >
                 👤
               </button>
@@ -1138,7 +1245,12 @@ export default function TacticalPadLiteClean() {
                 type="button"
                 aria-label="Open token colour selector"
                 style={WHITEBOARD_COLOR_BUTTON_STYLE}
-                onClick={() => setWhiteboardColorPickerOpen((open) => !open)}
+                onClick={() => {
+                  setWhiteboardCountPickerOpen(false);
+                  setToolsOpen(false);
+                  setFlowsOpen(false);
+                  setWhiteboardColorPickerOpen((open) => !open);
+                }}
               >
                 <span style={{ ...WHITEBOARD_COLOR_SWATCH_STYLE, background: getTokenColorCss(currentPlayerColor) }} />
               </button>
@@ -1455,6 +1567,18 @@ export default function TacticalPadLiteClean() {
             )}
           </div>
         ) : null}
+        {whiteboardFlowsMenu}
+        {isWhiteboardMode ? (
+          <button
+            type="button"
+            style={WHITEBOARD_FLOWS_TRIGGER_BUTTON_STYLE}
+            aria-label="Open flows menu"
+            aria-expanded={flowsOpen}
+            onClick={toggleFlowsMenu}
+          >
+            Flows
+          </button>
+        ) : null}
         {!isWhiteboardMode ? (
           <button
             type="button"
@@ -1471,7 +1595,14 @@ export default function TacticalPadLiteClean() {
           className="floating-bubble floating-bubble-tool"
           style={isWhiteboardMode ? WHITEBOARD_TOOL_BUBBLE_STYLE : TOOL_BUBBLE_STYLE}
           aria-label="Open tools"
-          onClick={() => setToolsOpen((open) => !open)}
+          onClick={() => {
+            if (isWhiteboardMode) {
+              setWhiteboardCountPickerOpen(false);
+              setWhiteboardColorPickerOpen(false);
+              setFlowsOpen(false);
+            }
+            setToolsOpen((open) => !open);
+          }}
         >
           <span className="tool-bubble-icon" aria-hidden="true">
             <span style={TOOL_BUBBLE_MONOGRAM_WRAP_STYLE}>
