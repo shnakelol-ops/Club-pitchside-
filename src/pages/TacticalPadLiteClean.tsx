@@ -12,7 +12,8 @@ type PadMode = "tactical" | "stats" | "whiteboard";
 const CONTENT_WIDTH_EXPR =
   "min(calc(100dvw - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), calc(100vw - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), calc((100dvh - 10px) * 1.6), calc((100vh - 10px) * 1.6), 1360px)";
 const WHITEBOARD_RIGHT_COLUMN_LEFT = `calc(50vw + (${CONTENT_WIDTH_EXPR} / 2) + 10px)`;
-const WHITEBOARD_LEFT_BUBBLE_LEFT = `calc(50vw - (${CONTENT_WIDTH_EXPR} / 2) - 52px)`;
+const WHITEBOARD_LEFT_MODE_LEFT = `calc(50vw - (${CONTENT_WIDTH_EXPR} / 2) - 74px)`;
+const WHITEBOARD_LEFT_MODE_MENU_LEFT = `calc(50vw - (${CONTENT_WIDTH_EXPR} / 2) - 132px)`;
 
 const ROOT_STYLE: CSSProperties = {
   position: "fixed",
@@ -437,8 +438,6 @@ const TOOLS_BUTTON_STYLE: CSSProperties = {
 
 const WHITEBOARD_TOOLS_POPOUT_STYLE: CSSProperties = {
   ...TOOLS_POPOUT_STYLE,
-  right: "auto",
-  left: WHITEBOARD_RIGHT_COLUMN_LEFT,
   background: "rgba(242, 246, 251, 0.92)",
   border: "1px solid rgba(130, 150, 170, 0.26)",
 };
@@ -646,8 +645,10 @@ const MODE_TAB_STYLE: CSSProperties = {
 
 const WHITEBOARD_MODE_TAB_STYLE: CSSProperties = {
   ...MODE_TAB_STYLE,
+  top: "auto",
   right: "auto",
-  left: WHITEBOARD_RIGHT_COLUMN_LEFT,
+  left: WHITEBOARD_LEFT_MODE_LEFT,
+  bottom: "max(12px, calc(env(safe-area-inset-bottom, 0px) + 10px))",
 };
 
 const MODE_MENU_STYLE: CSSProperties = {
@@ -670,14 +671,16 @@ const MODE_MENU_STYLE: CSSProperties = {
 
 const WHITEBOARD_MODE_MENU_STYLE: CSSProperties = {
   ...MODE_MENU_STYLE,
+  top: "auto",
   right: "auto",
-  left: WHITEBOARD_RIGHT_COLUMN_LEFT,
+  left: WHITEBOARD_LEFT_MODE_MENU_LEFT,
+  bottom: "max(50px, calc(env(safe-area-inset-bottom, 0px) + 48px))",
 };
 
 const WHITEBOARD_TOOL_BUBBLE_STYLE: CSSProperties = {
   ...TOOL_BUBBLE_STYLE,
   right: "auto",
-  left: WHITEBOARD_LEFT_BUBBLE_LEFT,
+  left: WHITEBOARD_RIGHT_COLUMN_LEFT,
 };
 
 const MODE_MENU_ITEM_STYLE: CSSProperties = {
