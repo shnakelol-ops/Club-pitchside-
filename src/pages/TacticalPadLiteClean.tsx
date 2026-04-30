@@ -463,66 +463,120 @@ const PHASES_EMPTY_STYLE: CSSProperties = {
   opacity: 0.75,
 };
 
-const WHITEBOARD_TEAM_CONTROLS_STYLE: CSSProperties = {
+const WHITEBOARD_HEAD_CONTROLS_STYLE: CSSProperties = {
   position: "fixed",
-  left: "50%",
+  left: "max(12px, calc(env(safe-area-inset-left, 0px) + 10px))",
   top: "max(12px, calc(env(safe-area-inset-top, 0px) + 10px))",
-  transform: "translateX(-50%)",
   display: "flex",
   gap: "8px",
   zIndex: 22,
 };
 
-const WHITEBOARD_TEAM_CONTROL_STYLE: CSSProperties = {
-  height: "32px",
-  borderRadius: "10px",
-  border: "1px solid rgba(136, 153, 171, 0.42)",
-  background: "rgba(247, 250, 253, 0.92)",
-  boxShadow: "0 8px 18px rgba(28, 38, 49, 0.14)",
-  display: "flex",
-  alignItems: "center",
-  gap: "7px",
-  padding: "0 9px",
-  color: "#243342",
-  fontFamily: "Inter, system-ui, sans-serif",
-  fontSize: "10.5px",
-  fontWeight: 650,
-  letterSpacing: "0.2px",
-};
-
-const WHITEBOARD_TEAM_ICON_BASE_STYLE: CSSProperties = {
-  width: "16px",
-  height: "16px",
+const WHITEBOARD_HEAD_BUTTON_BASE_STYLE: CSSProperties = {
+  width: "36px",
+  height: "36px",
   borderRadius: "999px",
-  border: "1px solid rgba(255, 255, 255, 0.72)",
-  boxShadow: "0 1px 4px rgba(6, 14, 24, 0.24), inset 0 1px 1px rgba(255, 255, 255, 0.35)",
-};
-
-const WHITEBOARD_TEAM_ICON_BLUE_STYLE: CSSProperties = {
-  ...WHITEBOARD_TEAM_ICON_BASE_STYLE,
-  background: "linear-gradient(165deg, #55a6ff 0%, #2f7deb 68%, #2b68c6 100%)",
-};
-
-const WHITEBOARD_TEAM_ICON_RED_STYLE: CSSProperties = {
-  ...WHITEBOARD_TEAM_ICON_BASE_STYLE,
-  background: "linear-gradient(165deg, #ff7078 0%, #e64050 68%, #b83340 100%)",
-};
-
-const WHITEBOARD_TEAM_PENCIL_STYLE: CSSProperties = {
-  border: "none",
-  background: "transparent",
-  color: "#3a4d62",
-  width: "18px",
-  height: "18px",
-  borderRadius: "6px",
+  border: "1px solid rgba(148, 163, 184, 0.3)",
+  background: "rgba(15, 23, 42, 0.68)",
+  backdropFilter: "blur(6px)",
+  WebkitBackdropFilter: "blur(6px)",
+  color: "#dbeafe",
+  fontSize: "14px",
+  lineHeight: 1,
   cursor: "pointer",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  padding: 0,
-  fontSize: "12px",
-  lineHeight: 1,
+  boxShadow: "0 0 0 1px rgba(148, 163, 184, 0.12), 0 0 6px rgba(148, 163, 184, 0.14)",
+  position: "relative",
 };
+
+const WHITEBOARD_HEAD_BUTTON_BLUE_STYLE: CSSProperties = {
+  ...WHITEBOARD_HEAD_BUTTON_BASE_STYLE,
+  boxShadow: "0 0 0 1px rgba(59, 130, 246, 0.42), 0 0 8px rgba(59, 130, 246, 0.22)",
+};
+
+const WHITEBOARD_HEAD_BUTTON_RED_STYLE: CSSProperties = {
+  ...WHITEBOARD_HEAD_BUTTON_BASE_STYLE,
+  boxShadow: "0 0 0 1px rgba(239, 68, 68, 0.4), 0 0 8px rgba(239, 68, 68, 0.2)",
+};
+
+const WHITEBOARD_HEAD_COUNT_BADGE_STYLE: CSSProperties = {
+  position: "absolute",
+  right: "-4px",
+  bottom: "-4px",
+  minWidth: "18px",
+  height: "18px",
+  borderRadius: "999px",
+  border: "1px solid rgba(255, 255, 255, 0.42)",
+  background: "rgba(7, 12, 18, 0.92)",
+  color: "#f3f8fd",
+  fontSize: "9px",
+  fontWeight: 700,
+  lineHeight: 1,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "0 5px",
+  pointerEvents: "none",
+};
+
+const WHITEBOARD_COUNT_SELECTOR_STYLE: CSSProperties = {
+  position: "fixed",
+  left: "max(12px, calc(env(safe-area-inset-left, 0px) + 10px))",
+  top: "max(54px, calc(env(safe-area-inset-top, 0px) + 52px))",
+  zIndex: 22,
+  width: "166px",
+  display: "flex",
+  flexDirection: "column",
+  gap: "6px",
+  padding: "7px",
+  borderRadius: "10px",
+  border: "1px solid rgba(148, 163, 184, 0.22)",
+  background: "rgba(10, 20, 35, 0.8)",
+  backdropFilter: "blur(8px)",
+  WebkitBackdropFilter: "blur(8px)",
+  boxShadow: "0 10px 22px rgba(4, 12, 24, 0.3)",
+};
+
+const WHITEBOARD_COUNT_SELECTOR_TITLE_STYLE: CSSProperties = {
+  color: "#dbe7f5",
+  fontSize: "9px",
+  fontWeight: 600,
+  letterSpacing: "0.2px",
+  textTransform: "uppercase",
+  margin: 0,
+  fontFamily: "Inter, system-ui, sans-serif",
+};
+
+const WHITEBOARD_COUNT_SELECTOR_GRID_STYLE: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+  gap: "4px",
+};
+
+const WHITEBOARD_COUNT_OPTION_STYLE: CSSProperties = {
+  height: "26px",
+  borderRadius: "8px",
+  border: "1px solid rgba(148, 163, 184, 0.36)",
+  background: "rgba(15, 23, 42, 0.86)",
+  color: "#dbe7f5",
+  fontSize: "10px",
+  fontWeight: 600,
+  lineHeight: 1,
+  letterSpacing: "0.2px",
+  cursor: "pointer",
+  fontFamily: "Inter, system-ui, sans-serif",
+};
+
+const WHITEBOARD_COUNT_OPTION_ACTIVE_STYLE: CSSProperties = {
+  ...WHITEBOARD_COUNT_OPTION_STYLE,
+  border: "1px solid rgba(125, 211, 252, 0.56)",
+  background: "rgba(30, 64, 175, 0.5)",
+  color: "#f8fcff",
+};
+
+const WHITEBOARD_COUNT_OPTIONS = Array.from({ length: 15 }, (_, index) => index + 1);
 
 const MODE_TAB_STYLE: CSSProperties = {
   position: "fixed",
@@ -592,6 +646,7 @@ export default function TacticalPadLiteClean() {
   const [mode, setMode] = useState<PadMode>("tactical");
   const [whiteboardBlueCount, setWhiteboardBlueCount] = useState(1);
   const [whiteboardRedCount, setWhiteboardRedCount] = useState(1);
+  const [whiteboardCountPickerTeam, setWhiteboardCountPickerTeam] = useState<"BLUE" | "RED" | null>(null);
   const [phaseCount, setPhaseCount] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(false);
@@ -657,6 +712,7 @@ export default function TacticalPadLiteClean() {
   const setPadMode = (nextMode: PadMode) => {
     setModeMenuOpen(false);
     if (nextMode === mode) return;
+    setWhiteboardCountPickerTeam(null);
     setControlsOpen(false);
     setToolsOpen(false);
     setPhasesOpen(false);
@@ -669,6 +725,16 @@ export default function TacticalPadLiteClean() {
       setPhaseCount(0);
     }
     setMode(nextMode);
+  };
+
+  const setWhiteboardCount = (team: "BLUE" | "RED", count: number) => {
+    const clamped = Math.max(1, Math.min(15, Math.floor(count)));
+    if (team === "BLUE") {
+      setWhiteboardBlueCount(clamped);
+    } else {
+      setWhiteboardRedCount(clamped);
+    }
+    setWhiteboardCountPickerTeam(null);
   };
 
   const modeMenu = modeMenuOpen ? (
@@ -746,44 +812,57 @@ export default function TacticalPadLiteClean() {
           <div ref={hostRef} style={isWhiteboardMode ? PITCH_WHITEBOARD_STYLE : PITCH_STYLE} />
         </div>
         {isWhiteboardMode ? (
-          <div style={WHITEBOARD_TEAM_CONTROLS_STYLE}>
-            <div style={WHITEBOARD_TEAM_CONTROL_STYLE}>
-              <span style={WHITEBOARD_TEAM_ICON_BLUE_STYLE} aria-hidden="true" />
-              <span>Blue {whiteboardBlueCount}</span>
+          <>
+            <div style={WHITEBOARD_HEAD_CONTROLS_STYLE}>
               <button
                 type="button"
-                aria-label="Edit blue team player count"
-                style={WHITEBOARD_TEAM_PENCIL_STYLE}
-                onClick={() => {
-                  const value = window.prompt("Blue player count (1-15)", String(whiteboardBlueCount));
-                  if (value == null) return;
-                  const parsed = Number.parseInt(value.trim(), 10);
-                  if (!Number.isFinite(parsed)) return;
-                  setWhiteboardBlueCount(Math.max(1, Math.min(15, parsed)));
-                }}
+                aria-label="Open blue team player count selector"
+                style={WHITEBOARD_HEAD_BUTTON_BLUE_STYLE}
+                onClick={() =>
+                  setWhiteboardCountPickerTeam((current) => (current === "BLUE" ? null : "BLUE"))
+                }
               >
-                ✎
+                👤
+                <span style={WHITEBOARD_HEAD_COUNT_BADGE_STYLE}>{whiteboardBlueCount}</span>
               </button>
-            </div>
-            <div style={WHITEBOARD_TEAM_CONTROL_STYLE}>
-              <span style={WHITEBOARD_TEAM_ICON_RED_STYLE} aria-hidden="true" />
-              <span>Red {whiteboardRedCount}</span>
               <button
                 type="button"
-                aria-label="Edit red team player count"
-                style={WHITEBOARD_TEAM_PENCIL_STYLE}
-                onClick={() => {
-                  const value = window.prompt("Red player count (1-15)", String(whiteboardRedCount));
-                  if (value == null) return;
-                  const parsed = Number.parseInt(value.trim(), 10);
-                  if (!Number.isFinite(parsed)) return;
-                  setWhiteboardRedCount(Math.max(1, Math.min(15, parsed)));
-                }}
+                aria-label="Open red team player count selector"
+                style={WHITEBOARD_HEAD_BUTTON_RED_STYLE}
+                onClick={() =>
+                  setWhiteboardCountPickerTeam((current) => (current === "RED" ? null : "RED"))
+                }
               >
-                ✎
+                👤
+                <span style={WHITEBOARD_HEAD_COUNT_BADGE_STYLE}>{whiteboardRedCount}</span>
               </button>
             </div>
-          </div>
+            {whiteboardCountPickerTeam ? (
+              <div style={WHITEBOARD_COUNT_SELECTOR_STYLE}>
+                <p style={WHITEBOARD_COUNT_SELECTOR_TITLE_STYLE}>
+                  {whiteboardCountPickerTeam === "BLUE" ? "Blue players" : "Red players"}
+                </p>
+                <div style={WHITEBOARD_COUNT_SELECTOR_GRID_STYLE}>
+                  {WHITEBOARD_COUNT_OPTIONS.map((count) => {
+                    const isActive =
+                      whiteboardCountPickerTeam === "BLUE"
+                        ? whiteboardBlueCount === count
+                        : whiteboardRedCount === count;
+                    return (
+                      <button
+                        key={`${whiteboardCountPickerTeam}-count-${count}`}
+                        type="button"
+                        style={isActive ? WHITEBOARD_COUNT_OPTION_ACTIVE_STYLE : WHITEBOARD_COUNT_OPTION_STYLE}
+                        onClick={() => setWhiteboardCount(whiteboardCountPickerTeam, count)}
+                      >
+                        {count}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+          </>
         ) : null}
         {!isWhiteboardMode ? (
           <button

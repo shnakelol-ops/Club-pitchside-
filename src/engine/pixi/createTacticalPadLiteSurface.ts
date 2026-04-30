@@ -143,7 +143,8 @@ function createWhiteboardPlayerToken(team: "BLUE" | "RED", number: number): Cont
   token.cursor = "grab";
 
   const teamColor = team === "BLUE" ? 0x2f7df3 : 0xe14f4f;
-  const rimColor = team === "BLUE" ? 0x0f3b79 : 0x7f1d1d;
+  const darkEdgeColor = team === "BLUE" ? 0x143f86 : 0x8f2332;
+  const innerShadeColor = team === "BLUE" ? 0x1f63bf : 0xbf3546;
 
   const shadow = new Graphics();
   shadow.ellipse(0.75, 3.25, PLAYER_RADIUS * 0.98, PLAYER_RADIUS * 0.62).fill({
@@ -154,8 +155,11 @@ function createWhiteboardPlayerToken(team: "BLUE" | "RED", number: number): Cont
 
   const jersey = new Graphics();
   jersey.circle(0, 0, PLAYER_RADIUS).fill({ color: teamColor, alpha: 1 });
+  jersey
+    .circle(0, 0, PLAYER_RADIUS - 0.52)
+    .fill({ color: innerShadeColor, alpha: 0.14 });
   jersey.circle(0, 0, PLAYER_RADIUS).stroke({
-    color: rimColor,
+    color: darkEdgeColor,
     alpha: 0.9,
     width: 0.56,
   });
@@ -178,10 +182,10 @@ function createWhiteboardPlayerToken(team: "BLUE" | "RED", number: number): Cont
       align: "center",
       fontFamily: "Inter, system-ui, sans-serif",
       dropShadow: {
-        alpha: 0.35,
+        alpha: 0.42,
         blur: 0.9,
         color: 0x020406,
-        distance: 0.15,
+        distance: 0.24,
         angle: Math.PI / 2,
       },
     },
