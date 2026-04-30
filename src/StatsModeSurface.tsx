@@ -42,6 +42,7 @@ type LoggedMatchEvent = MatchEvent & {
 };
 
 type ReviewEventGroupOptionId = ReviewEventGroup | "ACTIVE";
+type StatsSurfacePadMode = "tactical" | "stats";
 const MODE_MENU_OPTIONS: ReadonlyArray<{ key: GaaModeKey; label: string }> = [
   { key: "football", label: "Football" },
   { key: "ladiesFootball", label: "Ladies Football" },
@@ -1515,7 +1516,11 @@ const PANEL_CSS = `
 }
 `;
 
-export default function StatsModeSurface() {
+type StatsModeSurfaceProps = {
+  onRequestPadModeChange?: (mode: StatsSurfacePadMode) => void;
+};
+
+export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSurfaceProps = {}) {
   const hostRef = useRef<HTMLDivElement>(null);
   const floatingControlsRef = useRef<HTMLDivElement>(null);
   const [currentMode, setCurrentMode] = useState<GaaModeKey>("football");
@@ -3558,22 +3563,36 @@ export default function StatsModeSurface() {
         <div className={utilityControlsClass}>
           {isUtilityOpen ? (
             <div className="utility-menu">
+              <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.86 }}>
+                Mode
+              </div>
               <button
                 type="button"
                 className="utility-menu-btn"
-                disabled
-                style={{ opacity: 0.8, cursor: "default" }}
+                style={{ opacity: 0.86, cursor: "default" }}
+                onClick={() => {
+                  setIsUtilityOpen(false);
+                  onRequestPadModeChange?.("tactical");
+                }}
               >
-                {teamNames.HOME} v {teamNames.AWAY}
+                Tactical
               </button>
               <button
                 type="button"
                 className="utility-menu-btn"
-                disabled
-                style={{ opacity: 0.8, cursor: "default", textTransform: "none" }}
+                style={{
+                  border: "1px solid rgba(34,197,94,0.9)",
+                  background: "rgba(22,101,52,0.72)",
+                }}
+                onClick={() => {
+                  setIsUtilityOpen(false);
+                }}
               >
-                {venueName.length > 0 ? venueName : "Venue"}
+                Stats
               </button>
+              <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.86, marginTop: "2px" }}>
+                Sport
+              </div>
               {MODE_MENU_OPTIONS.map((option) => {
                 const isActiveMode = option.key === currentMode;
                 return (

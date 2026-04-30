@@ -585,7 +585,7 @@ export default function TacticalPadLiteClean() {
   if (isStatsMode) {
     return (
       <>
-        <StatsModeSurface />
+        <StatsModeSurface onRequestPadModeChange={setPadMode} />
       </>
     );
   }
