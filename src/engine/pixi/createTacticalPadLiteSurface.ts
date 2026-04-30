@@ -2,6 +2,14 @@ import { Application, Container, Graphics, Text } from "pixi.js";
 
 import { createWorldViewport } from "./createWorldViewport";
 import {
+  createPremiumPlayerToken,
+  PREMIUM_TOKEN_DRAG_SCALE,
+  PREMIUM_TOKEN_DRAG_SHADOW_ALPHA,
+  PREMIUM_TOKEN_IDLE_SCALE,
+  PREMIUM_TOKEN_IDLE_SHADOW_ALPHA,
+  type PremiumPlayerTokenColor,
+} from "./createPremiumPlayerToken";
+import {
   createTacticalPitchVisualRoot,
   type TacticalPitchTheme,
 } from "../../tactical-lite/pixi/renderTacticalPitch";
@@ -17,10 +25,13 @@ type TacticalPlayer = {
   team: "BLUE" | "RED";
   current: NormalizedPoint;
   token: Container;
+  tokenShadow: Graphics;
+  dragScaleTarget: number;
+  dragShadowAlphaTarget: number;
 };
 
 export type WhiteboardDrawTool = "move" | "pen" | "line" | "arrow" | "dashed";
-export type WhiteboardTokenColor = "blue" | "red" | "yellow" | "black";
+export type WhiteboardTokenColor = PremiumPlayerTokenColor;
 
 export type TacticalPadLiteSurface = {
   setStart: () => void;
@@ -80,47 +91,6 @@ function clampWorld(value: number, max: number): number {
   return value;
 }
 
-function createPlayerToken(number: number): Container {
-  const token = new Container();
-  token.eventMode = "static";
-  token.cursor = "grab";
-
-  const shadow = new Graphics();
-  shadow.ellipse(0.7, 3.4, PLAYER_RADIUS * 0.92, PLAYER_RADIUS * 0.58).fill({
-    color: 0x020706,
-    alpha: 0.25,
-  });
-  token.addChild(shadow);
-
-  const jersey = new Graphics();
-  jersey.circle(0, 0, PLAYER_RADIUS).fill({ color: 0x2f80ed, alpha: 1 });
-  jersey.roundRect(-1.65, -PLAYER_RADIUS - 1.6, 3.3, 2.35, 0.8).fill({
-    color: 0x4ea0ff,
-    alpha: 0.92,
-  });
-  jersey.circle(0, 0, PLAYER_RADIUS).stroke({
-    color: 0xe5f2ff,
-    alpha: 0.96,
-    width: 0.5,
-  });
-  token.addChild(jersey);
-
-  const numberLabel = new Text({
-    text: String(number),
-    style: {
-      fill: 0xffffff,
-      fontSize: 3.1,
-      fontWeight: "700",
-      align: "center",
-      fontFamily: "Inter, system-ui, sans-serif",
-    },
-  });
-  numberLabel.anchor.set(0.5, 0.54);
-  token.addChild(numberLabel);
-
-  return token;
-}
-
 function clampTeamCount(value: number | undefined): number {
   const parsed = Number.isFinite(value) ? Math.floor(value as number) : 1;
   return Math.max(1, Math.min(15, parsed));
@@ -158,105 +128,6 @@ function createWhiteboardPlayerSeeds(
   }));
 
   return [...bluePlayers, ...redPlayers];
-}
-
-function createWhiteboardPlayerToken({
-  color,
-  number,
-}: {
-  color: WhiteboardTokenColor;
-  number: number;
-}): Container {
-  const token = new Container();
-  token.eventMode = "static";
-  token.cursor = "grab";
-
-  const paletteByColor: Record<
-    WhiteboardTokenColor,
-    { base: number; highlight: number; edge: number; numberFill: number; numberStroke: number }
-  > = {
-    blue: {
-      base: 0x2563eb,
-      highlight: 0x60a5fa,
-      edge: 0x1e3a8a,
-      numberFill: 0xffffff,
-      numberStroke: 0x0f172a,
-    },
-    red: {
-      base: 0xdc2626,
-      highlight: 0xf87171,
-      edge: 0x7f1d1d,
-      numberFill: 0xffffff,
-      numberStroke: 0x240f12,
-    },
-    yellow: {
-      base: 0xeab308,
-      highlight: 0xfde047,
-      edge: 0xa16207,
-      numberFill: 0x111111,
-      numberStroke: 0xfef3c7,
-    },
-    black: {
-      base: 0x1f2937,
-      highlight: 0x4b5563,
-      edge: 0x030712,
-      numberFill: 0xffffff,
-      numberStroke: 0x020406,
-    },
-  };
-  const palette = paletteByColor[color];
-
-  const shadow = new Graphics();
-  shadow.ellipse(0.6, 3.45, PLAYER_RADIUS * 1.02, PLAYER_RADIUS * 0.64).fill({ color: 0x030507, alpha: 0.22 });
-  token.addChild(shadow);
-
-  const disc = new Graphics();
-  disc.circle(0, 0, PLAYER_RADIUS).fill({ color: palette.base, alpha: 1 });
-  disc.circle(0, -0.22, PLAYER_RADIUS * 0.86).fill({ color: palette.highlight, alpha: 0.2 });
-  disc.circle(0, -0.72, PLAYER_RADIUS * 0.63).fill({ color: palette.highlight, alpha: 0.24 });
-  disc.circle(0, 0.92, PLAYER_RADIUS * 0.9).fill({ color: 0x000000, alpha: 0.07 });
-  disc.circle(0, 0, PLAYER_RADIUS).stroke({
-    color: palette.edge,
-    alpha: 0.94,
-    width: 0.62,
-  });
-  disc.circle(0, 0, PLAYER_RADIUS - 0.72).stroke({
-    color: 0xffffff,
-    alpha: 0.2,
-    width: 0.34,
-  });
-  disc.ellipse(-0.95, -1.55, PLAYER_RADIUS * 0.56, PLAYER_RADIUS * 0.37).fill({
-    color: 0xffffff,
-    alpha: 0.24,
-  });
-  token.addChild(disc);
-
-  const numberLabel = new Text({
-    text: String(number),
-    style: {
-      fill: palette.numberFill,
-      fontSize: 3.6,
-      fontWeight: "800",
-      align: "center",
-      fontFamily: "Inter, system-ui, sans-serif",
-      stroke: {
-        color: palette.numberStroke,
-        width: 0.42,
-        join: "round",
-      },
-      dropShadow: {
-        alpha: 0.54,
-        blur: 1.15,
-        color: 0x020406,
-        distance: 0.3,
-        angle: Math.PI / 2,
-      },
-    },
-  });
-  numberLabel.anchor.set(0.5, 0.525);
-  token.addChild(numberLabel);
-
-  return token;
 }
 
 function setPlayerTouchHitArea(
@@ -437,10 +308,13 @@ export async function createTacticalPadLiteSurface(
       : TACTICAL_INITIAL_PLAYERS;
 
   const players: TacticalPlayer[] = playerSeeds.map((base) => {
-    const token =
-      surfaceVariant === "whiteboard"
-        ? createWhiteboardPlayerToken({ color: base.color, number: base.number })
-        : createPlayerToken(base.number);
+    const tokenColor: PremiumPlayerTokenColor =
+      surfaceVariant === "whiteboard" ? base.color : base.team === "RED" ? "red" : "blue";
+    const { token, shadow } = createPremiumPlayerToken({
+      color: tokenColor,
+      number: base.number,
+      radius: PLAYER_RADIUS,
+    });
     playersLayer.addChild(token);
     return {
       id: base.id,
@@ -448,6 +322,9 @@ export async function createTacticalPadLiteSurface(
       team: base.team,
       current: { ...base.position },
       token,
+      tokenShadow: shadow,
+      dragScaleTarget: PREMIUM_TOKEN_IDLE_SCALE,
+      dragShadowAlphaTarget: PREMIUM_TOKEN_IDLE_SHADOW_ALPHA,
     };
   });
 
@@ -642,15 +519,29 @@ export async function createTacticalPadLiteSurface(
     whiteboardLineStartPoint = null;
   }
 
+  function setPlayerDragVisualTarget(player: TacticalPlayer, isDragging: boolean): void {
+    player.dragScaleTarget = isDragging ? PREMIUM_TOKEN_DRAG_SCALE : PREMIUM_TOKEN_IDLE_SCALE;
+    player.dragShadowAlphaTarget = isDragging
+      ? PREMIUM_TOKEN_DRAG_SHADOW_ALPHA
+      : PREMIUM_TOKEN_IDLE_SHADOW_ALPHA;
+  }
+
+  function animatePlayerDragVisuals(deltaMs: number): void {
+    const blend = Math.min(1, Math.max(0.16, deltaMs / 72));
+    for (const player of players) {
+      const currentScale = player.token.scale.x;
+      const nextScale = currentScale + (player.dragScaleTarget - currentScale) * blend;
+      player.token.scale.set(nextScale, nextScale);
+
+      const currentShadow = player.tokenShadow.alpha;
+      player.tokenShadow.alpha =
+        currentShadow + (player.dragShadowAlphaTarget - currentShadow) * blend;
+    }
+  }
+
   function releaseDrag(): void {
     if (!activeDrag) return;
-    if (isWhiteboardSurface) {
-      activeDrag.player.token.scale.set(1, 1);
-      const shadow = activeDrag.player.token.getChildAt(0);
-      if (shadow instanceof Graphics) {
-        shadow.alpha = 0.22;
-      }
-    }
+    setPlayerDragVisualTarget(activeDrag.player, false);
     activeDrag.player.token.cursor = "grab";
     activeDrag = null;
   }
@@ -773,13 +664,7 @@ export async function createTacticalPadLiteSurface(
         return;
       }
       activeDrag = { player };
-      if (isWhiteboardSurface) {
-        player.token.scale.set(1.06, 1.06);
-        const shadow = player.token.getChildAt(0);
-        if (shadow instanceof Graphics) {
-          shadow.alpha = 0.3;
-        }
-      }
+      setPlayerDragVisualTarget(player, true);
       player.token.cursor = "grabbing";
       updateDraggedPlayerFromEvent(event);
       (event as { stopPropagation?: () => void }).stopPropagation?.();
@@ -803,6 +688,7 @@ export async function createTacticalPadLiteSurface(
   });
   app.ticker.add(() => {
     stepPlayback(app.ticker.deltaMS);
+    animatePlayerDragVisuals(app.ticker.deltaMS);
   });
 
   syncWhiteboardTokenInputMode();
