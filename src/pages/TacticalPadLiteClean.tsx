@@ -6,7 +6,6 @@ import {
 } from "../engine/pixi/createTacticalPadLiteSurface";
 import StatsModeSurface from "../StatsModeSurface";
 import OrientationGate from "../components/OrientationGate";
-import pitchsidePMark from "../assets/pitchside-p-mark.svg";
 
 type PadMode = "tactical" | "stats" | "whiteboard";
 
@@ -295,10 +294,25 @@ const TOOL_BUBBLE_STYLE: CSSProperties = {
   boxShadow: "0 8px 24px rgba(0, 0, 0, 0.55), inset 0 1px 2px rgba(255, 255, 255, 0.18)",
 };
 
-const TOOL_BUBBLE_MARK_STYLE: CSSProperties = {
-  width: "24px",
-  height: "24px",
-  display: "block",
+const TOOL_BUBBLE_WORDMARK_STYLE: CSSProperties = {
+  fontFamily: "\"Arial Narrow\", \"Roboto Condensed\", Inter, system-ui, sans-serif",
+  fontWeight: 800,
+  fontSize: "10px",
+  letterSpacing: "0.65px",
+  color: "rgba(248, 251, 250, 0.98)",
+  lineHeight: 1,
+  display: "inline-flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: "3px",
+};
+
+const TOOL_BUBBLE_WORDMARK_ACCENT_STYLE: CSSProperties = {
+  width: "16px",
+  height: "2px",
+  borderRadius: "999px",
+  background: "#F2C94C",
 };
 
 const POPOUT_BASE_STYLE: CSSProperties = {
@@ -975,7 +989,10 @@ export default function TacticalPadLiteClean() {
           onClick={() => setToolsOpen((open) => !open)}
         >
           <span className="tool-bubble-icon" aria-hidden="true">
-            <img src={pitchsidePMark} alt="" style={TOOL_BUBBLE_MARK_STYLE} />
+            <span style={TOOL_BUBBLE_WORDMARK_STYLE}>
+              <span>PITCHSIDE</span>
+              <span style={TOOL_BUBBLE_WORDMARK_ACCENT_STYLE} />
+            </span>
           </span>
         </button>
         {modeButton}

@@ -1,5 +1,4 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
-import pitchsidePMark from "../assets/pitchside-p-mark.svg";
 
 type OrientationGateProps = {
   modeLabel: string;
@@ -38,9 +37,28 @@ const CONTENT_STYLE: CSSProperties = {
   padding: "20px 16px",
 };
 
-const LOGO_STYLE: CSSProperties = {
-  width: "min(54vw, 250px)",
-  maxWidth: "250px",
+const WORDMARK_WRAP_STYLE: CSSProperties = {
+  display: "grid",
+  placeItems: "center",
+  gap: "6px",
+};
+
+const WORDMARK_STYLE: CSSProperties = {
+  margin: 0,
+  fontFamily: "Inter, Arial Narrow, system-ui, sans-serif",
+  fontSize: "clamp(34px, 9.2vw, 58px)",
+  fontWeight: 900,
+  lineHeight: 0.96,
+  letterSpacing: "0.14em",
+  color: "#f4f7f5",
+  textTransform: "uppercase",
+};
+
+const WORDMARK_ACCENT_STYLE: CSSProperties = {
+  width: "min(44vw, 180px)",
+  height: "3px",
+  borderRadius: "99px",
+  background: "linear-gradient(90deg, rgba(242, 201, 76, 0.92), rgba(242, 201, 76, 0.58))",
   filter: "drop-shadow(0 12px 26px rgba(0, 0, 0, 0.45))",
 };
 
@@ -94,7 +112,10 @@ export default function OrientationGate({ modeLabel, children }: OrientationGate
     <div style={ROOT_STYLE}>
       <div style={TEXTURE_STYLE} aria-hidden="true" />
       <div style={CONTENT_STYLE}>
-        <img src={pitchsidePMark} style={LOGO_STYLE} alt="" aria-hidden="true" />
+        <div style={WORDMARK_WRAP_STYLE} aria-hidden="true">
+          <p style={WORDMARK_STYLE}>PITCHSIDE</p>
+          <div style={WORDMARK_ACCENT_STYLE} />
+        </div>
         <p style={MESSAGE_STYLE}>Rotate to landscape to use {modeLabel}</p>
       </div>
     </div>

@@ -1,11 +1,10 @@
-import { Application, Container, Graphics, Sprite, Text, Texture } from "pixi.js";
+import { Application, Container, Graphics, Text } from "pixi.js";
 
 import { createWorldViewport } from "./createWorldViewport";
 import {
   createTacticalPitchVisualRoot,
   type TacticalPitchTheme,
 } from "../../tactical-lite/pixi/renderTacticalPitch";
-import pitchsidePMark from "../../assets/pitchside-p-mark.svg";
 import {
   NORMALIZED_MAX,
   NORMALIZED_MIN,
@@ -252,15 +251,28 @@ export async function createTacticalPadLiteSurface(
   world.addChild(pitchMount.root);
 
   if (surfaceVariant === "whiteboard") {
-    const markTexture = Texture.from(pitchsidePMark);
-    const watermarkMark = new Sprite(markTexture);
-    watermarkMark.anchor.set(1, 1);
-    watermarkMark.position.set(WORLD_SIZE.width - 2.8, WORLD_SIZE.height - 2.2);
-    watermarkMark.width = 11;
-    watermarkMark.height = 8.25;
-    watermarkMark.alpha = 0.18;
-    watermarkMark.eventMode = "none";
-    world.addChild(watermarkMark);
+    const watermarkLabel = new Text({
+      text: "PITCHSIDE",
+      style: {
+        fill: 0x202934,
+        fontSize: 2.55,
+        fontWeight: "800",
+        fontFamily: "Inter, Arial Narrow, Arial, system-ui, sans-serif",
+        letterSpacing: 0.58,
+      },
+    });
+    watermarkLabel.anchor.set(1, 1);
+    watermarkLabel.position.set(WORLD_SIZE.width - 2.2, WORLD_SIZE.height - 1.8);
+    watermarkLabel.alpha = 0.16;
+    watermarkLabel.eventMode = "none";
+    world.addChild(watermarkLabel);
+
+    const watermarkAccent = new Graphics();
+    watermarkAccent
+      .roundRect(WORLD_SIZE.width - 21.8, WORLD_SIZE.height - 1.35, 19.6, 0.38, 0.2)
+      .fill({ color: 0xf2c94c, alpha: 0.16 });
+    watermarkAccent.eventMode = "none";
+    world.addChild(watermarkAccent);
   }
 
   const playersLayer = new Container();
