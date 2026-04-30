@@ -1,0 +1,156 @@
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+
+type OrientationGateProps = {
+  modeLabel: string;
+  children: ReactNode;
+};
+
+const ROOT_STYLE: CSSProperties = {
+  position: "fixed",
+  inset: 0,
+  zIndex: 9999,
+  display: "grid",
+  placeItems: "center",
+  overflow: "hidden",
+  background:
+    "radial-gradient(circle at 15% 12%, rgba(75, 135, 95, 0.18), transparent 42%), radial-gradient(circle at 85% 18%, rgba(76, 112, 90, 0.16), transparent 38%), linear-gradient(165deg, #07110d 0%, #0c1913 38%, #102319 66%, #0e1b14 100%)",
+};
+
+const TEXTURE_STYLE: CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  pointerEvents: "none",
+  background:
+    "repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.018) 0px, rgba(255, 255, 255, 0.018) 2px, transparent 2px, transparent 22px), repeating-linear-gradient(0deg, rgba(80, 135, 98, 0.04) 0px, rgba(80, 135, 98, 0.04) 3px, transparent 3px, transparent 30px)",
+  opacity: 0.9,
+};
+
+const CONTENT_STYLE: CSSProperties = {
+  position: "relative",
+  zIndex: 2,
+  width: "min(84vw, 420px)",
+  textAlign: "center",
+  color: "#f0f6f3",
+  display: "grid",
+  placeItems: "center",
+  gap: "18px",
+  padding: "20px 16px",
+};
+
+const LOGO_STYLE: CSSProperties = {
+  width: "min(54vw, 250px)",
+  maxWidth: "250px",
+  filter: "drop-shadow(0 12px 26px rgba(0, 0, 0, 0.45))",
+};
+
+const MESSAGE_STYLE: CSSProperties = {
+  margin: 0,
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "clamp(16px, 2.9vw, 21px)",
+  fontWeight: 600,
+  lineHeight: 1.35,
+  letterSpacing: "0.2px",
+  color: "rgba(243, 250, 247, 0.96)",
+};
+
+function usePortraitOrientation(): boolean {
+  const getValue = () => window.matchMedia("(orientation: portrait)").matches || window.innerHeight > window.innerWidth;
+  const [isPortrait, setIsPortrait] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return getValue();
+  });
+
+  useEffect(() => {
+    const media = window.matchMedia("(orientation: portrait)");
+    const update = () => setIsPortrait(getValue());
+    update();
+
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", update);
+    } else {
+      media.addListener(update);
+    }
+    window.addEventListener("resize", update);
+
+    return () => {
+      if (typeof media.removeEventListener === "function") {
+        media.removeEventListener("change", update);
+      } else {
+        media.removeListener(update);
+      }
+      window.removeEventListener("resize", update);
+    };
+  }, []);
+
+  return isPortrait;
+}
+
+function PitchsidePLogo() {
+  return (
+    <svg viewBox="0 0 260 260" xmlns="http://www.w3.org/2000/svg" style={LOGO_STYLE} aria-hidden="true">
+      <path
+        d="M55 56h82c39 0 63 24 63 56 0 34-26 58-63 58h-35"
+        fill="none"
+        stroke="rgba(245, 248, 247, 0.96)"
+        strokeWidth="10"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M55 56v24M102 80v122"
+        fill="none"
+        stroke="rgba(245, 248, 247, 0.96)"
+        strokeWidth="10"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M42 225c0-60 33-112 90-112 58 0 95 34 95 83"
+        fill="none"
+        stroke="rgba(236, 243, 240, 0.92)"
+        strokeWidth="8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M70 227c-19-1-34-14-34-34 0-24 18-42 44-42h72"
+        fill="none"
+        stroke="rgba(236, 243, 240, 0.92)"
+        strokeWidth="7.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M102 150c30 0 47-8 82 10"
+        fill="none"
+        stroke="#e7c24b"
+        strokeWidth="7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M183 160l17-8-3 19"
+        fill="none"
+        stroke="#e7c24b"
+        strokeWidth="7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+export default function OrientationGate({ modeLabel, children }: OrientationGateProps) {
+  const isPortrait = usePortraitOrientation();
+  if (!isPortrait) return <>{children}</>;
+
+  return (
+    <div style={ROOT_STYLE}>
+      <div style={TEXTURE_STYLE} aria-hidden="true" />
+      <div style={CONTENT_STYLE}>
+        <PitchsidePLogo />
+        <p style={MESSAGE_STYLE}>Rotate to landscape to use {modeLabel}</p>
+      </div>
+    </div>
+  );
+}

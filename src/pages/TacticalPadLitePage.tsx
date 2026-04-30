@@ -4,6 +4,7 @@ import {
   createTacticalPadLiteSurface,
   type TacticalPadLiteSurface,
 } from "../engine/pixi/createTacticalPadLiteSurface";
+import OrientationGate from "../components/OrientationGate";
 
 const ROOT_STYLE: CSSProperties = {
   position: "fixed",
@@ -91,23 +92,25 @@ export default function TacticalPadLitePage() {
   }, []);
 
   return (
-    <div style={ROOT_STYLE}>
-      <div ref={hostRef} style={BOARD_STYLE} />
-      <div style={CONTROLS_STYLE}>
-        <button type="button" style={BUTTON_STYLE} onClick={() => surfaceRef.current?.setStart()}>
-          Set Start
-        </button>
-        <button type="button" style={BUTTON_STYLE} onClick={() => surfaceRef.current?.addPhase()}>
-          Add Phase
-        </button>
-        <button type="button" style={BUTTON_STYLE} onClick={() => surfaceRef.current?.play()}>
-          Play
-        </button>
-        <button type="button" style={BUTTON_STYLE} onClick={() => surfaceRef.current?.reset()}>
-          Reset
-        </button>
-        <div style={PHASE_COUNT_STYLE}>Phases: {phaseCount}</div>
+    <OrientationGate modeLabel="Tactical Sim Lite">
+      <div style={ROOT_STYLE}>
+        <div ref={hostRef} style={BOARD_STYLE} />
+        <div style={CONTROLS_STYLE}>
+          <button type="button" style={BUTTON_STYLE} onClick={() => surfaceRef.current?.setStart()}>
+            Set Start
+          </button>
+          <button type="button" style={BUTTON_STYLE} onClick={() => surfaceRef.current?.addPhase()}>
+            Add Phase
+          </button>
+          <button type="button" style={BUTTON_STYLE} onClick={() => surfaceRef.current?.play()}>
+            Play
+          </button>
+          <button type="button" style={BUTTON_STYLE} onClick={() => surfaceRef.current?.reset()}>
+            Reset
+          </button>
+          <div style={PHASE_COUNT_STYLE}>Phases: {phaseCount}</div>
+        </div>
       </div>
-    </div>
+    </OrientationGate>
   );
 }
