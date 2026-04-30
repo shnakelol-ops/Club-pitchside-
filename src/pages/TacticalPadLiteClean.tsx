@@ -524,54 +524,65 @@ const WHITEBOARD_TEAM_PENCIL_STYLE: CSSProperties = {
   lineHeight: 1,
 };
 
-const MODE_TOGGLE_STYLE: CSSProperties = {
+const MODE_TAB_STYLE: CSSProperties = {
   position: "fixed",
   top: "max(12px, calc(env(safe-area-inset-top, 0px) + 10px))",
   right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
-  display: "flex",
-  gap: "4px",
-  padding: "4px",
-  borderRadius: "12px",
-  border: "1px solid rgba(230, 238, 241, 0.24)",
-  background: "rgba(8, 14, 18, 0.58)",
+  height: "32px",
+  borderRadius: "10px",
+  border: "1px solid rgba(230, 238, 241, 0.3)",
+  background: "rgba(8, 14, 18, 0.66)",
+  color: "rgba(236, 245, 249, 0.96)",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "10.5px",
+  fontWeight: 650,
+  letterSpacing: "0.24px",
+  padding: "0 11px",
+  cursor: "pointer",
   backdropFilter: "blur(10px)",
   WebkitBackdropFilter: "blur(10px)",
-  boxShadow: "0 8px 20px rgba(0, 0, 0, 0.26)",
+  boxShadow: "0 8px 18px rgba(0, 0, 0, 0.24)",
   zIndex: 21,
 };
 
-const MODE_TOGGLE_STATS_STYLE: CSSProperties = {
-  ...MODE_TOGGLE_STYLE,
-  top: "max(58px, calc(env(safe-area-inset-top, 0px) + 56px))",
-  left: "50%",
-  right: "auto",
-  transform: "translateX(-50%)",
+const MODE_MENU_STYLE: CSSProperties = {
+  position: "fixed",
+  top: "max(48px, calc(env(safe-area-inset-top, 0px) + 46px))",
+  right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
+  width: "122px",
+  padding: "5px",
+  borderRadius: "11px",
+  border: "1px solid rgba(207, 220, 231, 0.32)",
+  background: "rgba(10, 18, 24, 0.84)",
+  backdropFilter: "blur(10px)",
+  WebkitBackdropFilter: "blur(10px)",
+  boxShadow: "0 10px 22px rgba(0, 0, 0, 0.28)",
+  zIndex: 21,
+  display: "flex",
+  flexDirection: "column",
+  gap: "4px",
 };
 
-const MODE_BUTTON_BASE_STYLE: CSSProperties = {
-  border: "1px solid rgba(230, 238, 241, 0.18)",
-  borderRadius: "9px",
-  background: "rgba(16, 24, 30, 0.5)",
-  color: "rgba(236, 245, 249, 0.92)",
+const MODE_MENU_ITEM_STYLE: CSSProperties = {
+  height: "30px",
+  width: "100%",
+  textAlign: "left",
+  border: "1px solid rgba(228, 236, 241, 0.16)",
+  borderRadius: "8px",
+  background: "rgba(16, 24, 30, 0.54)",
+  color: "rgba(236, 245, 249, 0.9)",
   fontFamily: "Inter, system-ui, sans-serif",
   fontSize: "10.5px",
   fontWeight: 600,
-  letterSpacing: "0.2px",
-  padding: "6px 10px",
+  letterSpacing: "0.18px",
+  padding: "0 10px",
   cursor: "pointer",
 };
 
-const MODE_BUTTON_ACTIVE_STYLE: CSSProperties = {
-  ...MODE_BUTTON_BASE_STYLE,
-  background: "rgba(58, 112, 138, 0.5)",
-  border: "1px solid rgba(181, 223, 242, 0.54)",
-  color: "rgba(255, 255, 255, 0.96)",
-};
-
-const MODE_BUTTON_WHITEBOARD_ACTIVE_STYLE: CSSProperties = {
-  ...MODE_BUTTON_BASE_STYLE,
-  background: "rgba(50, 70, 88, 0.62)",
-  border: "1px solid rgba(170, 194, 212, 0.68)",
+const MODE_MENU_ITEM_ACTIVE_STYLE: CSSProperties = {
+  ...MODE_MENU_ITEM_STYLE,
+  background: "rgba(55, 103, 131, 0.58)",
+  border: "1px solid rgba(171, 212, 232, 0.58)",
   color: "rgba(255, 255, 255, 0.97)",
 };
 
@@ -586,6 +597,7 @@ export default function TacticalPadLiteClean() {
   const [controlsOpen, setControlsOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [phasesOpen, setPhasesOpen] = useState(false);
+  const [modeMenuOpen, setModeMenuOpen] = useState(false);
   const isTacticalMode = mode === "tactical";
   const isStatsMode = mode === "stats";
   const isWhiteboardMode = mode === "whiteboard";
@@ -643,6 +655,7 @@ export default function TacticalPadLiteClean() {
   const closeControlsMenu = () => setControlsOpen(false);
   const closeToolsMenu = () => setToolsOpen(false);
   const setPadMode = (nextMode: PadMode) => {
+    setModeMenuOpen(false);
     if (nextMode === mode) return;
     setControlsOpen(false);
     setToolsOpen(false);
@@ -658,30 +671,42 @@ export default function TacticalPadLiteClean() {
     setMode(nextMode);
   };
 
-  const modeToggle = (
-    <div style={isStatsMode ? MODE_TOGGLE_STATS_STYLE : MODE_TOGGLE_STYLE}>
+  const modeMenu = modeMenuOpen ? (
+    <div style={MODE_MENU_STYLE}>
       <button
         type="button"
-        style={isTacticalMode ? MODE_BUTTON_ACTIVE_STYLE : MODE_BUTTON_BASE_STYLE}
+        style={isTacticalMode ? MODE_MENU_ITEM_ACTIVE_STYLE : MODE_MENU_ITEM_STYLE}
         onClick={() => setPadMode("tactical")}
       >
         Tactical
       </button>
       <button
         type="button"
-        style={isWhiteboardMode ? MODE_BUTTON_WHITEBOARD_ACTIVE_STYLE : MODE_BUTTON_BASE_STYLE}
+        style={isWhiteboardMode ? MODE_MENU_ITEM_ACTIVE_STYLE : MODE_MENU_ITEM_STYLE}
         onClick={() => setPadMode("whiteboard")}
       >
         Whiteboard
       </button>
       <button
         type="button"
-        style={isStatsMode ? MODE_BUTTON_ACTIVE_STYLE : MODE_BUTTON_BASE_STYLE}
+        style={isStatsMode ? MODE_MENU_ITEM_ACTIVE_STYLE : MODE_MENU_ITEM_STYLE}
         onClick={() => setPadMode("stats")}
       >
         Stats
       </button>
     </div>
+  ) : null;
+
+  const modeButton = (
+    <button
+      type="button"
+      style={MODE_TAB_STYLE}
+      aria-label="Open mode menu"
+      aria-expanded={modeMenuOpen}
+      onClick={() => setModeMenuOpen((open) => !open)}
+    >
+      Mode
+    </button>
   );
 
   if (isStatsMode) {
@@ -760,15 +785,17 @@ export default function TacticalPadLiteClean() {
             </div>
           </div>
         ) : null}
-        <button
-          type="button"
-          style={PHASES_CHIP_STYLE}
-          aria-label="Toggle phases tray"
-          onClick={() => setPhasesOpen((open) => !open)}
-        >
-          Phases: {phaseCount}
-        </button>
-        {phasesOpen ? (
+        {!isWhiteboardMode ? (
+          <button
+            type="button"
+            style={PHASES_CHIP_STYLE}
+            aria-label="Toggle phases tray"
+            onClick={() => setPhasesOpen((open) => !open)}
+          >
+            Phases: {phaseCount}
+          </button>
+        ) : null}
+        {!isWhiteboardMode && phasesOpen ? (
           <div style={PHASES_TRAY_STYLE}>
             {phaseItems.length > 0 ? (
               phaseItems.map((phase) => (
@@ -781,7 +808,7 @@ export default function TacticalPadLiteClean() {
             )}
           </div>
         ) : null}
-        {controlsOpen ? (
+        {!isWhiteboardMode && controlsOpen ? (
           <div style={CONTROLS_POPOUT_STYLE}>
             <button
               type="button"
@@ -843,15 +870,17 @@ export default function TacticalPadLiteClean() {
             </button>
           </div>
         ) : null}
-        <button
-          type="button"
-          className="floating-bubble"
-          style={LEFT_BUBBLE_STYLE}
-          aria-label="Open controls"
-          onClick={() => setControlsOpen((open) => !open)}
-        >
-          Ctrl
-        </button>
+        {!isWhiteboardMode ? (
+          <button
+            type="button"
+            className="floating-bubble"
+            style={LEFT_BUBBLE_STYLE}
+            aria-label="Open controls"
+            onClick={() => setControlsOpen((open) => !open)}
+          >
+            Ctrl
+          </button>
+        ) : null}
         <button
           type="button"
           className="floating-bubble floating-bubble-tool"
@@ -904,7 +933,8 @@ export default function TacticalPadLiteClean() {
             </svg>
           </span>
         </button>
-        {modeToggle}
+        {modeButton}
+        {modeMenu}
       </div>
     </OrientationGate>
   );
