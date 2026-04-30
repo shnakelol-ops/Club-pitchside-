@@ -586,7 +586,6 @@ export default function TacticalPadLiteClean() {
     return (
       <>
         <StatsModeSurface />
-        {modeToggle}
       </>
     );
   }

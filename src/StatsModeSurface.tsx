@@ -3526,6 +3526,8 @@ export default function StatsModeSurface() {
         <div
           ref={hostRef}
           style={{
+            position: "relative",
+            zIndex: 1,
             width: "100%",
             height: "100%",
             background: "transparent",
