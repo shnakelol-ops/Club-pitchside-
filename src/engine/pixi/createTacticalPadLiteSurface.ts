@@ -145,60 +145,73 @@ function createWhiteboardPlayerSeeds(
   return [...bluePlayers, ...redPlayers];
 }
 
-function createWhiteboardPlayerToken(team: "BLUE" | "RED", number: number): Container {
+function createWhiteboardPlayerToken({
+  team,
+  number,
+}: {
+  team: "BLUE" | "RED";
+  number: number;
+}): Container {
   const token = new Container();
   token.eventMode = "static";
   token.cursor = "grab";
 
-  const teamColor = team === "BLUE" ? 0x2f7df3 : 0xe14f4f;
-  const darkEdgeColor = team === "BLUE" ? 0x143f86 : 0x8f2332;
-  const innerShadeColor = team === "BLUE" ? 0x1f63bf : 0xbf3546;
+  const palette =
+    team === "BLUE"
+      ? {
+          base: 0x2563eb,
+          highlight: 0x60a5fa,
+          edge: 0x1e3a8a,
+        }
+      : {
+          base: 0xdc2626,
+          highlight: 0xf87171,
+          edge: 0x7f1d1d,
+        };
 
   const shadow = new Graphics();
-  shadow.ellipse(0.75, 3.25, PLAYER_RADIUS * 0.98, PLAYER_RADIUS * 0.62).fill({
-    color: 0x020406,
-    alpha: 0.24,
-  });
+  shadow.ellipse(0.6, 3.45, PLAYER_RADIUS * 1.02, PLAYER_RADIUS * 0.64).fill({ color: 0x030507, alpha: 0.22 });
   token.addChild(shadow);
 
-  const jersey = new Graphics();
-  jersey.circle(0, 0, PLAYER_RADIUS).fill({ color: teamColor, alpha: 1 });
-  jersey
-    .circle(0, 0, PLAYER_RADIUS - 0.52)
-    .fill({ color: innerShadeColor, alpha: 0.14 });
-  jersey.circle(0, 0, PLAYER_RADIUS).stroke({
-    color: darkEdgeColor,
-    alpha: 0.9,
-    width: 0.56,
+  const disc = new Graphics();
+  disc.circle(0, 0, PLAYER_RADIUS).fill({ color: palette.base, alpha: 1 });
+  disc.circle(0, -0.22, PLAYER_RADIUS * 0.86).fill({ color: palette.highlight, alpha: 0.2 });
+  disc.circle(0, -0.72, PLAYER_RADIUS * 0.63).fill({ color: palette.highlight, alpha: 0.24 });
+  disc.circle(0, 0.92, PLAYER_RADIUS * 0.9).fill({ color: 0x000000, alpha: 0.07 });
+  disc.circle(0, 0, PLAYER_RADIUS).stroke({
+    color: palette.edge,
+    alpha: 0.94,
+    width: 0.62,
   });
-  jersey.circle(0, 0, PLAYER_RADIUS - 0.68).stroke({
+  disc.circle(0, 0, PLAYER_RADIUS - 0.72).stroke({
     color: 0xffffff,
-    alpha: 0.32,
-    width: 0.42,
+    alpha: 0.2,
+    width: 0.34,
   });
-  jersey
-    .ellipse(-0.9, -1.45, PLAYER_RADIUS * 0.58, PLAYER_RADIUS * 0.42)
-    .fill({ color: 0xffffff, alpha: 0.22 });
-  token.addChild(jersey);
+  disc.ellipse(-0.95, -1.55, PLAYER_RADIUS * 0.56, PLAYER_RADIUS * 0.37).fill({
+    color: 0xffffff,
+    alpha: 0.24,
+  });
+  token.addChild(disc);
 
   const numberLabel = new Text({
     text: String(number),
     style: {
       fill: 0xffffff,
-      fontSize: 3.25,
-      fontWeight: "700",
+      fontSize: 3.35,
+      fontWeight: "800",
       align: "center",
       fontFamily: "Inter, system-ui, sans-serif",
       dropShadow: {
-        alpha: 0.42,
+        alpha: 0.46,
         blur: 0.9,
         color: 0x020406,
-        distance: 0.24,
+        distance: 0.25,
         angle: Math.PI / 2,
       },
     },
   });
-  numberLabel.anchor.set(0.5, 0.53);
+  numberLabel.anchor.set(0.5, 0.525);
   token.addChild(numberLabel);
 
   return token;
@@ -380,7 +393,7 @@ export async function createTacticalPadLiteSurface(
   const players: TacticalPlayer[] = playerSeeds.map((base) => {
     const token =
       surfaceVariant === "whiteboard"
-        ? createWhiteboardPlayerToken(base.team, base.number)
+        ? createWhiteboardPlayerToken({ team: base.team, number: base.number })
         : createPlayerToken(base.number);
     playersLayer.addChild(token);
     return {
@@ -559,6 +572,13 @@ export async function createTacticalPadLiteSurface(
 
   function releaseDrag(): void {
     if (!activeDrag) return;
+    if (isWhiteboardSurface) {
+      activeDrag.player.token.scale.set(1, 1);
+      const shadow = activeDrag.player.token.getChildAt(0);
+      if (shadow instanceof Graphics) {
+        shadow.alpha = 0.22;
+      }
+    }
     activeDrag.player.token.cursor = "grab";
     activeDrag = null;
   }
@@ -678,6 +698,13 @@ export async function createTacticalPadLiteSurface(
     player.token.on("pointerdown", (event) => {
       if (isPlaying) return;
       activeDrag = { player };
+      if (isWhiteboardSurface) {
+        player.token.scale.set(1.06, 1.06);
+        const shadow = player.token.getChildAt(0);
+        if (shadow instanceof Graphics) {
+          shadow.alpha = 0.3;
+        }
+      }
       player.token.cursor = "grabbing";
       updateDraggedPlayerFromEvent(event);
       (event as { stopPropagation?: () => void }).stopPropagation?.();
