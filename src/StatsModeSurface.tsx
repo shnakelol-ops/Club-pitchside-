@@ -226,6 +226,103 @@ const PANEL_CSS = `
   justify-content: center;
   background: #0a0f0c;
   overflow: hidden;
+  isolation: isolate;
+}
+
+.stats-stadium-background {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top left, rgba(0, 120, 100, 0.09), transparent 60%),
+    radial-gradient(circle at top right, rgba(0, 120, 100, 0.09), transparent 60%),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0) 30%),
+    linear-gradient(to top, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0) 35%),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0) 58%, rgba(0, 80, 60, 0.13) 100%),
+    linear-gradient(135deg, rgba(220, 238, 242, 1) 0%, rgba(172, 203, 214, 1) 45%, rgba(108, 158, 183, 1) 100%);
+}
+
+.stats-stadium-background::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 42%, rgba(4, 12, 18, 0.28) 68%, rgba(0, 0, 0, 0.62) 100%);
+}
+
+.stats-stadium-background::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 15% 0%, rgba(255, 255, 255, 0.18), transparent 35%),
+    radial-gradient(ellipse at 85% 0%, rgba(255, 255, 255, 0.18), transparent 35%),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.18), transparent 40%);
+}
+
+.stats-stadium-light {
+  position: absolute;
+  top: 6%;
+  width: 88px;
+  height: 70px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 7px;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.95;
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.75))
+    drop-shadow(0 0 28px rgba(180, 235, 255, 0.55));
+}
+
+.stats-stadium-light span {
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow:
+    0 0 10px rgba(255, 255, 255, 0.9),
+    0 0 22px rgba(185, 235, 255, 0.65);
+}
+
+.stats-stadium-light-left {
+  left: 2.5%;
+  transform: rotate(14deg);
+}
+
+.stats-stadium-light-right {
+  right: 2.5%;
+  transform: rotate(-14deg);
+}
+
+.stats-stadium-light::before {
+  content: "";
+  position: absolute;
+  top: 18px;
+  width: 210px;
+  height: 220px;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at top,
+    rgba(210, 240, 255, 0.28) 0%,
+    rgba(160, 220, 235, 0.16) 35%,
+    rgba(100, 180, 190, 0.08) 58%,
+    transparent 78%
+  );
+  filter: blur(22px);
+  z-index: -1;
+}
+
+.stats-stadium-light-left::before {
+  left: -25px;
+  transform: rotate(24deg);
+}
+
+.stats-stadium-light-right::before {
+  right: -25px;
+  transform: rotate(-24deg);
 }
 
 .floating-controls {
@@ -1352,6 +1449,26 @@ const PANEL_CSS = `
   .utility-controls--landscape .utility-menu {
     margin-left: 44px;
     margin-right: 0;
+  }
+}
+
+@media (max-width: 700px) and (orientation: portrait) {
+  .stats-stadium-light {
+    top: 5%;
+    width: 62px;
+    height: 50px;
+    gap: 5px;
+  }
+
+  .stats-stadium-light span {
+    width: 8px;
+    height: 8px;
+  }
+
+  .stats-stadium-light::before {
+    width: 150px;
+    height: 160px;
+    top: 14px;
   }
 }
 
@@ -2700,11 +2817,24 @@ export default function StatsModeSurface() {
           left: "14px",
           bottom: "max(142px, calc(env(safe-area-inset-bottom) + 120px))",
         };
+  const stadiumLightDots = Array.from({ length: 12 }, (_, index) => index);
 
   return (
     <>
       <main className="app-root">
         <style>{PANEL_CSS}</style>
+        <div className="stats-stadium-background" aria-hidden="true">
+          <div className="stats-stadium-light stats-stadium-light-left" aria-hidden="true">
+            {stadiumLightDots.map((dot) => (
+              <span key={`stats-left-light-${dot}`} />
+            ))}
+          </div>
+          <div className="stats-stadium-light stats-stadium-light-right" aria-hidden="true">
+            {stadiumLightDots.map((dot) => (
+              <span key={`stats-right-light-${dot}`} />
+            ))}
+          </div>
+        </div>
         {scoreboard}
       {utilityPanel === "PLAYERS" ? (
         <div
@@ -3398,7 +3528,7 @@ export default function StatsModeSurface() {
           style={{
             width: "100%",
             height: "100%",
-            background: "#0a0f0c",
+            background: "transparent",
             overflow: "hidden",
           }}
           aria-label="PitchsideCLUB Pixi pitch"
