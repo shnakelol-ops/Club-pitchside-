@@ -405,7 +405,8 @@ export function createTacticalPitchVisualRoot(
   const { markings } = getPitchConfig(sport);
   drawMarkings(markingsGraphics, markings);
   if (isWhiteboardTheme) {
-    markingsGraphics.tint = 0x1d2731;
+    markingsGraphics.tint = 0x0b1219;
+    markingsGraphics.alpha = 1;
   } else if (!isSoccer) {
     markingsGraphics.tint = 0xffffff;
   }
@@ -415,9 +416,9 @@ export function createTacticalPitchVisualRoot(
   markingsClarity.zIndex = 5;
   drawMarkings(markingsClarity, markings, { skipLineGlowMarked: true });
   if (isWhiteboardTheme) {
-    markingsClarity.tint = 0x111920;
+    markingsClarity.tint = 0x050b12;
     markingsClarity.blendMode = "normal";
-    markingsClarity.alpha = 0.08;
+    markingsClarity.alpha = 0.26;
   } else {
     if (!isSoccer) markingsClarity.tint = 0xffffff;
     markingsClarity.blendMode = "screen";

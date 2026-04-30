@@ -49,7 +49,8 @@ const PLAYER_RADIUS = 4.1;
 const PLAYER_TOUCH_HIT_DIAMETER_PX = 48;
 const WHITEBOARD_STROKE_COLOR = 0x29333d;
 const WHITEBOARD_STROKE_WIDTH = 1.1;
-const WHITEBOARD_RED_START_X = 143;
+const WHITEBOARD_BLUE_START_X = 30;
+const WHITEBOARD_RED_START_X = 70;
 
 type PlayerSeed = {
   id: string;
@@ -128,7 +129,7 @@ function createWhiteboardPlayerSeeds(
     number: index + 1,
     team: "BLUE",
     position: {
-      x: 34,
+      x: WHITEBOARD_BLUE_START_X,
       y: ((index + 1) * WORLD_SIZE.height) / (blueCount + 1),
     },
   }));
