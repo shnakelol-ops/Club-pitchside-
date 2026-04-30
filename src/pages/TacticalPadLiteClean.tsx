@@ -4,6 +4,9 @@ import {
   createTacticalPadLiteSurface,
   type TacticalPadLiteSurface,
 } from "../engine/pixi/createTacticalPadLiteSurface";
+import StatsModeSurface from "../StatsModeSurface";
+
+type PadMode = "tactical" | "stats";
 
 const ROOT_STYLE: CSSProperties = {
   position: "fixed",
@@ -447,16 +450,56 @@ const PHASES_EMPTY_STYLE: CSSProperties = {
   opacity: 0.75,
 };
 
+const MODE_TOGGLE_STYLE: CSSProperties = {
+  position: "fixed",
+  top: "max(12px, calc(env(safe-area-inset-top, 0px) + 10px))",
+  right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
+  display: "flex",
+  gap: "4px",
+  padding: "4px",
+  borderRadius: "12px",
+  border: "1px solid rgba(230, 238, 241, 0.24)",
+  background: "rgba(8, 14, 18, 0.58)",
+  backdropFilter: "blur(10px)",
+  WebkitBackdropFilter: "blur(10px)",
+  boxShadow: "0 8px 20px rgba(0, 0, 0, 0.26)",
+  zIndex: 21,
+};
+
+const MODE_BUTTON_BASE_STYLE: CSSProperties = {
+  border: "1px solid rgba(230, 238, 241, 0.18)",
+  borderRadius: "9px",
+  background: "rgba(16, 24, 30, 0.5)",
+  color: "rgba(236, 245, 249, 0.92)",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "10.5px",
+  fontWeight: 600,
+  letterSpacing: "0.2px",
+  padding: "6px 10px",
+  cursor: "pointer",
+};
+
+const MODE_BUTTON_ACTIVE_STYLE: CSSProperties = {
+  ...MODE_BUTTON_BASE_STYLE,
+  background: "rgba(58, 112, 138, 0.5)",
+  border: "1px solid rgba(181, 223, 242, 0.54)",
+  color: "rgba(255, 255, 255, 0.96)",
+};
+
 export default function TacticalPadLiteClean() {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const surfaceRef = useRef<TacticalPadLiteSurface | null>(null);
+  const [mode, setMode] = useState<PadMode>("tactical");
   const [phaseCount, setPhaseCount] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [phasesOpen, setPhasesOpen] = useState(false);
+  const isTacticalMode = mode === "tactical";
+  const isStatsMode = mode === "stats";
 
   useEffect(() => {
+    if (!isTacticalMode) return;
     const host = hostRef.current;
     if (!host) return;
 
@@ -483,7 +526,7 @@ export default function TacticalPadLiteClean() {
       surfaceRef.current = null;
       destroySurface?.();
     };
-  }, []);
+  }, [isTacticalMode]);
 
   const togglePlay = () => {
     if (!isPlaying) {
@@ -500,6 +543,45 @@ export default function TacticalPadLiteClean() {
   const floodlightDots = Array.from({ length: 12 }, (_, index) => index);
   const closeControlsMenu = () => setControlsOpen(false);
   const closeToolsMenu = () => setToolsOpen(false);
+  const setPadMode = (nextMode: PadMode) => {
+    if (nextMode === mode) return;
+    setControlsOpen(false);
+    setToolsOpen(false);
+    setPhasesOpen(false);
+    if (nextMode === "stats") {
+      setIsPlaying(false);
+      setPhaseCount(0);
+    }
+    setMode(nextMode);
+  };
+
+  const modeToggle = (
+    <div style={MODE_TOGGLE_STYLE}>
+      <button
+        type="button"
+        style={isTacticalMode ? MODE_BUTTON_ACTIVE_STYLE : MODE_BUTTON_BASE_STYLE}
+        onClick={() => setPadMode("tactical")}
+      >
+        Tactical
+      </button>
+      <button
+        type="button"
+        style={isStatsMode ? MODE_BUTTON_ACTIVE_STYLE : MODE_BUTTON_BASE_STYLE}
+        onClick={() => setPadMode("stats")}
+      >
+        Stats
+      </button>
+    </div>
+  );
+
+  if (isStatsMode) {
+    return (
+      <>
+        <StatsModeSurface />
+        {modeToggle}
+      </>
+    );
+  }
 
   return (
     <div style={ROOT_STYLE} className="simulator-container">
@@ -667,6 +749,7 @@ export default function TacticalPadLiteClean() {
           </svg>
         </span>
       </button>
+      {modeToggle}
     </div>
   );
 }
