@@ -688,12 +688,12 @@ export async function createTacticalPadLiteSurface(
     updateDraggedPlayerFromEvent(event);
     updateWhiteboardDrawing(event);
   });
-  app.stage.on("pointerup", () => {
-    endWhiteboardDrawing();
+  app.stage.on("pointerup", (event) => {
+    endWhiteboardDrawing(event);
     releaseDrag();
   });
-  app.stage.on("pointerupoutside", () => {
-    endWhiteboardDrawing();
+  app.stage.on("pointerupoutside", (event) => {
+    endWhiteboardDrawing(event);
     releaseDrag();
   });
   app.stage.on("pointerdown", (event) => {
