@@ -22,7 +22,12 @@ const WHITEBOARD_DRAW_COLOR_CHOICES = [
   { value: 0xdc2626, css: "#dc2626" },
   { value: 0xfacc15, css: "#facc15" },
 ] as const;
-const WHITEBOARD_TOKEN_COLOR_ORDER: WhiteboardTokenColor[] = ["blue", "red", "yellow", "black"];
+const WHITEBOARD_TOKEN_COLOR_CHOICES: ReadonlyArray<{ value: WhiteboardTokenColor; css: string }> = [
+  { value: "blue", css: "#2563eb" },
+  { value: "red", css: "#dc2626" },
+  { value: "yellow", css: "#facc15" },
+  { value: "black", css: "#1f2937" },
+];
 
 const ROOT_STYLE: CSSProperties = {
   position: "fixed",
@@ -554,50 +559,32 @@ const WHITEBOARD_HEAD_BUTTON_BASE_STYLE: CSSProperties = {
   width: "36px",
   height: "36px",
   borderRadius: "999px",
-  border: "1px solid rgba(148, 163, 184, 0.3)",
-  background: "rgba(15, 23, 42, 0.68)",
+  border: "1px solid rgba(148, 163, 184, 0.32)",
+  background: "rgba(15, 23, 42, 0.72)",
   backdropFilter: "blur(6px)",
   WebkitBackdropFilter: "blur(6px)",
-  color: "#dbeafe",
+  color: "#e2e8f0",
   fontSize: "14px",
   lineHeight: 1,
   cursor: "pointer",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  boxShadow: "0 0 0 1px rgba(148, 163, 184, 0.12), 0 0 6px rgba(148, 163, 184, 0.14)",
-  position: "relative",
+  boxShadow: "0 0 0 1px rgba(148, 163, 184, 0.14), 0 0 6px rgba(148, 163, 184, 0.16)",
 };
 
-const WHITEBOARD_HEAD_BUTTON_BLUE_STYLE: CSSProperties = {
+const WHITEBOARD_COLOR_BUTTON_STYLE: CSSProperties = {
   ...WHITEBOARD_HEAD_BUTTON_BASE_STYLE,
-  boxShadow: "0 0 0 1px rgba(59, 130, 246, 0.42), 0 0 8px rgba(59, 130, 246, 0.22)",
+  width: "34px",
+  height: "34px",
+  border: "1px solid rgba(148, 163, 184, 0.34)",
 };
 
-const WHITEBOARD_HEAD_BUTTON_RED_STYLE: CSSProperties = {
-  ...WHITEBOARD_HEAD_BUTTON_BASE_STYLE,
-  boxShadow: "0 0 0 1px rgba(239, 68, 68, 0.4), 0 0 8px rgba(239, 68, 68, 0.2)",
-};
-
-const WHITEBOARD_HEAD_COUNT_BADGE_STYLE: CSSProperties = {
-  position: "absolute",
-  right: "-4px",
-  bottom: "-4px",
-  minWidth: "18px",
+const WHITEBOARD_COLOR_SWATCH_STYLE: CSSProperties = {
+  width: "18px",
   height: "18px",
   borderRadius: "999px",
-  border: "1px solid rgba(255, 255, 255, 0.42)",
-  background: "rgba(7, 12, 18, 0.92)",
-  color: "#f3f8fd",
-  fontSize: "9px",
-  fontWeight: 700,
-  lineHeight: 1,
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: "0 5px",
-  pointerEvents: "auto",
-  cursor: "pointer",
+  border: "1px solid rgba(255, 255, 255, 0.5)",
 };
 
 const WHITEBOARD_COUNT_SELECTOR_STYLE: CSSProperties = {
@@ -628,6 +615,32 @@ const WHITEBOARD_COUNT_SELECTOR_TITLE_STYLE: CSSProperties = {
   fontFamily: "Inter, system-ui, sans-serif",
 };
 
+const WHITEBOARD_TEAM_SELECTOR_ROW_STYLE: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  gap: "5px",
+};
+
+const WHITEBOARD_TEAM_OPTION_STYLE: CSSProperties = {
+  height: "28px",
+  borderRadius: "8px",
+  border: "1px solid rgba(148, 163, 184, 0.36)",
+  background: "rgba(15, 23, 42, 0.82)",
+  color: "#dbe7f5",
+  fontSize: "10px",
+  fontWeight: 650,
+  letterSpacing: "0.2px",
+  cursor: "pointer",
+  fontFamily: "Inter, system-ui, sans-serif",
+};
+
+const WHITEBOARD_TEAM_OPTION_ACTIVE_STYLE: CSSProperties = {
+  ...WHITEBOARD_TEAM_OPTION_STYLE,
+  border: "1px solid rgba(125, 211, 252, 0.6)",
+  background: "rgba(30, 64, 175, 0.52)",
+  color: "#f8fcff",
+};
+
 const WHITEBOARD_COUNT_SELECTOR_GRID_STYLE: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
@@ -656,6 +669,43 @@ const WHITEBOARD_COUNT_OPTION_ACTIVE_STYLE: CSSProperties = {
 };
 
 const WHITEBOARD_COUNT_OPTIONS = Array.from({ length: 15 }, (_, index) => index + 1);
+
+const WHITEBOARD_TOKEN_COLOR_POPOVER_STYLE: CSSProperties = {
+  position: "fixed",
+  left: "max(56px, calc(env(safe-area-inset-left, 0px) + 54px))",
+  top: "max(54px, calc(env(safe-area-inset-top, 0px) + 52px))",
+  zIndex: 22,
+  display: "grid",
+  gridTemplateColumns: "repeat(4, 1fr)",
+  gap: "6px",
+  padding: "7px",
+  borderRadius: "10px",
+  border: "1px solid rgba(148, 163, 184, 0.24)",
+  background: "rgba(10, 20, 35, 0.82)",
+  backdropFilter: "blur(8px)",
+  WebkitBackdropFilter: "blur(8px)",
+  boxShadow: "0 10px 22px rgba(4, 12, 24, 0.3)",
+};
+
+const WHITEBOARD_TOKEN_COLOR_OPTION_STYLE: CSSProperties = {
+  width: "28px",
+  height: "28px",
+  borderRadius: "999px",
+  border: "1px solid rgba(130, 150, 170, 0.4)",
+  background: "rgba(15, 23, 42, 0.52)",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  cursor: "pointer",
+  padding: 0,
+};
+
+const WHITEBOARD_TOKEN_COLOR_SWATCH_STYLE: CSSProperties = {
+  width: "22px",
+  height: "22px",
+  borderRadius: "999px",
+  border: "1px solid rgba(255, 255, 255, 0.48)",
+};
 
 const MODE_TAB_STYLE: CSSProperties = {
   position: "fixed",
@@ -748,9 +798,12 @@ export default function TacticalPadLiteClean() {
   const [mode, setMode] = useState<PadMode>("tactical");
   const [whiteboardBlueCount, setWhiteboardBlueCount] = useState(1);
   const [whiteboardRedCount, setWhiteboardRedCount] = useState(1);
-  const [whiteboardCountPickerTeam, setWhiteboardCountPickerTeam] = useState<"BLUE" | "RED" | null>(null);
+  const [whiteboardCountPickerOpen, setWhiteboardCountPickerOpen] = useState(false);
+  const [whiteboardCountPickerTeam, setWhiteboardCountPickerTeam] = useState<"BLUE" | "RED">("BLUE");
   const [whiteboardBlueTokenColor, setWhiteboardBlueTokenColor] = useState<WhiteboardTokenColor>("blue");
   const [whiteboardRedTokenColor, setWhiteboardRedTokenColor] = useState<WhiteboardTokenColor>("red");
+  const [whiteboardCurrentTokenColor, setWhiteboardCurrentTokenColor] = useState<WhiteboardTokenColor>("blue");
+  const [whiteboardColorPickerOpen, setWhiteboardColorPickerOpen] = useState(false);
   const [currentDrawColor, setCurrentDrawColor] = useState<number>(WHITEBOARD_DRAW_COLOR_DEFAULT);
   const [whiteboardTool, setWhiteboardTool] = useState<"move" | "pen" | "line" | "arrow" | "dashed">(
     "move",
@@ -893,7 +946,8 @@ export default function TacticalPadLiteClean() {
   const setPadMode = (nextMode: PadMode) => {
     setModeMenuOpen(false);
     if (nextMode === mode) return;
-    setWhiteboardCountPickerTeam(null);
+    setWhiteboardCountPickerOpen(false);
+    setWhiteboardColorPickerOpen(false);
     setControlsOpen(false);
     setToolsOpen(false);
     setPhasesOpen(false);
@@ -911,18 +965,13 @@ export default function TacticalPadLiteClean() {
   const setWhiteboardCount = (team: "BLUE" | "RED", count: number) => {
     const clamped = Math.max(1, Math.min(15, Math.floor(count)));
     if (team === "BLUE") {
+      setWhiteboardBlueTokenColor(whiteboardCurrentTokenColor);
       setWhiteboardBlueCount(clamped);
     } else {
+      setWhiteboardRedTokenColor(whiteboardCurrentTokenColor);
       setWhiteboardRedCount(clamped);
     }
-    setWhiteboardCountPickerTeam(null);
-  };
-
-  const cycleWhiteboardTokenColor = (team: "BLUE" | "RED") => {
-    const setter = team === "BLUE" ? setWhiteboardBlueTokenColor : setWhiteboardRedTokenColor;
-    const current = team === "BLUE" ? whiteboardBlueTokenColor : whiteboardRedTokenColor;
-    const nextIndex = (WHITEBOARD_TOKEN_COLOR_ORDER.indexOf(current) + 1) % WHITEBOARD_TOKEN_COLOR_ORDER.length;
-    setter(WHITEBOARD_TOKEN_COLOR_ORDER[nextIndex] ?? current);
+    setWhiteboardCountPickerOpen(false);
   };
 
   const setWhiteboardDrawColor = (color: number) => {
@@ -930,21 +979,9 @@ export default function TacticalPadLiteClean() {
     surfaceRef.current?.setWhiteboardDrawColor(color);
   };
 
-  const getHeadButtonStyle = (color: WhiteboardTokenColor): CSSProperties => {
-    if (color === "blue") return WHITEBOARD_HEAD_BUTTON_BLUE_STYLE;
-    if (color === "red") return WHITEBOARD_HEAD_BUTTON_RED_STYLE;
-    if (color === "yellow") {
-      return {
-        ...WHITEBOARD_HEAD_BUTTON_BASE_STYLE,
-        color: "#fef3c7",
-        boxShadow: "0 0 0 1px rgba(250, 204, 21, 0.58), 0 0 9px rgba(250, 204, 21, 0.24)",
-      };
-    }
-    return {
-      ...WHITEBOARD_HEAD_BUTTON_BASE_STYLE,
-      color: "#e5e7eb",
-      boxShadow: "0 0 0 1px rgba(75, 85, 99, 0.58), 0 0 9px rgba(55, 65, 81, 0.24)",
-    };
+  const getTokenColorCss = (color: WhiteboardTokenColor): string => {
+    const match = WHITEBOARD_TOKEN_COLOR_CHOICES.find((choice) => choice.value === color);
+    return match?.css ?? "#2563eb";
   };
 
   const applyWhiteboardTool = (tool: "move" | "pen" | "line" | "arrow" | "dashed" | "undo" | "clear") => {
@@ -1064,64 +1101,75 @@ export default function TacticalPadLiteClean() {
             <div style={WHITEBOARD_HEAD_CONTROLS_STYLE}>
               <button
                 type="button"
-                aria-label="Cycle blue team token color"
-                style={getHeadButtonStyle(whiteboardBlueTokenColor)}
-                onClick={() => cycleWhiteboardTokenColor("BLUE")}
+                aria-label="Open whiteboard player selector"
+                style={WHITEBOARD_HEAD_BUTTON_BASE_STYLE}
+                onClick={() => setWhiteboardCountPickerOpen((open) => !open)}
               >
                 👤
-                <span
-                  role="button"
-                  tabIndex={0}
-                  aria-label="Open blue team player count selector"
-                  style={WHITEBOARD_HEAD_COUNT_BADGE_STYLE}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setWhiteboardCountPickerTeam((current) => (current === "BLUE" ? null : "BLUE"));
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      setWhiteboardCountPickerTeam((current) => (current === "BLUE" ? null : "BLUE"));
-                    }
-                  }}
-                >
-                  {whiteboardBlueCount}
-                </span>
               </button>
               <button
                 type="button"
-                aria-label="Cycle red team token color"
-                style={getHeadButtonStyle(whiteboardRedTokenColor)}
-                onClick={() => cycleWhiteboardTokenColor("RED")}
+                aria-label="Open token colour selector"
+                style={WHITEBOARD_COLOR_BUTTON_STYLE}
+                onClick={() => setWhiteboardColorPickerOpen((open) => !open)}
               >
-                👤
-                <span
-                  role="button"
-                  tabIndex={0}
-                  aria-label="Open red team player count selector"
-                  style={WHITEBOARD_HEAD_COUNT_BADGE_STYLE}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setWhiteboardCountPickerTeam((current) => (current === "RED" ? null : "RED"));
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      setWhiteboardCountPickerTeam((current) => (current === "RED" ? null : "RED"));
-                    }
-                  }}
-                >
-                  {whiteboardRedCount}
-                </span>
+                <span style={{ ...WHITEBOARD_COLOR_SWATCH_STYLE, background: getTokenColorCss(whiteboardCurrentTokenColor) }} />
               </button>
             </div>
-            {whiteboardCountPickerTeam ? (
+            {whiteboardColorPickerOpen ? (
+              <div style={WHITEBOARD_TOKEN_COLOR_POPOVER_STYLE}>
+                {WHITEBOARD_TOKEN_COLOR_CHOICES.map((choice) => {
+                  const isActive = whiteboardCurrentTokenColor === choice.value;
+                  return (
+                    <button
+                      key={`whiteboard-token-color-${choice.value}`}
+                      type="button"
+                      aria-label="Set current token colour"
+                      style={{
+                        ...WHITEBOARD_TOKEN_COLOR_OPTION_STYLE,
+                        ...(isActive
+                          ? { boxShadow: "0 0 0 2px rgba(125, 211, 252, 0.9)", border: "1px solid rgba(125, 211, 252, 0.75)" }
+                          : null),
+                      }}
+                      onClick={() => {
+                        setWhiteboardCurrentTokenColor(choice.value);
+                        setWhiteboardColorPickerOpen(false);
+                      }}
+                    >
+                      <span style={{ ...WHITEBOARD_TOKEN_COLOR_SWATCH_STYLE, background: choice.css }} />
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+            {whiteboardCountPickerOpen ? (
               <div style={WHITEBOARD_COUNT_SELECTOR_STYLE}>
-                <p style={WHITEBOARD_COUNT_SELECTOR_TITLE_STYLE}>
-                  {whiteboardCountPickerTeam === "BLUE" ? "Blue players" : "Red players"}
-                </p>
+                <p style={WHITEBOARD_COUNT_SELECTOR_TITLE_STYLE}>Team</p>
+                <div style={WHITEBOARD_TEAM_SELECTOR_ROW_STYLE}>
+                  <button
+                    type="button"
+                    style={
+                      whiteboardCountPickerTeam === "BLUE"
+                        ? WHITEBOARD_TEAM_OPTION_ACTIVE_STYLE
+                        : WHITEBOARD_TEAM_OPTION_STYLE
+                    }
+                    onClick={() => setWhiteboardCountPickerTeam("BLUE")}
+                  >
+                    Blue
+                  </button>
+                  <button
+                    type="button"
+                    style={
+                      whiteboardCountPickerTeam === "RED"
+                        ? WHITEBOARD_TEAM_OPTION_ACTIVE_STYLE
+                        : WHITEBOARD_TEAM_OPTION_STYLE
+                    }
+                    onClick={() => setWhiteboardCountPickerTeam("RED")}
+                  >
+                    Red
+                  </button>
+                </div>
+                <p style={WHITEBOARD_COUNT_SELECTOR_TITLE_STYLE}>Players</p>
                 <div style={WHITEBOARD_COUNT_SELECTOR_GRID_STYLE}>
                   {WHITEBOARD_COUNT_OPTIONS.map((count) => {
                     const isActive =
