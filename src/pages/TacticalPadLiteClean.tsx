@@ -5,6 +5,8 @@ import {
   type TacticalPadLiteSurface,
 } from "../engine/pixi/createTacticalPadLiteSurface";
 
+type PadMode = "tactical" | "stats";
+
 const ROOT_STYLE: CSSProperties = {
   position: "fixed",
   inset: 0,
@@ -447,9 +449,77 @@ const PHASES_EMPTY_STYLE: CSSProperties = {
   opacity: 0.75,
 };
 
+const MODE_TOGGLE_STYLE: CSSProperties = {
+  position: "fixed",
+  top: "max(12px, calc(env(safe-area-inset-top, 0px) + 10px))",
+  right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
+  display: "flex",
+  gap: "4px",
+  padding: "4px",
+  borderRadius: "12px",
+  border: "1px solid rgba(230, 238, 241, 0.24)",
+  background: "rgba(8, 14, 18, 0.58)",
+  backdropFilter: "blur(10px)",
+  WebkitBackdropFilter: "blur(10px)",
+  boxShadow: "0 8px 20px rgba(0, 0, 0, 0.26)",
+  zIndex: 21,
+};
+
+const MODE_BUTTON_BASE_STYLE: CSSProperties = {
+  border: "1px solid rgba(230, 238, 241, 0.18)",
+  borderRadius: "9px",
+  background: "rgba(16, 24, 30, 0.5)",
+  color: "rgba(236, 245, 249, 0.92)",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "10.5px",
+  fontWeight: 600,
+  letterSpacing: "0.2px",
+  padding: "6px 10px",
+  cursor: "pointer",
+};
+
+const MODE_BUTTON_ACTIVE_STYLE: CSSProperties = {
+  ...MODE_BUTTON_BASE_STYLE,
+  background: "rgba(58, 112, 138, 0.5)",
+  border: "1px solid rgba(181, 223, 242, 0.54)",
+  color: "rgba(255, 255, 255, 0.96)",
+};
+
+const STATS_STRIP_STYLE: CSSProperties = {
+  position: "fixed",
+  left: "50%",
+  transform: "translateX(-50%)",
+  bottom: "max(12px, calc(env(safe-area-inset-bottom, 0px) + 10px))",
+  display: "flex",
+  gap: "6px",
+  padding: "8px",
+  borderRadius: "14px",
+  border: "1px solid rgba(222, 232, 236, 0.24)",
+  background: "rgba(10, 18, 22, 0.62)",
+  backdropFilter: "blur(10px)",
+  WebkitBackdropFilter: "blur(10px)",
+  boxShadow: "0 10px 24px rgba(0, 0, 0, 0.26)",
+  zIndex: 21,
+};
+
+const STATS_EVENT_BUTTON_STYLE: CSSProperties = {
+  border: "1px solid rgba(224, 235, 240, 0.22)",
+  borderRadius: "10px",
+  background: "rgba(23, 33, 39, 0.62)",
+  color: "rgba(241, 247, 250, 0.94)",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "10.5px",
+  fontWeight: 600,
+  letterSpacing: "0.25px",
+  padding: "7px 10px",
+  minWidth: "64px",
+  cursor: "pointer",
+};
+
 export default function TacticalPadLiteClean() {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const surfaceRef = useRef<TacticalPadLiteSurface | null>(null);
+  const [mode, setMode] = useState<PadMode>("tactical");
   const [phaseCount, setPhaseCount] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(false);
@@ -500,6 +570,18 @@ export default function TacticalPadLiteClean() {
   const floodlightDots = Array.from({ length: 12 }, (_, index) => index);
   const closeControlsMenu = () => setControlsOpen(false);
   const closeToolsMenu = () => setToolsOpen(false);
+  const isTacticalMode = mode === "tactical";
+  const isStatsMode = mode === "stats";
+
+  const setPadMode = (nextMode: PadMode) => {
+    if (nextMode === mode) return;
+    if (nextMode === "stats") {
+      setToolsOpen(false);
+      setControlsOpen(false);
+      setPhasesOpen(false);
+    }
+    setMode(nextMode);
+  };
 
   return (
     <div style={ROOT_STYLE} className="simulator-container">
@@ -523,28 +605,48 @@ export default function TacticalPadLiteClean() {
       <div style={CONTENT_STYLE}>
         <div ref={hostRef} style={PITCH_STYLE} />
       </div>
-      <button
-        type="button"
-        style={PHASES_CHIP_STYLE}
-        aria-label="Toggle phases tray"
-        onClick={() => setPhasesOpen((open) => !open)}
-      >
-        Phases: {phaseCount}
-      </button>
-      {phasesOpen ? (
-        <div style={PHASES_TRAY_STYLE}>
-          {phaseItems.length > 0 ? (
-            phaseItems.map((phase) => (
-              <div key={phase} style={PHASE_ITEM_STYLE}>
-                Phase {phase}
-              </div>
-            ))
-          ) : (
-            <div style={PHASES_EMPTY_STYLE}>No phases</div>
-          )}
-        </div>
+      <div style={MODE_TOGGLE_STYLE}>
+        <button
+          type="button"
+          style={isTacticalMode ? MODE_BUTTON_ACTIVE_STYLE : MODE_BUTTON_BASE_STYLE}
+          onClick={() => setPadMode("tactical")}
+        >
+          Tactical
+        </button>
+        <button
+          type="button"
+          style={isStatsMode ? MODE_BUTTON_ACTIVE_STYLE : MODE_BUTTON_BASE_STYLE}
+          onClick={() => setPadMode("stats")}
+        >
+          Stats
+        </button>
+      </div>
+      {isTacticalMode ? (
+        <>
+          <button
+            type="button"
+            style={PHASES_CHIP_STYLE}
+            aria-label="Toggle phases tray"
+            onClick={() => setPhasesOpen((open) => !open)}
+          >
+            Phases: {phaseCount}
+          </button>
+          {phasesOpen ? (
+            <div style={PHASES_TRAY_STYLE}>
+              {phaseItems.length > 0 ? (
+                phaseItems.map((phase) => (
+                  <div key={phase} style={PHASE_ITEM_STYLE}>
+                    Phase {phase}
+                  </div>
+                ))
+              ) : (
+                <div style={PHASES_EMPTY_STYLE}>No phases</div>
+              )}
+            </div>
+          ) : null}
+        </>
       ) : null}
-      {controlsOpen ? (
+      {isTacticalMode && controlsOpen ? (
         <div style={CONTROLS_POPOUT_STYLE}>
           <button
             type="button"
@@ -587,7 +689,7 @@ export default function TacticalPadLiteClean() {
           </button>
         </div>
       ) : null}
-      {toolsOpen ? (
+      {isTacticalMode && toolsOpen ? (
         <div style={TOOLS_POPOUT_STYLE}>
           <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
             Select
@@ -606,67 +708,87 @@ export default function TacticalPadLiteClean() {
           </button>
         </div>
       ) : null}
-      <button
-        type="button"
-        className="floating-bubble"
-        style={LEFT_BUBBLE_STYLE}
-        aria-label="Open controls"
-        onClick={() => setControlsOpen((open) => !open)}
-      >
-        Ctrl
-      </button>
-      <button
-        type="button"
-        className="floating-bubble floating-bubble-tool"
-        style={TOOL_BUBBLE_STYLE}
-        aria-label="Open tools"
-        onClick={() => setToolsOpen((open) => !open)}
-      >
-        <span className="tool-bubble-icon" aria-hidden="true">
-          <svg className="tool-bubble-mark-svg" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-            <path
-              d="M7 8h9.2c4.5 0 7.4 2.8 7.4 6.6 0 3.8-2.9 6.5-7.4 6.5H12.4"
-              fill="none"
-              stroke="rgba(255,255,255,0.94)"
-              strokeWidth="2.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M7 8v2.7M12.4 10.8v16.2"
-              fill="none"
-              stroke="rgba(255,255,255,0.94)"
-              strokeWidth="2.6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M4.8 28.4C4.8 21 8.8 14.5 15.8 14.5 22.8 14.5 27.2 18.8 27.2 24.5"
-              fill="none"
-              stroke="rgba(255,255,255,0.9)"
-              strokeWidth="2.1"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M8.8 28.7c-2.3-0.1-4.2-1.7-4.2-4.2 0-2.9 2.2-5 5.3-5h9.2"
-              fill="none"
-              stroke="rgba(255,255,255,0.9)"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M20.7 22.4l3.1 1.8-3.5 1.1"
-              fill="none"
-              stroke="#F4C542"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </span>
-      </button>
+      {isTacticalMode ? (
+        <>
+          <button
+            type="button"
+            className="floating-bubble"
+            style={LEFT_BUBBLE_STYLE}
+            aria-label="Open controls"
+            onClick={() => setControlsOpen((open) => !open)}
+          >
+            Ctrl
+          </button>
+          <button
+            type="button"
+            className="floating-bubble floating-bubble-tool"
+            style={TOOL_BUBBLE_STYLE}
+            aria-label="Open tools"
+            onClick={() => setToolsOpen((open) => !open)}
+          >
+            <span className="tool-bubble-icon" aria-hidden="true">
+              <svg className="tool-bubble-mark-svg" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                <path
+                  d="M7 8h9.2c4.5 0 7.4 2.8 7.4 6.6 0 3.8-2.9 6.5-7.4 6.5H12.4"
+                  fill="none"
+                  stroke="rgba(255,255,255,0.94)"
+                  strokeWidth="2.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M7 8v2.7M12.4 10.8v16.2"
+                  fill="none"
+                  stroke="rgba(255,255,255,0.94)"
+                  strokeWidth="2.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M4.8 28.4C4.8 21 8.8 14.5 15.8 14.5 22.8 14.5 27.2 18.8 27.2 24.5"
+                  fill="none"
+                  stroke="rgba(255,255,255,0.9)"
+                  strokeWidth="2.1"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M8.8 28.7c-2.3-0.1-4.2-1.7-4.2-4.2 0-2.9 2.2-5 5.3-5h9.2"
+                  fill="none"
+                  stroke="rgba(255,255,255,0.9)"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M20.7 22.4l3.1 1.8-3.5 1.1"
+                  fill="none"
+                  stroke="#F4C542"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
+          </button>
+        </>
+      ) : null}
+      {isStatsMode ? (
+        <div style={STATS_STRIP_STYLE}>
+          <button type="button" style={STATS_EVENT_BUTTON_STYLE}>
+            POINT
+          </button>
+          <button type="button" style={STATS_EVENT_BUTTON_STYLE}>
+            WIDE
+          </button>
+          <button type="button" style={STATS_EVENT_BUTTON_STYLE}>
+            TURNOVER
+          </button>
+          <button type="button" style={STATS_EVENT_BUTTON_STYLE}>
+            FREE
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
