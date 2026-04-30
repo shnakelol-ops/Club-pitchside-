@@ -4,6 +4,7 @@ import {
   createTacticalPadLiteSurface,
   type TacticalPadLiteSurface,
 } from "../engine/pixi/createTacticalPadLiteSurface";
+import OrientationGate from "../components/OrientationGate";
 
 const ROOT_STYLE: CSSProperties = {
   position: "fixed",
@@ -67,47 +68,83 @@ export default function TacticalPadLitePage() {
 
     let disposed = false;
     let destroySurface: (() => void) | null = null;
+    let mountFrameA = 0;
+    let mountFrameB = 0;
+    let resizeFrameA = 0;
+    let resizeFrameB = 0;
 
-    void createTacticalPadLiteSurface(host, {
-      onPhaseCountChange: (count) => {
-        if (!disposed) {
-          setPhaseCount(count);
+    const mountSurface = () => {
+      void createTacticalPadLiteSurface(host, {
+        onPhaseCountChange: (count) => {
+          if (!disposed) {
+            setPhaseCount(count);
+          }
+        },
+      }).then((surface) => {
+        if (disposed) {
+          surface.destroy();
+          return;
         }
-      },
-    }).then((surface) => {
-      if (disposed) {
-        surface.destroy();
-        return;
-      }
-      surfaceRef.current = surface;
-      destroySurface = surface.destroy;
+        surfaceRef.current = surface;
+        destroySurface = surface.destroy;
+      });
+    };
+
+    const scheduleSurfaceReflow = () => {
+      window.cancelAnimationFrame(resizeFrameA);
+      window.cancelAnimationFrame(resizeFrameB);
+      resizeFrameA = window.requestAnimationFrame(() => {
+        resizeFrameB = window.requestAnimationFrame(() => {
+          if (disposed) return;
+          surfaceRef.current?.reflow();
+        });
+      });
+    };
+
+    const handleResize = () => {
+      scheduleSurfaceReflow();
+    };
+    window.addEventListener("resize", handleResize);
+
+    mountFrameA = window.requestAnimationFrame(() => {
+      mountFrameB = window.requestAnimationFrame(() => {
+        if (disposed) return;
+        mountSurface();
+      });
     });
 
     return () => {
       disposed = true;
+      window.removeEventListener("resize", handleResize);
+      window.cancelAnimationFrame(mountFrameA);
+      window.cancelAnimationFrame(mountFrameB);
+      window.cancelAnimationFrame(resizeFrameA);
+      window.cancelAnimationFrame(resizeFrameB);
       surfaceRef.current = null;
       destroySurface?.();
     };
   }, []);
 
   return (
-    <div style={ROOT_STYLE}>
-      <div ref={hostRef} style={BOARD_STYLE} />
-      <div style={CONTROLS_STYLE}>
-        <button type="button" style={BUTTON_STYLE} onClick={() => surfaceRef.current?.setStart()}>
-          Set Start
-        </button>
-        <button type="button" style={BUTTON_STYLE} onClick={() => surfaceRef.current?.addPhase()}>
-          Add Phase
-        </button>
-        <button type="button" style={BUTTON_STYLE} onClick={() => surfaceRef.current?.play()}>
-          Play
-        </button>
-        <button type="button" style={BUTTON_STYLE} onClick={() => surfaceRef.current?.reset()}>
-          Reset
-        </button>
-        <div style={PHASE_COUNT_STYLE}>Phases: {phaseCount}</div>
+    <OrientationGate modeLabel="Tactical Sim Lite">
+      <div style={ROOT_STYLE}>
+        <div ref={hostRef} style={BOARD_STYLE} />
+        <div style={CONTROLS_STYLE}>
+          <button type="button" style={BUTTON_STYLE} onClick={() => surfaceRef.current?.setStart()}>
+            Set Start
+          </button>
+          <button type="button" style={BUTTON_STYLE} onClick={() => surfaceRef.current?.addPhase()}>
+            Add Phase
+          </button>
+          <button type="button" style={BUTTON_STYLE} onClick={() => surfaceRef.current?.play()}>
+            Play
+          </button>
+          <button type="button" style={BUTTON_STYLE} onClick={() => surfaceRef.current?.reset()}>
+            Reset
+          </button>
+          <div style={PHASE_COUNT_STYLE}>Phases: {phaseCount}</div>
+        </div>
       </div>
-    </div>
+    </OrientationGate>
   );
 }

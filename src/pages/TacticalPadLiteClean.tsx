@@ -3,10 +3,39 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   createTacticalPadLiteSurface,
   type TacticalPadLiteSurface,
+  type WhiteboardTokenColor,
 } from "../engine/pixi/createTacticalPadLiteSurface";
 import StatsModeSurface from "../StatsModeSurface";
+import OrientationGate from "../components/OrientationGate";
 
-type PadMode = "tactical" | "stats";
+type PadMode = "tactical" | "stats" | "whiteboard";
+
+const CONTENT_WIDTH_EXPR =
+  "min(calc(100dvw - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), calc(100vw - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), calc((100dvh - 10px) * 1.6), calc((100vh - 10px) * 1.6), 1360px)";
+const WHITEBOARD_RIGHT_COLUMN_LEFT = `calc(50vw + (${CONTENT_WIDTH_EXPR} / 2) + 10px)`;
+const WHITEBOARD_LEFT_MODE_LEFT = `calc(50vw - (${CONTENT_WIDTH_EXPR} / 2) - 74px)`;
+const WHITEBOARD_LEFT_MODE_MENU_LEFT = `calc(50vw - (${CONTENT_WIDTH_EXPR} / 2) - 132px)`;
+const WHITEBOARD_DEFAULT_TEAM_A_NAME = "Team A";
+const WHITEBOARD_DEFAULT_TEAM_B_NAME = "Team B";
+const WHITEBOARD_PLAYER_COLOR_CHOICES: ReadonlyArray<{
+  value: WhiteboardTokenColor;
+  css: string;
+}> = [
+  { value: "blue", css: "#2563eb" },
+  { value: "red", css: "#dc2626" },
+  { value: "yellow", css: "#facc15" },
+  { value: "black", css: "#1f2937" },
+];
+const WHITEBOARD_TOOL_COLOR_CHOICES: ReadonlyArray<{
+  value: WhiteboardTokenColor;
+  css: string;
+  drawColor: number;
+}> = [
+  { value: "black", css: "#1f2937", drawColor: 0x111111 },
+  { value: "blue", css: "#2563eb", drawColor: 0x2563eb },
+  { value: "red", css: "#dc2626", drawColor: 0xdc2626 },
+  { value: "yellow", css: "#facc15", drawColor: 0xfacc15 },
+];
 
 const ROOT_STYLE: CSSProperties = {
   position: "fixed",
@@ -20,6 +49,12 @@ const ROOT_STYLE: CSSProperties = {
   alignItems: "center",
   justifyContent: "center",
   overflow: "hidden",
+};
+
+const ROOT_WHITEBOARD_STYLE: CSSProperties = {
+  ...ROOT_STYLE,
+  background:
+    "linear-gradient(165deg, rgba(245, 248, 251, 1) 0%, rgba(236, 241, 246, 1) 52%, rgba(228, 235, 242, 1) 100%)",
 };
 
 const BACKGROUND_LAYER_STYLE: CSSProperties = {
@@ -219,7 +254,7 @@ const STADIUM_BEAM_RIGHT_STYLE: CSSProperties = {
 };
 
 const CONTENT_STYLE: CSSProperties = {
-  width: "min(calc(100dvw - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), calc(100vw - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), calc((100dvh - 10px) * 1.6), calc((100vh - 10px) * 1.6), 1360px)",
+  width: CONTENT_WIDTH_EXPR,
   maxWidth: "calc(100vw - 24px)",
   aspectRatio: "16 / 10",
   maxHeight: "min(calc(100dvh - 10px), calc(100vh - 10px))",
@@ -237,6 +272,12 @@ const PITCH_STYLE: CSSProperties = {
   overflow: "hidden",
   boxShadow: "0 50px 110px rgba(0, 0, 0, 0.55), 0 18px 45px rgba(0, 0, 0, 0.35)",
   background: "#13221d",
+};
+
+const PITCH_WHITEBOARD_STYLE: CSSProperties = {
+  ...PITCH_STYLE,
+  background: "#f8f9fb",
+  boxShadow: "0 40px 90px rgba(34, 42, 51, 0.22), 0 14px 30px rgba(45, 56, 68, 0.17)",
 };
 
 const BUBBLE_BASE_STYLE: CSSProperties = {
@@ -279,6 +320,30 @@ const TOOL_BUBBLE_STYLE: CSSProperties = {
   background: "rgba(5, 8, 10, 0.92)",
   border: "2px solid rgba(255, 255, 255, 0.18)",
   boxShadow: "0 8px 24px rgba(0, 0, 0, 0.55), inset 0 1px 2px rgba(255, 255, 255, 0.18)",
+};
+
+const TOOL_BUBBLE_MONOGRAM_WRAP_STYLE: CSSProperties = {
+  display: "inline-flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: "2px",
+};
+
+const TOOL_BUBBLE_MONOGRAM_STYLE: CSSProperties = {
+  fontFamily: "\"Arial Narrow\", \"Roboto Condensed\", Inter, system-ui, sans-serif",
+  fontWeight: 800,
+  fontSize: "14px",
+  letterSpacing: "0.18px",
+  color: "rgba(248, 251, 250, 0.98)",
+  lineHeight: 1,
+};
+
+const TOOL_BUBBLE_MONOGRAM_ACCENT_STYLE: CSSProperties = {
+  width: "12px",
+  height: "2px",
+  borderRadius: "999px",
+  background: "#F2C94C",
 };
 
 const POPOUT_BASE_STYLE: CSSProperties = {
@@ -393,6 +458,38 @@ const TOOLS_BUTTON_STYLE: CSSProperties = {
   cursor: "pointer",
 };
 
+const WHITEBOARD_TOOLS_POPOUT_STYLE: CSSProperties = {
+  ...TOOLS_POPOUT_STYLE,
+  background: "rgba(242, 246, 251, 0.92)",
+  border: "1px solid rgba(130, 150, 170, 0.26)",
+};
+
+const WHITEBOARD_TOOLS_BUTTON_STYLE: CSSProperties = {
+  ...TOOLS_BUTTON_STYLE,
+  border: "1px solid rgba(123, 146, 172, 0.28)",
+  background: "rgba(224, 233, 242, 0.72)",
+  color: "#1f3348",
+  fontWeight: 600,
+};
+
+const WHITEBOARD_TOOL_COLOR_ROW_STYLE: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: "6px",
+  paddingTop: "2px",
+};
+
+const WHITEBOARD_TOOL_COLOR_BUTTON_STYLE: CSSProperties = {
+  width: "20px",
+  height: "20px",
+  borderRadius: "999px",
+  border: "1px solid rgba(36, 46, 58, 0.18)",
+  padding: 0,
+  cursor: "pointer",
+  background: "#111111",
+};
+
 const PHASES_CHIP_STYLE: CSSProperties = {
   position: "fixed",
   left: "max(12px, calc(env(safe-area-inset-left, 0px) + 10px))",
@@ -450,64 +547,377 @@ const PHASES_EMPTY_STYLE: CSSProperties = {
   opacity: 0.75,
 };
 
-const MODE_TOGGLE_STYLE: CSSProperties = {
+const WHITEBOARD_HEAD_CONTROLS_STYLE: CSSProperties = {
+  position: "fixed",
+  left: "max(12px, calc(env(safe-area-inset-left, 0px) + 10px))",
+  top: "max(12px, calc(env(safe-area-inset-top, 0px) + 10px))",
+  display: "flex",
+  gap: "8px",
+  zIndex: 22,
+};
+
+const WHITEBOARD_HEAD_BUTTON_BASE_STYLE: CSSProperties = {
+  width: "36px",
+  height: "36px",
+  borderRadius: "999px",
+  border: "1px solid rgba(148, 163, 184, 0.32)",
+  background: "rgba(15, 23, 42, 0.72)",
+  backdropFilter: "blur(6px)",
+  WebkitBackdropFilter: "blur(6px)",
+  color: "#e2e8f0",
+  fontSize: "14px",
+  lineHeight: 1,
+  cursor: "pointer",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  boxShadow: "0 0 0 1px rgba(148, 163, 184, 0.14), 0 0 6px rgba(148, 163, 184, 0.16)",
+};
+
+const WHITEBOARD_COLOR_BUTTON_STYLE: CSSProperties = {
+  ...WHITEBOARD_HEAD_BUTTON_BASE_STYLE,
+  width: "34px",
+  height: "34px",
+  border: "1px solid rgba(148, 163, 184, 0.34)",
+};
+
+const WHITEBOARD_COLOR_SWATCH_STYLE: CSSProperties = {
+  width: "18px",
+  height: "18px",
+  borderRadius: "999px",
+  border: "1px solid rgba(255, 255, 255, 0.5)",
+};
+
+const WHITEBOARD_COUNT_SELECTOR_STYLE: CSSProperties = {
+  position: "fixed",
+  left: "max(12px, calc(env(safe-area-inset-left, 0px) + 10px))",
+  top: "max(54px, calc(env(safe-area-inset-top, 0px) + 52px))",
+  zIndex: 22,
+  width: "166px",
+  display: "flex",
+  flexDirection: "column",
+  gap: "6px",
+  padding: "7px",
+  borderRadius: "10px",
+  border: "1px solid rgba(148, 163, 184, 0.22)",
+  background: "rgba(10, 20, 35, 0.8)",
+  backdropFilter: "blur(8px)",
+  WebkitBackdropFilter: "blur(8px)",
+  boxShadow: "0 10px 22px rgba(4, 12, 24, 0.3)",
+};
+
+const WHITEBOARD_COUNT_SELECTOR_TITLE_STYLE: CSSProperties = {
+  color: "#dbe7f5",
+  fontSize: "9px",
+  fontWeight: 600,
+  letterSpacing: "0.2px",
+  textTransform: "uppercase",
+  margin: 0,
+  fontFamily: "Inter, system-ui, sans-serif",
+};
+
+const WHITEBOARD_TEAM_SELECTOR_ROW_STYLE: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  gap: "5px",
+};
+
+const WHITEBOARD_TEAM_OPTION_STYLE: CSSProperties = {
+  height: "28px",
+  borderRadius: "8px",
+  border: "1px solid rgba(148, 163, 184, 0.36)",
+  background: "rgba(15, 23, 42, 0.82)",
+  color: "#dbe7f5",
+  fontSize: "10px",
+  fontWeight: 650,
+  letterSpacing: "0.2px",
+  cursor: "pointer",
+  fontFamily: "Inter, system-ui, sans-serif",
+};
+
+const WHITEBOARD_TEAM_OPTION_ACTIVE_STYLE: CSSProperties = {
+  ...WHITEBOARD_TEAM_OPTION_STYLE,
+  border: "1px solid rgba(125, 211, 252, 0.6)",
+  background: "rgba(30, 64, 175, 0.52)",
+  color: "#f8fcff",
+};
+
+const WHITEBOARD_TEAM_OPTION_CONTENT_STYLE: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: "4px",
+  width: "100%",
+  minWidth: 0,
+};
+
+const WHITEBOARD_TEAM_NAME_TEXT_STYLE: CSSProperties = {
+  flex: 1,
+  minWidth: 0,
+  overflow: "hidden",
+  whiteSpace: "nowrap",
+  textOverflow: "ellipsis",
+  textAlign: "left",
+};
+
+const WHITEBOARD_TEAM_NAME_INPUT_STYLE: CSSProperties = {
+  flex: 1,
+  minWidth: 0,
+  height: "18px",
+  borderRadius: "5px",
+  border: "1px solid rgba(125, 211, 252, 0.62)",
+  background: "rgba(8, 16, 28, 0.72)",
+  color: "#f8fcff",
+  fontSize: "10px",
+  fontWeight: 600,
+  fontFamily: "Inter, system-ui, sans-serif",
+  padding: "0 5px",
+  outline: "none",
+};
+
+const WHITEBOARD_TEAM_EDIT_ICON_STYLE: CSSProperties = {
+  width: "14px",
+  height: "14px",
+  borderRadius: "999px",
+  border: "1px solid rgba(171, 212, 232, 0.45)",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontSize: "9px",
+  lineHeight: 1,
+  color: "#dbe7f5",
+  cursor: "pointer",
+  flex: "0 0 auto",
+};
+
+const WHITEBOARD_COUNT_SELECTOR_GRID_STYLE: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+  gap: "4px",
+};
+
+const WHITEBOARD_COUNT_OPTION_STYLE: CSSProperties = {
+  height: "26px",
+  borderRadius: "8px",
+  border: "1px solid rgba(148, 163, 184, 0.36)",
+  background: "rgba(15, 23, 42, 0.86)",
+  color: "#dbe7f5",
+  fontSize: "10px",
+  fontWeight: 600,
+  lineHeight: 1,
+  letterSpacing: "0.2px",
+  cursor: "pointer",
+  fontFamily: "Inter, system-ui, sans-serif",
+};
+
+const WHITEBOARD_COUNT_OPTION_ACTIVE_STYLE: CSSProperties = {
+  ...WHITEBOARD_COUNT_OPTION_STYLE,
+  border: "1px solid rgba(125, 211, 252, 0.56)",
+  background: "rgba(30, 64, 175, 0.5)",
+  color: "#f8fcff",
+};
+
+const WHITEBOARD_COUNT_OPTIONS = Array.from({ length: 15 }, (_, index) => index + 1);
+
+const WHITEBOARD_TOKEN_COLOR_POPOVER_STYLE: CSSProperties = {
+  position: "fixed",
+  left: "max(56px, calc(env(safe-area-inset-left, 0px) + 54px))",
+  top: "max(54px, calc(env(safe-area-inset-top, 0px) + 52px))",
+  zIndex: 22,
+  display: "grid",
+  gridTemplateColumns: "repeat(4, 1fr)",
+  gap: "6px",
+  padding: "7px",
+  borderRadius: "10px",
+  border: "1px solid rgba(148, 163, 184, 0.24)",
+  background: "rgba(10, 20, 35, 0.82)",
+  backdropFilter: "blur(8px)",
+  WebkitBackdropFilter: "blur(8px)",
+  boxShadow: "0 10px 22px rgba(4, 12, 24, 0.3)",
+};
+
+const WHITEBOARD_TOKEN_COLOR_OPTION_STYLE: CSSProperties = {
+  width: "28px",
+  height: "28px",
+  borderRadius: "999px",
+  border: "1px solid rgba(130, 150, 170, 0.4)",
+  background: "rgba(15, 23, 42, 0.52)",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  cursor: "pointer",
+  padding: 0,
+};
+
+const WHITEBOARD_TOKEN_COLOR_SWATCH_STYLE: CSSProperties = {
+  width: "22px",
+  height: "22px",
+  borderRadius: "999px",
+  border: "1px solid rgba(255, 255, 255, 0.48)",
+};
+
+const MODE_TAB_STYLE: CSSProperties = {
   position: "fixed",
   top: "max(12px, calc(env(safe-area-inset-top, 0px) + 10px))",
   right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
-  display: "flex",
-  gap: "4px",
-  padding: "4px",
-  borderRadius: "12px",
-  border: "1px solid rgba(230, 238, 241, 0.24)",
-  background: "rgba(8, 14, 18, 0.58)",
+  height: "32px",
+  borderRadius: "10px",
+  border: "1px solid rgba(230, 238, 241, 0.3)",
+  background: "rgba(8, 14, 18, 0.66)",
+  color: "rgba(236, 245, 249, 0.96)",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "10.5px",
+  fontWeight: 650,
+  letterSpacing: "0.24px",
+  padding: "0 11px",
+  cursor: "pointer",
   backdropFilter: "blur(10px)",
   WebkitBackdropFilter: "blur(10px)",
-  boxShadow: "0 8px 20px rgba(0, 0, 0, 0.26)",
+  boxShadow: "0 8px 18px rgba(0, 0, 0, 0.24)",
   zIndex: 21,
 };
 
-const MODE_TOGGLE_STATS_STYLE: CSSProperties = {
-  ...MODE_TOGGLE_STYLE,
-  top: "max(58px, calc(env(safe-area-inset-top, 0px) + 56px))",
-  left: "50%",
+const WHITEBOARD_MODE_TAB_STYLE: CSSProperties = {
+  ...MODE_TAB_STYLE,
+  top: "auto",
   right: "auto",
-  transform: "translateX(-50%)",
+  left: WHITEBOARD_LEFT_MODE_LEFT,
+  bottom: "max(12px, calc(env(safe-area-inset-bottom, 0px) + 10px))",
 };
 
-const MODE_BUTTON_BASE_STYLE: CSSProperties = {
-  border: "1px solid rgba(230, 238, 241, 0.18)",
-  borderRadius: "9px",
-  background: "rgba(16, 24, 30, 0.5)",
-  color: "rgba(236, 245, 249, 0.92)",
+const MODE_MENU_STYLE: CSSProperties = {
+  position: "fixed",
+  top: "max(48px, calc(env(safe-area-inset-top, 0px) + 46px))",
+  right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
+  width: "122px",
+  padding: "5px",
+  borderRadius: "11px",
+  border: "1px solid rgba(207, 220, 231, 0.32)",
+  background: "rgba(10, 18, 24, 0.84)",
+  backdropFilter: "blur(10px)",
+  WebkitBackdropFilter: "blur(10px)",
+  boxShadow: "0 10px 22px rgba(0, 0, 0, 0.28)",
+  zIndex: 21,
+  display: "flex",
+  flexDirection: "column",
+  gap: "4px",
+};
+
+const WHITEBOARD_MODE_MENU_STYLE: CSSProperties = {
+  ...MODE_MENU_STYLE,
+  top: "auto",
+  right: "auto",
+  left: WHITEBOARD_LEFT_MODE_MENU_LEFT,
+  bottom: "max(50px, calc(env(safe-area-inset-bottom, 0px) + 48px))",
+};
+
+const WHITEBOARD_TOOL_BUBBLE_STYLE: CSSProperties = {
+  ...TOOL_BUBBLE_STYLE,
+  right: "auto",
+  left: WHITEBOARD_RIGHT_COLUMN_LEFT,
+};
+
+const MODE_MENU_ITEM_STYLE: CSSProperties = {
+  height: "30px",
+  width: "100%",
+  textAlign: "left",
+  border: "1px solid rgba(228, 236, 241, 0.16)",
+  borderRadius: "8px",
+  background: "rgba(16, 24, 30, 0.54)",
+  color: "rgba(236, 245, 249, 0.9)",
   fontFamily: "Inter, system-ui, sans-serif",
   fontSize: "10.5px",
   fontWeight: 600,
-  letterSpacing: "0.2px",
-  padding: "6px 10px",
+  letterSpacing: "0.18px",
+  padding: "0 10px",
   cursor: "pointer",
 };
 
-const MODE_BUTTON_ACTIVE_STYLE: CSSProperties = {
-  ...MODE_BUTTON_BASE_STYLE,
-  background: "rgba(58, 112, 138, 0.5)",
-  border: "1px solid rgba(181, 223, 242, 0.54)",
-  color: "rgba(255, 255, 255, 0.96)",
+const MODE_MENU_ITEM_ACTIVE_STYLE: CSSProperties = {
+  ...MODE_MENU_ITEM_STYLE,
+  background: "rgba(55, 103, 131, 0.58)",
+  border: "1px solid rgba(171, 212, 232, 0.58)",
+  color: "rgba(255, 255, 255, 0.97)",
 };
 
 export default function TacticalPadLiteClean() {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const surfaceRef = useRef<TacticalPadLiteSurface | null>(null);
+  const [surfaceRefreshKey, setSurfaceRefreshKey] = useState(0);
   const [mode, setMode] = useState<PadMode>("tactical");
+  const [whiteboardBlueCount, setWhiteboardBlueCount] = useState(1);
+  const [whiteboardRedCount, setWhiteboardRedCount] = useState(1);
+  const [whiteboardCountPickerOpen, setWhiteboardCountPickerOpen] = useState(false);
+  const [whiteboardCountPickerTeam, setWhiteboardCountPickerTeam] = useState<"BLUE" | "RED">("BLUE");
+  const [teamAName, setTeamAName] = useState(WHITEBOARD_DEFAULT_TEAM_A_NAME);
+  const [teamBName, setTeamBName] = useState(WHITEBOARD_DEFAULT_TEAM_B_NAME);
+  const [editingTeamName, setEditingTeamName] = useState<"A" | "B" | null>(null);
+  const [editingTeamDraft, setEditingTeamDraft] = useState("");
+  const [currentPlayerColor, setCurrentPlayerColor] = useState<WhiteboardTokenColor>("blue");
+  const [whiteboardColorPickerOpen, setWhiteboardColorPickerOpen] = useState(false);
+  const [currentToolColor, setCurrentToolColor] = useState<WhiteboardTokenColor>("black");
+  const [whiteboardTool, setWhiteboardTool] = useState<"move" | "pen" | "line" | "arrow" | "dashed">(
+    "move",
+  );
   const [phaseCount, setPhaseCount] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [phasesOpen, setPhasesOpen] = useState(false);
+  const [modeMenuOpen, setModeMenuOpen] = useState(false);
   const isTacticalMode = mode === "tactical";
   const isStatsMode = mode === "stats";
+  const isWhiteboardMode = mode === "whiteboard";
 
   useEffect(() => {
-    if (!isTacticalMode) return;
+    const media = window.matchMedia("(orientation: landscape)");
+    let rafA = 0;
+    let rafB = 0;
+    let wasLandscape = media.matches || window.innerWidth > window.innerHeight;
+
+    const runDoubleRafReflow = (triggerRemount: boolean) => {
+      rafA = window.requestAnimationFrame(() => {
+        rafB = window.requestAnimationFrame(() => {
+          surfaceRef.current?.reflow();
+          if (triggerRemount) {
+            setSurfaceRefreshKey((value) => value + 1);
+          }
+        });
+      });
+    };
+
+    const handleViewportChange = () => {
+      const isLandscape = media.matches || window.innerWidth > window.innerHeight;
+      if (isLandscape && !wasLandscape) {
+        runDoubleRafReflow(true);
+      } else if (isLandscape) {
+        runDoubleRafReflow(false);
+      }
+      wasLandscape = isLandscape;
+    };
+
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", handleViewportChange);
+    } else {
+      media.addListener(handleViewportChange);
+    }
+    window.addEventListener("orientationchange", handleViewportChange);
+    window.addEventListener("resize", handleViewportChange);
+
+    return () => {
+      window.cancelAnimationFrame(rafA);
+      window.cancelAnimationFrame(rafB);
+      if (typeof media.removeEventListener === "function") {
+        media.removeEventListener("change", handleViewportChange);
+      } else {
+        media.removeListener(handleViewportChange);
+      }
+      window.removeEventListener("orientationchange", handleViewportChange);
+      window.removeEventListener("resize", handleViewportChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isStatsMode) return;
     const host = hostRef.current;
     if (!host) return;
 
@@ -515,6 +925,22 @@ export default function TacticalPadLiteClean() {
     let destroySurface: (() => void) | null = null;
 
     void createTacticalPadLiteSurface(host, {
+      surfaceVariant: isWhiteboardMode ? "whiteboard" : "tactical",
+      whiteboardTeamCounts: isWhiteboardMode
+        ? {
+            blue: whiteboardBlueCount,
+            red: whiteboardRedCount,
+          }
+        : undefined,
+      whiteboardTeamColors: isWhiteboardMode
+        ? {
+            blue: whiteboardCountPickerTeam === "BLUE" ? currentPlayerColor : "blue",
+            red: whiteboardCountPickerTeam === "RED" ? currentPlayerColor : "red",
+          }
+        : undefined,
+      whiteboardDrawColor: isWhiteboardMode
+        ? (WHITEBOARD_TOOL_COLOR_CHOICES.find((choice) => choice.value === currentToolColor)?.drawColor ?? 0x111111)
+        : undefined,
       onPhaseCountChange: (count) => {
         if (!disposed) {
           setPhaseCount(count);
@@ -527,6 +953,17 @@ export default function TacticalPadLiteClean() {
       }
       surfaceRef.current = surface;
       destroySurface = surface.destroy;
+      if (isWhiteboardMode) {
+        surface.setWhiteboardDrawTool(whiteboardTool);
+        surface.setWhiteboardDrawColor(
+          WHITEBOARD_TOOL_COLOR_CHOICES.find((choice) => choice.value === currentToolColor)?.drawColor ?? 0x111111,
+        );
+      }
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          surface.reflow();
+        });
+      });
     });
 
     return () => {
@@ -534,7 +971,15 @@ export default function TacticalPadLiteClean() {
       surfaceRef.current = null;
       destroySurface?.();
     };
-  }, [isTacticalMode]);
+  }, [
+    isStatsMode,
+    isWhiteboardMode,
+    whiteboardBlueCount,
+    whiteboardRedCount,
+    currentPlayerColor,
+    currentToolColor,
+    surfaceRefreshKey,
+  ]);
 
   const togglePlay = () => {
     if (!isPlaying) {
@@ -552,7 +997,11 @@ export default function TacticalPadLiteClean() {
   const closeControlsMenu = () => setControlsOpen(false);
   const closeToolsMenu = () => setToolsOpen(false);
   const setPadMode = (nextMode: PadMode) => {
+    setModeMenuOpen(false);
     if (nextMode === mode) return;
+    setWhiteboardCountPickerOpen(false);
+    setWhiteboardColorPickerOpen(false);
+    setEditingTeamName(null);
     setControlsOpen(false);
     setToolsOpen(false);
     setPhasesOpen(false);
@@ -560,26 +1009,105 @@ export default function TacticalPadLiteClean() {
       setIsPlaying(false);
       setPhaseCount(0);
     }
+    if (nextMode === "whiteboard") {
+      setIsPlaying(false);
+      setPhaseCount(0);
+    }
     setMode(nextMode);
   };
 
-  const modeToggle = (
-    <div style={isStatsMode ? MODE_TOGGLE_STATS_STYLE : MODE_TOGGLE_STYLE}>
+  const setWhiteboardCount = (team: "BLUE" | "RED", count: number) => {
+    const clamped = Math.max(1, Math.min(15, Math.floor(count)));
+    if (team === "BLUE") {
+      setWhiteboardBlueCount(clamped);
+    } else {
+      setWhiteboardRedCount(clamped);
+    }
+    setWhiteboardCountPickerOpen(false);
+  };
+
+  const openTeamNameEditor = (team: "A" | "B") => {
+    setEditingTeamName(team);
+    setEditingTeamDraft(team === "A" ? teamAName : teamBName);
+  };
+
+  const commitTeamNameEditor = (team: "A" | "B", rawValue: string) => {
+    const trimmed = rawValue.trim();
+    const fallback = team === "A" ? WHITEBOARD_DEFAULT_TEAM_A_NAME : WHITEBOARD_DEFAULT_TEAM_B_NAME;
+    const next = trimmed.length > 0 ? trimmed : fallback;
+    if (team === "A") {
+      setTeamAName(next);
+    } else {
+      setTeamBName(next);
+    }
+    setEditingTeamName(null);
+  };
+
+  const setToolColor = (color: WhiteboardTokenColor) => {
+    setCurrentToolColor(color);
+    const drawColor = WHITEBOARD_TOOL_COLOR_CHOICES.find((choice) => choice.value === color)?.drawColor ?? 0x111111;
+    surfaceRef.current?.setWhiteboardDrawColor(drawColor);
+  };
+
+  const getTokenColorCss = (color: WhiteboardTokenColor): string => {
+    const match = WHITEBOARD_PLAYER_COLOR_CHOICES.find((choice) => choice.value === color);
+    return match?.css ?? "#2563eb";
+  };
+
+  const applyWhiteboardTool = (tool: "move" | "pen" | "line" | "arrow" | "dashed" | "undo" | "clear") => {
+    const surface = surfaceRef.current;
+    if (!surface) return;
+    if (tool === "undo") {
+      surface.undoWhiteboardStroke();
+      closeToolsMenu();
+      return;
+    }
+    if (tool === "clear") {
+      surface.clearWhiteboardStrokes();
+      closeToolsMenu();
+      return;
+    }
+    setWhiteboardTool(tool);
+    surface.setWhiteboardDrawTool(tool);
+    closeToolsMenu();
+  };
+
+  const modeMenu = modeMenuOpen ? (
+    <div style={isWhiteboardMode ? WHITEBOARD_MODE_MENU_STYLE : MODE_MENU_STYLE}>
       <button
         type="button"
-        style={isTacticalMode ? MODE_BUTTON_ACTIVE_STYLE : MODE_BUTTON_BASE_STYLE}
+        style={isTacticalMode ? MODE_MENU_ITEM_ACTIVE_STYLE : MODE_MENU_ITEM_STYLE}
         onClick={() => setPadMode("tactical")}
       >
         Tactical
       </button>
       <button
         type="button"
-        style={isStatsMode ? MODE_BUTTON_ACTIVE_STYLE : MODE_BUTTON_BASE_STYLE}
+        style={isWhiteboardMode ? MODE_MENU_ITEM_ACTIVE_STYLE : MODE_MENU_ITEM_STYLE}
+        onClick={() => setPadMode("whiteboard")}
+      >
+        Whiteboard
+      </button>
+      <button
+        type="button"
+        style={isStatsMode ? MODE_MENU_ITEM_ACTIVE_STYLE : MODE_MENU_ITEM_STYLE}
         onClick={() => setPadMode("stats")}
       >
         Stats
       </button>
     </div>
+  ) : null;
+
+  const modeButton = (
+    <button
+      type="button"
+      style={isWhiteboardMode ? WHITEBOARD_MODE_TAB_STYLE : MODE_TAB_STYLE}
+      aria-label="Open mode menu"
+      aria-expanded={modeMenuOpen}
+      onClick={() => setModeMenuOpen((open) => !open)}
+    >
+      Mode
+    </button>
   );
 
   if (isStatsMode) {
@@ -591,172 +1119,413 @@ export default function TacticalPadLiteClean() {
   }
 
   return (
-    <div style={ROOT_STYLE} className="simulator-container">
-      <style>{STADIUM_FLOODLIGHT_CSS}</style>
-      <div style={BACKGROUND_LAYER_STYLE} aria-hidden="true">
-        <div style={BACKGROUND_BASE_STYLE} />
-        <div className="stadium-light stadium-light-left" aria-hidden="true">
-          {floodlightDots.map((dot) => (
-            <span key={`left-light-${dot}`} />
-          ))}
-        </div>
-        <div className="stadium-light stadium-light-right" aria-hidden="true">
-          {floodlightDots.map((dot) => (
-            <span key={`right-light-${dot}`} />
-          ))}
-        </div>
-        <div style={STADIUM_BEAM_LEFT_STYLE} />
-        <div style={STADIUM_BEAM_RIGHT_STYLE} />
-        <div style={BACKGROUND_VIGNETTE_STYLE} />
-      </div>
-      <div style={CONTENT_STYLE}>
-        <div ref={hostRef} style={PITCH_STYLE} />
-      </div>
-      <button
-        type="button"
-        style={PHASES_CHIP_STYLE}
-        aria-label="Toggle phases tray"
-        onClick={() => setPhasesOpen((open) => !open)}
+    <OrientationGate modeLabel={isWhiteboardMode ? "Whiteboard Mode" : "Tactical Sim Lite"}>
+      <div
+        style={isWhiteboardMode ? ROOT_WHITEBOARD_STYLE : ROOT_STYLE}
+        className={isWhiteboardMode ? undefined : "simulator-container"}
       >
-        Phases: {phaseCount}
-      </button>
-      {phasesOpen ? (
-        <div style={PHASES_TRAY_STYLE}>
-          {phaseItems.length > 0 ? (
-            phaseItems.map((phase) => (
-              <div key={phase} style={PHASE_ITEM_STYLE}>
-                Phase {phase}
+        {!isWhiteboardMode ? <style>{STADIUM_FLOODLIGHT_CSS}</style> : null}
+        {!isWhiteboardMode ? (
+          <div style={BACKGROUND_LAYER_STYLE} aria-hidden="true">
+            <div style={BACKGROUND_BASE_STYLE} />
+            <div className="stadium-light stadium-light-left" aria-hidden="true">
+              {floodlightDots.map((dot) => (
+                <span key={`left-light-${dot}`} />
+              ))}
+            </div>
+            <div className="stadium-light stadium-light-right" aria-hidden="true">
+              {floodlightDots.map((dot) => (
+                <span key={`right-light-${dot}`} />
+              ))}
+            </div>
+            <div style={STADIUM_BEAM_LEFT_STYLE} />
+            <div style={STADIUM_BEAM_RIGHT_STYLE} />
+            <div style={BACKGROUND_VIGNETTE_STYLE} />
+          </div>
+        ) : null}
+        <div style={CONTENT_STYLE}>
+          <div ref={hostRef} style={isWhiteboardMode ? PITCH_WHITEBOARD_STYLE : PITCH_STYLE} />
+        </div>
+        {isWhiteboardMode ? (
+          <>
+            <div style={WHITEBOARD_HEAD_CONTROLS_STYLE}>
+              <button
+                type="button"
+                aria-label="Open whiteboard player selector"
+                style={WHITEBOARD_HEAD_BUTTON_BASE_STYLE}
+                onClick={() => setWhiteboardCountPickerOpen((open) => !open)}
+              >
+                👤
+              </button>
+              <button
+                type="button"
+                aria-label="Open token colour selector"
+                style={WHITEBOARD_COLOR_BUTTON_STYLE}
+                onClick={() => setWhiteboardColorPickerOpen((open) => !open)}
+              >
+                <span style={{ ...WHITEBOARD_COLOR_SWATCH_STYLE, background: getTokenColorCss(currentPlayerColor) }} />
+              </button>
+            </div>
+            {whiteboardColorPickerOpen ? (
+              <div style={WHITEBOARD_TOKEN_COLOR_POPOVER_STYLE}>
+                {WHITEBOARD_PLAYER_COLOR_CHOICES.map((choice) => {
+                  const isActive = currentPlayerColor === choice.value;
+                  return (
+                    <button
+                      key={`whiteboard-token-color-${choice.value}`}
+                      type="button"
+                      aria-label="Set current token colour"
+                      style={{
+                        ...WHITEBOARD_TOKEN_COLOR_OPTION_STYLE,
+                        ...(isActive
+                          ? { boxShadow: "0 0 0 2px rgba(125, 211, 252, 0.9)", border: "1px solid rgba(125, 211, 252, 0.75)" }
+                          : null),
+                      }}
+                      onClick={() => {
+                        setCurrentPlayerColor(choice.value);
+                        setWhiteboardColorPickerOpen(false);
+                      }}
+                    >
+                      <span style={{ ...WHITEBOARD_TOKEN_COLOR_SWATCH_STYLE, background: choice.css }} />
+                    </button>
+                  );
+                })}
               </div>
-            ))
-          ) : (
-            <div style={PHASES_EMPTY_STYLE}>No phases</div>
-          )}
-        </div>
-      ) : null}
-      {controlsOpen ? (
-        <div style={CONTROLS_POPOUT_STYLE}>
+            ) : null}
+            {whiteboardCountPickerOpen ? (
+              <div style={WHITEBOARD_COUNT_SELECTOR_STYLE}>
+                <p style={WHITEBOARD_COUNT_SELECTOR_TITLE_STYLE}>Team</p>
+                <div style={WHITEBOARD_TEAM_SELECTOR_ROW_STYLE}>
+                  <button
+                    type="button"
+                    style={
+                      whiteboardCountPickerTeam === "BLUE"
+                        ? WHITEBOARD_TEAM_OPTION_ACTIVE_STYLE
+                        : WHITEBOARD_TEAM_OPTION_STYLE
+                    }
+                    onClick={() => setWhiteboardCountPickerTeam("BLUE")}
+                    aria-label={`Select ${teamAName}`}
+                  >
+                    <span style={WHITEBOARD_TEAM_OPTION_CONTENT_STYLE}>
+                      {editingTeamName === "A" ? (
+                        <input
+                          value={editingTeamDraft}
+                          autoFocus
+                          style={WHITEBOARD_TEAM_NAME_INPUT_STYLE}
+                          onClick={(event) => event.stopPropagation()}
+                          onChange={(event) => setEditingTeamDraft(event.target.value)}
+                          onBlur={() => commitTeamNameEditor("A", editingTeamDraft)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              commitTeamNameEditor("A", editingTeamDraft);
+                            }
+                          }}
+                        />
+                      ) : (
+                        <span style={WHITEBOARD_TEAM_NAME_TEXT_STYLE}>{teamAName}</span>
+                      )}
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        aria-label="Edit Team A name"
+                        style={WHITEBOARD_TEAM_EDIT_ICON_STYLE}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openTeamNameEditor("A");
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            openTeamNameEditor("A");
+                          }
+                        }}
+                      >
+                        ✎
+                      </span>
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    style={
+                      whiteboardCountPickerTeam === "RED"
+                        ? WHITEBOARD_TEAM_OPTION_ACTIVE_STYLE
+                        : WHITEBOARD_TEAM_OPTION_STYLE
+                    }
+                    onClick={() => setWhiteboardCountPickerTeam("RED")}
+                    aria-label={`Select ${teamBName}`}
+                  >
+                    <span style={WHITEBOARD_TEAM_OPTION_CONTENT_STYLE}>
+                      {editingTeamName === "B" ? (
+                        <input
+                          value={editingTeamDraft}
+                          autoFocus
+                          style={WHITEBOARD_TEAM_NAME_INPUT_STYLE}
+                          onClick={(event) => event.stopPropagation()}
+                          onChange={(event) => setEditingTeamDraft(event.target.value)}
+                          onBlur={() => commitTeamNameEditor("B", editingTeamDraft)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              commitTeamNameEditor("B", editingTeamDraft);
+                            }
+                          }}
+                        />
+                      ) : (
+                        <span style={WHITEBOARD_TEAM_NAME_TEXT_STYLE}>{teamBName}</span>
+                      )}
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        aria-label="Edit Team B name"
+                        style={WHITEBOARD_TEAM_EDIT_ICON_STYLE}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openTeamNameEditor("B");
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            openTeamNameEditor("B");
+                          }
+                        }}
+                      >
+                        ✎
+                      </span>
+                    </span>
+                  </button>
+                </div>
+                <p style={WHITEBOARD_COUNT_SELECTOR_TITLE_STYLE}>Players</p>
+                <div style={WHITEBOARD_COUNT_SELECTOR_GRID_STYLE}>
+                  {WHITEBOARD_COUNT_OPTIONS.map((count) => {
+                    const isActive =
+                      whiteboardCountPickerTeam === "BLUE"
+                        ? whiteboardBlueCount === count
+                        : whiteboardRedCount === count;
+                    return (
+                      <button
+                        key={`${whiteboardCountPickerTeam}-count-${count}`}
+                        type="button"
+                        style={isActive ? WHITEBOARD_COUNT_OPTION_ACTIVE_STYLE : WHITEBOARD_COUNT_OPTION_STYLE}
+                        onClick={() => setWhiteboardCount(whiteboardCountPickerTeam, count)}
+                      >
+                        {count}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+          </>
+        ) : null}
+        {!isWhiteboardMode ? (
           <button
             type="button"
-            className="control-button"
-            disabled={isPlaying}
-            style={isPlaying ? DISABLED_CONTROL_BUTTON_STYLE : SET_START_BUTTON_STYLE}
-            onClick={() => {
-              surfaceRef.current?.setStart();
-              closeControlsMenu();
-            }}
+            style={PHASES_CHIP_STYLE}
+            aria-label="Toggle phases tray"
+            onClick={() => setPhasesOpen((open) => !open)}
           >
-            Set Start
+            Phases: {phaseCount}
           </button>
+        ) : null}
+        {!isWhiteboardMode && phasesOpen ? (
+          <div style={PHASES_TRAY_STYLE}>
+            {phaseItems.length > 0 ? (
+              phaseItems.map((phase) => (
+                <div key={phase} style={PHASE_ITEM_STYLE}>
+                  Phase {phase}
+                </div>
+              ))
+            ) : (
+              <div style={PHASES_EMPTY_STYLE}>No phases</div>
+            )}
+          </div>
+        ) : null}
+        {!isWhiteboardMode && controlsOpen ? (
+          <div style={CONTROLS_POPOUT_STYLE}>
+            <button
+              type="button"
+              className="control-button"
+              disabled={isPlaying}
+              style={isPlaying ? DISABLED_CONTROL_BUTTON_STYLE : SET_START_BUTTON_STYLE}
+              onClick={() => {
+                surfaceRef.current?.setStart();
+                closeControlsMenu();
+              }}
+            >
+              Set Start
+            </button>
+            <button
+              type="button"
+              className="control-button"
+              disabled={isPlaying}
+              style={isPlaying ? DISABLED_CONTROL_BUTTON_STYLE : ADD_PHASE_BUTTON_STYLE}
+              onClick={() => {
+                surfaceRef.current?.addPhase();
+                closeControlsMenu();
+              }}
+            >
+              Add Phase
+            </button>
+            <button type="button" className="control-button" style={PLAY_BUTTON_STYLE} onClick={togglePlay}>
+              Play
+            </button>
+            <button
+              type="button"
+              className="control-button"
+              style={RESET_BUTTON_STYLE}
+              onClick={() => {
+                surfaceRef.current?.reset();
+                setIsPlaying(false);
+                closeControlsMenu();
+              }}
+            >
+              Reset
+            </button>
+          </div>
+        ) : null}
+        {toolsOpen ? (
+          <div style={isWhiteboardMode ? WHITEBOARD_TOOLS_POPOUT_STYLE : TOOLS_POPOUT_STYLE}>
+            {isWhiteboardMode ? (
+              <>
+                <button
+                  type="button"
+                  style={{
+                    ...WHITEBOARD_TOOLS_BUTTON_STYLE,
+                    ...(whiteboardTool === "move"
+                      ? { border: "1px solid rgba(43, 95, 150, 0.58)", background: "rgba(196, 214, 232, 0.9)" }
+                      : null),
+                  }}
+                  onClick={() => applyWhiteboardTool("move")}
+                >
+                  Move
+                </button>
+                <button
+                  type="button"
+                  style={{
+                    ...WHITEBOARD_TOOLS_BUTTON_STYLE,
+                    ...(whiteboardTool === "pen"
+                      ? { border: "1px solid rgba(43, 95, 150, 0.58)", background: "rgba(196, 214, 232, 0.9)" }
+                      : null),
+                  }}
+                  onClick={() => applyWhiteboardTool("pen")}
+                >
+                  Pen
+                </button>
+                <button
+                  type="button"
+                  style={{
+                    ...WHITEBOARD_TOOLS_BUTTON_STYLE,
+                    ...(whiteboardTool === "line"
+                      ? { border: "1px solid rgba(43, 95, 150, 0.58)", background: "rgba(196, 214, 232, 0.9)" }
+                      : null),
+                  }}
+                  onClick={() => applyWhiteboardTool("line")}
+                >
+                  Line
+                </button>
+                <button
+                  type="button"
+                  style={{
+                    ...WHITEBOARD_TOOLS_BUTTON_STYLE,
+                    ...(whiteboardTool === "arrow"
+                      ? { border: "1px solid rgba(43, 95, 150, 0.58)", background: "rgba(196, 214, 232, 0.9)" }
+                      : null),
+                  }}
+                  onClick={() => applyWhiteboardTool("arrow")}
+                >
+                  Arrow
+                </button>
+                <button
+                  type="button"
+                  style={{
+                    ...WHITEBOARD_TOOLS_BUTTON_STYLE,
+                    ...(whiteboardTool === "dashed"
+                      ? { border: "1px solid rgba(43, 95, 150, 0.58)", background: "rgba(196, 214, 232, 0.9)" }
+                      : null),
+                  }}
+                  onClick={() => applyWhiteboardTool("dashed")}
+                >
+                  Dashed
+                </button>
+                <button type="button" style={WHITEBOARD_TOOLS_BUTTON_STYLE} onClick={() => applyWhiteboardTool("undo")}>
+                  Undo
+                </button>
+                <button type="button" style={WHITEBOARD_TOOLS_BUTTON_STYLE} onClick={() => applyWhiteboardTool("clear")}>
+                  Clear
+                </button>
+                <div style={WHITEBOARD_TOOL_COLOR_ROW_STYLE}>
+                  {WHITEBOARD_TOOL_COLOR_CHOICES.map((choice) => {
+                    const isActive = currentToolColor === choice.value;
+                    return (
+                      <button
+                        key={`whiteboard-tool-color-${choice.value}`}
+                        type="button"
+                        aria-label="Set tool color"
+                        style={{
+                          ...WHITEBOARD_TOOL_COLOR_BUTTON_STYLE,
+                          background: choice.css,
+                          boxShadow: isActive
+                            ? "0 0 0 2px rgba(255,255,255,0.95), 0 0 0 4px rgba(44, 64, 84, 0.45)"
+                            : "0 0 0 1px rgba(0, 0, 0, 0.14)",
+                        }}
+                        onClick={() => setToolColor(choice.value)}
+                      />
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <>
+                <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
+                  Select
+                </button>
+                <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
+                  Arrow
+                </button>
+                <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
+                  Dashed
+                </button>
+                <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
+                  Zone
+                </button>
+                <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
+                  Clear
+                </button>
+              </>
+            )}
+          </div>
+        ) : null}
+        {!isWhiteboardMode ? (
           <button
             type="button"
-            className="control-button"
-            disabled={isPlaying}
-            style={isPlaying ? DISABLED_CONTROL_BUTTON_STYLE : ADD_PHASE_BUTTON_STYLE}
-            onClick={() => {
-              surfaceRef.current?.addPhase();
-              closeControlsMenu();
-            }}
+            className="floating-bubble"
+            style={LEFT_BUBBLE_STYLE}
+            aria-label="Open controls"
+            onClick={() => setControlsOpen((open) => !open)}
           >
-            Add Phase
+            Ctrl
           </button>
-          <button type="button" className="control-button" style={PLAY_BUTTON_STYLE} onClick={togglePlay}>
-            Play
-          </button>
-          <button
-            type="button"
-            className="control-button"
-            style={RESET_BUTTON_STYLE}
-            onClick={() => {
-              surfaceRef.current?.reset();
-              setIsPlaying(false);
-              closeControlsMenu();
-            }}
-          >
-            Reset
-          </button>
-        </div>
-      ) : null}
-      {toolsOpen ? (
-        <div style={TOOLS_POPOUT_STYLE}>
-          <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
-            Select
-          </button>
-          <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
-            Arrow
-          </button>
-          <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
-            Dashed
-          </button>
-          <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
-            Zone
-          </button>
-          <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
-            Clear
-          </button>
-        </div>
-      ) : null}
-      <button
-        type="button"
-        className="floating-bubble"
-        style={LEFT_BUBBLE_STYLE}
-        aria-label="Open controls"
-        onClick={() => setControlsOpen((open) => !open)}
-      >
-        Ctrl
-      </button>
-      <button
-        type="button"
-        className="floating-bubble floating-bubble-tool"
-        style={TOOL_BUBBLE_STYLE}
-        aria-label="Open tools"
-        onClick={() => setToolsOpen((open) => !open)}
-      >
-        <span className="tool-bubble-icon" aria-hidden="true">
-          <svg className="tool-bubble-mark-svg" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-            <path
-              d="M7 8h9.2c4.5 0 7.4 2.8 7.4 6.6 0 3.8-2.9 6.5-7.4 6.5H12.4"
-              fill="none"
-              stroke="rgba(255,255,255,0.94)"
-              strokeWidth="2.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M7 8v2.7M12.4 10.8v16.2"
-              fill="none"
-              stroke="rgba(255,255,255,0.94)"
-              strokeWidth="2.6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M4.8 28.4C4.8 21 8.8 14.5 15.8 14.5 22.8 14.5 27.2 18.8 27.2 24.5"
-              fill="none"
-              stroke="rgba(255,255,255,0.9)"
-              strokeWidth="2.1"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M8.8 28.7c-2.3-0.1-4.2-1.7-4.2-4.2 0-2.9 2.2-5 5.3-5h9.2"
-              fill="none"
-              stroke="rgba(255,255,255,0.9)"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M20.7 22.4l3.1 1.8-3.5 1.1"
-              fill="none"
-              stroke="#F4C542"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </span>
-      </button>
-      {modeToggle}
-    </div>
+        ) : null}
+        <button
+          type="button"
+          className="floating-bubble floating-bubble-tool"
+          style={isWhiteboardMode ? WHITEBOARD_TOOL_BUBBLE_STYLE : TOOL_BUBBLE_STYLE}
+          aria-label="Open tools"
+          onClick={() => setToolsOpen((open) => !open)}
+        >
+          <span className="tool-bubble-icon" aria-hidden="true">
+            <span style={TOOL_BUBBLE_MONOGRAM_WRAP_STYLE}>
+              <span style={TOOL_BUBBLE_MONOGRAM_STYLE}>P</span>
+              <span style={TOOL_BUBBLE_MONOGRAM_ACCENT_STYLE} />
+            </span>
+          </span>
+        </button>
+        {modeButton}
+        {modeMenu}
+      </div>
+    </OrientationGate>
   );
 }
