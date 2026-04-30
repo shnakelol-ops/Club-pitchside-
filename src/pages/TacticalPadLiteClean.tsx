@@ -15,15 +15,24 @@ const CONTENT_WIDTH_EXPR =
 const WHITEBOARD_RIGHT_COLUMN_LEFT = `calc(50vw + (${CONTENT_WIDTH_EXPR} / 2) + 10px)`;
 const WHITEBOARD_LEFT_MODE_LEFT = `calc(50vw - (${CONTENT_WIDTH_EXPR} / 2) - 74px)`;
 const WHITEBOARD_LEFT_MODE_MENU_LEFT = `calc(50vw - (${CONTENT_WIDTH_EXPR} / 2) - 132px)`;
-const WHITEBOARD_COLOR_CHOICES: ReadonlyArray<{
+const WHITEBOARD_PLAYER_COLOR_CHOICES: ReadonlyArray<{
+  value: WhiteboardTokenColor;
+  css: string;
+}> = [
+  { value: "blue", css: "#2563eb" },
+  { value: "red", css: "#dc2626" },
+  { value: "yellow", css: "#facc15" },
+  { value: "black", css: "#1f2937" },
+];
+const WHITEBOARD_TOOL_COLOR_CHOICES: ReadonlyArray<{
   value: WhiteboardTokenColor;
   css: string;
   drawColor: number;
 }> = [
+  { value: "black", css: "#1f2937", drawColor: 0x111111 },
   { value: "blue", css: "#2563eb", drawColor: 0x2563eb },
   { value: "red", css: "#dc2626", drawColor: 0xdc2626 },
   { value: "yellow", css: "#facc15", drawColor: 0xfacc15 },
-  { value: "black", css: "#1f2937", drawColor: 0x111111 },
 ];
 
 const ROOT_STYLE: CSSProperties = {
@@ -461,6 +470,24 @@ const WHITEBOARD_TOOLS_BUTTON_STYLE: CSSProperties = {
   fontWeight: 600,
 };
 
+const WHITEBOARD_TOOL_COLOR_ROW_STYLE: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: "6px",
+  paddingTop: "2px",
+};
+
+const WHITEBOARD_TOOL_COLOR_BUTTON_STYLE: CSSProperties = {
+  width: "20px",
+  height: "20px",
+  borderRadius: "999px",
+  border: "1px solid rgba(36, 46, 58, 0.18)",
+  padding: 0,
+  cursor: "pointer",
+  background: "#111111",
+};
+
 const PHASES_CHIP_STYLE: CSSProperties = {
   position: "fixed",
   left: "max(12px, calc(env(safe-area-inset-left, 0px) + 10px))",
@@ -772,8 +799,9 @@ export default function TacticalPadLiteClean() {
   const [whiteboardRedCount, setWhiteboardRedCount] = useState(1);
   const [whiteboardCountPickerOpen, setWhiteboardCountPickerOpen] = useState(false);
   const [whiteboardCountPickerTeam, setWhiteboardCountPickerTeam] = useState<"BLUE" | "RED">("BLUE");
-  const [currentColor, setCurrentColor] = useState<WhiteboardTokenColor>("blue");
+  const [currentPlayerColor, setCurrentPlayerColor] = useState<WhiteboardTokenColor>("blue");
   const [whiteboardColorPickerOpen, setWhiteboardColorPickerOpen] = useState(false);
+  const [currentToolColor, setCurrentToolColor] = useState<WhiteboardTokenColor>("black");
   const [whiteboardTool, setWhiteboardTool] = useState<"move" | "pen" | "line" | "arrow" | "dashed">(
     "move",
   );
@@ -853,12 +881,12 @@ export default function TacticalPadLiteClean() {
         : undefined,
       whiteboardTeamColors: isWhiteboardMode
         ? {
-            blue: whiteboardCountPickerTeam === "BLUE" ? currentColor : "blue",
-            red: whiteboardCountPickerTeam === "RED" ? currentColor : "red",
+            blue: whiteboardCountPickerTeam === "BLUE" ? currentPlayerColor : "blue",
+            red: whiteboardCountPickerTeam === "RED" ? currentPlayerColor : "red",
           }
         : undefined,
       whiteboardDrawColor: isWhiteboardMode
-        ? (WHITEBOARD_COLOR_CHOICES.find((choice) => choice.value === currentColor)?.drawColor ?? 0x111111)
+        ? (WHITEBOARD_TOOL_COLOR_CHOICES.find((choice) => choice.value === currentToolColor)?.drawColor ?? 0x111111)
         : undefined,
       onPhaseCountChange: (count) => {
         if (!disposed) {
@@ -875,7 +903,7 @@ export default function TacticalPadLiteClean() {
       if (isWhiteboardMode) {
         surface.setWhiteboardDrawTool(whiteboardTool);
         surface.setWhiteboardDrawColor(
-          WHITEBOARD_COLOR_CHOICES.find((choice) => choice.value === currentColor)?.drawColor ?? 0x111111,
+          WHITEBOARD_TOOL_COLOR_CHOICES.find((choice) => choice.value === currentToolColor)?.drawColor ?? 0x111111,
         );
       }
       window.requestAnimationFrame(() => {
@@ -895,7 +923,8 @@ export default function TacticalPadLiteClean() {
     isWhiteboardMode,
     whiteboardBlueCount,
     whiteboardRedCount,
-    currentColor,
+    currentPlayerColor,
+    currentToolColor,
     surfaceRefreshKey,
   ]);
 
@@ -943,8 +972,14 @@ export default function TacticalPadLiteClean() {
     setWhiteboardCountPickerOpen(false);
   };
 
+  const setToolColor = (color: WhiteboardTokenColor) => {
+    setCurrentToolColor(color);
+    const drawColor = WHITEBOARD_TOOL_COLOR_CHOICES.find((choice) => choice.value === color)?.drawColor ?? 0x111111;
+    surfaceRef.current?.setWhiteboardDrawColor(drawColor);
+  };
+
   const getTokenColorCss = (color: WhiteboardTokenColor): string => {
-    const match = WHITEBOARD_COLOR_CHOICES.find((choice) => choice.value === color);
+    const match = WHITEBOARD_PLAYER_COLOR_CHOICES.find((choice) => choice.value === color);
     return match?.css ?? "#2563eb";
   };
 
@@ -1057,13 +1092,13 @@ export default function TacticalPadLiteClean() {
                 style={WHITEBOARD_COLOR_BUTTON_STYLE}
                 onClick={() => setWhiteboardColorPickerOpen((open) => !open)}
               >
-                <span style={{ ...WHITEBOARD_COLOR_SWATCH_STYLE, background: getTokenColorCss(currentColor) }} />
+                <span style={{ ...WHITEBOARD_COLOR_SWATCH_STYLE, background: getTokenColorCss(currentPlayerColor) }} />
               </button>
             </div>
             {whiteboardColorPickerOpen ? (
               <div style={WHITEBOARD_TOKEN_COLOR_POPOVER_STYLE}>
-                {WHITEBOARD_COLOR_CHOICES.map((choice) => {
-                  const isActive = currentColor === choice.value;
+                {WHITEBOARD_PLAYER_COLOR_CHOICES.map((choice) => {
+                  const isActive = currentPlayerColor === choice.value;
                   return (
                     <button
                       key={`whiteboard-token-color-${choice.value}`}
@@ -1076,8 +1111,7 @@ export default function TacticalPadLiteClean() {
                           : null),
                       }}
                       onClick={() => {
-                        setCurrentColor(choice.value);
-                        surfaceRef.current?.setWhiteboardDrawColor(choice.drawColor);
+                        setCurrentPlayerColor(choice.value);
                         setWhiteboardColorPickerOpen(false);
                       }}
                     >
@@ -1273,6 +1307,26 @@ export default function TacticalPadLiteClean() {
                 <button type="button" style={WHITEBOARD_TOOLS_BUTTON_STYLE} onClick={() => applyWhiteboardTool("clear")}>
                   Clear
                 </button>
+                <div style={WHITEBOARD_TOOL_COLOR_ROW_STYLE}>
+                  {WHITEBOARD_TOOL_COLOR_CHOICES.map((choice) => {
+                    const isActive = currentToolColor === choice.value;
+                    return (
+                      <button
+                        key={`whiteboard-tool-color-${choice.value}`}
+                        type="button"
+                        aria-label="Set tool color"
+                        style={{
+                          ...WHITEBOARD_TOOL_COLOR_BUTTON_STYLE,
+                          background: choice.css,
+                          boxShadow: isActive
+                            ? "0 0 0 2px rgba(255,255,255,0.95), 0 0 0 4px rgba(44, 64, 84, 0.45)"
+                            : "0 0 0 1px rgba(0, 0, 0, 0.14)",
+                        }}
+                        onClick={() => setToolColor(choice.value)}
+                      />
+                    );
+                  })}
+                </div>
               </>
             ) : (
               <>
