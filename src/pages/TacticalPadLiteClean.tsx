@@ -466,6 +466,14 @@ const MODE_TOGGLE_STYLE: CSSProperties = {
   zIndex: 21,
 };
 
+const MODE_TOGGLE_STATS_STYLE: CSSProperties = {
+  ...MODE_TOGGLE_STYLE,
+  top: "max(58px, calc(env(safe-area-inset-top, 0px) + 56px))",
+  left: "50%",
+  right: "auto",
+  transform: "translateX(-50%)",
+};
+
 const MODE_BUTTON_BASE_STYLE: CSSProperties = {
   border: "1px solid rgba(230, 238, 241, 0.18)",
   borderRadius: "9px",
@@ -556,7 +564,7 @@ export default function TacticalPadLiteClean() {
   };
 
   const modeToggle = (
-    <div style={MODE_TOGGLE_STYLE}>
+    <div style={isStatsMode ? MODE_TOGGLE_STATS_STYLE : MODE_TOGGLE_STYLE}>
       <button
         type="button"
         style={isTacticalMode ? MODE_BUTTON_ACTIVE_STYLE : MODE_BUTTON_BASE_STYLE}
