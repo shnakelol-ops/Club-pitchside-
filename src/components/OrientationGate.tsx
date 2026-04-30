@@ -113,7 +113,7 @@ export default function OrientationGate({ modeLabel, children }: OrientationGate
       <div style={TEXTURE_STYLE} aria-hidden="true" />
       <div style={CONTENT_STYLE}>
         <div style={WORDMARK_WRAP_STYLE} aria-hidden="true">
-          <p style={WORDMARK_STYLE}>PITCHSIDE</p>
+          <p style={WORDMARK_STYLE}>PITCHFLOW</p>
           <div style={WORDMARK_ACCENT_STYLE} />
         </div>
         <p style={MESSAGE_STYLE}>Rotate to landscape to use {modeLabel}</p>
