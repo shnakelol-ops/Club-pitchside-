@@ -37,6 +37,10 @@ export type TacticalPadLiteSurface = {
   setStart: () => void;
   addPhase: () => void;
   play: () => void;
+  pausePlayback: () => void;
+  resumePlayback: () => void;
+  addTacticalPlayer: () => void;
+  removeTacticalPlayer: () => void;
   reset: () => void;
   reflow: () => void;
   setWhiteboardTeamConfig: (config: {
@@ -53,6 +57,7 @@ export type TacticalPadLiteSurface = {
 
 type TacticalPadLiteSurfaceOptions = {
   onPhaseCountChange?: (count: number) => void;
+  onPlaybackStateChange?: (state: { isPlaying: boolean; isPaused: boolean }) => void;
   surfaceVariant?: "tactical" | "whiteboard";
   whiteboardTeamCounts?: {
     blue: number;
@@ -386,6 +391,7 @@ export async function createTacticalPadLiteSurface(
 
   const PLAY_DURATION_MS = 1200;
   let isPlaying = false;
+  let isPaused = false;
   let playElapsedMs = 0;
   let playbackPath: PhaseSnapshot[] = [];
   let activeSegmentIndex = 0;
@@ -415,6 +421,15 @@ export async function createTacticalPadLiteSurface(
   let activeWhiteboardDrawing: WhiteboardDrawingObject | null = null;
   let whiteboardDrawingCounter = 0;
 
+  function emitPlaybackStateChange(): void {
+    syncWhiteboardTokenInputMode();
+    options.onPlaybackStateChange?.({ isPlaying, isPaused });
+  }
+
+  function isPlaybackInputLocked(): boolean {
+    return isPlaying || isPaused;
+  }
+
   function fitToHost(): void {
     const width = host.clientWidth;
     const height = host.clientHeight;
@@ -435,7 +450,7 @@ export async function createTacticalPadLiteSurface(
   }
 
   function updateDraggedPlayerFromEvent(event: unknown): void {
-    if (!activeDrag || isPlaying) return;
+    if (!activeDrag || isPlaybackInputLocked()) return;
 
     const stagePoint = getStagePointFromEvent(event, app.stage);
     if (!stagePoint) return;
@@ -456,7 +471,7 @@ export async function createTacticalPadLiteSurface(
 
   function syncWhiteboardTokenInputMode(): void {
     if (!isDrawingEnabledSurface) return;
-    const canDragPlayers = activeWhiteboardTool === "move";
+    const canDragPlayers = activeWhiteboardTool === "move" && !isPlaybackInputLocked();
     for (const player of players) {
       player.token.eventMode = canDragPlayers ? "static" : "none";
       player.token.cursor = canDragPlayers ? "grab" : "default";
@@ -557,7 +572,7 @@ export async function createTacticalPadLiteSurface(
   }
 
   function startWhiteboardDrawing(event: unknown): void {
-    if (!isDrawingEnabledSurface || isPlaying || activeDrag) return;
+    if (!isDrawingEnabledSurface || isPlaybackInputLocked() || activeDrag) return;
     if (activeWhiteboardTool === "move") return;
     const worldPoint = getBoundedWorldPointFromEvent(event);
     if (!worldPoint) return;
@@ -591,7 +606,7 @@ export async function createTacticalPadLiteSurface(
   }
 
   function updateWhiteboardDrawing(event: unknown): void {
-    if (!isDrawingEnabledSurface || isPlaying || activeDrag) return;
+    if (!isDrawingEnabledSurface || isPlaybackInputLocked() || activeDrag) return;
     if (activeWhiteboardTool === "move") return;
     const worldPoint = getBoundedWorldPointFromEvent(event);
     if (!worldPoint) return;
@@ -606,7 +621,7 @@ export async function createTacticalPadLiteSurface(
   }
 
   function endWhiteboardDrawing(event?: unknown): void {
-    if (!isDrawingEnabledSurface || isPlaying || activeDrag) return;
+    if (!isDrawingEnabledSurface || isPlaybackInputLocked() || activeDrag) return;
     if (activeWhiteboardTool === "move") return;
     if (!activeWhiteboardDrawing) return;
     if (event != null) {
@@ -691,10 +706,12 @@ export async function createTacticalPadLiteSurface(
 
   function cancelPlaybackAnimation(): void {
     isPlaying = false;
+    isPaused = false;
     playElapsedMs = 0;
     playbackPath = [];
     activeSegmentIndex = 0;
     loggedSegmentIndex = -1;
+    emitPlaybackStateChange();
   }
 
   function startPlayback(path: PhaseSnapshot[]): void {
@@ -703,8 +720,10 @@ export async function createTacticalPadLiteSurface(
     activeSegmentIndex = 0;
     loggedSegmentIndex = -1;
     isPlaying = true;
+    isPaused = false;
     playElapsedMs = 0;
     applySnapshotToPlayers(path[0]!);
+    emitPlaybackStateChange();
   }
 
   function playSingleStartToCurrent(): void {
@@ -720,6 +739,12 @@ export async function createTacticalPadLiteSurface(
 
   function handlePlay(): void {
     releaseDrag();
+    if (isPaused && playbackPath.length >= 2) {
+      isPaused = false;
+      isPlaying = true;
+      emitPlaybackStateChange();
+      return;
+    }
     cancelPlaybackAnimation();
     console.debug("PLAY_CLICKED");
     console.debug("PHASE_COUNT", phases.length);
@@ -782,7 +807,7 @@ export async function createTacticalPadLiteSurface(
 
   function bindPlayerPointerDown(player: TacticalPlayer): void {
     player.token.on("pointerdown", (event) => {
-      if (isPlaying) return;
+      if (isPlaybackInputLocked()) return;
       activeDrag = { player };
       setPlayerDragVisualTarget(player, true);
       player.token.cursor = "grabbing";
@@ -822,6 +847,66 @@ export async function createTacticalPadLiteSurface(
     renderAllWhiteboardDrawings();
   }
 
+  function getTacticalPlayerSerial(player: TacticalPlayer): number {
+    const serialMatch = /^P(\d+)$/.exec(player.id);
+    const parsed = serialMatch?.[1] ? Number(serialMatch[1]) : Number.NaN;
+    return Number.isFinite(parsed) ? parsed : player.number;
+  }
+
+  function createNextTacticalPlayerSeed(): PlayerSeed | null {
+    if (surfaceVariant !== "tactical") return null;
+    if (players.length >= 15) return null;
+
+    const maxSerial = players.reduce<number>(
+      (maxValue, player) => Math.max(maxValue, getTacticalPlayerSerial(player)),
+      0,
+    );
+    const nextSerial = Math.max(1, maxSerial + 1);
+    const lastPlayer = players[players.length - 1];
+    const basePoint = lastPlayer ? lastPlayer.current : { x: 50, y: 50 };
+    let nextX = basePoint.x + (lastPlayer ? 5 : 0);
+    let nextY = basePoint.y;
+    if (nextX > NORMALIZED_MAX - 4) {
+      nextX = 30;
+      nextY += 6;
+    }
+
+    return {
+      id: `P${nextSerial}`,
+      number: nextSerial,
+      team: "BLUE",
+      color: "blue",
+      position: {
+        x: Math.max(NORMALIZED_MIN, Math.min(NORMALIZED_MAX, nextX)),
+        y: Math.max(NORMALIZED_MIN, Math.min(NORMALIZED_MAX, nextY)),
+      },
+    };
+  }
+
+  function addTacticalPlayer(): void {
+    if (surfaceVariant !== "tactical") return;
+    const nextSeed = createNextTacticalPlayerSeed();
+    if (!nextSeed) return;
+    releaseDrag();
+    const nextPlayer = createSurfacePlayer(nextSeed);
+    players.push(nextPlayer);
+    bindPlayerPointerDown(nextPlayer);
+    syncPlayersToViewport();
+    syncWhiteboardTokenInputMode();
+  }
+
+  function removeLastTacticalPlayer(): void {
+    if (surfaceVariant !== "tactical") return;
+    if (players.length <= 0) return;
+    releaseDrag();
+    const removedPlayer = players.pop();
+    if (!removedPlayer) return;
+    removedPlayer.token.removeAllListeners();
+    removedPlayer.token.destroy({ children: true });
+    syncPlayersToViewport();
+    syncWhiteboardTokenInputMode();
+  }
+
   for (const player of players) {
     bindPlayerPointerDown(player);
   }
@@ -855,6 +940,7 @@ export async function createTacticalPadLiteSurface(
   resizeObserver.observe(host);
   fitToHost();
   options.onPhaseCountChange?.(0);
+  emitPlaybackStateChange();
 
   return {
     setStart: () => {
@@ -871,6 +957,22 @@ export async function createTacticalPadLiteSurface(
       options.onPhaseCountChange?.(phases.length);
     },
     play: handlePlay,
+    pausePlayback: () => {
+      if (!isPlaying) return;
+      releaseDrag();
+      resetActiveWhiteboardDrawing();
+      isPlaying = false;
+      isPaused = true;
+      emitPlaybackStateChange();
+    },
+    resumePlayback: () => {
+      if (!isPaused || playbackPath.length < 2) return;
+      isPaused = false;
+      isPlaying = true;
+      emitPlaybackStateChange();
+    },
+    addTacticalPlayer,
+    removeTacticalPlayer: removeLastTacticalPlayer,
     reset: () => {
       releaseDrag();
       cancelPlaybackAnimation();

@@ -266,6 +266,7 @@ const STADIUM_FLOODLIGHT_CSS = `
     top: 14px;
   }
 }
+
 `;
 
 const STADIUM_BEAM_BASE_STYLE: CSSProperties = {
@@ -419,19 +420,109 @@ const CONTROLS_POPOUT_STYLE: CSSProperties = {
   border: "1px solid rgba(238, 146, 146, 0.16)",
 };
 
-const TOOLS_POPOUT_STYLE: CSSProperties = {
+const COACH_HUB_PANEL_STYLE: CSSProperties = {
   ...POPOUT_BASE_STYLE,
   display: "flex",
   flexDirection: "column",
-  gap: "5px",
-  width: "112px",
-  maxHeight: "60vh",
+  gap: "6px",
+  width: "clamp(128px, 15vw, 168px)",
+  maxHeight: "min(60vh, 360px)",
   overflowY: "auto",
   overflowX: "hidden",
-  right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
+  right: "max(6px, calc(env(safe-area-inset-right, 0px) + 4px))",
   bottom: "max(60px, calc(env(safe-area-inset-bottom, 0px) + 58px))",
-  background: "rgba(14, 24, 19, 0.56)",
-  border: "1px solid rgba(126, 192, 150, 0.16)",
+  padding: "6px",
+  background: "rgba(10, 19, 24, 0.74)",
+  border: "1px solid rgba(165, 194, 220, 0.26)",
+  backdropFilter: "blur(14px)",
+  WebkitBackdropFilter: "blur(14px)",
+  boxShadow: "0 14px 28px rgba(2, 8, 15, 0.36)",
+  zIndex: 20,
+};
+
+const COACH_HUB_SECTION_STYLE: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "3px",
+};
+
+const COACH_HUB_SECTION_TITLE_STYLE: CSSProperties = {
+  margin: 0,
+  color: "#d7e8f5",
+  fontSize: "8px",
+  fontWeight: 700,
+  letterSpacing: "0.16px",
+  textTransform: "uppercase",
+  fontFamily: "Inter, system-ui, sans-serif",
+};
+
+const COACH_HUB_TOOL_GRID_STYLE: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+  gap: "4px",
+};
+
+const COACH_HUB_TOOL_BUTTON_STYLE: CSSProperties = {
+  height: "30px",
+  minWidth: "100%",
+  borderRadius: "8px",
+  fontSize: "10px",
+  fontWeight: 600,
+  fontFamily: "Inter, system-ui, sans-serif",
+  letterSpacing: "0.16px",
+  lineHeight: 1,
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  padding: "0 3px",
+  cursor: "pointer",
+  border: "1px solid rgba(121, 171, 208, 0.28)",
+  background: "rgba(17, 30, 40, 0.64)",
+  color: "#dbecfa",
+};
+
+const COACH_HUB_TOOL_BUTTON_ACTIVE_STYLE: CSSProperties = {
+  ...COACH_HUB_TOOL_BUTTON_STYLE,
+  border: "1px solid rgba(125, 211, 252, 0.68)",
+  background: "rgba(38, 72, 102, 0.68)",
+  color: "#f7fcff",
+};
+
+const COACH_HUB_COLOR_GRID_STYLE: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+  gap: "3px",
+};
+
+const COACH_HUB_COLOR_BUTTON_STYLE: CSSProperties = {
+  width: "100%",
+  height: "24px",
+  borderRadius: "999px",
+  border: "1px solid rgba(147, 173, 196, 0.36)",
+  background: "rgba(15, 25, 36, 0.65)",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  cursor: "pointer",
+  padding: 0,
+};
+
+const COACH_HUB_COLOR_SWATCH_STYLE: CSSProperties = {
+  width: "16px",
+  height: "16px",
+  borderRadius: "999px",
+  border: "1px solid rgba(255, 255, 255, 0.44)",
+};
+
+const COACH_HUB_ACTION_GRID_STYLE: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  gap: "3px",
+};
+
+const COACH_HUB_ACTION_BUTTON_STYLE: CSSProperties = {
+  ...COACH_HUB_TOOL_BUTTON_STYLE,
+  minWidth: 0,
 };
 
 const CONTROL_BUTTON_STYLE: CSSProperties = {
@@ -478,6 +569,13 @@ const PLAY_BUTTON_STYLE: CSSProperties = {
   border: "1px solid rgba(34, 197, 94, 0.6)",
   boxShadow:
     "0 6px 20px rgba(0, 0, 0, 0.45), 0 0 18px rgba(34, 197, 94, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.25)",
+};
+
+const PAUSE_BUTTON_STYLE: CSSProperties = {
+  ...CONTROL_BUTTON_STYLE,
+  border: "1px solid rgba(245, 158, 11, 0.62)",
+  boxShadow:
+    "0 6px 20px rgba(0, 0, 0, 0.45), 0 0 18px rgba(245, 158, 11, 0.32), inset 0 1px 2px rgba(255, 255, 255, 0.25)",
 };
 
 const RESET_BUTTON_STYLE: CSSProperties = {
@@ -795,6 +893,7 @@ export default function TacticalPadLiteClean() {
   const [whiteboardBlueColor, setWhiteboardBlueColor] = useState<WhiteboardTokenColor>("blue");
   const [whiteboardRedColor, setWhiteboardRedColor] = useState<WhiteboardTokenColor>("red");
   const [whiteboardPenColor, setWhiteboardPenColor] = useState<number>(WHITEBOARD_DRAW_COLOR);
+  const [tacticalPenColor, setTacticalPenColor] = useState<number>(WHITEBOARD_DRAW_COLOR);
   const whiteboardCountsRef = useRef({ blue: 1, red: 1 });
   const whiteboardTeamColorsRef = useRef<{ blue: WhiteboardTokenColor; red: WhiteboardTokenColor }>({
     blue: "blue",
@@ -804,6 +903,7 @@ export default function TacticalPadLiteClean() {
   const [tacticalTool, setTacticalTool] = useState<WhiteboardToolControl>("move");
   const [phaseCount, setPhaseCount] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [phasesOpen, setPhasesOpen] = useState(false);
@@ -886,11 +986,16 @@ export default function TacticalPadLiteClean() {
       surfaceVariant: isWhiteboardMode ? "whiteboard" : "tactical",
       whiteboardTeamCounts: isWhiteboardMode ? whiteboardCountsRef.current : undefined,
       whiteboardTeamColors: isWhiteboardMode ? whiteboardTeamColorsRef.current : undefined,
-      whiteboardDrawColor: isWhiteboardMode ? whiteboardPenColor : WHITEBOARD_DRAW_COLOR,
+      whiteboardDrawColor: isWhiteboardMode ? whiteboardPenColor : tacticalPenColor,
       onPhaseCountChange: (count) => {
         if (!disposed) {
           setPhaseCount(count);
         }
+      },
+      onPlaybackStateChange: (state) => {
+        if (disposed) return;
+        setIsPlaying(state.isPlaying);
+        setIsPaused(state.isPaused);
       },
     }).then((surface) => {
       if (disposed) {
@@ -900,7 +1005,7 @@ export default function TacticalPadLiteClean() {
       surfaceRef.current = surface;
       destroySurface = surface.destroy;
       const initialDrawTool = isWhiteboardMode ? whiteboardTool : tacticalTool;
-      const initialDrawColor = isWhiteboardMode ? whiteboardPenColor : WHITEBOARD_DRAW_COLOR;
+      const initialDrawColor = isWhiteboardMode ? whiteboardPenColor : tacticalPenColor;
       surface.setWhiteboardDrawTool(initialDrawTool);
       surface.setWhiteboardDrawColor(initialDrawColor);
       window.requestAnimationFrame(() => {
@@ -922,10 +1027,10 @@ export default function TacticalPadLiteClean() {
     const surface = surfaceRef.current;
     if (!surface) return;
     const activeDrawTool = isWhiteboardMode ? whiteboardTool : tacticalTool;
-    const activeDrawColor = isWhiteboardMode ? whiteboardPenColor : WHITEBOARD_DRAW_COLOR;
+    const activeDrawColor = isWhiteboardMode ? whiteboardPenColor : tacticalPenColor;
     surface.setWhiteboardDrawTool(activeDrawTool);
     surface.setWhiteboardDrawColor(activeDrawColor);
-  }, [isStatsMode, isWhiteboardMode, whiteboardTool, whiteboardPenColor, tacticalTool]);
+  }, [isStatsMode, isWhiteboardMode, whiteboardTool, whiteboardPenColor, tacticalTool, tacticalPenColor]);
 
   useEffect(() => {
     if (!isWhiteboardMode) return;
@@ -1010,21 +1115,26 @@ export default function TacticalPadLiteClean() {
     };
   }, [isWhiteboardMode, whiteboardBubbleOpen]);
 
-  const togglePlay = () => {
-    if (!isPlaying) {
+  const handlePlayPress = () => {
+    if (isPaused) {
+      surfaceRef.current?.resumePlayback();
+    } else {
       surfaceRef.current?.play();
-      setIsPlaying(true);
-      setControlsOpen(false);
-      return;
     }
-    setIsPlaying(false);
+    setToolsOpen(false);
+    setControlsOpen(false);
+  };
+
+  const handlePausePress = () => {
+    surfaceRef.current?.pausePlayback();
     setControlsOpen(false);
   };
 
   const phaseItems = Array.from({ length: phaseCount }, (_, index) => index + 1);
   const floodlightDots = Array.from({ length: 12 }, (_, index) => index);
+  const activeTacticalPenColor = tacticalPenColor;
+  const isPlaybackLocked = isPlaying || isPaused;
   const closeControlsMenu = () => setControlsOpen(false);
-  const closeToolsMenu = () => setToolsOpen(false);
   const setPadMode = (nextMode: PadMode) => {
     setModeMenuOpen(false);
     if (nextMode === mode) return;
@@ -1034,10 +1144,12 @@ export default function TacticalPadLiteClean() {
     setPhasesOpen(false);
     if (nextMode === "stats") {
       setIsPlaying(false);
+      setIsPaused(false);
       setPhaseCount(0);
     }
     if (nextMode === "whiteboard") {
       setIsPlaying(false);
+      setIsPaused(false);
       setPhaseCount(0);
     }
     setMode(nextMode);
@@ -1069,6 +1181,11 @@ export default function TacticalPadLiteClean() {
     surfaceRef.current?.setWhiteboardDrawColor(color);
   };
 
+  const applyTacticalPenColor = (color: number) => {
+    setTacticalPenColor(color);
+    surfaceRef.current?.setWhiteboardDrawColor(color);
+  };
+
   const applyTacticalTool = (tool: WhiteboardToolAction) => {
     const surface = surfaceRef.current;
     if (!surface) return;
@@ -1078,11 +1195,19 @@ export default function TacticalPadLiteClean() {
     }
     setTacticalTool(tool);
     surface.setWhiteboardDrawTool(tool);
-    surface.setWhiteboardDrawColor(WHITEBOARD_DRAW_COLOR);
+    surface.setWhiteboardDrawColor(tacticalPenColor);
   };
 
   const clearTacticalDrawings = () => {
     surfaceRef.current?.clearWhiteboardStrokes();
+  };
+
+  const addTacticalPlayer = () => {
+    surfaceRef.current?.addTacticalPlayer();
+  };
+
+  const removeTacticalPlayer = () => {
+    surfaceRef.current?.removeTacticalPlayer();
   };
 
   const handleWhiteboardBubblePointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
@@ -1531,8 +1656,8 @@ export default function TacticalPadLiteClean() {
             <button
               type="button"
               className="control-button"
-              disabled={isPlaying}
-              style={isPlaying ? DISABLED_CONTROL_BUTTON_STYLE : SET_START_BUTTON_STYLE}
+              disabled={isPlaybackLocked}
+              style={isPlaybackLocked ? DISABLED_CONTROL_BUTTON_STYLE : SET_START_BUTTON_STYLE}
               onClick={() => {
                 surfaceRef.current?.setStart();
                 closeControlsMenu();
@@ -1543,8 +1668,8 @@ export default function TacticalPadLiteClean() {
             <button
               type="button"
               className="control-button"
-              disabled={isPlaying}
-              style={isPlaying ? DISABLED_CONTROL_BUTTON_STYLE : ADD_PHASE_BUTTON_STYLE}
+              disabled={isPlaybackLocked}
+              style={isPlaybackLocked ? DISABLED_CONTROL_BUTTON_STYLE : ADD_PHASE_BUTTON_STYLE}
               onClick={() => {
                 surfaceRef.current?.addPhase();
                 closeControlsMenu();
@@ -1552,8 +1677,23 @@ export default function TacticalPadLiteClean() {
             >
               Add Phase
             </button>
-            <button type="button" className="control-button" style={PLAY_BUTTON_STYLE} onClick={togglePlay}>
+            <button
+              type="button"
+              className="control-button"
+              disabled={isPlaying}
+              style={isPlaying ? DISABLED_CONTROL_BUTTON_STYLE : PLAY_BUTTON_STYLE}
+              onClick={handlePlayPress}
+            >
               Play
+            </button>
+            <button
+              type="button"
+              className="control-button"
+              disabled={!isPlaying}
+              style={!isPlaying ? DISABLED_CONTROL_BUTTON_STYLE : PAUSE_BUTTON_STYLE}
+              onClick={handlePausePress}
+            >
+              Pause
             </button>
             <button
               type="button"
@@ -1562,6 +1702,7 @@ export default function TacticalPadLiteClean() {
               onClick={() => {
                 surfaceRef.current?.reset();
                 setIsPlaying(false);
+                setIsPaused(false);
                 closeControlsMenu();
               }}
             >
@@ -1570,75 +1711,119 @@ export default function TacticalPadLiteClean() {
           </div>
         ) : null}
         {!isWhiteboardMode && toolsOpen ? (
-          <div style={TOOLS_POPOUT_STYLE}>
-            <>
+          <div style={COACH_HUB_PANEL_STYLE}>
+            <div style={COACH_HUB_SECTION_STYLE}>
+              <p style={COACH_HUB_SECTION_TITLE_STYLE}>Tools</p>
+              <div className="coach-hub-tool-grid" style={COACH_HUB_TOOL_GRID_STYLE}>
+                <button
+                  type="button"
+                  style={tacticalTool === "move" ? COACH_HUB_TOOL_BUTTON_ACTIVE_STYLE : COACH_HUB_TOOL_BUTTON_STYLE}
+                  onClick={() => applyTacticalTool("move")}
+                >
+                  Move
+                </button>
+                <button
+                  type="button"
+                  style={tacticalTool === "pen" ? COACH_HUB_TOOL_BUTTON_ACTIVE_STYLE : COACH_HUB_TOOL_BUTTON_STYLE}
+                  onClick={() => applyTacticalTool("pen")}
+                >
+                  Pen
+                </button>
+                <button
+                  type="button"
+                  style={tacticalTool === "line" ? COACH_HUB_TOOL_BUTTON_ACTIVE_STYLE : COACH_HUB_TOOL_BUTTON_STYLE}
+                  onClick={() => applyTacticalTool("line")}
+                >
+                  Line
+                </button>
+                <button
+                  type="button"
+                  style={tacticalTool === "arrow" ? COACH_HUB_TOOL_BUTTON_ACTIVE_STYLE : COACH_HUB_TOOL_BUTTON_STYLE}
+                  onClick={() => applyTacticalTool("arrow")}
+                >
+                  Arrow
+                </button>
+                <button
+                  type="button"
+                  style={tacticalTool === "dashed" ? COACH_HUB_TOOL_BUTTON_ACTIVE_STYLE : COACH_HUB_TOOL_BUTTON_STYLE}
+                  onClick={() => applyTacticalTool("dashed")}
+                >
+                  Dash
+                </button>
+              </div>
+            </div>
+            <div style={COACH_HUB_SECTION_STYLE}>
+              <p style={COACH_HUB_SECTION_TITLE_STYLE}>Colour</p>
+              <div style={COACH_HUB_COLOR_GRID_STYLE}>
+                {WHITEBOARD_PEN_COLOR_CHOICES.map((choice) => {
+                  const isActive = activeTacticalPenColor === choice.value;
+                  return (
+                    <button
+                      key={`tactical-color-${choice.label.toLowerCase()}`}
+                      type="button"
+                      aria-label={`Set tactical drawing colour ${choice.label}`}
+                      style={{
+                        ...COACH_HUB_COLOR_BUTTON_STYLE,
+                        ...(isActive
+                          ? {
+                              boxShadow: "0 0 0 2px rgba(125, 211, 252, 0.88)",
+                              border: "1px solid rgba(125, 211, 252, 0.8)",
+                            }
+                          : null),
+                      }}
+                      onClick={() => applyTacticalPenColor(choice.value)}
+                    >
+                      <span style={{ ...COACH_HUB_COLOR_SWATCH_STYLE, background: choice.css }} />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div style={COACH_HUB_SECTION_STYLE}>
+              <p style={COACH_HUB_SECTION_TITLE_STYLE}>Players</p>
+              <div style={COACH_HUB_ACTION_GRID_STYLE}>
+                <button type="button" style={COACH_HUB_ACTION_BUTTON_STYLE} disabled={isPlaybackLocked} onClick={addTacticalPlayer}>
+                  + Player
+                </button>
+                <button
+                  type="button"
+                  style={COACH_HUB_ACTION_BUTTON_STYLE}
+                  disabled={isPlaybackLocked}
+                  onClick={removeTacticalPlayer}
+                >
+                  - Player
+                </button>
+                <button type="button" style={{ ...COACH_HUB_ACTION_BUTTON_STYLE, gridColumn: "1 / -1" }} onClick={() => {}}>
+                  Clear Players
+                </button>
+              </div>
+            </div>
+            <div style={COACH_HUB_SECTION_STYLE}>
+              <p style={COACH_HUB_SECTION_TITLE_STYLE}>Drawing</p>
+              <div style={COACH_HUB_ACTION_GRID_STYLE}>
+                <button
+                  type="button"
+                  style={COACH_HUB_ACTION_BUTTON_STYLE}
+                  onClick={() => surfaceRef.current?.undoWhiteboardStroke()}
+                >
+                  Undo
+                </button>
+                <button type="button" style={COACH_HUB_ACTION_BUTTON_STYLE} onClick={clearTacticalDrawings}>
+                  Clear Drawing
+                </button>
+              </div>
+            </div>
+            {isTacticalMode ? (
               <button
                 type="button"
-                style={
-                  tacticalTool === "move"
-                    ? { ...TOOLS_BUTTON_STYLE, border: "1px solid rgba(126, 192, 150, 0.48)", background: "rgba(23, 66, 40, 0.55)" }
-                    : TOOLS_BUTTON_STYLE
-                }
-                onClick={() => {
-                  applyTacticalTool("move");
-                  closeToolsMenu();
-                }}
+                style={{ ...MODE_TAB_STYLE, position: "relative", inset: "auto", width: "100%", height: "30px" }}
+                aria-label="Open mode menu"
+                aria-expanded={modeMenuOpen}
+                onClick={() => setModeMenuOpen((open) => !open)}
               >
-                Select
+                Mode
               </button>
-              <button
-                type="button"
-                style={
-                  tacticalTool === "arrow"
-                    ? { ...TOOLS_BUTTON_STYLE, border: "1px solid rgba(126, 192, 150, 0.48)", background: "rgba(23, 66, 40, 0.55)" }
-                    : TOOLS_BUTTON_STYLE
-                }
-                onClick={() => {
-                  applyTacticalTool("arrow");
-                  closeToolsMenu();
-                }}
-              >
-                Arrow
-              </button>
-              <button
-                type="button"
-                style={
-                  tacticalTool === "dashed"
-                    ? { ...TOOLS_BUTTON_STYLE, border: "1px solid rgba(126, 192, 150, 0.48)", background: "rgba(23, 66, 40, 0.55)" }
-                    : TOOLS_BUTTON_STYLE
-                }
-                onClick={() => {
-                  applyTacticalTool("dashed");
-                  closeToolsMenu();
-                }}
-              >
-                Dashed
-              </button>
-              <button
-                type="button"
-                style={
-                  tacticalTool === "pen"
-                    ? { ...TOOLS_BUTTON_STYLE, border: "1px solid rgba(126, 192, 150, 0.48)", background: "rgba(23, 66, 40, 0.55)" }
-                    : TOOLS_BUTTON_STYLE
-                }
-                onClick={() => {
-                  applyTacticalTool("pen");
-                  closeToolsMenu();
-                }}
-              >
-                Zone
-              </button>
-              <button
-                type="button"
-                style={TOOLS_BUTTON_STYLE}
-                onClick={() => {
-                  clearTacticalDrawings();
-                  closeToolsMenu();
-                }}
-              >
-                Clear
-              </button>
-            </>
+            ) : null}
           </div>
         ) : null}
         {!isWhiteboardMode ? (
@@ -1668,7 +1853,7 @@ export default function TacticalPadLiteClean() {
             </span>
           </button>
         ) : null}
-        {modeButton}
+        {isWhiteboardMode ? modeButton : null}
         {modeMenu}
       </div>
     </OrientationGate>
