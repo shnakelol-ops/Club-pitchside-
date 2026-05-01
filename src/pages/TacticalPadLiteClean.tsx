@@ -266,6 +266,12 @@ const STADIUM_FLOODLIGHT_CSS = `
     top: 14px;
   }
 }
+
+@media (max-height: 520px) and (orientation: landscape) {
+  .coach-hub-tool-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
 `;
 
 const STADIUM_BEAM_BASE_STYLE: CSSProperties = {
@@ -423,14 +429,14 @@ const COACH_HUB_PANEL_STYLE: CSSProperties = {
   ...POPOUT_BASE_STYLE,
   display: "flex",
   flexDirection: "column",
-  gap: "10px",
-  width: "196px",
-  maxHeight: "min(70vh, 520px)",
+  gap: "8px",
+  width: "clamp(144px, 18vw, 260px)",
+  maxHeight: "min(62vh, 420px)",
   overflowY: "auto",
   overflowX: "hidden",
-  right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
+  right: "max(8px, calc(env(safe-area-inset-right, 0px) + 6px))",
   bottom: "max(60px, calc(env(safe-area-inset-bottom, 0px) + 58px))",
-  padding: "10px",
+  padding: "8px",
   background: "rgba(10, 19, 24, 0.74)",
   border: "1px solid rgba(165, 194, 220, 0.26)",
   backdropFilter: "blur(14px)",
@@ -442,34 +448,34 @@ const COACH_HUB_PANEL_STYLE: CSSProperties = {
 const COACH_HUB_SECTION_STYLE: CSSProperties = {
   display: "flex",
   flexDirection: "column",
-  gap: "6px",
+  gap: "4px",
 };
 
 const COACH_HUB_SECTION_TITLE_STYLE: CSSProperties = {
   margin: 0,
   color: "#d7e8f5",
-  fontSize: "9px",
+  fontSize: "8.5px",
   fontWeight: 700,
-  letterSpacing: "0.24px",
+  letterSpacing: "0.2px",
   textTransform: "uppercase",
   fontFamily: "Inter, system-ui, sans-serif",
 };
 
 const COACH_HUB_TOOL_GRID_STYLE: CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-  gap: "6px",
+  gridTemplateColumns: "repeat(auto-fit, minmax(42px, 1fr))",
+  gap: "4px",
 };
 
 const COACH_HUB_TOOL_BUTTON_STYLE: CSSProperties = {
-  height: "36px",
+  height: "31px",
   minWidth: "100%",
   borderRadius: "9px",
-  fontSize: "11px",
+  fontSize: "10px",
   fontWeight: 600,
   fontFamily: "Inter, system-ui, sans-serif",
-  letterSpacing: "0.22px",
-  padding: "0 8px",
+  letterSpacing: "0.18px",
+  padding: "0 4px",
   cursor: "pointer",
   border: "1px solid rgba(121, 171, 208, 0.28)",
   background: "rgba(17, 30, 40, 0.64)",
@@ -486,12 +492,12 @@ const COACH_HUB_TOOL_BUTTON_ACTIVE_STYLE: CSSProperties = {
 const COACH_HUB_COLOR_GRID_STYLE: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
-  gap: "6px",
+  gap: "4px",
 };
 
 const COACH_HUB_COLOR_BUTTON_STYLE: CSSProperties = {
   width: "100%",
-  height: "32px",
+  height: "28px",
   borderRadius: "999px",
   border: "1px solid rgba(147, 173, 196, 0.36)",
   background: "rgba(15, 25, 36, 0.65)",
@@ -503,8 +509,8 @@ const COACH_HUB_COLOR_BUTTON_STYLE: CSSProperties = {
 };
 
 const COACH_HUB_COLOR_SWATCH_STYLE: CSSProperties = {
-  width: "22px",
-  height: "22px",
+  width: "19px",
+  height: "19px",
   borderRadius: "999px",
   border: "1px solid rgba(255, 255, 255, 0.44)",
 };
@@ -512,7 +518,7 @@ const COACH_HUB_COLOR_SWATCH_STYLE: CSSProperties = {
 const COACH_HUB_ACTION_GRID_STYLE: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-  gap: "6px",
+  gap: "4px",
 };
 
 const COACH_HUB_ACTION_BUTTON_STYLE: CSSProperties = {
@@ -792,6 +798,11 @@ const MODE_TAB_STYLE: CSSProperties = {
   WebkitBackdropFilter: "blur(10px)",
   boxShadow: "0 8px 18px rgba(0, 0, 0, 0.24)",
   zIndex: 21,
+};
+
+const TACTICAL_MODE_TAB_STYLE: CSSProperties = {
+  ...MODE_TAB_STYLE,
+  right: "max(164px, calc(env(safe-area-inset-right, 0px) + 152px))",
 };
 
 const WHITEBOARD_MODE_TAB_STYLE: CSSProperties = {
@@ -1299,7 +1310,7 @@ export default function TacticalPadLiteClean() {
   const modeButton = (
     <button
       type="button"
-      style={isWhiteboardMode ? WHITEBOARD_MODE_TAB_STYLE : MODE_TAB_STYLE}
+      style={isWhiteboardMode ? WHITEBOARD_MODE_TAB_STYLE : isTacticalMode ? TACTICAL_MODE_TAB_STYLE : MODE_TAB_STYLE}
       aria-label="Open mode menu"
       aria-expanded={modeMenuOpen}
       onClick={() => setModeMenuOpen((open) => !open)}
@@ -1659,7 +1670,7 @@ export default function TacticalPadLiteClean() {
           <div style={COACH_HUB_PANEL_STYLE}>
             <div style={COACH_HUB_SECTION_STYLE}>
               <p style={COACH_HUB_SECTION_TITLE_STYLE}>Tools</p>
-              <div style={COACH_HUB_TOOL_GRID_STYLE}>
+              <div className="coach-hub-tool-grid" style={COACH_HUB_TOOL_GRID_STYLE}>
                 <button
                   type="button"
                   style={tacticalTool === "move" ? COACH_HUB_TOOL_BUTTON_ACTIVE_STYLE : COACH_HUB_TOOL_BUTTON_STYLE}
