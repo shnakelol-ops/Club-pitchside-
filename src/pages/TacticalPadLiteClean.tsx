@@ -419,19 +419,105 @@ const CONTROLS_POPOUT_STYLE: CSSProperties = {
   border: "1px solid rgba(238, 146, 146, 0.16)",
 };
 
-const TOOLS_POPOUT_STYLE: CSSProperties = {
+const COACH_HUB_PANEL_STYLE: CSSProperties = {
   ...POPOUT_BASE_STYLE,
   display: "flex",
   flexDirection: "column",
-  gap: "5px",
-  width: "112px",
-  maxHeight: "60vh",
+  gap: "10px",
+  width: "196px",
+  maxHeight: "min(70vh, 520px)",
   overflowY: "auto",
   overflowX: "hidden",
   right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
   bottom: "max(60px, calc(env(safe-area-inset-bottom, 0px) + 58px))",
-  background: "rgba(14, 24, 19, 0.56)",
-  border: "1px solid rgba(126, 192, 150, 0.16)",
+  padding: "10px",
+  background: "rgba(10, 19, 24, 0.74)",
+  border: "1px solid rgba(165, 194, 220, 0.26)",
+  backdropFilter: "blur(14px)",
+  WebkitBackdropFilter: "blur(14px)",
+  boxShadow: "0 14px 28px rgba(2, 8, 15, 0.36)",
+  zIndex: 20,
+};
+
+const COACH_HUB_SECTION_STYLE: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "6px",
+};
+
+const COACH_HUB_SECTION_TITLE_STYLE: CSSProperties = {
+  margin: 0,
+  color: "#d7e8f5",
+  fontSize: "9px",
+  fontWeight: 700,
+  letterSpacing: "0.24px",
+  textTransform: "uppercase",
+  fontFamily: "Inter, system-ui, sans-serif",
+};
+
+const COACH_HUB_TOOL_GRID_STYLE: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  gap: "6px",
+};
+
+const COACH_HUB_TOOL_BUTTON_STYLE: CSSProperties = {
+  height: "36px",
+  minWidth: "100%",
+  borderRadius: "9px",
+  fontSize: "11px",
+  fontWeight: 600,
+  fontFamily: "Inter, system-ui, sans-serif",
+  letterSpacing: "0.22px",
+  padding: "0 8px",
+  cursor: "pointer",
+  border: "1px solid rgba(121, 171, 208, 0.28)",
+  background: "rgba(17, 30, 40, 0.64)",
+  color: "#dbecfa",
+};
+
+const COACH_HUB_TOOL_BUTTON_ACTIVE_STYLE: CSSProperties = {
+  ...COACH_HUB_TOOL_BUTTON_STYLE,
+  border: "1px solid rgba(125, 211, 252, 0.68)",
+  background: "rgba(38, 72, 102, 0.68)",
+  color: "#f7fcff",
+};
+
+const COACH_HUB_COLOR_GRID_STYLE: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+  gap: "6px",
+};
+
+const COACH_HUB_COLOR_BUTTON_STYLE: CSSProperties = {
+  width: "100%",
+  height: "32px",
+  borderRadius: "999px",
+  border: "1px solid rgba(147, 173, 196, 0.36)",
+  background: "rgba(15, 25, 36, 0.65)",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  cursor: "pointer",
+  padding: 0,
+};
+
+const COACH_HUB_COLOR_SWATCH_STYLE: CSSProperties = {
+  width: "22px",
+  height: "22px",
+  borderRadius: "999px",
+  border: "1px solid rgba(255, 255, 255, 0.44)",
+};
+
+const COACH_HUB_ACTION_GRID_STYLE: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  gap: "6px",
+};
+
+const COACH_HUB_ACTION_BUTTON_STYLE: CSSProperties = {
+  ...COACH_HUB_TOOL_BUTTON_STYLE,
+  minWidth: 0,
 };
 
 const CONTROL_BUTTON_STYLE: CSSProperties = {
@@ -1023,8 +1109,8 @@ export default function TacticalPadLiteClean() {
 
   const phaseItems = Array.from({ length: phaseCount }, (_, index) => index + 1);
   const floodlightDots = Array.from({ length: 12 }, (_, index) => index);
+  const activeTacticalPenColor = whiteboardPenColor;
   const closeControlsMenu = () => setControlsOpen(false);
-  const closeToolsMenu = () => setToolsOpen(false);
   const setPadMode = (nextMode: PadMode) => {
     setModeMenuOpen(false);
     if (nextMode === mode) return;
@@ -1570,75 +1656,100 @@ export default function TacticalPadLiteClean() {
           </div>
         ) : null}
         {!isWhiteboardMode && toolsOpen ? (
-          <div style={TOOLS_POPOUT_STYLE}>
-            <>
-              <button
-                type="button"
-                style={
-                  tacticalTool === "move"
-                    ? { ...TOOLS_BUTTON_STYLE, border: "1px solid rgba(126, 192, 150, 0.48)", background: "rgba(23, 66, 40, 0.55)" }
-                    : TOOLS_BUTTON_STYLE
-                }
-                onClick={() => {
-                  applyTacticalTool("move");
-                  closeToolsMenu();
-                }}
-              >
-                Select
-              </button>
-              <button
-                type="button"
-                style={
-                  tacticalTool === "arrow"
-                    ? { ...TOOLS_BUTTON_STYLE, border: "1px solid rgba(126, 192, 150, 0.48)", background: "rgba(23, 66, 40, 0.55)" }
-                    : TOOLS_BUTTON_STYLE
-                }
-                onClick={() => {
-                  applyTacticalTool("arrow");
-                  closeToolsMenu();
-                }}
-              >
-                Arrow
-              </button>
-              <button
-                type="button"
-                style={
-                  tacticalTool === "dashed"
-                    ? { ...TOOLS_BUTTON_STYLE, border: "1px solid rgba(126, 192, 150, 0.48)", background: "rgba(23, 66, 40, 0.55)" }
-                    : TOOLS_BUTTON_STYLE
-                }
-                onClick={() => {
-                  applyTacticalTool("dashed");
-                  closeToolsMenu();
-                }}
-              >
-                Dashed
-              </button>
-              <button
-                type="button"
-                style={
-                  tacticalTool === "pen"
-                    ? { ...TOOLS_BUTTON_STYLE, border: "1px solid rgba(126, 192, 150, 0.48)", background: "rgba(23, 66, 40, 0.55)" }
-                    : TOOLS_BUTTON_STYLE
-                }
-                onClick={() => {
-                  applyTacticalTool("pen");
-                  closeToolsMenu();
-                }}
-              >
-                Zone
-              </button>
-              <button
-                type="button"
-                style={TOOLS_BUTTON_STYLE}
-                onClick={() => {
-                  clearTacticalDrawings();
-                  closeToolsMenu();
-                }}
-              >
-                Clear
-              </button>
-            </>
+          <div style={COACH_HUB_PANEL_STYLE}>
+            <div style={COACH_HUB_SECTION_STYLE}>
+              <p style={COACH_HUB_SECTION_TITLE_STYLE}>Tools</p>
+              <div style={COACH_HUB_TOOL_GRID_STYLE}>
+                <button
+                  type="button"
+                  style={tacticalTool === "move" ? COACH_HUB_TOOL_BUTTON_ACTIVE_STYLE : COACH_HUB_TOOL_BUTTON_STYLE}
+                  onClick={() => applyTacticalTool("move")}
+                >
+                  Move
+                </button>
+                <button
+                  type="button"
+                  style={tacticalTool === "pen" ? COACH_HUB_TOOL_BUTTON_ACTIVE_STYLE : COACH_HUB_TOOL_BUTTON_STYLE}
+                  onClick={() => applyTacticalTool("pen")}
+                >
+                  Pen
+                </button>
+                <button
+                  type="button"
+                  style={tacticalTool === "line" ? COACH_HUB_TOOL_BUTTON_ACTIVE_STYLE : COACH_HUB_TOOL_BUTTON_STYLE}
+                  onClick={() => applyTacticalTool("line")}
+                >
+                  Line
+                </button>
+                <button
+                  type="button"
+                  style={tacticalTool === "arrow" ? COACH_HUB_TOOL_BUTTON_ACTIVE_STYLE : COACH_HUB_TOOL_BUTTON_STYLE}
+                  onClick={() => applyTacticalTool("arrow")}
+                >
+                  Arrow
+                </button>
+                <button
+                  type="button"
+                  style={tacticalTool === "dashed" ? COACH_HUB_TOOL_BUTTON_ACTIVE_STYLE : COACH_HUB_TOOL_BUTTON_STYLE}
+                  onClick={() => applyTacticalTool("dashed")}
+                >
+                  Dash
+                </button>
+              </div>
+            </div>
+            <div style={COACH_HUB_SECTION_STYLE}>
+              <p style={COACH_HUB_SECTION_TITLE_STYLE}>Colour</p>
+              <div style={COACH_HUB_COLOR_GRID_STYLE}>
+                {WHITEBOARD_PEN_COLOR_CHOICES.map((choice) => {
+                  const isActive = activeTacticalPenColor === choice.value;
+                  return (
+                    <button
+                      key={`tactical-color-${choice.label.toLowerCase()}`}
+                      type="button"
+                      aria-label={`Set tactical drawing colour ${choice.label}`}
+                      style={{
+                        ...COACH_HUB_COLOR_BUTTON_STYLE,
+                        ...(isActive
+                          ? {
+                              boxShadow: "0 0 0 2px rgba(125, 211, 252, 0.88)",
+                              border: "1px solid rgba(125, 211, 252, 0.8)",
+                            }
+                          : null),
+                      }}
+                      onClick={() => applyWhiteboardPenColor(choice.value)}
+                    >
+                      <span style={{ ...COACH_HUB_COLOR_SWATCH_STYLE, background: choice.css }} />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div style={COACH_HUB_SECTION_STYLE}>
+              <p style={COACH_HUB_SECTION_TITLE_STYLE}>Players</p>
+              <div style={COACH_HUB_ACTION_GRID_STYLE}>
+                <button type="button" style={COACH_HUB_ACTION_BUTTON_STYLE} onClick={() => {}}>
+                  Add 15
+                </button>
+                <button type="button" style={COACH_HUB_ACTION_BUTTON_STYLE} onClick={() => {}}>
+                  Clear Players
+                </button>
+              </div>
+            </div>
+            <div style={COACH_HUB_SECTION_STYLE}>
+              <p style={COACH_HUB_SECTION_TITLE_STYLE}>Drawing</p>
+              <div style={COACH_HUB_ACTION_GRID_STYLE}>
+                <button
+                  type="button"
+                  style={COACH_HUB_ACTION_BUTTON_STYLE}
+                  onClick={() => surfaceRef.current?.undoWhiteboardStroke()}
+                >
+                  Undo
+                </button>
+                <button type="button" style={COACH_HUB_ACTION_BUTTON_STYLE} onClick={clearTacticalDrawings}>
+                  Clear Drawing
+                </button>
+              </div>
+            </div>
           </div>
         ) : null}
         {!isWhiteboardMode ? (
