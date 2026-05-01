@@ -571,6 +571,13 @@ const PLAY_BUTTON_STYLE: CSSProperties = {
     "0 6px 20px rgba(0, 0, 0, 0.45), 0 0 18px rgba(34, 197, 94, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.25)",
 };
 
+const PAUSE_BUTTON_STYLE: CSSProperties = {
+  ...CONTROL_BUTTON_STYLE,
+  border: "1px solid rgba(245, 158, 11, 0.62)",
+  boxShadow:
+    "0 6px 20px rgba(0, 0, 0, 0.45), 0 0 18px rgba(245, 158, 11, 0.32), inset 0 1px 2px rgba(255, 255, 255, 0.25)",
+};
+
 const RESET_BUTTON_STYLE: CSSProperties = {
   ...CONTROL_BUTTON_STYLE,
   border: "1px solid rgba(239, 68, 68, 0.6)",
@@ -886,6 +893,7 @@ export default function TacticalPadLiteClean() {
   const [whiteboardBlueColor, setWhiteboardBlueColor] = useState<WhiteboardTokenColor>("blue");
   const [whiteboardRedColor, setWhiteboardRedColor] = useState<WhiteboardTokenColor>("red");
   const [whiteboardPenColor, setWhiteboardPenColor] = useState<number>(WHITEBOARD_DRAW_COLOR);
+  const [tacticalPenColor, setTacticalPenColor] = useState<number>(WHITEBOARD_DRAW_COLOR);
   const whiteboardCountsRef = useRef({ blue: 1, red: 1 });
   const whiteboardTeamColorsRef = useRef<{ blue: WhiteboardTokenColor; red: WhiteboardTokenColor }>({
     blue: "blue",
@@ -895,6 +903,7 @@ export default function TacticalPadLiteClean() {
   const [tacticalTool, setTacticalTool] = useState<WhiteboardToolControl>("move");
   const [phaseCount, setPhaseCount] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [phasesOpen, setPhasesOpen] = useState(false);
@@ -977,11 +986,16 @@ export default function TacticalPadLiteClean() {
       surfaceVariant: isWhiteboardMode ? "whiteboard" : "tactical",
       whiteboardTeamCounts: isWhiteboardMode ? whiteboardCountsRef.current : undefined,
       whiteboardTeamColors: isWhiteboardMode ? whiteboardTeamColorsRef.current : undefined,
-      whiteboardDrawColor: isWhiteboardMode ? whiteboardPenColor : WHITEBOARD_DRAW_COLOR,
+      whiteboardDrawColor: isWhiteboardMode ? whiteboardPenColor : tacticalPenColor,
       onPhaseCountChange: (count) => {
         if (!disposed) {
           setPhaseCount(count);
         }
+      },
+      onPlaybackStateChange: (state) => {
+        if (disposed) return;
+        setIsPlaying(state.isPlaying);
+        setIsPaused(state.isPaused);
       },
     }).then((surface) => {
       if (disposed) {
@@ -991,7 +1005,7 @@ export default function TacticalPadLiteClean() {
       surfaceRef.current = surface;
       destroySurface = surface.destroy;
       const initialDrawTool = isWhiteboardMode ? whiteboardTool : tacticalTool;
-      const initialDrawColor = isWhiteboardMode ? whiteboardPenColor : WHITEBOARD_DRAW_COLOR;
+      const initialDrawColor = isWhiteboardMode ? whiteboardPenColor : tacticalPenColor;
       surface.setWhiteboardDrawTool(initialDrawTool);
       surface.setWhiteboardDrawColor(initialDrawColor);
       window.requestAnimationFrame(() => {
@@ -1013,10 +1027,10 @@ export default function TacticalPadLiteClean() {
     const surface = surfaceRef.current;
     if (!surface) return;
     const activeDrawTool = isWhiteboardMode ? whiteboardTool : tacticalTool;
-    const activeDrawColor = isWhiteboardMode ? whiteboardPenColor : WHITEBOARD_DRAW_COLOR;
+    const activeDrawColor = isWhiteboardMode ? whiteboardPenColor : tacticalPenColor;
     surface.setWhiteboardDrawTool(activeDrawTool);
     surface.setWhiteboardDrawColor(activeDrawColor);
-  }, [isStatsMode, isWhiteboardMode, whiteboardTool, whiteboardPenColor, tacticalTool]);
+  }, [isStatsMode, isWhiteboardMode, whiteboardTool, whiteboardPenColor, tacticalTool, tacticalPenColor]);
 
   useEffect(() => {
     if (!isWhiteboardMode) return;
@@ -1101,20 +1115,25 @@ export default function TacticalPadLiteClean() {
     };
   }, [isWhiteboardMode, whiteboardBubbleOpen]);
 
-  const togglePlay = () => {
-    if (!isPlaying) {
+  const handlePlayPress = () => {
+    if (isPaused) {
+      surfaceRef.current?.resumePlayback();
+    } else {
       surfaceRef.current?.play();
-      setIsPlaying(true);
-      setControlsOpen(false);
-      return;
     }
-    setIsPlaying(false);
+    setToolsOpen(false);
+    setControlsOpen(false);
+  };
+
+  const handlePausePress = () => {
+    surfaceRef.current?.pausePlayback();
     setControlsOpen(false);
   };
 
   const phaseItems = Array.from({ length: phaseCount }, (_, index) => index + 1);
   const floodlightDots = Array.from({ length: 12 }, (_, index) => index);
-  const activeTacticalPenColor = whiteboardPenColor;
+  const activeTacticalPenColor = tacticalPenColor;
+  const isPlaybackLocked = isPlaying || isPaused;
   const closeControlsMenu = () => setControlsOpen(false);
   const setPadMode = (nextMode: PadMode) => {
     setModeMenuOpen(false);
@@ -1125,10 +1144,12 @@ export default function TacticalPadLiteClean() {
     setPhasesOpen(false);
     if (nextMode === "stats") {
       setIsPlaying(false);
+      setIsPaused(false);
       setPhaseCount(0);
     }
     if (nextMode === "whiteboard") {
       setIsPlaying(false);
+      setIsPaused(false);
       setPhaseCount(0);
     }
     setMode(nextMode);
@@ -1160,6 +1181,11 @@ export default function TacticalPadLiteClean() {
     surfaceRef.current?.setWhiteboardDrawColor(color);
   };
 
+  const applyTacticalPenColor = (color: number) => {
+    setTacticalPenColor(color);
+    surfaceRef.current?.setWhiteboardDrawColor(color);
+  };
+
   const applyTacticalTool = (tool: WhiteboardToolAction) => {
     const surface = surfaceRef.current;
     if (!surface) return;
@@ -1169,7 +1195,7 @@ export default function TacticalPadLiteClean() {
     }
     setTacticalTool(tool);
     surface.setWhiteboardDrawTool(tool);
-    surface.setWhiteboardDrawColor(WHITEBOARD_DRAW_COLOR);
+    surface.setWhiteboardDrawColor(tacticalPenColor);
   };
 
   const clearTacticalDrawings = () => {
@@ -1622,8 +1648,8 @@ export default function TacticalPadLiteClean() {
             <button
               type="button"
               className="control-button"
-              disabled={isPlaying}
-              style={isPlaying ? DISABLED_CONTROL_BUTTON_STYLE : SET_START_BUTTON_STYLE}
+              disabled={isPlaybackLocked}
+              style={isPlaybackLocked ? DISABLED_CONTROL_BUTTON_STYLE : SET_START_BUTTON_STYLE}
               onClick={() => {
                 surfaceRef.current?.setStart();
                 closeControlsMenu();
@@ -1634,8 +1660,8 @@ export default function TacticalPadLiteClean() {
             <button
               type="button"
               className="control-button"
-              disabled={isPlaying}
-              style={isPlaying ? DISABLED_CONTROL_BUTTON_STYLE : ADD_PHASE_BUTTON_STYLE}
+              disabled={isPlaybackLocked}
+              style={isPlaybackLocked ? DISABLED_CONTROL_BUTTON_STYLE : ADD_PHASE_BUTTON_STYLE}
               onClick={() => {
                 surfaceRef.current?.addPhase();
                 closeControlsMenu();
@@ -1643,8 +1669,23 @@ export default function TacticalPadLiteClean() {
             >
               Add Phase
             </button>
-            <button type="button" className="control-button" style={PLAY_BUTTON_STYLE} onClick={togglePlay}>
+            <button
+              type="button"
+              className="control-button"
+              disabled={isPlaying}
+              style={isPlaying ? DISABLED_CONTROL_BUTTON_STYLE : PLAY_BUTTON_STYLE}
+              onClick={handlePlayPress}
+            >
               Play
+            </button>
+            <button
+              type="button"
+              className="control-button"
+              disabled={!isPlaying}
+              style={!isPlaying ? DISABLED_CONTROL_BUTTON_STYLE : PAUSE_BUTTON_STYLE}
+              onClick={handlePausePress}
+            >
+              Pause
             </button>
             <button
               type="button"
@@ -1653,6 +1694,7 @@ export default function TacticalPadLiteClean() {
               onClick={() => {
                 surfaceRef.current?.reset();
                 setIsPlaying(false);
+                setIsPaused(false);
                 closeControlsMenu();
               }}
             >
@@ -1721,7 +1763,7 @@ export default function TacticalPadLiteClean() {
                             }
                           : null),
                       }}
-                      onClick={() => applyWhiteboardPenColor(choice.value)}
+                      onClick={() => applyTacticalPenColor(choice.value)}
                     >
                       <span style={{ ...COACH_HUB_COLOR_SWATCH_STYLE, background: choice.css }} />
                     </button>

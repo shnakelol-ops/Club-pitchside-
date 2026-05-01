@@ -37,6 +37,8 @@ export type TacticalPadLiteSurface = {
   setStart: () => void;
   addPhase: () => void;
   play: () => void;
+  pausePlayback: () => void;
+  resumePlayback: () => void;
   reset: () => void;
   reflow: () => void;
   setWhiteboardTeamConfig: (config: {
@@ -53,6 +55,7 @@ export type TacticalPadLiteSurface = {
 
 type TacticalPadLiteSurfaceOptions = {
   onPhaseCountChange?: (count: number) => void;
+  onPlaybackStateChange?: (state: { isPlaying: boolean; isPaused: boolean }) => void;
   surfaceVariant?: "tactical" | "whiteboard";
   whiteboardTeamCounts?: {
     blue: number;
@@ -386,6 +389,7 @@ export async function createTacticalPadLiteSurface(
 
   const PLAY_DURATION_MS = 1200;
   let isPlaying = false;
+  let isPaused = false;
   let playElapsedMs = 0;
   let playbackPath: PhaseSnapshot[] = [];
   let activeSegmentIndex = 0;
@@ -415,6 +419,15 @@ export async function createTacticalPadLiteSurface(
   let activeWhiteboardDrawing: WhiteboardDrawingObject | null = null;
   let whiteboardDrawingCounter = 0;
 
+  function emitPlaybackStateChange(): void {
+    syncWhiteboardTokenInputMode();
+    options.onPlaybackStateChange?.({ isPlaying, isPaused });
+  }
+
+  function isPlaybackInputLocked(): boolean {
+    return isPlaying || isPaused;
+  }
+
   function fitToHost(): void {
     const width = host.clientWidth;
     const height = host.clientHeight;
@@ -435,7 +448,7 @@ export async function createTacticalPadLiteSurface(
   }
 
   function updateDraggedPlayerFromEvent(event: unknown): void {
-    if (!activeDrag || isPlaying) return;
+    if (!activeDrag || isPlaybackInputLocked()) return;
 
     const stagePoint = getStagePointFromEvent(event, app.stage);
     if (!stagePoint) return;
@@ -456,7 +469,7 @@ export async function createTacticalPadLiteSurface(
 
   function syncWhiteboardTokenInputMode(): void {
     if (!isDrawingEnabledSurface) return;
-    const canDragPlayers = activeWhiteboardTool === "move";
+    const canDragPlayers = activeWhiteboardTool === "move" && !isPlaybackInputLocked();
     for (const player of players) {
       player.token.eventMode = canDragPlayers ? "static" : "none";
       player.token.cursor = canDragPlayers ? "grab" : "default";
@@ -557,7 +570,7 @@ export async function createTacticalPadLiteSurface(
   }
 
   function startWhiteboardDrawing(event: unknown): void {
-    if (!isDrawingEnabledSurface || isPlaying || activeDrag) return;
+    if (!isDrawingEnabledSurface || isPlaybackInputLocked() || activeDrag) return;
     if (activeWhiteboardTool === "move") return;
     const worldPoint = getBoundedWorldPointFromEvent(event);
     if (!worldPoint) return;
@@ -591,7 +604,7 @@ export async function createTacticalPadLiteSurface(
   }
 
   function updateWhiteboardDrawing(event: unknown): void {
-    if (!isDrawingEnabledSurface || isPlaying || activeDrag) return;
+    if (!isDrawingEnabledSurface || isPlaybackInputLocked() || activeDrag) return;
     if (activeWhiteboardTool === "move") return;
     const worldPoint = getBoundedWorldPointFromEvent(event);
     if (!worldPoint) return;
@@ -606,7 +619,7 @@ export async function createTacticalPadLiteSurface(
   }
 
   function endWhiteboardDrawing(event?: unknown): void {
-    if (!isDrawingEnabledSurface || isPlaying || activeDrag) return;
+    if (!isDrawingEnabledSurface || isPlaybackInputLocked() || activeDrag) return;
     if (activeWhiteboardTool === "move") return;
     if (!activeWhiteboardDrawing) return;
     if (event != null) {
@@ -691,10 +704,12 @@ export async function createTacticalPadLiteSurface(
 
   function cancelPlaybackAnimation(): void {
     isPlaying = false;
+    isPaused = false;
     playElapsedMs = 0;
     playbackPath = [];
     activeSegmentIndex = 0;
     loggedSegmentIndex = -1;
+    emitPlaybackStateChange();
   }
 
   function startPlayback(path: PhaseSnapshot[]): void {
@@ -703,8 +718,10 @@ export async function createTacticalPadLiteSurface(
     activeSegmentIndex = 0;
     loggedSegmentIndex = -1;
     isPlaying = true;
+    isPaused = false;
     playElapsedMs = 0;
     applySnapshotToPlayers(path[0]!);
+    emitPlaybackStateChange();
   }
 
   function playSingleStartToCurrent(): void {
@@ -720,6 +737,12 @@ export async function createTacticalPadLiteSurface(
 
   function handlePlay(): void {
     releaseDrag();
+    if (isPaused && playbackPath.length >= 2) {
+      isPaused = false;
+      isPlaying = true;
+      emitPlaybackStateChange();
+      return;
+    }
     cancelPlaybackAnimation();
     console.debug("PLAY_CLICKED");
     console.debug("PHASE_COUNT", phases.length);
@@ -782,7 +805,7 @@ export async function createTacticalPadLiteSurface(
 
   function bindPlayerPointerDown(player: TacticalPlayer): void {
     player.token.on("pointerdown", (event) => {
-      if (isPlaying) return;
+      if (isPlaybackInputLocked()) return;
       activeDrag = { player };
       setPlayerDragVisualTarget(player, true);
       player.token.cursor = "grabbing";
@@ -855,6 +878,7 @@ export async function createTacticalPadLiteSurface(
   resizeObserver.observe(host);
   fitToHost();
   options.onPhaseCountChange?.(0);
+  emitPlaybackStateChange();
 
   return {
     setStart: () => {
@@ -871,6 +895,20 @@ export async function createTacticalPadLiteSurface(
       options.onPhaseCountChange?.(phases.length);
     },
     play: handlePlay,
+    pausePlayback: () => {
+      if (!isPlaying) return;
+      releaseDrag();
+      resetActiveWhiteboardDrawing();
+      isPlaying = false;
+      isPaused = true;
+      emitPlaybackStateChange();
+    },
+    resumePlayback: () => {
+      if (!isPaused || playbackPath.length < 2) return;
+      isPaused = false;
+      isPlaying = true;
+      emitPlaybackStateChange();
+    },
     reset: () => {
       releaseDrag();
       cancelPlaybackAnimation();
