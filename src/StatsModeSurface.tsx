@@ -1650,6 +1650,8 @@ export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSu
   const awayNameInputRef = useRef<HTMLInputElement>(null);
   const venueInputRef = useRef<HTMLInputElement>(null);
   const matchEngineStateRef = useRef(createInitialMatchEngineState());
+  const secondHalfSwitchBaselineEventCountRef = useRef<number | null>(null);
+  const eventKindSwitchBaselineEventCountRef = useRef<number | null>(null);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const EVENT_BUTTONS = mode.eventButtons;
   const EVENT_LABEL_BY_KIND = mode.eventLabels;
@@ -1889,6 +1891,7 @@ export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSu
   };
 
   const selectEventKind = (kind: MatchEventKind) => {
+    eventKindSwitchBaselineEventCountRef.current = loggedEvents.length;
     setSelectedEventKind(kind);
     selectedEventRef.current = kind;
     handleRef.current?.setActiveEventKind(kind);
@@ -1896,17 +1899,27 @@ export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSu
   };
 
   const logAwayInstantScore = (kind: MatchEventKind) => {
-    setLoggedEvents((prev) => [
-      ...prev,
-      {
-        id: `team-away-instant-score-${newLocalEventId()}`,
-        kind,
-        nx: 0,
-        ny: 0,
-        half: matchEngineStateRef.current.currentHalf,
-        timestamp: matchEngineStateRef.current.matchTimeSeconds,
-      },
-    ]);
+    setLoggedEvents((prev) => {
+      const next = [
+        ...prev,
+        {
+          id: `team-away-instant-score-${newLocalEventId()}`,
+          kind,
+          nx: 0,
+          ny: 0,
+          half: matchEngineStateRef.current.currentHalf,
+          timestamp: matchEngineStateRef.current.matchTimeSeconds,
+        },
+      ];
+      if (import.meta.env.DEV) {
+        console.assert(
+          next.length === prev.length + 1,
+          "[stats-events] Away instant score should append exactly one event",
+          { previousCount: prev.length, nextCount: next.length, kind },
+        );
+      }
+      return next;
+    });
   };
 
   const handleEventButtonPress = (kind: MatchEventKind) => {
@@ -1971,6 +1984,23 @@ export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSu
   useEffect(() => {
     firstHalfAttackingDirectionRef.current = firstHalfAttackingDirection;
   }, [firstHalfAttackingDirection]);
+
+  useEffect(() => {
+    const baseline = eventKindSwitchBaselineEventCountRef.current;
+    if (baseline == null) return;
+    if (import.meta.env.DEV) {
+      console.assert(
+        loggedEvents.length >= baseline,
+        "[stats-events] Switching event type must not reduce total event count",
+        {
+          baselineCount: baseline,
+          currentCount: loggedEvents.length,
+          selectedEventKind,
+        },
+      );
+    }
+    eventKindSwitchBaselineEventCountRef.current = null;
+  }, [loggedEvents.length, selectedEventKind]);
 
   useEffect(() => {
     if (!activePlayer) {
@@ -2076,7 +2106,22 @@ export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSu
             pendingScorerRef.current = null;
           }
         }
-        setLoggedEvents((prev) => [...prev, nextEvent]);
+        setLoggedEvents((prev) => {
+          const next = [...prev, nextEvent];
+          if (import.meta.env.DEV) {
+            console.assert(
+              next.length === prev.length + 1,
+              "[stats-events] Logged pitch event should append exactly one event",
+              {
+                previousCount: prev.length,
+                nextCount: next.length,
+                kind: nextEvent.kind,
+                half: nextEvent.half,
+              },
+            );
+          }
+          return next;
+        });
       },
     }).then((nextHandle) => {
       if (disposed) {
@@ -2130,6 +2175,7 @@ export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSu
   };
 
   const startSecondHalfAction = () => {
+    secondHalfSwitchBaselineEventCountRef.current = loggedEvents.length;
     reviewHalfRef.current = "H2";
     reviewEventGroupRef.current = "ALL";
     reviewZoneRef.current = "FULL";
@@ -2152,7 +2198,6 @@ export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSu
       timestamp: next.matchTimeSeconds,
       canLog: isLoggingActive(next.matchState) && activeTeamRef.current === "HOME",
     });
-    handleRef.current?.setEvents([]);
   };
 
   const endMatchAction = () => {
@@ -2258,6 +2303,23 @@ export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSu
       canLog: isLoggingActive(matchState) && activeTeam === "HOME",
     });
   }, [activeTeam, currentHalf, matchTimeSeconds, matchState]);
+
+  useEffect(() => {
+    if (currentHalf !== 2) return;
+    const baseline = secondHalfSwitchBaselineEventCountRef.current;
+    if (baseline == null) return;
+    if (import.meta.env.DEV) {
+      console.assert(
+        loggedEvents.length >= baseline,
+        "[stats-events] Switching to second half must not reduce total event count",
+        {
+          baselineCount: baseline,
+          currentCount: loggedEvents.length,
+        },
+      );
+    }
+    secondHalfSwitchBaselineEventCountRef.current = null;
+  }, [currentHalf, loggedEvents.length]);
 
   useEffect(() => {
     const visibleLimit =
