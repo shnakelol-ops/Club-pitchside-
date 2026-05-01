@@ -85,6 +85,18 @@ type WhiteboardDrawingObject = {
   createdAt: number;
 };
 
+function isWhiteboardPenGeometry(
+  geometry: WhiteboardDrawingGeometry,
+): geometry is WhiteboardPenGeometry {
+  return "points" in geometry;
+}
+
+function isWhiteboardLinearGeometry(
+  geometry: WhiteboardDrawingGeometry,
+): geometry is WhiteboardLinearGeometry {
+  return "start" in geometry && "end" in geometry;
+}
+
 const WORLD_SIZE = { width: 160, height: 100 } as const;
 const PLAYER_RADIUS = 4.1;
 const PLAYER_TOUCH_HIT_DIAMETER_PX = 48;
@@ -484,39 +496,41 @@ export async function createTacticalPadLiteSurface(
   }
 
   function cloneWhiteboardDrawingObject(drawing: WhiteboardDrawingObject): WhiteboardDrawingObject {
-    const geometry =
-      drawing.type === "pen"
-        ? {
-            points: drawing.geometry.points.map((point) => ({ x: point.x, y: point.y })),
-          }
-        : {
-            start: { x: drawing.geometry.start.x, y: drawing.geometry.start.y },
-            end: { x: drawing.geometry.end.x, y: drawing.geometry.end.y },
-            controlPoint: drawing.geometry.controlPoint
-              ? { x: drawing.geometry.controlPoint.x, y: drawing.geometry.controlPoint.y }
-              : null,
-          };
+    const geometry = drawing.geometry;
+    const clonedGeometry: WhiteboardDrawingGeometry = isWhiteboardPenGeometry(geometry)
+      ? {
+          points: geometry.points.map((point) => ({ x: point.x, y: point.y })),
+        }
+      : {
+          start: { x: geometry.start.x, y: geometry.start.y },
+          end: { x: geometry.end.x, y: geometry.end.y },
+          controlPoint: geometry.controlPoint
+            ? { x: geometry.controlPoint.x, y: geometry.controlPoint.y }
+            : null,
+        };
     return {
       id: drawing.id,
       type: drawing.type,
       color: drawing.color,
-      geometry,
+      geometry: clonedGeometry,
       createdAt: drawing.createdAt,
     };
   }
 
   function renderWhiteboardDrawing(graphics: Graphics, drawing: WhiteboardDrawingObject): void {
+    const geometry = drawing.geometry;
     if (drawing.type === "pen") {
-      if (drawing.geometry.points.length < 2) return;
-      for (let index = 1; index < drawing.geometry.points.length; index += 1) {
-        const from = drawing.geometry.points[index - 1];
-        const to = drawing.geometry.points[index];
+      if (!isWhiteboardPenGeometry(geometry)) return;
+      if (geometry.points.length < 2) return;
+      for (let index = 1; index < geometry.points.length; index += 1) {
+        const from = geometry.points[index - 1];
+        const to = geometry.points[index];
         if (!from || !to) continue;
         drawSolidSegment(graphics, from, to, drawing.color);
       }
       return;
     }
-    const geometry = drawing.geometry;
+    if (!isWhiteboardLinearGeometry(geometry)) return;
     const from = geometry.start;
     const to = geometry.end;
     drawLineWithTool(drawing.type, graphics, from, to, drawing.color);

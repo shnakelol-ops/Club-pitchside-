@@ -899,7 +899,7 @@ export default function TacticalPadLiteClean() {
       surfaceRef.current = surface;
       destroySurface = surface.destroy;
       if (isWhiteboardMode) {
-        surface.setWhiteboardDrawTool(whiteboardTool === "eraser" ? "move" : whiteboardTool);
+        surface.setWhiteboardDrawTool(whiteboardTool);
         surface.setWhiteboardDrawColor(whiteboardPenColor);
       }
       window.requestAnimationFrame(() => {
