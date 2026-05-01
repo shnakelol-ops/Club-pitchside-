@@ -126,7 +126,7 @@ export default function TacticalPadLitePage() {
   }, []);
 
   return (
-    <OrientationGate modeLabel="Tactical Sim Lite">
+    <OrientationGate modeLabel="FlowLab Tactics">
       <div style={ROOT_STYLE}>
         <div ref={hostRef} style={BOARD_STYLE} />
         <div style={CONTROLS_STYLE}>
