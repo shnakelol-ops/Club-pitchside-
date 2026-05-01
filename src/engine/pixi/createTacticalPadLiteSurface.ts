@@ -39,6 +39,8 @@ export type TacticalPadLiteSurface = {
   play: () => void;
   pausePlayback: () => void;
   resumePlayback: () => void;
+  addTacticalPlayer: () => void;
+  removeTacticalPlayer: () => void;
   reset: () => void;
   reflow: () => void;
   setWhiteboardTeamConfig: (config: {
@@ -845,6 +847,66 @@ export async function createTacticalPadLiteSurface(
     renderAllWhiteboardDrawings();
   }
 
+  function getTacticalPlayerSerial(player: TacticalPlayer): number {
+    const serialMatch = /^P(\d+)$/.exec(player.id);
+    const parsed = serialMatch?.[1] ? Number(serialMatch[1]) : Number.NaN;
+    return Number.isFinite(parsed) ? parsed : player.number;
+  }
+
+  function createNextTacticalPlayerSeed(): PlayerSeed | null {
+    if (surfaceVariant !== "tactical") return null;
+    if (players.length >= 15) return null;
+
+    const maxSerial = players.reduce<number>(
+      (maxValue, player) => Math.max(maxValue, getTacticalPlayerSerial(player)),
+      0,
+    );
+    const nextSerial = Math.max(1, maxSerial + 1);
+    const lastPlayer = players[players.length - 1];
+    const basePoint = lastPlayer ? lastPlayer.current : { x: 50, y: 50 };
+    let nextX = basePoint.x + (lastPlayer ? 5 : 0);
+    let nextY = basePoint.y;
+    if (nextX > NORMALIZED_MAX - 4) {
+      nextX = 30;
+      nextY += 6;
+    }
+
+    return {
+      id: `P${nextSerial}`,
+      number: nextSerial,
+      team: "BLUE",
+      color: "blue",
+      position: {
+        x: Math.max(NORMALIZED_MIN, Math.min(NORMALIZED_MAX, nextX)),
+        y: Math.max(NORMALIZED_MIN, Math.min(NORMALIZED_MAX, nextY)),
+      },
+    };
+  }
+
+  function addTacticalPlayer(): void {
+    if (surfaceVariant !== "tactical") return;
+    const nextSeed = createNextTacticalPlayerSeed();
+    if (!nextSeed) return;
+    releaseDrag();
+    const nextPlayer = createSurfacePlayer(nextSeed);
+    players.push(nextPlayer);
+    bindPlayerPointerDown(nextPlayer);
+    syncPlayersToViewport();
+    syncWhiteboardTokenInputMode();
+  }
+
+  function removeLastTacticalPlayer(): void {
+    if (surfaceVariant !== "tactical") return;
+    if (players.length <= 0) return;
+    releaseDrag();
+    const removedPlayer = players.pop();
+    if (!removedPlayer) return;
+    removedPlayer.token.removeAllListeners();
+    removedPlayer.token.destroy({ children: true });
+    syncPlayersToViewport();
+    syncWhiteboardTokenInputMode();
+  }
+
   for (const player of players) {
     bindPlayerPointerDown(player);
   }
@@ -909,6 +971,8 @@ export async function createTacticalPadLiteSurface(
       isPlaying = true;
       emitPlaybackStateChange();
     },
+    addTacticalPlayer,
+    removeTacticalPlayer: removeLastTacticalPlayer,
     reset: () => {
       releaseDrag();
       cancelPlaybackAnimation();

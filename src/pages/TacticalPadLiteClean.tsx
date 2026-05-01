@@ -1202,6 +1202,14 @@ export default function TacticalPadLiteClean() {
     surfaceRef.current?.clearWhiteboardStrokes();
   };
 
+  const addTacticalPlayer = () => {
+    surfaceRef.current?.addTacticalPlayer();
+  };
+
+  const removeTacticalPlayer = () => {
+    surfaceRef.current?.removeTacticalPlayer();
+  };
+
   const handleWhiteboardBubblePointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
     if (event.button !== 0) return;
     const viewport = getViewportRect();
@@ -1774,10 +1782,18 @@ export default function TacticalPadLiteClean() {
             <div style={COACH_HUB_SECTION_STYLE}>
               <p style={COACH_HUB_SECTION_TITLE_STYLE}>Players</p>
               <div style={COACH_HUB_ACTION_GRID_STYLE}>
-                <button type="button" style={COACH_HUB_ACTION_BUTTON_STYLE} onClick={() => {}}>
-                  Add 15
+                <button type="button" style={COACH_HUB_ACTION_BUTTON_STYLE} disabled={isPlaybackLocked} onClick={addTacticalPlayer}>
+                  + Player
                 </button>
-                <button type="button" style={COACH_HUB_ACTION_BUTTON_STYLE} onClick={() => {}}>
+                <button
+                  type="button"
+                  style={COACH_HUB_ACTION_BUTTON_STYLE}
+                  disabled={isPlaybackLocked}
+                  onClick={removeTacticalPlayer}
+                >
+                  - Player
+                </button>
+                <button type="button" style={{ ...COACH_HUB_ACTION_BUTTON_STYLE, gridColumn: "1 / -1" }} onClick={() => {}}>
                   Clear Players
                 </button>
               </div>
@@ -1837,7 +1853,7 @@ export default function TacticalPadLiteClean() {
             </span>
           </button>
         ) : null}
-        {isTacticalMode && toolsOpen ? null : modeButton}
+        {isWhiteboardMode ? modeButton : null}
         {modeMenu}
       </div>
     </OrientationGate>
