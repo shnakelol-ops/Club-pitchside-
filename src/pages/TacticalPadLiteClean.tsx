@@ -877,7 +877,6 @@ export default function TacticalPadLiteClean() {
     moved: boolean;
   } | null>(null);
   const suppressWhiteboardBubbleClickRef = useRef(false);
-  const [surfaceRefreshKey, setSurfaceRefreshKey] = useState(0);
   const [mode, setMode] = useState<PadMode>("tactical");
   const [whiteboardBlueCount, setWhiteboardBlueCount] = useState(1);
   const [whiteboardRedCount, setWhiteboardRedCount] = useState(1);
@@ -916,27 +915,17 @@ export default function TacticalPadLiteClean() {
     const media = window.matchMedia("(orientation: landscape)");
     let rafA = 0;
     let rafB = 0;
-    let wasLandscape = media.matches || window.innerWidth > window.innerHeight;
 
-    const runDoubleRafReflow = (triggerRemount: boolean) => {
+    const runDoubleRafReflow = () => {
       rafA = window.requestAnimationFrame(() => {
         rafB = window.requestAnimationFrame(() => {
           surfaceRef.current?.reflow();
-          if (triggerRemount) {
-            setSurfaceRefreshKey((value) => value + 1);
-          }
         });
       });
     };
 
     const handleViewportChange = () => {
-      const isLandscape = media.matches || window.innerWidth > window.innerHeight;
-      if (isLandscape && !wasLandscape) {
-        runDoubleRafReflow(true);
-      } else if (isLandscape) {
-        runDoubleRafReflow(false);
-      }
-      wasLandscape = isLandscape;
+      runDoubleRafReflow();
     };
 
     if (typeof media.addEventListener === "function") {
@@ -1020,7 +1009,7 @@ export default function TacticalPadLiteClean() {
       surfaceRef.current = null;
       destroySurface?.();
     };
-  }, [isStatsMode, isWhiteboardMode, surfaceRefreshKey]);
+  }, [isStatsMode, isWhiteboardMode]);
 
   useEffect(() => {
     if (isStatsMode) return;

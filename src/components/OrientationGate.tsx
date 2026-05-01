@@ -104,20 +104,24 @@ function usePortraitOrientation(): boolean {
   return isPortrait;
 }
 
-export default function OrientationGate({ modeLabel, children }: OrientationGateProps) {
+export default function OrientationGate({ children }: OrientationGateProps) {
   const isPortrait = usePortraitOrientation();
-  if (!isPortrait) return <>{children}</>;
 
   return (
-    <div style={ROOT_STYLE}>
-      <div style={TEXTURE_STYLE} aria-hidden="true" />
-      <div style={CONTENT_STYLE}>
-        <div style={WORDMARK_WRAP_STYLE} aria-hidden="true">
-          <p style={WORDMARK_STYLE}>PITCHFLOW</p>
-          <div style={WORDMARK_ACCENT_STYLE} />
+    <>
+      {children}
+      {isPortrait ? (
+        <div style={ROOT_STYLE}>
+          <div style={TEXTURE_STYLE} aria-hidden="true" />
+          <div style={CONTENT_STYLE}>
+            <div style={WORDMARK_WRAP_STYLE} aria-hidden="true">
+              <p style={WORDMARK_STYLE}>PITCHFLOW</p>
+              <div style={WORDMARK_ACCENT_STYLE} />
+            </div>
+            <p style={MESSAGE_STYLE}>Rotate to landscape to continue</p>
+          </div>
         </div>
-        <p style={MESSAGE_STYLE}>Rotate to landscape to use {modeLabel}</p>
-      </div>
-    </div>
+      ) : null}
+    </>
   );
 }
