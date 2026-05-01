@@ -269,6 +269,12 @@ const STADIUM_FLOODLIGHT_CSS = `
 
 @media (max-height: 520px) and (orientation: landscape) {
   .coach-hub-tool-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+@media (max-height: 430px) and (orientation: landscape) {
+  .coach-hub-tool-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
@@ -429,14 +435,14 @@ const COACH_HUB_PANEL_STYLE: CSSProperties = {
   ...POPOUT_BASE_STYLE,
   display: "flex",
   flexDirection: "column",
-  gap: "8px",
-  width: "clamp(144px, 18vw, 260px)",
-  maxHeight: "min(62vh, 420px)",
+  gap: "6px",
+  width: "clamp(128px, 15vw, 168px)",
+  maxHeight: "min(60vh, 360px)",
   overflowY: "auto",
   overflowX: "hidden",
-  right: "max(8px, calc(env(safe-area-inset-right, 0px) + 6px))",
+  right: "max(6px, calc(env(safe-area-inset-right, 0px) + 4px))",
   bottom: "max(60px, calc(env(safe-area-inset-bottom, 0px) + 58px))",
-  padding: "8px",
+  padding: "6px",
   background: "rgba(10, 19, 24, 0.74)",
   border: "1px solid rgba(165, 194, 220, 0.26)",
   backdropFilter: "blur(14px)",
@@ -448,34 +454,34 @@ const COACH_HUB_PANEL_STYLE: CSSProperties = {
 const COACH_HUB_SECTION_STYLE: CSSProperties = {
   display: "flex",
   flexDirection: "column",
-  gap: "4px",
+  gap: "3px",
 };
 
 const COACH_HUB_SECTION_TITLE_STYLE: CSSProperties = {
   margin: 0,
   color: "#d7e8f5",
-  fontSize: "8.5px",
+  fontSize: "8px",
   fontWeight: 700,
-  letterSpacing: "0.2px",
+  letterSpacing: "0.16px",
   textTransform: "uppercase",
   fontFamily: "Inter, system-ui, sans-serif",
 };
 
 const COACH_HUB_TOOL_GRID_STYLE: CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(42px, 1fr))",
-  gap: "4px",
+  gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+  gap: "3px",
 };
 
 const COACH_HUB_TOOL_BUTTON_STYLE: CSSProperties = {
-  height: "31px",
+  height: "28px",
   minWidth: "100%",
-  borderRadius: "9px",
-  fontSize: "10px",
+  borderRadius: "8px",
+  fontSize: "9px",
   fontWeight: 600,
   fontFamily: "Inter, system-ui, sans-serif",
-  letterSpacing: "0.18px",
-  padding: "0 4px",
+  letterSpacing: "0.12px",
+  padding: "0 2px",
   cursor: "pointer",
   border: "1px solid rgba(121, 171, 208, 0.28)",
   background: "rgba(17, 30, 40, 0.64)",
@@ -492,12 +498,12 @@ const COACH_HUB_TOOL_BUTTON_ACTIVE_STYLE: CSSProperties = {
 const COACH_HUB_COLOR_GRID_STYLE: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
-  gap: "4px",
+  gap: "3px",
 };
 
 const COACH_HUB_COLOR_BUTTON_STYLE: CSSProperties = {
   width: "100%",
-  height: "28px",
+  height: "24px",
   borderRadius: "999px",
   border: "1px solid rgba(147, 173, 196, 0.36)",
   background: "rgba(15, 25, 36, 0.65)",
@@ -509,8 +515,8 @@ const COACH_HUB_COLOR_BUTTON_STYLE: CSSProperties = {
 };
 
 const COACH_HUB_COLOR_SWATCH_STYLE: CSSProperties = {
-  width: "19px",
-  height: "19px",
+  width: "16px",
+  height: "16px",
   borderRadius: "999px",
   border: "1px solid rgba(255, 255, 255, 0.44)",
 };
@@ -518,7 +524,7 @@ const COACH_HUB_COLOR_SWATCH_STYLE: CSSProperties = {
 const COACH_HUB_ACTION_GRID_STYLE: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-  gap: "4px",
+  gap: "3px",
 };
 
 const COACH_HUB_ACTION_BUTTON_STYLE: CSSProperties = {
@@ -798,11 +804,6 @@ const MODE_TAB_STYLE: CSSProperties = {
   WebkitBackdropFilter: "blur(10px)",
   boxShadow: "0 8px 18px rgba(0, 0, 0, 0.24)",
   zIndex: 21,
-};
-
-const TACTICAL_MODE_TAB_STYLE: CSSProperties = {
-  ...MODE_TAB_STYLE,
-  right: "max(164px, calc(env(safe-area-inset-right, 0px) + 152px))",
 };
 
 const WHITEBOARD_MODE_TAB_STYLE: CSSProperties = {
@@ -1310,7 +1311,7 @@ export default function TacticalPadLiteClean() {
   const modeButton = (
     <button
       type="button"
-      style={isWhiteboardMode ? WHITEBOARD_MODE_TAB_STYLE : isTacticalMode ? TACTICAL_MODE_TAB_STYLE : MODE_TAB_STYLE}
+      style={isWhiteboardMode ? WHITEBOARD_MODE_TAB_STYLE : MODE_TAB_STYLE}
       aria-label="Open mode menu"
       aria-expanded={modeMenuOpen}
       onClick={() => setModeMenuOpen((open) => !open)}
@@ -1761,6 +1762,17 @@ export default function TacticalPadLiteClean() {
                 </button>
               </div>
             </div>
+            {isTacticalMode ? (
+              <button
+                type="button"
+                style={{ ...MODE_TAB_STYLE, position: "relative", inset: "auto", width: "100%", height: "30px" }}
+                aria-label="Open mode menu"
+                aria-expanded={modeMenuOpen}
+                onClick={() => setModeMenuOpen((open) => !open)}
+              >
+                Mode
+              </button>
+            ) : null}
           </div>
         ) : null}
         {!isWhiteboardMode ? (
@@ -1790,7 +1802,7 @@ export default function TacticalPadLiteClean() {
             </span>
           </button>
         ) : null}
-        {modeButton}
+        {isTacticalMode && toolsOpen ? null : modeButton}
         {modeMenu}
       </div>
     </OrientationGate>
