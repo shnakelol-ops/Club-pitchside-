@@ -399,6 +399,7 @@ export async function createTacticalPadLiteSurface(
       }
     | null = null;
   const isWhiteboardSurface = surfaceVariant === "whiteboard";
+  const isDrawingEnabledSurface = surfaceVariant === "whiteboard" || surfaceVariant === "tactical";
   let activeWhiteboardTool: WhiteboardDrawTool = "move";
   let activeWhiteboardColor = options.whiteboardDrawColor ?? WHITEBOARD_DEFAULT_STROKE_COLOR;
   const whiteboardDrawingsLayer = new Container();
@@ -454,7 +455,7 @@ export async function createTacticalPadLiteSurface(
   }
 
   function syncWhiteboardTokenInputMode(): void {
-    if (!isWhiteboardSurface) return;
+    if (!isDrawingEnabledSurface) return;
     const canDragPlayers = activeWhiteboardTool === "move";
     for (const player of players) {
       player.token.eventMode = canDragPlayers ? "static" : "none";
@@ -537,7 +538,7 @@ export async function createTacticalPadLiteSurface(
   }
 
   function renderAllWhiteboardDrawings(): void {
-    if (!isWhiteboardSurface) return;
+    if (!isDrawingEnabledSurface) return;
     const existingChildren = whiteboardDrawingsLayer.removeChildren();
     for (const child of existingChildren) {
       child.destroy({ children: true });
@@ -556,7 +557,7 @@ export async function createTacticalPadLiteSurface(
   }
 
   function startWhiteboardDrawing(event: unknown): void {
-    if (!isWhiteboardSurface || isPlaying || activeDrag) return;
+    if (!isDrawingEnabledSurface || isPlaying || activeDrag) return;
     if (activeWhiteboardTool === "move") return;
     const worldPoint = getBoundedWorldPointFromEvent(event);
     if (!worldPoint) return;
@@ -590,7 +591,7 @@ export async function createTacticalPadLiteSurface(
   }
 
   function updateWhiteboardDrawing(event: unknown): void {
-    if (!isWhiteboardSurface || isPlaying || activeDrag) return;
+    if (!isDrawingEnabledSurface || isPlaying || activeDrag) return;
     if (activeWhiteboardTool === "move") return;
     const worldPoint = getBoundedWorldPointFromEvent(event);
     if (!worldPoint) return;
@@ -605,7 +606,7 @@ export async function createTacticalPadLiteSurface(
   }
 
   function endWhiteboardDrawing(event?: unknown): void {
-    if (!isWhiteboardSurface || isPlaying || activeDrag) return;
+    if (!isDrawingEnabledSurface || isPlaying || activeDrag) return;
     if (activeWhiteboardTool === "move") return;
     if (!activeWhiteboardDrawing) return;
     if (event != null) {
@@ -633,7 +634,7 @@ export async function createTacticalPadLiteSurface(
   }
 
   function eraseLastPenStroke(): void {
-    if (!isWhiteboardSurface) return;
+    if (!isDrawingEnabledSurface) return;
     resetActiveWhiteboardDrawing();
     for (let index = completedWhiteboardDrawingObjects.length - 1; index >= 0; index -= 1) {
       const drawing = completedWhiteboardDrawingObjects[index];
@@ -782,9 +783,6 @@ export async function createTacticalPadLiteSurface(
   function bindPlayerPointerDown(player: TacticalPlayer): void {
     player.token.on("pointerdown", (event) => {
       if (isPlaying) return;
-      if (isWhiteboardSurface && activeWhiteboardTool !== "move") {
-        return;
-      }
       activeDrag = { player };
       setPlayerDragVisualTarget(player, true);
       player.token.cursor = "grabbing";
@@ -886,7 +884,7 @@ export async function createTacticalPadLiteSurface(
       rebuildWhiteboardPlayers(config.counts, config.colors);
     },
     setWhiteboardDrawTool: (tool) => {
-      if (!isWhiteboardSurface) return;
+      if (!isDrawingEnabledSurface) return;
       if (tool !== "move") {
         releaseDrag();
       }
@@ -896,24 +894,24 @@ export async function createTacticalPadLiteSurface(
       renderAllWhiteboardDrawings();
     },
     setWhiteboardDrawColor: (color) => {
-      if (!isWhiteboardSurface) return;
+      if (!isDrawingEnabledSurface) return;
       activeWhiteboardColor = color;
       resetActiveWhiteboardDrawing();
       renderAllWhiteboardDrawings();
     },
     eraseWhiteboardPenStroke: () => {
-      if (!isWhiteboardSurface) return;
+      if (!isDrawingEnabledSurface) return;
       eraseLastPenStroke();
     },
     undoWhiteboardStroke: () => {
-      if (!isWhiteboardSurface) return;
+      if (!isDrawingEnabledSurface) return;
       resetActiveWhiteboardDrawing();
       if (completedWhiteboardDrawingObjects.length === 0) return;
       completedWhiteboardDrawingObjects.pop();
       renderAllWhiteboardDrawings();
     },
     clearWhiteboardStrokes: () => {
-      if (!isWhiteboardSurface) return;
+      if (!isDrawingEnabledSurface) return;
       resetActiveWhiteboardDrawing();
       completedWhiteboardDrawingObjects.length = 0;
       renderAllWhiteboardDrawings();

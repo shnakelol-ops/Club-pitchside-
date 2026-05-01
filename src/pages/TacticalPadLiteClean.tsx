@@ -801,6 +801,7 @@ export default function TacticalPadLiteClean() {
     red: "red",
   });
   const [whiteboardTool, setWhiteboardTool] = useState<WhiteboardToolControl>("move");
+  const [tacticalTool, setTacticalTool] = useState<WhiteboardToolControl>("move");
   const [phaseCount, setPhaseCount] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(false);
@@ -885,7 +886,7 @@ export default function TacticalPadLiteClean() {
       surfaceVariant: isWhiteboardMode ? "whiteboard" : "tactical",
       whiteboardTeamCounts: isWhiteboardMode ? whiteboardCountsRef.current : undefined,
       whiteboardTeamColors: isWhiteboardMode ? whiteboardTeamColorsRef.current : undefined,
-      whiteboardDrawColor: isWhiteboardMode ? whiteboardPenColor : undefined,
+      whiteboardDrawColor: isWhiteboardMode ? whiteboardPenColor : WHITEBOARD_DRAW_COLOR,
       onPhaseCountChange: (count) => {
         if (!disposed) {
           setPhaseCount(count);
@@ -898,10 +899,10 @@ export default function TacticalPadLiteClean() {
       }
       surfaceRef.current = surface;
       destroySurface = surface.destroy;
-      if (isWhiteboardMode) {
-        surface.setWhiteboardDrawTool(whiteboardTool);
-        surface.setWhiteboardDrawColor(whiteboardPenColor);
-      }
+      const initialDrawTool = isWhiteboardMode ? whiteboardTool : tacticalTool;
+      const initialDrawColor = isWhiteboardMode ? whiteboardPenColor : WHITEBOARD_DRAW_COLOR;
+      surface.setWhiteboardDrawTool(initialDrawTool);
+      surface.setWhiteboardDrawColor(initialDrawColor);
       window.requestAnimationFrame(() => {
         window.requestAnimationFrame(() => {
           surface.reflow();
@@ -915,6 +916,16 @@ export default function TacticalPadLiteClean() {
       destroySurface?.();
     };
   }, [isStatsMode, isWhiteboardMode, surfaceRefreshKey]);
+
+  useEffect(() => {
+    if (isStatsMode) return;
+    const surface = surfaceRef.current;
+    if (!surface) return;
+    const activeDrawTool = isWhiteboardMode ? whiteboardTool : tacticalTool;
+    const activeDrawColor = isWhiteboardMode ? whiteboardPenColor : WHITEBOARD_DRAW_COLOR;
+    surface.setWhiteboardDrawTool(activeDrawTool);
+    surface.setWhiteboardDrawColor(activeDrawColor);
+  }, [isStatsMode, isWhiteboardMode, whiteboardTool, whiteboardPenColor, tacticalTool]);
 
   useEffect(() => {
     if (!isWhiteboardMode) return;
@@ -1056,6 +1067,22 @@ export default function TacticalPadLiteClean() {
   const applyWhiteboardPenColor = (color: number) => {
     setWhiteboardPenColor(color);
     surfaceRef.current?.setWhiteboardDrawColor(color);
+  };
+
+  const applyTacticalTool = (tool: WhiteboardToolAction) => {
+    const surface = surfaceRef.current;
+    if (!surface) return;
+    if (tool === "eraser") {
+      surface.eraseWhiteboardPenStroke();
+      return;
+    }
+    setTacticalTool(tool);
+    surface.setWhiteboardDrawTool(tool);
+    surface.setWhiteboardDrawColor(WHITEBOARD_DRAW_COLOR);
+  };
+
+  const clearTacticalDrawings = () => {
+    surfaceRef.current?.clearWhiteboardStrokes();
   };
 
   const handleWhiteboardBubblePointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
@@ -1545,19 +1572,70 @@ export default function TacticalPadLiteClean() {
         {!isWhiteboardMode && toolsOpen ? (
           <div style={TOOLS_POPOUT_STYLE}>
             <>
-              <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
+              <button
+                type="button"
+                style={
+                  tacticalTool === "move"
+                    ? { ...TOOLS_BUTTON_STYLE, border: "1px solid rgba(126, 192, 150, 0.48)", background: "rgba(23, 66, 40, 0.55)" }
+                    : TOOLS_BUTTON_STYLE
+                }
+                onClick={() => {
+                  applyTacticalTool("move");
+                  closeToolsMenu();
+                }}
+              >
                 Select
               </button>
-              <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
+              <button
+                type="button"
+                style={
+                  tacticalTool === "arrow"
+                    ? { ...TOOLS_BUTTON_STYLE, border: "1px solid rgba(126, 192, 150, 0.48)", background: "rgba(23, 66, 40, 0.55)" }
+                    : TOOLS_BUTTON_STYLE
+                }
+                onClick={() => {
+                  applyTacticalTool("arrow");
+                  closeToolsMenu();
+                }}
+              >
                 Arrow
               </button>
-              <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
+              <button
+                type="button"
+                style={
+                  tacticalTool === "dashed"
+                    ? { ...TOOLS_BUTTON_STYLE, border: "1px solid rgba(126, 192, 150, 0.48)", background: "rgba(23, 66, 40, 0.55)" }
+                    : TOOLS_BUTTON_STYLE
+                }
+                onClick={() => {
+                  applyTacticalTool("dashed");
+                  closeToolsMenu();
+                }}
+              >
                 Dashed
               </button>
-              <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
+              <button
+                type="button"
+                style={
+                  tacticalTool === "pen"
+                    ? { ...TOOLS_BUTTON_STYLE, border: "1px solid rgba(126, 192, 150, 0.48)", background: "rgba(23, 66, 40, 0.55)" }
+                    : TOOLS_BUTTON_STYLE
+                }
+                onClick={() => {
+                  applyTacticalTool("pen");
+                  closeToolsMenu();
+                }}
+              >
                 Zone
               </button>
-              <button type="button" style={TOOLS_BUTTON_STYLE} onClick={closeToolsMenu}>
+              <button
+                type="button"
+                style={TOOLS_BUTTON_STYLE}
+                onClick={() => {
+                  clearTacticalDrawings();
+                  closeToolsMenu();
+                }}
+              >
                 Clear
               </button>
             </>
