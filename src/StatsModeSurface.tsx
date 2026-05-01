@@ -9,10 +9,11 @@ import {
   startFirstHalf,
   startSecondHalf,
   tickMatchClock,
+  type MatchEngineState,
   type MatchState,
 } from "./core/match/match-state-store";
 import { createPixiPitchSurface } from "./core/pitch/create-pixi-pitch-surface";
-import { type MatchEvent, type MatchEventKind } from "./core/stats/stats-event-model";
+import { MATCH_EVENT_KINDS, type MatchEvent, type MatchEventKind } from "./core/stats/stats-event-model";
 import { gaaModeConfig, type GaaModeKey } from "./config/gaaModeConfig";
 
 type VisibilityMode = "ALL" | "LAST_5" | "LAST_10";
@@ -55,6 +56,37 @@ const MODE_MENU_OPTIONS: ReadonlyArray<{ key: GaaModeKey; label: string }> = [
 ];
 const FORMATION_ROW_SIZES = [1, 3, 3, 2, 3, 3] as const;
 const SQUADS_STORAGE_KEY = "pitchsideclub.squads";
+const MATCH_STATE_STORAGE_KEY = "pitchsideclub.stats-match.v1";
+const VALID_MATCH_STATES: ReadonlySet<MatchState> = new Set([
+  "PRE_MATCH",
+  "FIRST_HALF",
+  "HALF_TIME",
+  "SECOND_HALF",
+  "FULL_TIME",
+]);
+const VALID_EVENT_KINDS: ReadonlySet<MatchEventKind> = new Set(MATCH_EVENT_KINDS);
+
+type PersistedStatsMatchState = {
+  version: 1;
+  currentMode: GaaModeKey;
+  selectedEventKind: MatchEventKind;
+  activeTeam: TeamSide;
+  teamNames: { HOME: string; AWAY: string };
+  venueName: string;
+  squads: Squad[];
+  activeSquadId: string;
+  activePlayer: string | null;
+  activePlayerNumber: number | null;
+  activePlayerId: string | null;
+  reviewHalf: ReviewHalf;
+  reviewEventGroup: ReviewEventGroup;
+  reviewActivePlayerOnly: boolean;
+  reviewZone: ReviewZone;
+  firstHalfAttackingDirection: AttackingDirection;
+  loggedEvents: LoggedMatchEvent[];
+  visibilityMode: VisibilityMode;
+  matchEngineState: MatchEngineState;
+};
 function newLocalEventId(): string {
   const c = globalThis.crypto;
   if (c && "randomUUID" in c && typeof c.randomUUID === "function") {
@@ -112,8 +144,15 @@ function parseStoredSquads(input: string | null): Squad[] {
   if (!input) return [];
   try {
     const parsed = JSON.parse(input);
-    if (!Array.isArray(parsed)) return [];
-    return parsed
+    return parseStoredSquadsValue(parsed);
+  } catch {
+    return [];
+  }
+}
+
+function parseStoredSquadsValue(input: unknown): Squad[] {
+  if (!Array.isArray(input)) return [];
+  return input
       .map((item) => {
         if (!item || typeof item !== "object") return null;
         const maybeId = "id" in item ? item.id : null;
@@ -131,9 +170,265 @@ function parseStoredSquads(input: string | null): Squad[] {
         };
       })
       .filter((squad): squad is Squad => squad !== null);
-  } catch {
-    return [];
+}
+
+function parseStoredLoggedEvent(input: unknown): LoggedMatchEvent | null {
+  if (!input || typeof input !== "object") return null;
+  const rawId = "id" in input ? input.id : null;
+  const rawKind = "kind" in input ? input.kind : null;
+  const rawNx = "nx" in input ? input.nx : null;
+  const rawNy = "ny" in input ? input.ny : null;
+  const rawHalf = "half" in input ? input.half : null;
+  const rawTimestamp = "timestamp" in input ? input.timestamp : null;
+  if (typeof rawId !== "string" || rawId.length === 0) return null;
+  if (typeof rawKind !== "string" || !VALID_EVENT_KINDS.has(rawKind as MatchEventKind)) return null;
+  if (typeof rawNx !== "number" || !Number.isFinite(rawNx)) return null;
+  if (typeof rawNy !== "number" || !Number.isFinite(rawNy)) return null;
+  if (rawHalf !== 1 && rawHalf !== 2) return null;
+  if (typeof rawTimestamp !== "number" || !Number.isFinite(rawTimestamp)) return null;
+
+  const parsed: LoggedMatchEvent = {
+    id: rawId,
+    kind: rawKind as MatchEventKind,
+    nx: Math.max(0, Math.min(1, rawNx)),
+    ny: Math.max(0, Math.min(1, rawNy)),
+    half: rawHalf,
+    timestamp: Math.max(0, Math.floor(rawTimestamp)),
+  };
+
+  const rawPlayerId = "playerId" in input ? input.playerId : null;
+  if (typeof rawPlayerId === "string" && rawPlayerId.length > 0) parsed.playerId = rawPlayerId;
+  const rawPlayerName = "playerName" in input ? input.playerName : null;
+  if (typeof rawPlayerName === "string" && rawPlayerName.trim().length > 0) {
+    parsed.playerName = rawPlayerName.trim().slice(0, 24);
   }
+  const rawPlayerNumber = "playerNumber" in input ? input.playerNumber : null;
+  if (typeof rawPlayerNumber === "number" && Number.isFinite(rawPlayerNumber)) {
+    parsed.playerNumber = Math.max(1, Math.min(99, Math.floor(rawPlayerNumber)));
+  }
+  const rawSquadId = "squadId" in input ? input.squadId : null;
+  if (typeof rawSquadId === "string" && rawSquadId.length > 0) parsed.squadId = rawSquadId;
+  const rawTeam = "team" in input ? input.team : null;
+  if (rawTeam === "HOME" || rawTeam === "AWAY") parsed.team = rawTeam;
+
+  return parsed;
+}
+
+function parseStoredMatchEngineState(input: unknown): MatchEngineState | null {
+  if (!input || typeof input !== "object") return null;
+  const rawMatchState = "matchState" in input ? input.matchState : null;
+  const rawCurrentHalf = "currentHalf" in input ? input.currentHalf : null;
+  const rawMatchTimeSeconds = "matchTimeSeconds" in input ? input.matchTimeSeconds : null;
+  const rawIsRunning = "isRunning" in input ? input.isRunning : null;
+  if (typeof rawMatchState !== "string" || !VALID_MATCH_STATES.has(rawMatchState as MatchState)) {
+    return null;
+  }
+  if (rawCurrentHalf !== 1 && rawCurrentHalf !== 2) return null;
+  if (typeof rawMatchTimeSeconds !== "number" || !Number.isFinite(rawMatchTimeSeconds)) return null;
+  const matchState = rawMatchState as MatchState;
+  const shouldRun = matchState === "FIRST_HALF" || matchState === "SECOND_HALF";
+  return {
+    matchState,
+    currentHalf: rawCurrentHalf,
+    matchTimeSeconds: Math.max(0, Math.floor(rawMatchTimeSeconds)),
+    isRunning: typeof rawIsRunning === "boolean" ? rawIsRunning && shouldRun : shouldRun,
+  };
+}
+
+function readStoredMatchState(): PersistedStatsMatchState | null {
+  if (typeof window === "undefined") return null;
+  const raw = window.localStorage.getItem(MATCH_STATE_STORAGE_KEY);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return null;
+
+    const parsedEvents = Array.isArray(parsed.loggedEvents)
+      ? parsed.loggedEvents
+          .map((event) => parseStoredLoggedEvent(event))
+          .filter((event): event is LoggedMatchEvent => event !== null)
+      : [];
+    const parsedSquads = parseStoredSquadsValue("squads" in parsed ? parsed.squads : null);
+    const parsedEngineState = parseStoredMatchEngineState(
+      "matchEngineState" in parsed ? parsed.matchEngineState : null,
+    );
+    if (parsedEngineState == null) return null;
+
+    const rawMode = "currentMode" in parsed ? parsed.currentMode : null;
+    const currentMode = MODE_MENU_OPTIONS.some((option) => option.key === rawMode) ? rawMode : "football";
+    const rawSelectedEventKind = "selectedEventKind" in parsed ? parsed.selectedEventKind : null;
+    const selectedEventKind =
+      typeof rawSelectedEventKind === "string" && VALID_EVENT_KINDS.has(rawSelectedEventKind as MatchEventKind)
+        ? (rawSelectedEventKind as MatchEventKind)
+        : "POINT";
+    const rawActiveTeam = "activeTeam" in parsed ? parsed.activeTeam : null;
+    const activeTeam: TeamSide = rawActiveTeam === "AWAY" ? "AWAY" : "HOME";
+    const rawTeamNames = "teamNames" in parsed ? parsed.teamNames : null;
+    const teamNames =
+      rawTeamNames &&
+      typeof rawTeamNames === "object" &&
+      typeof (rawTeamNames as { HOME?: unknown }).HOME === "string" &&
+      typeof (rawTeamNames as { AWAY?: unknown }).AWAY === "string"
+        ? {
+            HOME: (rawTeamNames as { HOME: string }).HOME.slice(0, 15),
+            AWAY: (rawTeamNames as { AWAY: string }).AWAY.slice(0, 15),
+          }
+        : { HOME: "Team A", AWAY: "Team B" };
+    const rawVenueName = "venueName" in parsed ? parsed.venueName : null;
+    const venueName = typeof rawVenueName === "string" ? rawVenueName.slice(0, 24) : "";
+    const rawActiveSquadId = "activeSquadId" in parsed ? parsed.activeSquadId : null;
+    const activeSquadId = typeof rawActiveSquadId === "string" ? rawActiveSquadId : "";
+    const rawActivePlayer = "activePlayer" in parsed ? parsed.activePlayer : null;
+    const activePlayer = typeof rawActivePlayer === "string" ? rawActivePlayer : null;
+    const rawActivePlayerNumber = "activePlayerNumber" in parsed ? parsed.activePlayerNumber : null;
+    const activePlayerNumber =
+      typeof rawActivePlayerNumber === "number" && Number.isFinite(rawActivePlayerNumber)
+        ? Math.max(1, Math.min(99, Math.floor(rawActivePlayerNumber)))
+        : null;
+    const rawActivePlayerId = "activePlayerId" in parsed ? parsed.activePlayerId : null;
+    const activePlayerId = typeof rawActivePlayerId === "string" ? rawActivePlayerId : null;
+    const rawReviewHalf = "reviewHalf" in parsed ? parsed.reviewHalf : null;
+    const reviewHalf: ReviewHalf =
+      rawReviewHalf === "H1" || rawReviewHalf === "H2" || rawReviewHalf === "FULL"
+        ? rawReviewHalf
+        : "FULL";
+    const rawReviewEventGroup = "reviewEventGroup" in parsed ? parsed.reviewEventGroup : null;
+    const reviewEventGroup: ReviewEventGroup =
+      rawReviewEventGroup === "SCORES" ||
+      rawReviewEventGroup === "WIDES" ||
+      rawReviewEventGroup === "SHOTS" ||
+      rawReviewEventGroup === "TURNOVERS" ||
+      rawReviewEventGroup === "KICKOUTS" ||
+      rawReviewEventGroup === "FREES" ||
+      rawReviewEventGroup === "ALL"
+        ? rawReviewEventGroup
+        : "ALL";
+    const rawReviewZone = "reviewZone" in parsed ? parsed.reviewZone : null;
+    const reviewZone: ReviewZone =
+      rawReviewZone === "OWN_HALF" || rawReviewZone === "OPPOSITION_HALF" || rawReviewZone === "FULL"
+        ? rawReviewZone
+        : "FULL";
+    const rawReviewActivePlayerOnly = "reviewActivePlayerOnly" in parsed ? parsed.reviewActivePlayerOnly : null;
+    const reviewActivePlayerOnly = Boolean(rawReviewActivePlayerOnly);
+    const rawFirstHalfAttackingDirection =
+      "firstHalfAttackingDirection" in parsed ? parsed.firstHalfAttackingDirection : null;
+    const firstHalfAttackingDirection: AttackingDirection =
+      rawFirstHalfAttackingDirection === "LEFT" || rawFirstHalfAttackingDirection === "RIGHT"
+        ? rawFirstHalfAttackingDirection
+        : "RIGHT";
+    const rawVisibilityMode = "visibilityMode" in parsed ? parsed.visibilityMode : null;
+    const visibilityMode: VisibilityMode =
+      rawVisibilityMode === "LAST_5" || rawVisibilityMode === "LAST_10" || rawVisibilityMode === "ALL"
+        ? rawVisibilityMode
+        : "ALL";
+
+    return {
+      version: 1,
+      currentMode,
+      selectedEventKind,
+      activeTeam,
+      teamNames,
+      venueName,
+      squads: parsedSquads,
+      activeSquadId,
+      activePlayer,
+      activePlayerNumber,
+      activePlayerId,
+      reviewHalf,
+      reviewEventGroup,
+      reviewActivePlayerOnly,
+      reviewZone,
+      firstHalfAttackingDirection,
+      loggedEvents: parsedEvents,
+      visibilityMode,
+      matchEngineState: parsedEngineState,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function buildPersistedStatsMatchState(
+  state: {
+    currentMode: GaaModeKey;
+    selectedEventKind: MatchEventKind;
+    activeTeam: TeamSide;
+    teamNames: { HOME: string; AWAY: string };
+    venueName: string;
+    squads: Squad[];
+    activeSquadId: string;
+    activePlayer: string | null;
+    activePlayerNumber: number | null;
+    activePlayerId: string | null;
+    reviewHalf: ReviewHalf;
+    reviewEventGroup: ReviewEventGroup;
+    reviewActivePlayerOnly: boolean;
+    reviewZone: ReviewZone;
+    firstHalfAttackingDirection: AttackingDirection;
+    loggedEvents: readonly LoggedMatchEvent[];
+    visibilityMode: VisibilityMode;
+    matchEngineState: MatchEngineState;
+  },
+): PersistedStatsMatchState {
+  return {
+    version: 1,
+    currentMode: state.currentMode,
+    selectedEventKind: state.selectedEventKind,
+    activeTeam: state.activeTeam,
+    teamNames: state.teamNames,
+    venueName: state.venueName,
+    squads: state.squads,
+    activeSquadId: state.activeSquadId,
+    activePlayer: state.activePlayer,
+    activePlayerNumber: state.activePlayerNumber,
+    activePlayerId: state.activePlayerId,
+    reviewHalf: state.reviewHalf,
+    reviewEventGroup: state.reviewEventGroup,
+    reviewActivePlayerOnly: state.reviewActivePlayerOnly,
+    reviewZone: state.reviewZone,
+    firstHalfAttackingDirection: state.firstHalfAttackingDirection,
+    loggedEvents: [...state.loggedEvents],
+    visibilityMode: state.visibilityMode,
+    matchEngineState: state.matchEngineState,
+  };
+}
+
+function warnIfEventCountDropped(
+  previousCountRef: { current: number },
+  suppressWarningRef: { current: boolean },
+  nextCount: number,
+): void {
+  if (suppressWarningRef.current) {
+    suppressWarningRef.current = false;
+    previousCountRef.current = nextCount;
+    return;
+  }
+  if (import.meta.env.DEV && nextCount < previousCountRef.current) {
+    console.warn("[stats-events] matchEvents count decreased without explicit reset", {
+      previousCount: previousCountRef.current,
+      nextCount,
+    });
+  }
+  previousCountRef.current = nextCount;
+}
+
+function warnIfPlayerCountDropped(
+  previousCountRef: { current: number },
+  suppressWarningRef: { current: boolean },
+  nextCount: number,
+): void {
+  if (suppressWarningRef.current) {
+    suppressWarningRef.current = false;
+    previousCountRef.current = nextCount;
+    return;
+  }
+  if (import.meta.env.DEV && nextCount < previousCountRef.current) {
+    console.warn("[stats-events] player count decreased without explicit team reset", {
+      previousCount: previousCountRef.current,
+      nextCount,
+    });
+  }
+  previousCountRef.current = nextCount;
 }
 
 function computeTeamScore(events: readonly MatchEvent[], team: TeamSide): TeamScore {
@@ -1581,48 +1876,70 @@ export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSu
     moved: boolean;
   } | null>(null);
   const suppressUtilityBubbleClickRef = useRef(false);
-  const [currentMode, setCurrentMode] = useState<GaaModeKey>("football");
+  const storedMatchState = useMemo(() => readStoredMatchState(), []);
+  const [currentMode, setCurrentMode] = useState<GaaModeKey>(storedMatchState?.currentMode ?? "football");
   const mode = gaaModeConfig[currentMode];
-  const [selectedEventKind, setSelectedEventKind] = useState<MatchEventKind>("POINT");
-  const [activeTeam, setActiveTeam] = useState<TeamSide>("HOME");
-  const [teamNames, setTeamNames] = useState<{ HOME: string; AWAY: string }>({
-    HOME: "Team A",
-    AWAY: "Team B",
-  });
+  const [selectedEventKind, setSelectedEventKind] = useState<MatchEventKind>(
+    storedMatchState?.selectedEventKind ?? "POINT",
+  );
+  const [activeTeam, setActiveTeam] = useState<TeamSide>(storedMatchState?.activeTeam ?? "HOME");
+  const [teamNames, setTeamNames] = useState<{ HOME: string; AWAY: string }>(
+    storedMatchState?.teamNames ?? {
+      HOME: "Team A",
+      AWAY: "Team B",
+    },
+  );
   const [editingTeam, setEditingTeam] = useState<TeamSide | null>(null);
   const [teamNameDraft, setTeamNameDraft] = useState("");
-  const [venueName, setVenueName] = useState<string>("");
+  const [venueName, setVenueName] = useState<string>(storedMatchState?.venueName ?? "");
   const [editingVenue, setEditingVenue] = useState<boolean>(false);
   const [venueDraft, setVenueDraft] = useState("");
   const [isUtilityOpen, setIsUtilityOpen] = useState(false);
   const [utilityPanel, setUtilityPanel] = useState<UtilityPanel>(null);
   const [squads, setSquads] = useState<Squad[]>(() => {
+    if (storedMatchState && storedMatchState.squads.length > 0) {
+      return storedMatchState.squads;
+    }
     if (typeof window === "undefined") {
       return [createDefaultSquad()];
     }
     const parsed = parseStoredSquads(window.localStorage.getItem(SQUADS_STORAGE_KEY));
     return parsed.length > 0 ? parsed : [createDefaultSquad()];
   });
-  const [activeSquadId, setActiveSquadId] = useState("");
+  const [activeSquadId, setActiveSquadId] = useState(storedMatchState?.activeSquadId ?? "");
   const [squadDraft, setSquadDraft] = useState("");
-  const [activePlayer, setActivePlayer] = useState<string | null>(null);
-  const [activePlayerNumber, setActivePlayerNumber] = useState<number | null>(null);
-  const [activePlayerId, setActivePlayerId] = useState<string | null>(null);
+  const [activePlayer, setActivePlayer] = useState<string | null>(storedMatchState?.activePlayer ?? null);
+  const [activePlayerNumber, setActivePlayerNumber] = useState<number | null>(
+    storedMatchState?.activePlayerNumber ?? null,
+  );
+  const [activePlayerId, setActivePlayerId] = useState<string | null>(storedMatchState?.activePlayerId ?? null);
   const [playerDraft, setPlayerDraft] = useState("");
   const [showPlayerInitials] = useState(true);
-  const [reviewHalf, setReviewHalf] = useState<ReviewHalf>("FULL");
-  const [reviewEventGroup, setReviewEventGroup] = useState<ReviewEventGroup>("ALL");
-  const [reviewActivePlayerOnly, setReviewActivePlayerOnly] = useState(false);
-  const [reviewZone, setReviewZone] = useState<ReviewZone>("FULL");
+  const [reviewHalf, setReviewHalf] = useState<ReviewHalf>(storedMatchState?.reviewHalf ?? "FULL");
+  const [reviewEventGroup, setReviewEventGroup] = useState<ReviewEventGroup>(
+    storedMatchState?.reviewEventGroup ?? "ALL",
+  );
+  const [reviewActivePlayerOnly, setReviewActivePlayerOnly] = useState(
+    storedMatchState?.reviewActivePlayerOnly ?? false,
+  );
+  const [reviewZone, setReviewZone] = useState<ReviewZone>(storedMatchState?.reviewZone ?? "FULL");
   const [firstHalfAttackingDirection, setFirstHalfAttackingDirection] =
-    useState<AttackingDirection>("RIGHT");
+    useState<AttackingDirection>(storedMatchState?.firstHalfAttackingDirection ?? "RIGHT");
   const [showReviewStrip, setShowReviewStrip] = useState(false);
   const [selectedReviewEventId, setSelectedReviewEventId] = useState<string | null>(null);
-  const [loggedEvents, setLoggedEvents] = useState<readonly LoggedMatchEvent[]>([]);
-  const [visibilityMode, setVisibilityMode] = useState<VisibilityMode>("ALL");
-  const [matchState, setMatchState] = useState<MatchState>("PRE_MATCH");
-  const [currentHalf, setCurrentHalf] = useState<1 | 2>(1);
-  const [matchTimeSeconds, setMatchTimeSeconds] = useState(0);
+  const [loggedEvents, setLoggedEvents] = useState<readonly LoggedMatchEvent[]>(
+    storedMatchState?.loggedEvents ?? [],
+  );
+  const [visibilityMode, setVisibilityMode] = useState<VisibilityMode>(
+    storedMatchState?.visibilityMode ?? "ALL",
+  );
+  const [matchState, setMatchState] = useState<MatchState>(
+    storedMatchState?.matchEngineState.matchState ?? "PRE_MATCH",
+  );
+  const [currentHalf, setCurrentHalf] = useState<1 | 2>(storedMatchState?.matchEngineState.currentHalf ?? 1);
+  const [matchTimeSeconds, setMatchTimeSeconds] = useState(
+    storedMatchState?.matchEngineState.matchTimeSeconds ?? 0,
+  );
   const [keyboardInset, setKeyboardInset] = useState(0);
   const [utilityBubblePosition, setUtilityBubblePosition] = useState<{ left: number; top: number } | null>(null);
   const [utilityMenuSize, setUtilityMenuSize] = useState<{ width: number; height: number }>({
@@ -1634,24 +1951,32 @@ export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSu
       typeof window !== "undefined" &&
       window.matchMedia("(orientation: landscape)").matches,
   );
-  const selectedEventRef = useRef<MatchEventKind>("POINT");
-  const activeTeamRef = useRef<TeamSide>("HOME");
-  const activePlayerRef = useRef<string | null>(null);
-  const activePlayerNumberRef = useRef<number | null>(null);
-  const activePlayerIdRef = useRef<string | null>(null);
-  const reviewHalfRef = useRef<ReviewHalf>("FULL");
-  const reviewEventGroupRef = useRef<ReviewEventGroup>("ALL");
-  const reviewActivePlayerOnlyRef = useRef(false);
-  const reviewZoneRef = useRef<ReviewZone>("FULL");
-  const firstHalfAttackingDirectionRef = useRef<AttackingDirection>("RIGHT");
+  const selectedEventRef = useRef<MatchEventKind>(storedMatchState?.selectedEventKind ?? "POINT");
+  const activeTeamRef = useRef<TeamSide>(storedMatchState?.activeTeam ?? "HOME");
+  const activePlayerRef = useRef<string | null>(storedMatchState?.activePlayer ?? null);
+  const activePlayerNumberRef = useRef<number | null>(storedMatchState?.activePlayerNumber ?? null);
+  const activePlayerIdRef = useRef<string | null>(storedMatchState?.activePlayerId ?? null);
+  const reviewHalfRef = useRef<ReviewHalf>(storedMatchState?.reviewHalf ?? "FULL");
+  const reviewEventGroupRef = useRef<ReviewEventGroup>(storedMatchState?.reviewEventGroup ?? "ALL");
+  const reviewActivePlayerOnlyRef = useRef(storedMatchState?.reviewActivePlayerOnly ?? false);
+  const reviewZoneRef = useRef<ReviewZone>(storedMatchState?.reviewZone ?? "FULL");
+  const firstHalfAttackingDirectionRef = useRef<AttackingDirection>(
+    storedMatchState?.firstHalfAttackingDirection ?? "RIGHT",
+  );
   const pendingScorerRef = useRef<{ name: string; number: number; squadId: string } | null>(null);
-  const activeSquadIdRef = useRef("");
+  const activeSquadIdRef = useRef(storedMatchState?.activeSquadId ?? "");
   const homeNameInputRef = useRef<HTMLInputElement>(null);
   const awayNameInputRef = useRef<HTMLInputElement>(null);
   const venueInputRef = useRef<HTMLInputElement>(null);
-  const matchEngineStateRef = useRef(createInitialMatchEngineState());
+  const matchEngineStateRef = useRef(storedMatchState?.matchEngineState ?? createInitialMatchEngineState());
   const secondHalfSwitchBaselineEventCountRef = useRef<number | null>(null);
   const eventKindSwitchBaselineEventCountRef = useRef<number | null>(null);
+  const previousLoggedEventsCountRef = useRef((storedMatchState?.loggedEvents ?? []).length);
+  const previousPlayerCountRef = useRef(
+    (storedMatchState?.squads ?? squads).reduce((count, squad) => count + squad.players.length, 0),
+  );
+  const suppressEventCountDropWarningRef = useRef(false);
+  const suppressPlayerCountDropWarningRef = useRef(false);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const EVENT_BUTTONS = mode.eventButtons;
   const EVENT_LABEL_BY_KIND = mode.eventLabels;
@@ -1691,6 +2016,12 @@ export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSu
     ],
     [mode],
   );
+  const syncMatchEngineState = (next: MatchEngineState) => {
+    matchEngineStateRef.current = next;
+    setMatchState(next.matchState);
+    setCurrentHalf(next.currentHalf);
+    setMatchTimeSeconds(next.matchTimeSeconds);
+  };
   const handleRef = useRef<{
     destroy: () => void;
     setEvents: (events: readonly import("./core/stats/stats-event-model").MatchEvent[]) => void;
@@ -1859,6 +2190,7 @@ export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSu
     if (!isInstantAwayScore) {
       handleRef.current?.undoLastEvent();
     }
+    suppressEventCountDropWarningRef.current = true;
     setLoggedEvents((prev) => prev.slice(0, -1));
   };
 
@@ -1912,6 +2244,11 @@ export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSu
         },
       ];
       if (import.meta.env.DEV) {
+        console.debug("[stats-events] away instant score append", {
+          previousCount: prev.length,
+          nextCount: next.length,
+          kind,
+        });
         console.assert(
           next.length === prev.length + 1,
           "[stats-events] Away instant score should append exactly one event",
@@ -2045,6 +2382,72 @@ export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSu
   }, [squads]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    const persistedState = buildPersistedStatsMatchState({
+      currentMode,
+      selectedEventKind,
+      activeTeam,
+      teamNames,
+      venueName,
+      squads,
+      activeSquadId,
+      activePlayer,
+      activePlayerNumber,
+      activePlayerId,
+      reviewHalf,
+      reviewEventGroup,
+      reviewActivePlayerOnly,
+      reviewZone,
+      firstHalfAttackingDirection,
+      loggedEvents,
+      visibilityMode,
+      matchEngineState: matchEngineStateRef.current,
+    });
+    window.localStorage.setItem(
+      MATCH_STATE_STORAGE_KEY,
+      JSON.stringify(persistedState),
+    );
+  }, [
+    currentMode,
+    selectedEventKind,
+    activeTeam,
+    teamNames,
+    venueName,
+    squads,
+    activeSquadId,
+    activePlayer,
+    activePlayerNumber,
+    activePlayerId,
+    reviewHalf,
+    reviewEventGroup,
+    reviewActivePlayerOnly,
+    reviewZone,
+    firstHalfAttackingDirection,
+    loggedEvents,
+    visibilityMode,
+    matchState,
+    currentHalf,
+    matchTimeSeconds,
+  ]);
+
+  useEffect(() => {
+    warnIfEventCountDropped(
+      previousLoggedEventsCountRef,
+      suppressEventCountDropWarningRef,
+      loggedEvents.length,
+    );
+  }, [loggedEvents.length, matchState, currentHalf, selectedEventKind]);
+
+  useEffect(() => {
+    const currentPlayerCount = squads.reduce((count, squad) => count + squad.players.length, 0);
+    warnIfPlayerCountDropped(
+      previousPlayerCountRef,
+      suppressPlayerCountDropWarningRef,
+      currentPlayerCount,
+    );
+  }, [squads, activeSquadId]);
+
+  useEffect(() => {
     if (canEditTeamNames) return;
     setEditingTeam(null);
     setTeamNameDraft("");
@@ -2109,6 +2512,12 @@ export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSu
         setLoggedEvents((prev) => {
           const next = [...prev, nextEvent];
           if (import.meta.env.DEV) {
+            console.debug("[stats-events] pitch event append", {
+              previousCount: prev.length,
+              nextCount: next.length,
+              kind: nextEvent.kind,
+              half: nextEvent.half,
+            });
             console.assert(
               next.length === prev.length + 1,
               "[stats-events] Logged pitch event should append exactly one event",
@@ -2149,8 +2558,7 @@ export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSu
     const timerId = window.setInterval(() => {
       const next = tickMatchClock(matchEngineStateRef.current);
       if (next === matchEngineStateRef.current) return;
-      matchEngineStateRef.current = next;
-      setMatchTimeSeconds(next.matchTimeSeconds);
+      syncMatchEngineState(next);
     }, 1000);
 
     return () => {
@@ -2160,18 +2568,12 @@ export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSu
 
   const startFirstHalfAction = () => {
     const next = startFirstHalf(matchEngineStateRef.current);
-    matchEngineStateRef.current = next;
-    setMatchState(next.matchState);
-    setCurrentHalf(next.currentHalf);
-    setMatchTimeSeconds(next.matchTimeSeconds);
+    syncMatchEngineState(next);
   };
 
   const goToHalfTimeAction = () => {
     const next = goToHalfTime(matchEngineStateRef.current);
-    matchEngineStateRef.current = next;
-    setMatchState(next.matchState);
-    setCurrentHalf(next.currentHalf);
-    setMatchTimeSeconds(next.matchTimeSeconds);
+    syncMatchEngineState(next);
   };
 
   const startSecondHalfAction = () => {
@@ -2187,10 +2589,7 @@ export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSu
     setShowReviewStrip(false);
     setUtilityPanel(null);
     const next = startSecondHalf(matchEngineStateRef.current);
-    matchEngineStateRef.current = next;
-    setMatchState(next.matchState);
-    setCurrentHalf(next.currentHalf);
-    setMatchTimeSeconds(next.matchTimeSeconds);
+    syncMatchEngineState(next);
     // Eagerly sync the pitch surface so 2H taps register immediately,
     // independent of when the React effect for setEventContext runs.
     handleRef.current?.setEventContext({
@@ -2202,13 +2601,17 @@ export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSu
 
   const endMatchAction = () => {
     const next = endMatch(matchEngineStateRef.current);
-    matchEngineStateRef.current = next;
-    setMatchState(next.matchState);
-    setCurrentHalf(next.currentHalf);
-    setMatchTimeSeconds(next.matchTimeSeconds);
+    syncMatchEngineState(next);
   };
 
   const openPlayersPanel = () => {
+    if (import.meta.env.DEV) {
+      const playerCount = squads.reduce((count, squad) => count + squad.players.length, 0);
+      console.debug("[stats-events] opening players panel keeps roster count", {
+        playerCount,
+        activeSquadId,
+      });
+    }
     setUtilityPanel("PLAYERS");
     setIsUtilityOpen(false);
     setIsPickerOpen(false);
@@ -2269,6 +2672,8 @@ export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSu
   };
 
   const resetMatch = () => {
+    suppressEventCountDropWarningRef.current = true;
+    suppressPlayerCountDropWarningRef.current = true;
     setLoggedEvents([]);
     reviewHalfRef.current = "FULL";
     reviewEventGroupRef.current = "ALL";
@@ -2279,13 +2684,25 @@ export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSu
     setReviewZone("FULL");
     setShowReviewStrip(false);
     setUtilityPanel(null);
+    setCurrentMode("football");
+    setSelectedEventKind("POINT");
+    setActiveTeam("HOME");
+    setTeamNames({
+      HOME: "Team A",
+      AWAY: "Team B",
+    });
+    setVenueName("");
+    setSquads([createDefaultSquad()]);
+    setActiveSquadId("");
     setActivePlayer(null);
     setActivePlayerNumber(null);
     setActivePlayerId(null);
     setPlayerDraft("");
+    setVisibilityMode("ALL");
     setMatchState("PRE_MATCH");
     setCurrentHalf(1);
     setMatchTimeSeconds(0);
+    setFirstHalfAttackingDirection("RIGHT");
     matchEngineStateRef.current = createInitialMatchEngineState();
     handleRef.current?.setEvents([]);
     handleRef.current?.setEventContext({
@@ -2346,19 +2763,36 @@ export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSu
   }, [showReviewStrip, utilityPanel]);
 
   useEffect(() => {
+    const effectiveReviewHalf = showReviewStrip || utilityPanel === "REVIEW" ? reviewHalf : "FULL";
+    const effectiveReviewEventGroup = showReviewStrip || utilityPanel === "REVIEW" ? reviewEventGroup : "ALL";
+    const effectiveReviewZone = showReviewStrip || utilityPanel === "REVIEW" ? reviewZone : "FULL";
+    const effectiveReviewActivePlayerOnly =
+      showReviewStrip || utilityPanel === "REVIEW" ? reviewActivePlayerOnly : false;
     handleRef.current?.setEvents(
       getRenderablePitchEvents(
         loggedEvents,
-        reviewHalf,
-        reviewEventGroup,
+        effectiveReviewHalf,
+        effectiveReviewEventGroup,
         REVIEW_EVENT_GROUP_KINDS,
-        reviewZone,
+        effectiveReviewZone,
         getEffectiveAttackingDirection(firstHalfAttackingDirection, currentHalf),
-        reviewActivePlayerOnly,
+        effectiveReviewActivePlayerOnly,
         activePlayerId,
       ),
     );
-  }, [loggedEvents, reviewHalf, reviewEventGroup, REVIEW_EVENT_GROUP_KINDS, reviewZone, firstHalfAttackingDirection, currentHalf, reviewActivePlayerOnly, activePlayerId]);
+  }, [
+    loggedEvents,
+    reviewHalf,
+    reviewEventGroup,
+    REVIEW_EVENT_GROUP_KINDS,
+    reviewZone,
+    firstHalfAttackingDirection,
+    currentHalf,
+    reviewActivePlayerOnly,
+    activePlayerId,
+    showReviewStrip,
+    utilityPanel,
+  ]);
 
   useEffect(() => {
     if (!selectedReviewEventId) return;
@@ -2569,19 +3003,30 @@ export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSu
     firstHalfAttackingDirection,
     currentHalf,
   );
+  const isReviewModeActive = showReviewStrip || utilityPanel === "REVIEW";
   const renderableLoggedEvents = useMemo(
     () =>
       getRenderablePitchEvents(
         loggedEvents,
-        reviewHalf,
-        reviewEventGroup,
+        isReviewModeActive ? reviewHalf : "FULL",
+        isReviewModeActive ? reviewEventGroup : "ALL",
         REVIEW_EVENT_GROUP_KINDS,
-        reviewZone,
+        isReviewModeActive ? reviewZone : "FULL",
         effectiveAttackingDirection,
-        reviewActivePlayerOnly,
+        isReviewModeActive ? reviewActivePlayerOnly : false,
         activePlayerId,
       ),
-    [loggedEvents, reviewHalf, reviewEventGroup, REVIEW_EVENT_GROUP_KINDS, reviewZone, effectiveAttackingDirection, reviewActivePlayerOnly, activePlayerId],
+    [
+      loggedEvents,
+      isReviewModeActive,
+      reviewHalf,
+      reviewEventGroup,
+      REVIEW_EVENT_GROUP_KINDS,
+      reviewZone,
+      effectiveAttackingDirection,
+      reviewActivePlayerOnly,
+      activePlayerId,
+    ],
   );
   const attackingDirectionHalfLabel = currentHalf === 2 ? "2H" : "1H";
   const attackingDirectionLabel =
@@ -2593,7 +3038,6 @@ export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSu
     if (!canSetFirstHalfAttackingDirection) return;
     setFirstHalfAttackingDirection((prev) => oppositeAttackingDirection(prev));
   };
-  const isReviewModeActive = showReviewStrip || utilityPanel === "REVIEW";
   const playerById = useMemo(() => {
     const next = new Map<string, SquadPlayer>();
     for (const squad of squads) {
@@ -3878,6 +4322,16 @@ export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSu
                     type="button"
                     className="utility-menu-btn"
                     onClick={() => {
+                      if (import.meta.env.DEV) {
+                        const beforePlayerCount = squads.reduce(
+                          (count, squad) => count + squad.players.length,
+                          0,
+                        );
+                        console.debug("[stats-events] sport mode change preserves roster baseline", {
+                          nextMode: option.key,
+                          playerCountBefore: beforePlayerCount,
+                        });
+                      }
                       setCurrentMode(option.key);
                     }}
                     style={
