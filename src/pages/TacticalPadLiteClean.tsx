@@ -1164,7 +1164,7 @@ export default function TacticalPadLiteClean() {
         style={isTacticalMode ? MODE_MENU_ITEM_ACTIVE_STYLE : MODE_MENU_ITEM_STYLE}
         onClick={() => setPadMode("tactical")}
       >
-        Tactical
+        FlowLab Tactics
       </button>
       <button
         type="button"
@@ -1178,7 +1178,7 @@ export default function TacticalPadLiteClean() {
         style={isStatsMode ? MODE_MENU_ITEM_ACTIVE_STYLE : MODE_MENU_ITEM_STYLE}
         onClick={() => setPadMode("stats")}
       >
-        Stats
+        FlowStats
       </button>
     </div>
   ) : null;
@@ -1204,7 +1204,7 @@ export default function TacticalPadLiteClean() {
   }
 
   return (
-    <OrientationGate modeLabel={isWhiteboardMode ? "Whiteboard Mode" : "Tactical Sim Lite"}>
+    <OrientationGate modeLabel={isWhiteboardMode ? "Whiteboard Mode" : "FlowLab Tactics"}>
       <div
         style={isWhiteboardMode ? ROOT_WHITEBOARD_STYLE : ROOT_STYLE}
         className={isWhiteboardMode ? undefined : "simulator-container"}

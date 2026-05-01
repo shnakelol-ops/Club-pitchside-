@@ -3790,7 +3790,7 @@ export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSu
                   onRequestPadModeChange?.("tactical");
                 }}
               >
-                Tactical
+                FlowLab Tactics
               </button>
               <button
                 type="button"
@@ -3803,7 +3803,7 @@ export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSu
                   setIsUtilityOpen(false);
                 }}
               >
-                Stats
+                FlowStats
               </button>
               <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.86, marginTop: "2px" }}>
                 Sport
