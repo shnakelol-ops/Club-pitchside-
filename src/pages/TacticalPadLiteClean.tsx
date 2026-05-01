@@ -24,6 +24,13 @@ const WHITEBOARD_PLAYER_COLOR_CHOICES: ReadonlyArray<{
   { value: "black", css: "#1f2937" },
 ];
 const WHITEBOARD_DRAW_COLOR = 0x111111;
+const WHITEBOARD_PEN_COLOR_CHOICES: ReadonlyArray<{ label: string; value: number; css: string }> = [
+  { label: "Black", value: 0x111111, css: "#111111" },
+  { label: "White", value: 0xffffff, css: "#ffffff" },
+  { label: "Yellow", value: 0xfacc15, css: "#facc15" },
+  { label: "Red", value: 0xdc2626, css: "#dc2626" },
+  { label: "Blue", value: 0x2563eb, css: "#2563eb" },
+];
 const WHITEBOARD_BUBBLE_SIZE = 36;
 const WHITEBOARD_BUBBLE_MARGIN = 12;
 
@@ -781,10 +788,11 @@ export default function TacticalPadLiteClean() {
   );
   const [whiteboardBubbleMenuSize, setWhiteboardBubbleMenuSize] = useState<{ width: number; height: number }>({
     width: 176,
-    height: 240,
+    height: 300,
   });
   const [whiteboardBlueColor, setWhiteboardBlueColor] = useState<WhiteboardTokenColor>("blue");
   const [whiteboardRedColor, setWhiteboardRedColor] = useState<WhiteboardTokenColor>("red");
+  const [whiteboardPenColor, setWhiteboardPenColor] = useState<number>(WHITEBOARD_DRAW_COLOR);
   const whiteboardCountsRef = useRef({ blue: 1, red: 1 });
   const whiteboardTeamColorsRef = useRef<{ blue: WhiteboardTokenColor; red: WhiteboardTokenColor }>({
     blue: "blue",
@@ -875,7 +883,8 @@ export default function TacticalPadLiteClean() {
       surfaceVariant: isWhiteboardMode ? "whiteboard" : "tactical",
       whiteboardTeamCounts: isWhiteboardMode ? whiteboardCountsRef.current : undefined,
       whiteboardTeamColors: isWhiteboardMode ? whiteboardTeamColorsRef.current : undefined,
-      whiteboardDrawColor: isWhiteboardMode ? WHITEBOARD_DRAW_COLOR : undefined,
+      whiteboardDrawColor:
+        isWhiteboardMode ? (whiteboardTool === "pen" ? whiteboardPenColor : WHITEBOARD_DRAW_COLOR) : undefined,
       onPhaseCountChange: (count) => {
         if (!disposed) {
           setPhaseCount(count);
@@ -890,7 +899,7 @@ export default function TacticalPadLiteClean() {
       destroySurface = surface.destroy;
       if (isWhiteboardMode) {
         surface.setWhiteboardDrawTool(whiteboardTool);
-        surface.setWhiteboardDrawColor(WHITEBOARD_DRAW_COLOR);
+        surface.setWhiteboardDrawColor(whiteboardTool === "pen" ? whiteboardPenColor : WHITEBOARD_DRAW_COLOR);
       }
       window.requestAnimationFrame(() => {
         window.requestAnimationFrame(() => {
@@ -904,7 +913,7 @@ export default function TacticalPadLiteClean() {
       surfaceRef.current = null;
       destroySurface?.();
     };
-  }, [isStatsMode, isWhiteboardMode, surfaceRefreshKey]);
+  }, [isStatsMode, isWhiteboardMode, surfaceRefreshKey, whiteboardPenColor, whiteboardTool]);
 
   useEffect(() => {
     if (!isWhiteboardMode) return;
@@ -1031,11 +1040,18 @@ export default function TacticalPadLiteClean() {
     setWhiteboardRedCount(clamped);
   };
 
-  const applyWhiteboardTool = (tool: "move" | "line" | "arrow" | "dashed") => {
+  const applyWhiteboardTool = (tool: "move" | "pen" | "line" | "arrow" | "dashed") => {
     const surface = surfaceRef.current;
     if (!surface) return;
     setWhiteboardTool(tool);
     surface.setWhiteboardDrawTool(tool);
+    surface.setWhiteboardDrawColor(tool === "pen" ? whiteboardPenColor : WHITEBOARD_DRAW_COLOR);
+  };
+
+  const applyWhiteboardPenColor = (color: number) => {
+    setWhiteboardPenColor(color);
+    if (whiteboardTool !== "pen") return;
+    surfaceRef.current?.setWhiteboardDrawColor(color);
   };
 
   const handleWhiteboardBubblePointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
@@ -1247,6 +1263,18 @@ export default function TacticalPadLiteClean() {
                   type="button"
                   style={{
                     ...WHITEBOARD_TOOLS_BUTTON_STYLE,
+                    ...(whiteboardTool === "pen"
+                      ? { border: "1px solid rgba(43, 95, 150, 0.58)", background: "rgba(196, 214, 232, 0.9)" }
+                      : null),
+                  }}
+                  onClick={() => applyWhiteboardTool("pen")}
+                >
+                  Pen
+                </button>
+                <button
+                  type="button"
+                  style={{
+                    ...WHITEBOARD_TOOLS_BUTTON_STYLE,
                     ...(whiteboardTool === "line"
                       ? { border: "1px solid rgba(43, 95, 150, 0.58)", background: "rgba(196, 214, 232, 0.9)" }
                       : null),
@@ -1279,6 +1307,32 @@ export default function TacticalPadLiteClean() {
                 >
                   Dashed line
                 </button>
+                <p style={WHITEBOARD_COUNT_SELECTOR_TITLE_STYLE}>Pen colour</p>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: "4px" }}>
+                  {WHITEBOARD_PEN_COLOR_CHOICES.map((choice) => {
+                    const isActive = whiteboardPenColor === choice.value;
+                    return (
+                      <button
+                        key={`whiteboard-pen-color-${choice.label.toLowerCase()}`}
+                        type="button"
+                        aria-label={`Set pen colour ${choice.label}`}
+                        style={{
+                          ...WHITEBOARD_TOKEN_COLOR_OPTION_STYLE,
+                          width: "100%",
+                          ...(isActive
+                            ? {
+                                boxShadow: "0 0 0 2px rgba(125, 211, 252, 0.9)",
+                                border: "1px solid rgba(125, 211, 252, 0.75)",
+                              }
+                            : null),
+                        }}
+                        onClick={() => applyWhiteboardPenColor(choice.value)}
+                      >
+                        <span style={{ ...WHITEBOARD_TOKEN_COLOR_SWATCH_STYLE, background: choice.css }} />
+                      </button>
+                    );
+                  })}
+                </div>
                 <p style={WHITEBOARD_COUNT_SELECTOR_TITLE_STYLE}>Player colours</p>
                 <div style={{ display: "grid", gridTemplateColumns: "44px 1fr", gap: "6px", alignItems: "center" }}>
                   <span style={{ color: "#dbe7f5", fontSize: "10px", fontWeight: 600, fontFamily: "Inter, system-ui, sans-serif" }}>
