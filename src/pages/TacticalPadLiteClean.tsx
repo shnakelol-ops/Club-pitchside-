@@ -23,7 +23,6 @@ const WHITEBOARD_PLAYER_COLOR_CHOICES: ReadonlyArray<{
   { value: "yellow", css: "#facc15" },
   { value: "black", css: "#1f2937" },
 ];
-const WHITEBOARD_DRAW_COLOR = 0x111111;
 const WHITEBOARD_PEN_COLOR_CHOICES: ReadonlyArray<{ label: string; value: number; css: string }> = [
   { label: "Black", value: 0x111111, css: "#111111" },
   { label: "White", value: 0xffffff, css: "#ffffff" },
@@ -31,6 +30,9 @@ const WHITEBOARD_PEN_COLOR_CHOICES: ReadonlyArray<{ label: string; value: number
   { label: "Red", value: 0xdc2626, css: "#dc2626" },
   { label: "Blue", value: 0x2563eb, css: "#2563eb" },
 ];
+const WHITEBOARD_DRAW_COLOR = WHITEBOARD_PEN_COLOR_CHOICES[0]?.value ?? 0x111111;
+type WhiteboardToolControl = "move" | "pen" | "line" | "arrow" | "dashed";
+type WhiteboardToolAction = WhiteboardToolControl | "eraser";
 const WHITEBOARD_BUBBLE_SIZE = 36;
 const WHITEBOARD_BUBBLE_MARGIN = 12;
 
@@ -798,7 +800,7 @@ export default function TacticalPadLiteClean() {
     blue: "blue",
     red: "red",
   });
-  const [whiteboardTool, setWhiteboardTool] = useState<"move" | "pen" | "line" | "arrow" | "dashed">("move");
+  const [whiteboardTool, setWhiteboardTool] = useState<WhiteboardToolControl>("move");
   const [phaseCount, setPhaseCount] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(false);
@@ -883,8 +885,7 @@ export default function TacticalPadLiteClean() {
       surfaceVariant: isWhiteboardMode ? "whiteboard" : "tactical",
       whiteboardTeamCounts: isWhiteboardMode ? whiteboardCountsRef.current : undefined,
       whiteboardTeamColors: isWhiteboardMode ? whiteboardTeamColorsRef.current : undefined,
-      whiteboardDrawColor:
-        isWhiteboardMode ? (whiteboardTool === "pen" ? whiteboardPenColor : WHITEBOARD_DRAW_COLOR) : undefined,
+      whiteboardDrawColor: isWhiteboardMode ? whiteboardPenColor : undefined,
       onPhaseCountChange: (count) => {
         if (!disposed) {
           setPhaseCount(count);
@@ -898,8 +899,8 @@ export default function TacticalPadLiteClean() {
       surfaceRef.current = surface;
       destroySurface = surface.destroy;
       if (isWhiteboardMode) {
-        surface.setWhiteboardDrawTool(whiteboardTool);
-        surface.setWhiteboardDrawColor(whiteboardTool === "pen" ? whiteboardPenColor : WHITEBOARD_DRAW_COLOR);
+        surface.setWhiteboardDrawTool(whiteboardTool === "eraser" ? "move" : whiteboardTool);
+        surface.setWhiteboardDrawColor(whiteboardPenColor);
       }
       window.requestAnimationFrame(() => {
         window.requestAnimationFrame(() => {
@@ -913,7 +914,7 @@ export default function TacticalPadLiteClean() {
       surfaceRef.current = null;
       destroySurface?.();
     };
-  }, [isStatsMode, isWhiteboardMode, surfaceRefreshKey, whiteboardPenColor, whiteboardTool]);
+  }, [isStatsMode, isWhiteboardMode, surfaceRefreshKey]);
 
   useEffect(() => {
     if (!isWhiteboardMode) return;
@@ -1040,17 +1041,20 @@ export default function TacticalPadLiteClean() {
     setWhiteboardRedCount(clamped);
   };
 
-  const applyWhiteboardTool = (tool: "move" | "pen" | "line" | "arrow" | "dashed") => {
+  const applyWhiteboardTool = (tool: WhiteboardToolAction) => {
     const surface = surfaceRef.current;
     if (!surface) return;
+    if (tool === "eraser") {
+      surface.eraseWhiteboardPenStroke();
+      return;
+    }
     setWhiteboardTool(tool);
     surface.setWhiteboardDrawTool(tool);
-    surface.setWhiteboardDrawColor(tool === "pen" ? whiteboardPenColor : WHITEBOARD_DRAW_COLOR);
+    surface.setWhiteboardDrawColor(whiteboardPenColor);
   };
 
   const applyWhiteboardPenColor = (color: number) => {
     setWhiteboardPenColor(color);
-    if (whiteboardTool !== "pen") return;
     surfaceRef.current?.setWhiteboardDrawColor(color);
   };
 
@@ -1307,7 +1311,28 @@ export default function TacticalPadLiteClean() {
                 >
                   Dashed line
                 </button>
-                <p style={WHITEBOARD_COUNT_SELECTOR_TITLE_STYLE}>Pen colour</p>
+                <button
+                  type="button"
+                  style={WHITEBOARD_TOOLS_BUTTON_STYLE}
+                  onClick={() => applyWhiteboardTool("eraser")}
+                >
+                  Eraser
+                </button>
+                <button
+                  type="button"
+                  style={WHITEBOARD_TOOLS_BUTTON_STYLE}
+                  onClick={() => surfaceRef.current?.undoWhiteboardStroke()}
+                >
+                  Undo
+                </button>
+                <button
+                  type="button"
+                  style={WHITEBOARD_TOOLS_BUTTON_STYLE}
+                  onClick={() => surfaceRef.current?.clearWhiteboardStrokes()}
+                >
+                  Clear All
+                </button>
+                <p style={WHITEBOARD_COUNT_SELECTOR_TITLE_STYLE}>Drawing colour</p>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: "4px" }}>
                   {WHITEBOARD_PEN_COLOR_CHOICES.map((choice) => {
                     const isActive = whiteboardPenColor === choice.value;
