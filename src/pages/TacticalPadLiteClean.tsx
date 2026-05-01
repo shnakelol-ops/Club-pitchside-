@@ -267,17 +267,6 @@ const STADIUM_FLOODLIGHT_CSS = `
   }
 }
 
-@media (max-height: 520px) and (orientation: landscape) {
-  .coach-hub-tool-grid {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-  }
-}
-
-@media (max-height: 430px) and (orientation: landscape) {
-  .coach-hub-tool-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
 `;
 
 const STADIUM_BEAM_BASE_STYLE: CSSProperties = {
@@ -469,19 +458,23 @@ const COACH_HUB_SECTION_TITLE_STYLE: CSSProperties = {
 
 const COACH_HUB_TOOL_GRID_STYLE: CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
-  gap: "3px",
+  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+  gap: "4px",
 };
 
 const COACH_HUB_TOOL_BUTTON_STYLE: CSSProperties = {
-  height: "28px",
+  height: "30px",
   minWidth: "100%",
   borderRadius: "8px",
-  fontSize: "9px",
+  fontSize: "10px",
   fontWeight: 600,
   fontFamily: "Inter, system-ui, sans-serif",
-  letterSpacing: "0.12px",
-  padding: "0 2px",
+  letterSpacing: "0.16px",
+  lineHeight: 1,
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  padding: "0 3px",
   cursor: "pointer",
   border: "1px solid rgba(121, 171, 208, 0.28)",
   background: "rgba(17, 30, 40, 0.64)",
