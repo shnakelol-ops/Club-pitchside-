@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as R
 import {
   createTacticalPadLiteSurface,
   type TacticalPadLiteSurface,
+  type TacticalItem,
   type WhiteboardTokenColor,
 } from "../engine/pixi/createTacticalPadLiteSurface";
 import StatsModeSurface from "../StatsModeSurface";
@@ -31,6 +32,14 @@ const WHITEBOARD_PEN_COLOR_CHOICES: ReadonlyArray<{ label: string; value: number
   { label: "Blue", value: 0x2563eb, css: "#2563eb" },
 ];
 const WHITEBOARD_DRAW_COLOR = WHITEBOARD_PEN_COLOR_CHOICES[0]?.value ?? 0x111111;
+const TACTICAL_ITEM_CHOICES: ReadonlyArray<{ label: string; type: TacticalItem["type"] }> = [
+  { label: "Cone", type: "cone" },
+  { label: "Pole", type: "pole" },
+  { label: "Ladder", type: "ladder" },
+  { label: "Bag", type: "bag" },
+  { label: "Football", type: "football" },
+  { label: "Sliotar", type: "sliotar" },
+];
 type WhiteboardToolControl = "move" | "pen" | "line" | "arrow" | "dashed";
 type WhiteboardToolAction = WhiteboardToolControl | "eraser";
 const WHITEBOARD_BUBBLE_SIZE = 36;
@@ -866,6 +875,7 @@ const MODE_MENU_ITEM_ACTIVE_STYLE: CSSProperties = {
 export default function TacticalPadLiteClean() {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const surfaceRef = useRef<TacticalPadLiteSurface | null>(null);
+  const tacticalItemCounterRef = useRef(0);
   const whiteboardBubbleButtonRef = useRef<HTMLButtonElement | null>(null);
   const whiteboardBubbleMenuRef = useRef<HTMLDivElement | null>(null);
   const whiteboardBubbleDragRef = useRef<{
@@ -900,6 +910,7 @@ export default function TacticalPadLiteClean() {
   });
   const [whiteboardTool, setWhiteboardTool] = useState<WhiteboardToolControl>("move");
   const [tacticalTool, setTacticalTool] = useState<WhiteboardToolControl>("move");
+  const [items, setItems] = useState<TacticalItem[]>([]);
   const [phaseCount, setPhaseCount] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -997,6 +1008,9 @@ export default function TacticalPadLiteClean() {
       const initialDrawColor = isWhiteboardMode ? whiteboardPenColor : tacticalPenColor;
       surface.setWhiteboardDrawTool(initialDrawTool);
       surface.setWhiteboardDrawColor(initialDrawColor);
+      if (!isWhiteboardMode) {
+        surface.setItems(items);
+      }
       window.requestAnimationFrame(() => {
         window.requestAnimationFrame(() => {
           surface.reflow();
@@ -1030,6 +1044,11 @@ export default function TacticalPadLiteClean() {
       colors: whiteboardTeamColorsRef.current,
     });
   }, [isWhiteboardMode, whiteboardBlueCount, whiteboardRedCount, whiteboardBlueColor, whiteboardRedColor]);
+
+  useEffect(() => {
+    if (isStatsMode || isWhiteboardMode) return;
+    surfaceRef.current?.setItems(items);
+  }, [isStatsMode, isWhiteboardMode, items]);
 
   useEffect(() => {
     if (!isWhiteboardMode) return;
@@ -1197,6 +1216,25 @@ export default function TacticalPadLiteClean() {
 
   const removeTacticalPlayer = () => {
     surfaceRef.current?.removeTacticalPlayer();
+  };
+
+  const updateItemPosition = (id: string, x: number, y: number) => {
+    const nextX = Math.max(0, Math.min(100, x));
+    const nextY = Math.max(0, Math.min(100, y));
+    setItems((previous) =>
+      previous.map((item) => (item.id === id ? { ...item, x: nextX, y: nextY } : item)),
+    );
+  };
+
+  const addItem = (type: TacticalItem["type"]) => {
+    tacticalItemCounterRef.current += 1;
+    const nextId = `item-${tacticalItemCounterRef.current}`;
+    setItems((previous) => [...previous, { id: nextId, type, x: 50, y: 50 }]);
+    updateItemPosition(nextId, 50, 50);
+  };
+
+  const clearItems = () => {
+    setItems([]);
   };
 
   const handleWhiteboardBubblePointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
@@ -1784,6 +1822,30 @@ export default function TacticalPadLiteClean() {
                 </button>
                 <button type="button" style={{ ...COACH_HUB_ACTION_BUTTON_STYLE, gridColumn: "1 / -1" }} onClick={() => {}}>
                   Clear Players
+                </button>
+              </div>
+            </div>
+            <div style={COACH_HUB_SECTION_STYLE}>
+              <p style={COACH_HUB_SECTION_TITLE_STYLE}>Items</p>
+              <div style={COACH_HUB_ACTION_GRID_STYLE}>
+                {TACTICAL_ITEM_CHOICES.map((choice) => (
+                  <button
+                    key={`item-${choice.type}`}
+                    type="button"
+                    style={COACH_HUB_ACTION_BUTTON_STYLE}
+                    disabled={isPlaybackLocked}
+                    onClick={() => addItem(choice.type)}
+                  >
+                    + {choice.label}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  style={{ ...COACH_HUB_ACTION_BUTTON_STYLE, gridColumn: "1 / -1" }}
+                  disabled={isPlaybackLocked}
+                  onClick={clearItems}
+                >
+                  Clear Items
                 </button>
               </div>
             </div>
