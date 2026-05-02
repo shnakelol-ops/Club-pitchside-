@@ -376,7 +376,7 @@ const RAW_LIBRARY_ITEMS: ReadonlyArray<RawLibraryItem> = [
     difficulty: "standard",
     duration: "30 min",
     durationMinutes: 30,
-    setup: "Set break zone from 45 to midfield with two teams.",
+    setup: "Set break zone from midfield line to scoring side with two teams.",
     howItWorks: "Coach strikes long puckout, teams race to control break.",
     coachingPoints: "Attack drop zone. Cushion touch. Move ball fast.",
     progression: "Add one hooker and one blocker after first touch.",
@@ -1582,13 +1582,70 @@ function normalizeBulletList(value: string): string {
     .join("\n");
 }
 
+const FOOTBALL_PAIR: ReadonlyArray<SportFilter> = ["gaelic-football", "ladies-football"];
+const HURLING_PAIR: ReadonlyArray<SportFilter> = ["hurling", "camogie"];
+const FOOTBALL_TERMS: ReadonlyArray<RegExp> = [
+  /\bkickout\b/g,
+  /\bhandpass\b/g,
+  /\bkick pass\b/g,
+  /\btwo-point\b/g,
+  /\b45\s*(?:line|restart)\b/g,
+];
+const HURLING_TERMS: ReadonlyArray<RegExp> = [/\bpuckout\b/g, /\bstrike\b/g, /\bhook\b/g, /\bblock\b/g, /\b65\b/g];
+const UNDERAGE_NEUTRAL_TERMS =
+  /\b(fun|movement|balance|agility|coordination|leader|traffic lights|sharks|islands|treasure|catch and clap)\b/;
+
+function countTermMatches(text: string, patterns: ReadonlyArray<RegExp>): number {
+  return patterns.reduce((count, pattern) => count + (text.match(pattern)?.length ?? 0), 0);
+}
+
+function normalizeItemSports(item: Omit<RawLibraryItem, "coachingPoints" | "whatToWatchFor">): SportFilter[] {
+  const baseSports = [...new Set(item.sports)];
+  const hasFootballFamily = baseSports.some((sport) => sport === "gaelic-football" || sport === "ladies-football");
+  const hasHurlingFamily = baseSports.some((sport) => sport === "hurling" || sport === "camogie");
+
+  if (!(hasFootballFamily && hasHurlingFamily)) {
+    return baseSports;
+  }
+
+  const searchableText = [item.title, item.summary, item.setup, item.howItWorks, item.matchUse, ...item.keywords]
+    .join(" ")
+    .toLowerCase();
+  const footballHits = countTermMatches(searchableText, FOOTBALL_TERMS);
+  const hurlingHits = countTermMatches(searchableText, HURLING_TERMS);
+  const isSharedRestartContent =
+    searchableText.includes("kickout / puckout") || (searchableText.includes("kickout") && searchableText.includes("puckout"));
+  const isUnderageNeutral =
+    item.sectionLabel === "Underage & Club Development" && UNDERAGE_NEUTRAL_TERMS.test(searchableText);
+
+  if (footballHits > 0 && hurlingHits > 0) {
+    return [...FOOTBALL_PAIR, ...HURLING_PAIR];
+  }
+
+  if (footballHits > 0 && hurlingHits === 0) {
+    return [...FOOTBALL_PAIR];
+  }
+
+  if (hurlingHits > 0 && footballHits === 0) {
+    return [...HURLING_PAIR];
+  }
+
+  if (isSharedRestartContent || isUnderageNeutral) {
+    return [...FOOTBALL_PAIR, ...HURLING_PAIR];
+  }
+
+  return baseSports;
+}
+
 export const LIBRARY_ITEMS: ReadonlyArray<LibraryItem> = RAW_LIBRARY_ITEMS.map(
   ({ coachingPoints, whatToWatchFor, commonMistakes, ...item }) => {
     const normalizedWatch = normalizeBulletList(whatToWatchFor ?? coachingPoints ?? "");
     const normalizedCommonMistakes = commonMistakes ? normalizeBulletList(commonMistakes) : undefined;
+    const normalizedSports = normalizeItemSports(item);
 
     return {
       ...item,
+      sports: normalizedSports,
       coachingPoints: normalizedWatch,
       whatToWatchFor: normalizedWatch,
       commonMistakes: normalizedCommonMistakes,

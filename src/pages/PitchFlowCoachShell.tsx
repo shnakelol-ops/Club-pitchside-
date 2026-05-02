@@ -738,8 +738,8 @@ function LibraryPage() {
   const [selectedProblem, setSelectedProblem] = useState<ProblemTag | null>(null);
   const [selectedProblemTab, setSelectedProblemTab] = useState<ProblemTabId>("sessions");
   const [selectedQuickBrowse, setSelectedQuickBrowse] = useState<QuickBrowseId | null>(null);
-  const [selectedSports, setSelectedSports] = useState<SportFilter[]>([]);
-  const [selectedAges, setSelectedAges] = useState<AgeGroupFilter[]>([]);
+  const [selectedSport, setSelectedSport] = useState<SportFilter | null>(null);
+  const [selectedAge, setSelectedAge] = useState<AgeGroupFilter | null>(null);
   const [expandedItemIds, setExpandedItemIds] = useState<string[]>([]);
   const isUnderageQuickBrowse = selectedQuickBrowse === "underage";
   const activeProblemTab = PROBLEM_TAB_OPTIONS.find((tab) => tab.id === selectedProblemTab) ?? PROBLEM_TAB_OPTIONS[1];
@@ -768,12 +768,20 @@ function LibraryPage() {
       next = next.filter((item) => item.category === categoryFilter);
     }
 
-    if (selectedSports.length > 0) {
-      next = next.filter((item) => item.sports.some((sport) => selectedSports.includes(sport)));
+    if (selectedSport) {
+      const footballFamily = selectedSport === "gaelic-football" || selectedSport === "ladies-football";
+      const oppositeFamily: SportFilter[] = footballFamily
+        ? ["hurling", "camogie"]
+        : ["gaelic-football", "ladies-football"];
+
+      next = next.filter(
+        (item) =>
+          item.sports.includes(selectedSport) && !item.sports.some((sport) => oppositeFamily.includes(sport)),
+      );
     }
 
-    if (selectedAges.length > 0) {
-      next = next.filter((item) => item.ageGroups.some((age) => selectedAges.includes(age)));
+    if (selectedAge) {
+      next = next.filter((item) => item.ageGroups.includes(selectedAge));
     }
 
     if (query.length > 0) {
@@ -795,30 +803,30 @@ function LibraryPage() {
     }
 
     return next;
-  }, [categoryFilter, isUnderageQuickBrowse, searchQuery, selectedAges, selectedProblem, selectedSports]);
+  }, [categoryFilter, isUnderageQuickBrowse, searchQuery, selectedAge, selectedProblem, selectedSport]);
 
   const toggleSport = (sport: SportFilter) => {
-    setSelectedSports((previous) => (previous.includes(sport) ? previous.filter((item) => item !== sport) : [...previous, sport]));
+    setSelectedSport((previous) => (previous === sport ? null : sport));
   };
 
   const toggleAge = (age: AgeGroupFilter) => {
-    setSelectedAges((previous) => (previous.includes(age) ? previous.filter((item) => item !== age) : [...previous, age]));
+    setSelectedAge((previous) => (previous === age ? null : age));
   };
 
   const toggleQuickBrowse = (id: QuickBrowseId) => {
     setExpandedItemIds([]);
     setSelectedProblem(null);
     setSelectedProblemTab("sessions");
-    setSelectedSports([]);
-    setSelectedAges([]);
+    setSelectedSport(null);
+    setSelectedAge(null);
     setSelectedQuickBrowse((previous) => (previous === id ? null : id));
   };
 
   const handleProblemTap = (problem: ProblemTag) => {
     setExpandedItemIds([]);
     setSelectedQuickBrowse(null);
-    setSelectedSports([]);
-    setSelectedAges([]);
+    setSelectedSport(null);
+    setSelectedAge(null);
     setSelectedProblemTab("sessions");
     setSelectedProblem((previous) => (previous === problem ? null : problem));
   };
@@ -826,8 +834,8 @@ function LibraryPage() {
   const clearFilteredView = () => {
     setSelectedProblem(null);
     setSelectedQuickBrowse(null);
-    setSelectedSports([]);
-    setSelectedAges([]);
+    setSelectedSport(null);
+    setSelectedAge(null);
     setSelectedProblemTab("sessions");
   };
 
@@ -928,7 +936,7 @@ function LibraryPage() {
                 <p className="pf-library-filters-label">Sports</p>
                 <div className="pf-library-chip-row">
                   {SPORT_FILTER_OPTIONS.map((sport) => {
-                    const isActive = selectedSports.includes(sport.id);
+                    const isActive = selectedSport === sport.id;
                     return (
                       <button
                         key={sport.id}
@@ -945,10 +953,26 @@ function LibraryPage() {
             ) : null}
             {selectedQuickBrowse === "underage" ? (
               <div className="pf-library-filters-inline">
+                <p className="pf-library-filters-label">Sports</p>
+                <div className="pf-library-chip-row">
+                  {SPORT_FILTER_OPTIONS.map((sport) => {
+                    const isActive = selectedSport === sport.id;
+                    return (
+                      <button
+                        key={sport.id}
+                        type="button"
+                        className={isActive ? "pf-library-chip-btn is-active" : "pf-library-chip-btn"}
+                        onClick={() => toggleSport(sport.id)}
+                      >
+                        {SPORT_FILTER_VIEW_LABELS[sport.id]}
+                      </button>
+                    );
+                  })}
+                </div>
                 <p className="pf-library-filters-label">Age Groups</p>
                 <div className="pf-library-age-grid">
                   {AGE_FILTER_OPTIONS.map((age) => {
-                    const isActive = selectedAges.includes(age.id);
+                    const isActive = selectedAge === age.id;
                     return (
                       <button
                         key={age.id}
