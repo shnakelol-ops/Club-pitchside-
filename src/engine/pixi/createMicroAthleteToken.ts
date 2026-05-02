@@ -1,6 +1,7 @@
 import { Container, FillGradient, Graphics, Text } from "pixi.js";
 
 export type MicroAthleteStyle = {
+  baseColor?: number | string;
   primaryColor: number;
   secondaryColor?: number;
   badgeColor: number;
@@ -79,6 +80,145 @@ function colorToHexString(color: number): string {
   return `#${color.toString(16).padStart(6, "0")}`;
 }
 
+function clampUnit(value: number): number {
+  return Math.max(0, Math.min(1, value));
+}
+
+function parseHexColor(input: number | string | undefined, fallback: number): number {
+  if (typeof input === "number" && Number.isFinite(input)) {
+    return Math.max(0, Math.min(0xffffff, Math.round(input)));
+  }
+  if (typeof input !== "string") return fallback;
+
+  const normalized = input.trim().replace(/^#/, "");
+  if (/^[0-9a-fA-F]{3}$/.test(normalized)) {
+    const expanded = normalized
+      .split("")
+      .map((char) => `${char}${char}`)
+      .join("");
+    return Number.parseInt(expanded, 16);
+  }
+  if (/^[0-9a-fA-F]{6}$/.test(normalized)) {
+    return Number.parseInt(normalized, 16);
+  }
+  return fallback;
+}
+
+function colorToRgb(color: number): { r: number; g: number; b: number } {
+  return {
+    r: ((color >> 16) & 0xff) / 255,
+    g: ((color >> 8) & 0xff) / 255,
+    b: (color & 0xff) / 255,
+  };
+}
+
+function rgbToColor(r: number, g: number, b: number): number {
+  return (clampColorChannel(r * 255) << 16) | (clampColorChannel(g * 255) << 8) | clampColorChannel(b * 255);
+}
+
+function rgbToHsl(color: number): { h: number; s: number; l: number } {
+  const { r, g, b } = colorToRgb(color);
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  const delta = max - min;
+
+  if (delta === 0) {
+    return { h: 0, s: 0, l };
+  }
+
+  const s = l > 0.5 ? delta / (2 - max - min) : delta / (max + min);
+  let h: number;
+  if (max === r) {
+    h = (g - b) / delta + (g < b ? 6 : 0);
+  } else if (max === g) {
+    h = (b - r) / delta + 2;
+  } else {
+    h = (r - g) / delta + 4;
+  }
+  h /= 6;
+  return { h, s, l };
+}
+
+function hueToRgb(p: number, q: number, t: number): number {
+  let value = t;
+  if (value < 0) value += 1;
+  if (value > 1) value -= 1;
+  if (value < 1 / 6) return p + (q - p) * 6 * value;
+  if (value < 1 / 2) return q;
+  if (value < 2 / 3) return p + (q - p) * (2 / 3 - value) * 6;
+  return p;
+}
+
+function hslToColor(h: number, s: number, l: number): number {
+  const hue = clampUnit(h);
+  const sat = clampUnit(s);
+  const light = clampUnit(l);
+  if (sat === 0) return rgbToColor(light, light, light);
+  const q = light < 0.5 ? light * (1 + sat) : light + sat - light * sat;
+  const p = 2 * light - q;
+  const r = hueToRgb(p, q, hue + 1 / 3);
+  const g = hueToRgb(p, q, hue);
+  const b = hueToRgb(p, q, hue - 1 / 3);
+  return rgbToColor(r, g, b);
+}
+
+function toLinear(channel: number): number {
+  if (channel <= 0.03928) return channel / 12.92;
+  return ((channel + 0.055) / 1.055) ** 2.4;
+}
+
+function relativeLuminance(color: number): number {
+  const { r, g, b } = colorToRgb(color);
+  const rl = toLinear(r);
+  const gl = toLinear(g);
+  const bl = toLinear(b);
+  return 0.2126 * rl + 0.7152 * gl + 0.0722 * bl;
+}
+
+type DerivedTokenPalette = {
+  base: number;
+  highlight: number;
+  shadow: number;
+  glow: number;
+  rimLight: number;
+  innerShadow: number;
+  numberColor: number;
+};
+
+function deriveTokenPalette(baseColor: number): DerivedTokenPalette {
+  const hsl = rgbToHsl(baseColor);
+
+  // Keep very light and very dark colors usable on grass.
+  let saturation = clampUnit(hsl.s);
+  let lightness = clampUnit(hsl.l);
+  if (lightness > 0.78) lightness = 0.66;
+  if (lightness > 0.68) lightness = 0.62;
+  if (lightness < 0.14) lightness = 0.22;
+  if (lightness < 0.2) lightness = 0.25;
+  if (saturation < 0.18) saturation = 0.22;
+
+  const normalizedBase = hslToColor(hsl.h, saturation, lightness);
+  const darkBoost = lightness < 0.34 ? 0.07 : 0;
+  const lightBoost = lightness > 0.62 ? 0.06 : 0;
+  const highlight = hslToColor(hsl.h, clampUnit(saturation * 0.9), clampUnit(lightness + 0.22 + darkBoost));
+  const shadow = hslToColor(hsl.h, clampUnit(saturation + 0.08), clampUnit(lightness - 0.2 - lightBoost));
+  const glow = hslToColor(hsl.h, clampUnit(saturation * 0.45), clampUnit(lightness + 0.17));
+  const rimLight = hslToColor(hsl.h, clampUnit(saturation * 0.5), clampUnit(lightness + 0.3));
+  const innerShadow = hslToColor(hsl.h, clampUnit(saturation + 0.06), clampUnit(lightness - 0.28));
+  const numberColor = relativeLuminance(normalizedBase) < 0.5 ? 0xffffff : 0x0f172a;
+
+  return {
+    base: normalizedBase,
+    highlight,
+    shadow,
+    glow,
+    rimLight,
+    innerShadow,
+    numberColor,
+  };
+}
+
 export function createMicroAthleteToken({
   label,
   teamColor,
@@ -103,6 +243,8 @@ export function createMicroAthleteToken({
   token.cursor = "grab";
   token.scale.set(scale ?? 1);
 
+  const baseColor = parseHexColor(style?.baseColor, resolved.primaryColor);
+  const tokenPalette = deriveTokenPalette(baseColor);
   const badgeRadius = 3.66;
 
   const shadow = new Graphics();
@@ -122,7 +264,7 @@ export function createMicroAthleteToken({
 
   const jerseyFill = resolved.goalkeeper && resolved.secondaryColor != null
     ? resolved.secondaryColor
-    : resolved.primaryColor;
+    : tokenPalette.base;
   const torsoTop = mixColor(jerseyFill, 0xffffff, 0.24);
   const torsoBottom = mixColor(jerseyFill, 0x000000, 0.26);
   const torsoGradient = new FillGradient({
@@ -188,16 +330,15 @@ export function createMicroAthleteToken({
     .fill({ color: 0xffffff, alpha: 0.12 });
   athlete.addChild(body);
 
-  const badgeBaseColor = resolved.badgeColor;
-  const badgeTopColor = mixColor(badgeBaseColor, 0xffffff, 0.38);
-  const badgeMidColor = mixColor(badgeBaseColor, resolved.primaryColor, 0.24);
-  const badgeBottomColor = mixColor(badgeBaseColor, 0x000000, 0.38);
+  const badgeTopColor = tokenPalette.highlight;
+  const badgeMidColor = tokenPalette.base;
+  const badgeBottomColor = tokenPalette.shadow;
   const tokenOuterGlow = new Graphics();
   tokenOuterGlow
     .circle(0, 0, badgeRadius * 1.2)
-    .fill({ color: mixColor(resolved.primaryColor, 0xffffff, 0.14), alpha: 0.05 })
+    .fill({ color: tokenPalette.glow, alpha: 0.05 })
     .circle(0, 0, badgeRadius * 1.06)
-    .fill({ color: mixColor(resolved.primaryColor, 0xffffff, 0.1), alpha: 0.06 });
+    .fill({ color: tokenPalette.glow, alpha: 0.07 });
   token.addChild(tokenOuterGlow);
 
   const badgeGradient = new FillGradient({
@@ -224,29 +365,36 @@ export function createMicroAthleteToken({
     .fill({ color: 0xffffff, alpha: 0.32 })
     .ellipse(-badgeRadius * 0.04, -badgeRadius * 0.72, badgeRadius * 0.68, badgeRadius * 0.1)
     .fill({ color: 0xffffff, alpha: 0.2 })
+    .ellipse(0, -badgeRadius * 0.68, badgeRadius * 0.74, badgeRadius * 0.12)
+    .fill({ color: tokenPalette.rimLight, alpha: 0.18 })
     .ellipse(0, badgeRadius * 0.56, badgeRadius * 0.84, badgeRadius * 0.3)
-    .fill({ color: 0x020617, alpha: 0.09 });
+    .fill({ color: tokenPalette.innerShadow, alpha: 0.1 });
   token.addChild(badge);
+
+  const numberFill = style?.textColor ?? tokenPalette.numberColor;
+  const numberUsesLightFill = relativeLuminance(numberFill) > 0.56;
+  const numberStroke = numberUsesLightFill ? mixColor(tokenPalette.shadow, 0x000000, 0.48) : 0xf8fafc;
+  const numberDropShadowColor = numberUsesLightFill ? 0x020617 : 0xffffff;
 
   const labelText = new Text({
     text: label,
     style: {
-      fill: resolved.textColor,
+      fill: numberFill,
       fontSize: 3.78,
       fontWeight: "900",
       fontFamily: "Inter, system-ui, sans-serif",
       align: "center",
       letterSpacing: 0.12,
       stroke: {
-        color: resolved.outlineColor,
-        width: 0.34,
+        color: numberStroke,
+        width: 0.28,
         join: "round",
       },
       dropShadow: {
-        color: 0x020617,
-        alpha: 0.34,
+        color: numberDropShadowColor,
+        alpha: numberUsesLightFill ? 0.28 : 0.12,
         blur: 1,
-        distance: 0.18,
+        distance: 0.14,
         angle: Math.PI / 2,
       },
     },
