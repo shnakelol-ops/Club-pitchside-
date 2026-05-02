@@ -80,7 +80,7 @@ export function createMicroAthleteToken({
   token.cursor = "grab";
   token.scale.set(scale ?? 1);
 
-  const badgeRadius = 3.85;
+  const badgeRadius = 3.66;
 
   const shadow = new Graphics();
   shadow
@@ -96,13 +96,13 @@ export function createMicroAthleteToken({
     ? resolved.secondaryColor
     : resolved.primaryColor;
   const torsoWidth = badgeRadius * 1.44;
-  const torsoHeight = badgeRadius * 0.9;
+  const torsoHeight = badgeRadius * 1.02;
   const torsoTop = -4.9;
   const torsoLeft = -torsoWidth / 2;
   const shoulderWidth = torsoWidth * 1.12;
   const shoulderLeft = -shoulderWidth / 2;
   const headRadius = badgeRadius * 0.24;
-  const headCenterY = torsoTop - headRadius * 0.82;
+  const headCenterY = torsoTop - headRadius * 1.02;
 
   // Legs
   body
