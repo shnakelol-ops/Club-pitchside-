@@ -1028,7 +1028,11 @@ export default function TacticalPadLiteClean() {
       surface.setWhiteboardDrawColor(initialDrawColor);
       if (!isWhiteboardMode) {
         surface.setItems(items);
-        surface.setItemMode("locked");
+        const initialSurfaceItemMode: ItemMode =
+          itemMode === "edit" && tacticalTool === "move" && !(isPlaying || isPaused)
+            ? "edit"
+            : "locked";
+        surface.setItemMode(initialSurfaceItemMode);
       }
       window.requestAnimationFrame(() => {
         window.requestAnimationFrame(() => {
@@ -1248,7 +1252,14 @@ export default function TacticalPadLiteClean() {
   const addItem = (type: TacticalItem["type"]) => {
     tacticalItemCounterRef.current += 1;
     const nextId = `item-${tacticalItemCounterRef.current}`;
-    setItems((previous) => [...previous, { id: nextId, type, x: 50, y: 50 }]);
+    setItems((previous) => {
+      const index = previous.length;
+      const column = index % 3;
+      const row = Math.floor(index / 3);
+      const nextX = Math.min(78, 30 + column * 12);
+      const nextY = Math.min(78, 26 + row * 10);
+      return [...previous, { id: nextId, type, x: nextX, y: nextY }];
+    });
   };
 
   const clearItems = () => {
@@ -1852,7 +1863,7 @@ export default function TacticalPadLiteClean() {
                   disabled={isPlaybackLocked}
                   onClick={() => setItemMode((previous) => (previous === "edit" ? "locked" : "edit"))}
                 >
-                  {itemMode === "edit" ? "Lock Items" : "Edit Items"}
+                  {effectiveItemMode === "edit" ? "Lock Items" : "Edit Items"}
                 </button>
                 {TACTICAL_ITEM_CHOICES.map((choice) => (
                   <button

@@ -121,6 +121,7 @@ const PLAYER_RADIUS = 4.1;
 const PLAYER_TOUCH_HIT_DIAMETER_PX = 48;
 const TACTICAL_ITEM_HALF_SIZE = 2.2;
 const TACTICAL_ITEM_DRAG_THRESHOLD_PX = 5;
+const TACTICAL_ITEM_TOUCH_HIT_DIAMETER_PX = 46;
 const WHITEBOARD_DEFAULT_STROKE_COLOR = 0x111111;
 const WHITEBOARD_STROKE_WIDTH = 1.1;
 const WHITEBOARD_BLUE_START_X = 30;
@@ -149,6 +150,7 @@ type ActiveDragState =
   | ({
       type: "item";
       itemId: string;
+      dragOffset: { x: number; y: number };
     } & DragPointerState)
   | ({
       type: "player";
@@ -227,6 +229,19 @@ function setTokenWorldPositionForPoint(
 ): void {
   const world = mapper.normalizedToWorld(point);
   player.token.position.set(world.x, world.y);
+}
+
+function setItemTouchHitArea(
+  item: Pick<TacticalSurfaceItem, "graphic">,
+  mapper: ReturnType<typeof createWorldViewport>,
+): void {
+  const touchRadiusInWorld = (TACTICAL_ITEM_TOUCH_HIT_DIAMETER_PX * 0.5) / mapper.transform.scale;
+  const itemVisualRadius = TACTICAL_ITEM_HALF_SIZE * 1.35;
+  const hitRadius = Math.max(itemVisualRadius, touchRadiusInWorld);
+  const hitRadiusSquared = hitRadius * hitRadius;
+  item.graphic.hitArea = {
+    contains: (x: number, y: number) => x * x + y * y <= hitRadiusSquared,
+  };
 }
 
 function clampNormalizedValue(value: number): number {
@@ -527,6 +542,9 @@ export async function createTacticalPadLiteSurface(
       setPlayerTouchHitArea(player, mapper);
       setTokenWorldPositionForPoint(player, player.current, mapper);
     }
+    for (const item of tacticalItems) {
+      setItemTouchHitArea(item, mapper);
+    }
     renderTacticalItems();
     renderAllWhiteboardDrawings();
   }
@@ -753,9 +771,17 @@ export async function createTacticalPadLiteSurface(
     selectedItemId = item.id;
     const pointerId = getPointerIdFromEvent(event);
     const startStagePoint = getStagePointFromEvent(event, app.stage);
+    const pointerNormalized = getBoundedNormalizedPointFromEvent(event);
+    const dragOffset = pointerNormalized
+      ? {
+          x: item.x - pointerNormalized.x,
+          y: item.y - pointerNormalized.y,
+        }
+      : { x: 0, y: 0 };
     activeDrag = {
       type: "item",
       itemId: item.id,
+      dragOffset,
       pointerId,
       startStagePoint,
       hasCrossedThreshold: false,
@@ -815,6 +841,7 @@ export async function createTacticalPadLiteSurface(
         graphic,
         selectionGraphic,
       };
+      setItemTouchHitArea(createdItem, mapper);
       bindTacticalItemPointerDown(createdItem);
       tacticalItems.push(createdItem);
     }
@@ -835,8 +862,12 @@ export async function createTacticalPadLiteSurface(
     }
     if (!hasExceededDragThreshold(event, activeDrag)) return;
     activeDrag.hasCrossedThreshold = true;
-    const normalized = getBoundedNormalizedPointFromEvent(event);
-    if (!normalized) return;
+    const pointerNormalized = getBoundedNormalizedPointFromEvent(event);
+    if (!pointerNormalized) return;
+    const normalized = {
+      x: clampNormalizedValue(pointerNormalized.x + activeDrag.dragOffset.x),
+      y: clampNormalizedValue(pointerNormalized.y + activeDrag.dragOffset.y),
+    };
     item.x = normalized.x;
     item.y = normalized.y;
     setItemWorldPosition(item, mapper);
