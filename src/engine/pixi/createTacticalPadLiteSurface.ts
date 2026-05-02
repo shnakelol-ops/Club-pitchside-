@@ -135,6 +135,12 @@ const WHITEBOARD_DEFAULT_STROKE_COLOR = 0x111111;
 const WHITEBOARD_STROKE_WIDTH = 1.1;
 const WHITEBOARD_BLUE_START_X = 30;
 const WHITEBOARD_RED_START_X = 70;
+const TOKEN_BASE_COLOR_BY_NAME: Record<PremiumPlayerTokenColor, number> = {
+  blue: 0x2563eb,
+  red: 0xdc2626,
+  yellow: 0xfacc15,
+  black: 0x1f2937,
+};
 
 type PlayerSeed = {
   id: string;
@@ -457,11 +463,15 @@ export async function createTacticalPadLiteSurface(
   function createSurfacePlayer(base: PlayerSeed): TacticalPlayer {
     const tokenColor: PremiumPlayerTokenColor =
       surfaceVariant === "whiteboard" ? base.color : base.team === "RED" ? "red" : "blue";
+    const tokenBaseColor = TOKEN_BASE_COLOR_BY_NAME[tokenColor];
     const tokenPack =
       surfaceVariant === "tactical"
         ? createMicroAthleteToken({
             label: String(base.number),
             teamColor: tokenColor,
+            style: {
+              baseColor: tokenBaseColor,
+            },
             scale: PLAYER_RADIUS / 4.1,
           })
         : createPremiumPlayerToken({
