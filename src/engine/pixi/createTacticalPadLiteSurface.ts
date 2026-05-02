@@ -9,7 +9,13 @@ import {
   PREMIUM_TOKEN_IDLE_SHADOW_ALPHA,
   type PremiumPlayerTokenColor,
 } from "./createPremiumPlayerToken";
-import { createMicroAthleteToken } from "./createMicroAthleteToken";
+import {
+  createMicroAthleteToken,
+  MICRO_ATHLETE_TOKEN_DRAG_SCALE,
+  MICRO_ATHLETE_TOKEN_DRAG_SHADOW_ALPHA,
+  MICRO_ATHLETE_TOKEN_IDLE_SCALE,
+  MICRO_ATHLETE_TOKEN_IDLE_SHADOW_ALPHA,
+} from "./createMicroAthleteToken";
 import {
   createTacticalPitchVisualRoot,
   type TacticalPitchTheme,
@@ -27,6 +33,10 @@ type TacticalPlayer = {
   current: NormalizedPoint;
   token: Container;
   tokenShadow: Graphics;
+  idleScale: number;
+  dragScale: number;
+  idleShadowAlpha: number;
+  dragShadowAlpha: number;
   dragScaleTarget: number;
   dragShadowAlphaTarget: number;
 };
@@ -457,12 +467,22 @@ export async function createTacticalPadLiteSurface(
   function createSurfacePlayer(base: PlayerSeed): TacticalPlayer {
     const tokenColor: PremiumPlayerTokenColor =
       surfaceVariant === "whiteboard" ? base.color : base.team === "RED" ? "red" : "blue";
+    const isTacticalSurface = surfaceVariant === "tactical";
+    const baseScale = isTacticalSurface ? PLAYER_RADIUS / 4.1 : 1;
+    const idleScale = baseScale * (isTacticalSurface ? MICRO_ATHLETE_TOKEN_IDLE_SCALE : PREMIUM_TOKEN_IDLE_SCALE);
+    const dragScale = baseScale * (isTacticalSurface ? MICRO_ATHLETE_TOKEN_DRAG_SCALE : PREMIUM_TOKEN_DRAG_SCALE);
+    const idleShadowAlpha = isTacticalSurface
+      ? MICRO_ATHLETE_TOKEN_IDLE_SHADOW_ALPHA
+      : PREMIUM_TOKEN_IDLE_SHADOW_ALPHA;
+    const dragShadowAlpha = isTacticalSurface
+      ? MICRO_ATHLETE_TOKEN_DRAG_SHADOW_ALPHA
+      : PREMIUM_TOKEN_DRAG_SHADOW_ALPHA;
     const tokenPack =
-      surfaceVariant === "tactical"
+      isTacticalSurface
         ? createMicroAthleteToken({
             label: String(base.number),
             teamColor: tokenColor,
-            scale: PLAYER_RADIUS / 4.1,
+            scale: baseScale,
           })
         : createPremiumPlayerToken({
             color: tokenColor,
@@ -478,8 +498,12 @@ export async function createTacticalPadLiteSurface(
       current: { ...base.position },
       token,
       tokenShadow: shadow,
-      dragScaleTarget: PREMIUM_TOKEN_IDLE_SCALE,
-      dragShadowAlphaTarget: PREMIUM_TOKEN_IDLE_SHADOW_ALPHA,
+      idleScale,
+      dragScale,
+      idleShadowAlpha,
+      dragShadowAlpha,
+      dragScaleTarget: idleScale,
+      dragShadowAlphaTarget: idleShadowAlpha,
     };
   }
 
@@ -1074,10 +1098,8 @@ export async function createTacticalPadLiteSurface(
   }
 
   function setPlayerDragVisualTarget(player: TacticalPlayer, isDragging: boolean): void {
-    player.dragScaleTarget = isDragging ? PREMIUM_TOKEN_DRAG_SCALE : PREMIUM_TOKEN_IDLE_SCALE;
-    player.dragShadowAlphaTarget = isDragging
-      ? PREMIUM_TOKEN_DRAG_SHADOW_ALPHA
-      : PREMIUM_TOKEN_IDLE_SHADOW_ALPHA;
+    player.dragScaleTarget = isDragging ? player.dragScale : player.idleScale;
+    player.dragShadowAlphaTarget = isDragging ? player.dragShadowAlpha : player.idleShadowAlpha;
   }
 
   function animatePlayerDragVisuals(deltaMs: number): void {
