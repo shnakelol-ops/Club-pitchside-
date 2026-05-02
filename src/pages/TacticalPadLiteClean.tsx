@@ -34,6 +34,7 @@ const WHITEBOARD_PEN_COLOR_CHOICES: ReadonlyArray<{ label: string; value: number
 const WHITEBOARD_DRAW_COLOR = WHITEBOARD_PEN_COLOR_CHOICES[0]?.value ?? 0x111111;
 type WhiteboardToolControl = "move" | "pen" | "line" | "arrow" | "dashed";
 type WhiteboardToolAction = WhiteboardToolControl | "eraser";
+type TacticalItemPositionUpdate = { id: string; x: number; y: number };
 const WHITEBOARD_BUBBLE_SIZE = 36;
 const WHITEBOARD_BUBBLE_MARGIN = 12;
 
@@ -988,6 +989,24 @@ export default function TacticalPadLiteClean() {
         if (disposed) return;
         setIsPlaying(state.isPlaying);
         setIsPaused(state.isPaused);
+      },
+      onTacticalItemsPositionChange: (updates) => {
+        if (disposed) return;
+        setItems((previous) => {
+          if (updates.length === 0) return previous;
+          const updateById = new Map<string, TacticalItemPositionUpdate>(
+            updates.map((update) => [update.id, update]),
+          );
+          let didChange = false;
+          const nextItems = previous.map((item) => {
+            const nextPosition = updateById.get(item.id);
+            if (!nextPosition) return item;
+            if (item.x === nextPosition.x && item.y === nextPosition.y) return item;
+            didChange = true;
+            return { ...item, x: nextPosition.x, y: nextPosition.y };
+          });
+          return didChange ? nextItems : previous;
+        });
       },
     }).then((surface) => {
       if (disposed) {

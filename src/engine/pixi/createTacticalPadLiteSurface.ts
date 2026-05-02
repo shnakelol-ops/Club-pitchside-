@@ -66,6 +66,7 @@ export type TacticalPadLiteSurface = {
 type TacticalPadLiteSurfaceOptions = {
   onPhaseCountChange?: (count: number) => void;
   onPlaybackStateChange?: (state: { isPlaying: boolean; isPaused: boolean }) => void;
+  onTacticalItemsCommit?: (items: TacticalItem[]) => void;
   surfaceVariant?: "tactical" | "whiteboard";
   whiteboardTeamCounts?: {
     blue: number;
@@ -447,6 +448,7 @@ export async function createTacticalPadLiteSurface(
   let activeItemDrag:
     | {
         itemId: string;
+        pendingPosition: NormalizedPoint | null;
       }
     | null = null;
   let activeItemLongPress:
@@ -576,6 +578,15 @@ export async function createTacticalPadLiteSurface(
 
   function findTacticalItemById(itemId: string): TacticalSurfaceItem | null {
     return tacticalItems.find((item) => item.id === itemId) ?? null;
+  }
+
+  function snapshotTacticalItems(): TacticalItem[] {
+    return tacticalItems.map((item) => ({
+      id: item.id,
+      type: item.type,
+      x: item.x,
+      y: item.y,
+    }));
   }
 
   function drawTacticalItemGraphic(graphic: Graphics, item: TacticalItem, isSelected: boolean): void {
@@ -739,7 +750,10 @@ export async function createTacticalPadLiteSurface(
       releaseItemDrag();
       clearItemLongPressState();
       if (selectedItemId === item.id) {
-        activeItemDrag = { itemId: item.id };
+        activeItemDrag = { itemId: item.id, pendingPosition: normalized };
+        item.x = normalized.x;
+        item.y = normalized.y;
+        setItemWorldPosition(item, mapper);
         syncWhiteboardTokenInputMode();
         (event as { stopPropagation?: () => void }).stopPropagation?.();
         return;
@@ -748,7 +762,10 @@ export async function createTacticalPadLiteSurface(
         if (!activeItemLongPress || activeItemLongPress.itemId !== item.id) return;
         activeItemLongPress.didTrigger = true;
         selectItem(item.id);
-        activeItemDrag = { itemId: item.id };
+        activeItemDrag = { itemId: item.id, pendingPosition: activeItemLongPress.startPoint };
+        item.x = activeItemLongPress.startPoint.x;
+        item.y = activeItemLongPress.startPoint.y;
+        setItemWorldPosition(item, mapper);
         syncWhiteboardTokenInputMode();
       }, TACTICAL_ITEM_LONG_PRESS_MS);
       activeItemLongPress = {
@@ -760,15 +777,21 @@ export async function createTacticalPadLiteSurface(
       (event as { stopPropagation?: () => void }).stopPropagation?.();
     });
     item.graphic.on("pointermove", (event) => {
-      updateItemLongPressFromEvent(event);
+      if (activeItemDrag?.itemId === item.id && selectedItemId === item.id) {
+        updateDraggedItemFromEvent(event);
+      } else {
+        updateItemLongPressFromEvent(event);
+      }
       (event as { stopPropagation?: () => void }).stopPropagation?.();
     });
     item.graphic.on("pointerup", (event) => {
       clearItemLongPressState();
+      releaseItemDrag();
       (event as { stopPropagation?: () => void }).stopPropagation?.();
     });
     item.graphic.on("pointerupoutside", (event) => {
       clearItemLongPressState();
+      releaseItemDrag();
       (event as { stopPropagation?: () => void }).stopPropagation?.();
     });
   }
@@ -828,6 +851,7 @@ export async function createTacticalPadLiteSurface(
     }
     const normalized = getBoundedNormalizedPointFromEvent(event);
     if (!normalized) return;
+    activeItemDrag.pendingPosition = normalized;
     item.x = normalized.x;
     item.y = normalized.y;
     setItemWorldPosition(item, mapper);
@@ -835,8 +859,17 @@ export async function createTacticalPadLiteSurface(
 
   function releaseItemDrag(): void {
     if (!activeItemDrag) return;
+    const dragState = activeItemDrag;
     activeItemDrag = null;
     syncWhiteboardTokenInputMode();
+    if (surfaceVariant !== "tactical") return;
+    const draggedItem = findTacticalItemById(dragState.itemId);
+    if (!draggedItem) return;
+    const finalPoint = dragState.pendingPosition ?? { x: draggedItem.x, y: draggedItem.y };
+    draggedItem.x = finalPoint.x;
+    draggedItem.y = finalPoint.y;
+    setItemWorldPosition(draggedItem, mapper);
+    options.onTacticalItemsCommit?.(snapshotTacticalItems());
   }
 
   function drawLineWithTool(
