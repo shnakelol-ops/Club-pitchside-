@@ -66,7 +66,7 @@ export type TacticalPadLiteSurface = {
 type TacticalPadLiteSurfaceOptions = {
   onPhaseCountChange?: (count: number) => void;
   onPlaybackStateChange?: (state: { isPlaying: boolean; isPaused: boolean }) => void;
-  onTacticalItemsCommit?: (items: TacticalItem[]) => void;
+  onTacticalItemsPositionChange?: (items: TacticalItem[]) => void;
   surfaceVariant?: "tactical" | "whiteboard";
   whiteboardTeamCounts?: {
     blue: number;
@@ -869,7 +869,7 @@ export async function createTacticalPadLiteSurface(
     draggedItem.x = finalPoint.x;
     draggedItem.y = finalPoint.y;
     setItemWorldPosition(draggedItem, mapper);
-    options.onTacticalItemsCommit?.(snapshotTacticalItems());
+    options.onTacticalItemsPositionChange?.(snapshotTacticalItems());
   }
 
   function drawLineWithTool(
