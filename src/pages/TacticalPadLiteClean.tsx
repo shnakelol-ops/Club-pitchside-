@@ -17,7 +17,6 @@ type TacticalPadLiteCleanProps = {
 
 const CONTENT_WIDTH_EXPR =
   "min(calc(100dvw - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), calc(100vw - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), calc((100dvh - 10px) * 1.6), calc((100vh - 10px) * 1.6), 1360px)";
-const FLOWLAB_HOME_RIGHT = `calc(50vw - (${CONTENT_WIDTH_EXPR} / 2) + 8px)`;
 const WHITEBOARD_PLAYER_COLOR_CHOICES: ReadonlyArray<{
   value: WhiteboardTokenColor;
   css: string;
@@ -804,10 +803,7 @@ const WHITEBOARD_TOKEN_COLOR_SWATCH_STYLE: CSSProperties = {
   border: "1px solid rgba(255, 255, 255, 0.48)",
 };
 
-const HOME_BUTTON_STYLE: CSSProperties = {
-  position: "absolute",
-  top: "max(12px, calc(env(safe-area-inset-top, 0px) + 10px))",
-  right: FLOWLAB_HOME_RIGHT,
+const HOME_MENU_ICON_BUTTON_STYLE: CSSProperties = {
   width: "34px",
   height: "34px",
   borderRadius: "10px",
@@ -824,7 +820,14 @@ const HOME_BUTTON_STYLE: CSSProperties = {
   backdropFilter: "blur(10px)",
   WebkitBackdropFilter: "blur(10px)",
   boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
-  zIndex: 24,
+};
+
+const WHITEBOARD_HOME_BUTTON_STYLE: CSSProperties = {
+  ...HOME_MENU_ICON_BUTTON_STYLE,
+  position: "absolute",
+  top: "-42px",
+  right: "0px",
+  zIndex: 23,
 };
 
 export default function TacticalPadLiteClean({ initialMode = "tactical" }: TacticalPadLiteCleanProps) {
@@ -1610,6 +1613,15 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             <button
               type="button"
               className="control-button"
+              style={{ ...CONTROL_BUTTON_STYLE, ...HOME_MENU_ICON_BUTTON_STYLE, minWidth: "34px" }}
+              onClick={goHome}
+              aria-label="Go to Home"
+            >
+              ⌂
+            </button>
+            <button
+              type="button"
+              className="control-button"
               disabled={isPlaybackLocked}
               style={isPlaybackLocked ? DISABLED_CONTROL_BUTTON_STYLE : SET_START_BUTTON_STYLE}
               onClick={() => {
@@ -1840,9 +1852,13 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             </span>
           </button>
         ) : null}
-        <button type="button" style={HOME_BUTTON_STYLE} onClick={goHome} aria-label="Go to Home">
-          ⌂
-        </button>
+        {isWhiteboardMode ? (
+          <div style={CONTENT_STYLE}>
+            <button type="button" style={WHITEBOARD_HOME_BUTTON_STYLE} onClick={goHome} aria-label="Go to Home">
+              ⌂
+            </button>
+          </div>
+        ) : null}
       </div>
     </OrientationGate>
   );
