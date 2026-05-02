@@ -141,6 +141,12 @@ const TOKEN_BASE_COLOR_BY_NAME: Record<PremiumPlayerTokenColor, number> = {
   yellow: 0xfacc15,
   black: 0x1f2937,
 };
+// TEMP TEST ONLY: force extreme simulator team colors to visually validate
+// derived palette rendering and contrast handling.
+const TEMP_SIMULATOR_TEAM_BASE_COLORS: Record<"BLUE" | "RED", number> = {
+  BLUE: 0xffd400,
+  RED: 0x0b1220,
+};
 
 type PlayerSeed = {
   id: string;
@@ -463,7 +469,10 @@ export async function createTacticalPadLiteSurface(
   function createSurfacePlayer(base: PlayerSeed): TacticalPlayer {
     const tokenColor: PremiumPlayerTokenColor =
       surfaceVariant === "whiteboard" ? base.color : base.team === "RED" ? "red" : "blue";
-    const tokenBaseColor = TOKEN_BASE_COLOR_BY_NAME[tokenColor];
+    const tokenBaseColor =
+      surfaceVariant === "tactical"
+        ? TEMP_SIMULATOR_TEAM_BASE_COLORS[base.team]
+        : TOKEN_BASE_COLOR_BY_NAME[tokenColor];
     const tokenPack =
       surfaceVariant === "tactical"
         ? createMicroAthleteToken({
