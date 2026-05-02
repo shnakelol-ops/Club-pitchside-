@@ -741,6 +741,7 @@ function LibraryPage() {
   const [selectedSports, setSelectedSports] = useState<SportFilter[]>([]);
   const [selectedAges, setSelectedAges] = useState<AgeGroupFilter[]>([]);
   const [expandedItemIds, setExpandedItemIds] = useState<string[]>([]);
+  const isUnderageQuickBrowse = selectedQuickBrowse === "underage";
   const activeProblemTab = PROBLEM_TAB_OPTIONS.find((tab) => tab.id === selectedProblemTab) ?? PROBLEM_TAB_OPTIONS[1];
   const selectedQuickBrowseCategory = selectedQuickBrowse ? (QUICK_BROWSE_CATEGORY_MAP[selectedQuickBrowse] ?? "all") : "all";
   const categoryFilter: LibraryCategory | "all" = selectedProblem ? activeProblemTab.category : selectedQuickBrowseCategory;
@@ -759,7 +760,11 @@ function LibraryPage() {
       next = next.filter((item) => item.problemTags.includes(selectedProblem));
     }
 
-    if (categoryFilter !== "all") {
+    if (isUnderageQuickBrowse) {
+      next = next.filter(
+        (item) => item.category === "underage-club-development" || item.sectionLabel === "Underage & Club Development",
+      );
+    } else if (categoryFilter !== "all") {
       next = next.filter((item) => item.category === categoryFilter);
     }
 
@@ -790,7 +795,7 @@ function LibraryPage() {
     }
 
     return next;
-  }, [categoryFilter, searchQuery, selectedAges, selectedProblem, selectedSports]);
+  }, [categoryFilter, isUnderageQuickBrowse, searchQuery, selectedAges, selectedProblem, selectedSports]);
 
   const toggleSport = (sport: SportFilter) => {
     setSelectedSports((previous) => (previous.includes(sport) ? previous.filter((item) => item !== sport) : [...previous, sport]));
