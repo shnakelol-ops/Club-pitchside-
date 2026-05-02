@@ -15,6 +15,38 @@
     {
       "source": "/tacticalpad-lite-clean/(.*)",
       "destination": "/index.html"
+    },
+    {
+      "source": "/board",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/board/(.*)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/library",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/library/(.*)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/sessions",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/sessions/(.*)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/plans",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/plans/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
