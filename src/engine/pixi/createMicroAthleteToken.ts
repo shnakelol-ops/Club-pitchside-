@@ -117,7 +117,7 @@ export function createMicroAthleteToken({
 
   const athlete = new Container();
   athlete.rotation = -0.092;
-  athlete.position.set(0.16, -0.1);
+  athlete.position.set(0.16, -0.06);
   token.addChild(athlete);
 
   const jerseyFill = resolved.goalkeeper && resolved.secondaryColor != null
@@ -139,36 +139,36 @@ export function createMicroAthleteToken({
   const body = new Graphics();
   // Subtle arms (kept slim for small-scale readability)
   body
-    .roundRect(-2.54, -4.92, 0.62, 3.02, 0.28)
+    .roundRect(-2.26, -5.2, 0.54, 3.34, 0.26)
     .fill({ color: mixColor(jerseyFill, 0x000000, 0.08), alpha: 0.94 })
-    .roundRect(1.92, -4.92, 0.62, 3.02, 0.28)
+    .roundRect(1.72, -5.2, 0.54, 3.34, 0.26)
     .fill({ color: mixColor(jerseyFill, 0x000000, 0.15), alpha: 0.94 });
 
   // Torso / jersey (lean upright silhouette with gentle taper)
   body
-    .moveTo(-1.8, -5.96)
-    .lineTo(1.8, -5.96)
-    .lineTo(1.12, -0.62)
-    .lineTo(-1.12, -0.62)
+    .moveTo(-1.58, -6.26)
+    .lineTo(1.58, -6.26)
+    .lineTo(0.94, -0.45)
+    .lineTo(-0.94, -0.45)
     .closePath()
     .fill(torsoGradient);
 
   // Internal polish without thick cartoon outlines.
   body
-    .ellipse(0.54, -2.46, 0.96, 2.24)
+    .ellipse(0.46, -2.64, 0.82, 2.42)
     .fill({ color: 0x020617, alpha: 0.16 })
-    .ellipse(-0.46, -4.82, 0.84, 0.42)
+    .ellipse(-0.38, -5.08, 0.74, 0.38)
     .fill({ color: 0xffffff, alpha: 0.17 })
-    .roundRect(-0.86, -1.26, 1.72, 0.82, 0.38)
+    .roundRect(-0.72, -1.1, 1.44, 0.74, 0.34)
     .fill({ color: 0x020617, alpha: 0.11 });
 
   // Shorts + subtle legs
   body
-    .roundRect(-1.04, -0.94, 2.08, 0.72, 0.24)
+    .roundRect(-0.92, -0.8, 1.84, 0.7, 0.22)
     .fill({ color: mixColor(jerseyFill, 0x000000, 0.34), alpha: 0.88 })
-    .roundRect(-0.9, -0.2, 0.66, 2.12, 0.28)
+    .roundRect(-0.8, -0.1, 0.58, 2.28, 0.26)
     .fill({ color: 0x334155, alpha: 0.92 })
-    .roundRect(0.24, -0.2, 0.66, 2.12, 0.28)
+    .roundRect(0.22, -0.1, 0.58, 2.28, 0.26)
     .fill({ color: 0x334155, alpha: 0.92 });
 
   // Head (small and clean: no facial details).
@@ -176,15 +176,15 @@ export function createMicroAthleteToken({
   const hairTone = mixColor(headColor, 0x020617, 0.36);
   body
     // Tiny soft back-hair cue for quick female-identifying read.
-    .ellipse(-0.76, -6.78, 0.28, 0.2)
+    .ellipse(-0.7, -6.9, 0.26, 0.19)
     .fill({ color: hairTone, alpha: 0.29 })
-    .ellipse(-0.96, -6.62, 0.16, 0.12)
+    .ellipse(-0.88, -6.74, 0.14, 0.1)
     .fill({ color: hairTone, alpha: 0.24 })
-    .circle(0.03, -7.04, 0.98)
+    .circle(0.03, -7.16, 0.9)
     .fill({ color: headColor })
-    .ellipse(0.03, -7.4, 0.62, 0.24)
+    .ellipse(0.03, -7.5, 0.56, 0.22)
     .fill({ color: 0x020617, alpha: 0.16 })
-    .ellipse(-0.1, -7.24, 0.56, 0.24)
+    .ellipse(-0.1, -7.3, 0.5, 0.21)
     .fill({ color: 0xffffff, alpha: 0.12 });
   athlete.addChild(body);
 
