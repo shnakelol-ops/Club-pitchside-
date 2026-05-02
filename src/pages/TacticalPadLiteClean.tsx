@@ -11,11 +11,12 @@ import StatsModeSurface from "../StatsModeSurface";
 import OrientationGate from "../components/OrientationGate";
 
 type PadMode = "tactical" | "stats" | "whiteboard";
+type TacticalPadLiteCleanProps = {
+  initialMode?: PadMode;
+};
 
 const CONTENT_WIDTH_EXPR =
   "min(calc(100dvw - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), calc(100vw - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), calc((100dvh - 10px) * 1.6), calc((100vh - 10px) * 1.6), 1360px)";
-const WHITEBOARD_LEFT_MODE_LEFT = `calc(50vw - (${CONTENT_WIDTH_EXPR} / 2) - 74px)`;
-const WHITEBOARD_LEFT_MODE_MENU_LEFT = `calc(50vw - (${CONTENT_WIDTH_EXPR} / 2) - 132px)`;
 const WHITEBOARD_PLAYER_COLOR_CHOICES: ReadonlyArray<{
   value: WhiteboardTokenColor;
   css: string;
@@ -802,85 +803,34 @@ const WHITEBOARD_TOKEN_COLOR_SWATCH_STYLE: CSSProperties = {
   border: "1px solid rgba(255, 255, 255, 0.48)",
 };
 
-const MODE_TAB_STYLE: CSSProperties = {
-  position: "fixed",
-  top: "max(12px, calc(env(safe-area-inset-top, 0px) + 10px))",
-  right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
-  height: "32px",
+const HOME_MENU_ICON_BUTTON_STYLE: CSSProperties = {
+  width: "34px",
+  height: "34px",
   borderRadius: "10px",
-  border: "1px solid rgba(230, 238, 241, 0.3)",
-  background: "rgba(8, 14, 18, 0.66)",
-  color: "rgba(236, 245, 249, 0.96)",
-  fontFamily: "Inter, system-ui, sans-serif",
-  fontSize: "10.5px",
-  fontWeight: 650,
-  letterSpacing: "0.24px",
-  padding: "0 11px",
+  border: "1px solid rgba(120, 168, 143, 0.34)",
+  background: "rgba(13, 35, 23, 0.72)",
+  color: "#f1f7f0",
+  fontSize: "16px",
+  lineHeight: 1,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: 0,
   cursor: "pointer",
   backdropFilter: "blur(10px)",
   WebkitBackdropFilter: "blur(10px)",
-  boxShadow: "0 8px 18px rgba(0, 0, 0, 0.24)",
-  zIndex: 21,
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
 };
 
-const WHITEBOARD_MODE_TAB_STYLE: CSSProperties = {
-  ...MODE_TAB_STYLE,
-  top: "auto",
-  right: "auto",
-  left: WHITEBOARD_LEFT_MODE_LEFT,
-  bottom: "max(12px, calc(env(safe-area-inset-bottom, 0px) + 10px))",
+const WHITEBOARD_HOME_BUTTON_STYLE: CSSProperties = {
+  ...HOME_MENU_ICON_BUTTON_STYLE,
+  position: "absolute",
+  top: "-42px",
+  right: "0px",
+  zIndex: 23,
 };
 
-const MODE_MENU_STYLE: CSSProperties = {
-  position: "fixed",
-  top: "max(48px, calc(env(safe-area-inset-top, 0px) + 46px))",
-  right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
-  width: "122px",
-  padding: "5px",
-  borderRadius: "11px",
-  border: "1px solid rgba(207, 220, 231, 0.32)",
-  background: "rgba(10, 18, 24, 0.84)",
-  backdropFilter: "blur(10px)",
-  WebkitBackdropFilter: "blur(10px)",
-  boxShadow: "0 10px 22px rgba(0, 0, 0, 0.28)",
-  zIndex: 21,
-  display: "flex",
-  flexDirection: "column",
-  gap: "4px",
-};
-
-const WHITEBOARD_MODE_MENU_STYLE: CSSProperties = {
-  ...MODE_MENU_STYLE,
-  top: "auto",
-  right: "auto",
-  left: WHITEBOARD_LEFT_MODE_MENU_LEFT,
-  bottom: "max(50px, calc(env(safe-area-inset-bottom, 0px) + 48px))",
-};
-
-const MODE_MENU_ITEM_STYLE: CSSProperties = {
-  height: "30px",
-  width: "100%",
-  textAlign: "left",
-  border: "1px solid rgba(228, 236, 241, 0.16)",
-  borderRadius: "8px",
-  background: "rgba(16, 24, 30, 0.54)",
-  color: "rgba(236, 245, 249, 0.9)",
-  fontFamily: "Inter, system-ui, sans-serif",
-  fontSize: "10.5px",
-  fontWeight: 600,
-  letterSpacing: "0.18px",
-  padding: "0 10px",
-  cursor: "pointer",
-};
-
-const MODE_MENU_ITEM_ACTIVE_STYLE: CSSProperties = {
-  ...MODE_MENU_ITEM_STYLE,
-  background: "rgba(55, 103, 131, 0.58)",
-  border: "1px solid rgba(171, 212, 232, 0.58)",
-  color: "rgba(255, 255, 255, 0.97)",
-};
-
-export default function TacticalPadLiteClean() {
+export default function TacticalPadLiteClean({ initialMode = "tactical" }: TacticalPadLiteCleanProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const surfaceRef = useRef<TacticalPadLiteSurface | null>(null);
   const tacticalItemCounterRef = useRef(0);
@@ -895,7 +845,7 @@ export default function TacticalPadLiteClean() {
     moved: boolean;
   } | null>(null);
   const suppressWhiteboardBubbleClickRef = useRef(false);
-  const [mode, setMode] = useState<PadMode>("tactical");
+  const mode: PadMode = initialMode;
   const [whiteboardBlueCount, setWhiteboardBlueCount] = useState(1);
   const [whiteboardRedCount, setWhiteboardRedCount] = useState(1);
   const [whiteboardCountPickerTeam, setWhiteboardCountPickerTeam] = useState<"BLUE" | "RED">("BLUE");
@@ -926,8 +876,6 @@ export default function TacticalPadLiteClean() {
   const [controlsOpen, setControlsOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [phasesOpen, setPhasesOpen] = useState(false);
-  const [modeMenuOpen, setModeMenuOpen] = useState(false);
-  const isTacticalMode = mode === "tactical";
   const isStatsMode = mode === "stats";
   const isWhiteboardMode = mode === "whiteboard";
 
@@ -1181,24 +1129,8 @@ export default function TacticalPadLiteClean() {
   const floodlightDots = Array.from({ length: 12 }, (_, index) => index);
   const activeTacticalPenColor = tacticalPenColor;
   const closeControlsMenu = () => setControlsOpen(false);
-  const setPadMode = (nextMode: PadMode) => {
-    setModeMenuOpen(false);
-    if (nextMode === mode) return;
-    setWhiteboardBubbleOpen(false);
-    setControlsOpen(false);
-    setToolsOpen(false);
-    setPhasesOpen(false);
-    if (nextMode === "stats") {
-      setIsPlaying(false);
-      setIsPaused(false);
-      setPhaseCount(0);
-    }
-    if (nextMode === "whiteboard") {
-      setIsPlaying(false);
-      setIsPaused(false);
-      setPhaseCount(0);
-    }
-    setMode(nextMode);
+  const goHome = () => {
+    window.location.assign("/board");
   };
 
   const setWhiteboardCount = (team: "BLUE" | "RED", count: number) => {
@@ -1372,48 +1304,10 @@ export default function TacticalPadLiteClean() {
     } as const;
   })();
 
-  const modeMenu = modeMenuOpen ? (
-    <div style={isWhiteboardMode ? WHITEBOARD_MODE_MENU_STYLE : MODE_MENU_STYLE}>
-      <button
-        type="button"
-        style={isTacticalMode ? MODE_MENU_ITEM_ACTIVE_STYLE : MODE_MENU_ITEM_STYLE}
-        onClick={() => setPadMode("tactical")}
-      >
-        FlowLab Tactics
-      </button>
-      <button
-        type="button"
-        style={isWhiteboardMode ? MODE_MENU_ITEM_ACTIVE_STYLE : MODE_MENU_ITEM_STYLE}
-        onClick={() => setPadMode("whiteboard")}
-      >
-        Whiteboard
-      </button>
-      <button
-        type="button"
-        style={isStatsMode ? MODE_MENU_ITEM_ACTIVE_STYLE : MODE_MENU_ITEM_STYLE}
-        onClick={() => setPadMode("stats")}
-      >
-        FlowStats
-      </button>
-    </div>
-  ) : null;
-
-  const modeButton = (
-    <button
-      type="button"
-      style={isWhiteboardMode ? WHITEBOARD_MODE_TAB_STYLE : MODE_TAB_STYLE}
-      aria-label="Open mode menu"
-      aria-expanded={modeMenuOpen}
-      onClick={() => setModeMenuOpen((open) => !open)}
-    >
-      Mode
-    </button>
-  );
-
   if (isStatsMode) {
     return (
       <>
-        <StatsModeSurface onRequestPadModeChange={setPadMode} />
+        <StatsModeSurface />
       </>
     );
   }
@@ -1719,6 +1613,15 @@ export default function TacticalPadLiteClean() {
             <button
               type="button"
               className="control-button"
+              style={{ ...CONTROL_BUTTON_STYLE, ...HOME_MENU_ICON_BUTTON_STYLE, minWidth: "34px" }}
+              onClick={goHome}
+              aria-label="Go to Home"
+            >
+              ⌂
+            </button>
+            <button
+              type="button"
+              className="control-button"
               disabled={isPlaybackLocked}
               style={isPlaybackLocked ? DISABLED_CONTROL_BUTTON_STYLE : SET_START_BUTTON_STYLE}
               onClick={() => {
@@ -1920,17 +1823,6 @@ export default function TacticalPadLiteClean() {
                 </button>
               </div>
             </div>
-            {isTacticalMode ? (
-              <button
-                type="button"
-                style={{ ...MODE_TAB_STYLE, position: "relative", inset: "auto", width: "100%", height: "30px" }}
-                aria-label="Open mode menu"
-                aria-expanded={modeMenuOpen}
-                onClick={() => setModeMenuOpen((open) => !open)}
-              >
-                Mode
-              </button>
-            ) : null}
           </div>
         ) : null}
         {!isWhiteboardMode ? (
@@ -1960,8 +1852,13 @@ export default function TacticalPadLiteClean() {
             </span>
           </button>
         ) : null}
-        {isWhiteboardMode ? modeButton : null}
-        {modeMenu}
+        {isWhiteboardMode ? (
+          <div style={CONTENT_STYLE}>
+            <button type="button" style={WHITEBOARD_HOME_BUTTON_STYLE} onClick={goHome} aria-label="Go to Home">
+              ⌂
+            </button>
+          </div>
+        ) : null}
       </div>
     </OrientationGate>
   );

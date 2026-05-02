@@ -15,6 +15,78 @@
     {
       "source": "/tacticalpad-lite-clean/(.*)",
       "destination": "/index.html"
+    },
+    {
+      "source": "/board",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/board/(.*)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/library",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/library/(.*)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/sessions",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/sessions/(.*)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/plans",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/plans/(.*)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/flowlab",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/flowlab/(.*)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/simulator",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/simulator/(.*)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/flowstats",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/flowstats/(.*)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/stats",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/stats/(.*)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/whiteboard",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/whiteboard/(.*)",
+      "destination": "/index.html"
     }
   ]
 }

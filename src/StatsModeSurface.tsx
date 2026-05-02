@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 
 import {
   createInitialMatchEngineState,
@@ -42,7 +42,6 @@ type LoggedMatchEvent = MatchEvent & {
 };
 
 type ReviewEventGroupOptionId = ReviewEventGroup | "ACTIVE";
-type StatsSurfacePadMode = "tactical" | "stats";
 type ViewportRect = { left: number; top: number; width: number; height: number };
 
 const UTILITY_BUBBLE_SIZE = 39;
@@ -1564,11 +1563,25 @@ const PANEL_CSS = `
 }
 `;
 
-type StatsModeSurfaceProps = {
-  onRequestPadModeChange?: (mode: StatsSurfacePadMode) => void;
+const HOME_ICON_BUTTON_STYLE: CSSProperties = {
+  height: "34px",
+  width: "34px",
+  borderRadius: "10px",
+  border: "1px solid rgba(124, 255, 114, 0.28)",
+  background: "rgba(16, 41, 27, 0.74)",
+  color: "#f1f7f0",
+  fontSize: "14px",
+  lineHeight: 1,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  cursor: "pointer",
+  backdropFilter: "blur(10px)",
+  WebkitBackdropFilter: "blur(10px)",
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
 };
 
-export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSurfaceProps = {}) {
+export default function StatsModeSurface() {
   const hostRef = useRef<HTMLDivElement>(null);
   const floatingControlsRef = useRef<HTMLDivElement>(null);
   const utilityMenuRef = useRef<HTMLDivElement>(null);
@@ -2230,6 +2243,10 @@ export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSu
 
   const closeUtilityPanel = () => {
     setUtilityPanel(null);
+  };
+
+  const goHome = () => {
+    window.location.assign("/board");
   };
 
   const exitReviewMode = () => {
@@ -3840,32 +3857,15 @@ export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSu
         <div className={utilityControlsClass}>
           {isUtilityOpen ? (
             <div className="utility-menu" ref={utilityMenuRef} style={utilityMenuStyle}>
-              <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.86 }}>
-                Mode
-              </div>
               <button
                 type="button"
                 className="utility-menu-btn"
-                style={{ opacity: 0.86, cursor: "default" }}
-                onClick={() => {
-                  setIsUtilityOpen(false);
-                  onRequestPadModeChange?.("tactical");
-                }}
+                aria-label="Go to Home"
+                title="Home"
+                style={{ ...HOME_ICON_BUTTON_STYLE, marginBottom: "4px" }}
+                onClick={goHome}
               >
-                FlowLab Tactics
-              </button>
-              <button
-                type="button"
-                className="utility-menu-btn"
-                style={{
-                  border: "1px solid rgba(34,197,94,0.9)",
-                  background: "rgba(22,101,52,0.72)",
-                }}
-                onClick={() => {
-                  setIsUtilityOpen(false);
-                }}
-              >
-                FlowStats
+                ⌂
               </button>
               <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.86, marginTop: "2px" }}>
                 Sport
