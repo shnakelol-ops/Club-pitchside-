@@ -172,9 +172,16 @@ export function createMicroAthleteToken({
     .fill({ color: 0x334155, alpha: 0.92 });
 
   // Head (small and clean: no facial details).
+  const headColor = 0xf2cfad;
+  const hairTone = mixColor(headColor, 0x020617, 0.36);
   body
+    // Tiny soft back-hair cue for quick female-identifying read.
+    .ellipse(-0.76, -6.78, 0.26, 0.19)
+    .fill({ color: hairTone, alpha: 0.34 })
+    .ellipse(-0.94, -6.62, 0.14, 0.11)
+    .fill({ color: hairTone, alpha: 0.28 })
     .circle(0.03, -7.04, 0.98)
-    .fill({ color: 0xf2cfad })
+    .fill({ color: headColor })
     .ellipse(0.03, -7.4, 0.62, 0.24)
     .fill({ color: 0x020617, alpha: 0.16 })
     .ellipse(-0.1, -7.24, 0.56, 0.24)
