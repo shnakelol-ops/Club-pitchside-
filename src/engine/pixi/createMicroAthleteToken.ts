@@ -107,17 +107,17 @@ export function createMicroAthleteToken({
 
   const shadow = new Graphics();
   shadow
-    .ellipse(0.48, badgeRadius * 1.27, badgeRadius * 1.64, badgeRadius * 0.78)
-    .fill({ color: 0x020617, alpha: 0.07 })
-    .ellipse(0.48, badgeRadius * 1.18, badgeRadius * 1.36, badgeRadius * 0.56)
-    .fill({ color: 0x020617, alpha: 0.12 })
-    .ellipse(0.48, badgeRadius * 1.1, badgeRadius * 1.1, badgeRadius * 0.41)
-    .fill({ color: 0x020617, alpha: 0.17 });
+    .ellipse(0.54, badgeRadius * 1.28, badgeRadius * 1.72, badgeRadius * 0.72)
+    .fill({ color: 0x020617, alpha: 0.06 })
+    .ellipse(0.54, badgeRadius * 1.19, badgeRadius * 1.44, badgeRadius * 0.5)
+    .fill({ color: 0x020617, alpha: 0.1 })
+    .ellipse(0.54, badgeRadius * 1.1, badgeRadius * 1.16, badgeRadius * 0.36)
+    .fill({ color: 0x020617, alpha: 0.16 });
   token.addChild(shadow);
 
   const athlete = new Container();
   athlete.rotation = -0.092;
-  athlete.position.set(0.16, -0.3);
+  athlete.position.set(0.16, -0.1);
   token.addChild(athlete);
 
   const jerseyFill = resolved.goalkeeper && resolved.secondaryColor != null
@@ -176,10 +176,10 @@ export function createMicroAthleteToken({
   const hairTone = mixColor(headColor, 0x020617, 0.36);
   body
     // Tiny soft back-hair cue for quick female-identifying read.
-    .ellipse(-0.76, -6.78, 0.26, 0.19)
-    .fill({ color: hairTone, alpha: 0.34 })
-    .ellipse(-0.94, -6.62, 0.14, 0.11)
-    .fill({ color: hairTone, alpha: 0.28 })
+    .ellipse(-0.76, -6.78, 0.28, 0.2)
+    .fill({ color: hairTone, alpha: 0.29 })
+    .ellipse(-0.96, -6.62, 0.16, 0.12)
+    .fill({ color: hairTone, alpha: 0.24 })
     .circle(0.03, -7.04, 0.98)
     .fill({ color: headColor })
     .ellipse(0.03, -7.4, 0.62, 0.24)
