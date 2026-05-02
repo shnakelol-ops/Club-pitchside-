@@ -5,7 +5,7 @@ import PitchFlowCoachShell from "./pages/PitchFlowCoachShell";
 import TacticalPadLiteClean from "./pages/TacticalPadLiteClean";
 import TacticalPadLitePage from "./pages/TacticalPadLitePage";
 
-const boardShell = () => <PitchFlowCoachShell initialTab="board" />;
+const boardShell = () => <PitchFlowCoachShell initialTab="home" />;
 
 function redirectToBoard() {
   if (window.location.pathname !== "/board") {
