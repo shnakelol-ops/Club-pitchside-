@@ -57,11 +57,27 @@
       "destination": "/index.html"
     },
     {
+      "source": "/simulator",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/simulator/(.*)",
+      "destination": "/index.html"
+    },
+    {
       "source": "/flowstats",
       "destination": "/index.html"
     },
     {
       "source": "/flowstats/(.*)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/stats",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/stats/(.*)",
       "destination": "/index.html"
     },
     {

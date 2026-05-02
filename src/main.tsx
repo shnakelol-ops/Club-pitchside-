@@ -19,6 +19,9 @@ function pickRootComponent() {
   if (normalizedPath === "/") {
     return redirectToBoard();
   }
+  if (normalizedPath === "/simulator") {
+    return TacticalPadLiteClean;
+  }
   if (normalizedPath === "/tacticalpad-lite-clean") {
     return TacticalPadLiteClean;
   }
@@ -26,6 +29,9 @@ function pickRootComponent() {
     return TacticalPadLiteClean;
   }
   if (normalizedPath === "/flowstats") {
+    return () => <TacticalPadLiteClean initialMode="stats" />;
+  }
+  if (normalizedPath === "/stats") {
     return () => <TacticalPadLiteClean initialMode="stats" />;
   }
   if (normalizedPath === "/whiteboard") {

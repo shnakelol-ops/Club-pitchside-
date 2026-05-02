@@ -57,6 +57,27 @@ const PHASE_COUNT_STYLE: CSSProperties = {
   padding: "8px 13px",
 };
 
+const HOME_BUTTON_STYLE: CSSProperties = {
+  position: "fixed",
+  top: "max(12px, calc(env(safe-area-inset-top, 0px) + 10px))",
+  left: "max(12px, calc(env(safe-area-inset-left, 0px) + 10px))",
+  height: "32px",
+  borderRadius: "10px",
+  border: "1px solid rgba(129, 192, 151, 0.36)",
+  background: "rgba(14, 25, 19, 0.66)",
+  color: "#dff3e6",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "10.5px",
+  fontWeight: 650,
+  letterSpacing: "0.24px",
+  padding: "0 11px",
+  cursor: "pointer",
+  backdropFilter: "blur(10px)",
+  WebkitBackdropFilter: "blur(10px)",
+  boxShadow: "0 0 0 1px rgba(34, 197, 94, 0.2), 0 0 10px rgba(34, 197, 94, 0.26)",
+  zIndex: 21,
+};
+
 export default function TacticalPadLitePage() {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const surfaceRef = useRef<TacticalPadLiteSurface | null>(null);
@@ -128,6 +149,9 @@ export default function TacticalPadLitePage() {
   return (
     <OrientationGate modeLabel="FlowLab Tactics">
       <div style={ROOT_STYLE}>
+        <button type="button" style={HOME_BUTTON_STYLE} onClick={() => window.location.assign("/board")}>
+          Home
+        </button>
         <div ref={hostRef} style={BOARD_STYLE} />
         <div style={CONTROLS_STYLE}>
           <button type="button" style={BUTTON_STYLE} onClick={() => surfaceRef.current?.setStart()}>

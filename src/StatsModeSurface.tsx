@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 
 import {
   createInitialMatchEngineState,
@@ -42,7 +42,6 @@ type LoggedMatchEvent = MatchEvent & {
 };
 
 type ReviewEventGroupOptionId = ReviewEventGroup | "ACTIVE";
-type StatsSurfacePadMode = "tactical" | "stats";
 type ViewportRect = { left: number; top: number; width: number; height: number };
 
 const UTILITY_BUBBLE_SIZE = 39;
@@ -1564,11 +1563,30 @@ const PANEL_CSS = `
 }
 `;
 
-type StatsModeSurfaceProps = {
-  onRequestPadModeChange?: (mode: StatsSurfacePadMode) => void;
+const HOME_BUTTON_STYLE: CSSProperties = {
+  position: "fixed",
+  top: "max(12px, calc(env(safe-area-inset-top, 0px) + 10px))",
+  left: "max(12px, calc(env(safe-area-inset-left, 0px) + 10px))",
+  height: "34px",
+  minWidth: "74px",
+  borderRadius: "10px",
+  border: "1px solid rgba(124, 255, 114, 0.52)",
+  background: "rgba(16, 41, 27, 0.78)",
+  color: "#f1f7f0",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "10.5px",
+  fontWeight: 700,
+  letterSpacing: "0.24px",
+  textTransform: "uppercase",
+  cursor: "pointer",
+  backdropFilter: "blur(10px)",
+  WebkitBackdropFilter: "blur(10px)",
+  boxShadow:
+    "0 0 0 1px rgba(124, 255, 114, 0.2), 0 0 12px rgba(124, 255, 114, 0.2), inset 0 1px 0 rgba(255,255,255,0.08)",
+  zIndex: 10002,
 };
 
-export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSurfaceProps = {}) {
+export default function StatsModeSurface() {
   const hostRef = useRef<HTMLDivElement>(null);
   const floatingControlsRef = useRef<HTMLDivElement>(null);
   const utilityMenuRef = useRef<HTMLDivElement>(null);
@@ -2230,6 +2248,10 @@ export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSu
 
   const closeUtilityPanel = () => {
     setUtilityPanel(null);
+  };
+
+  const goHome = () => {
+    window.location.assign("/board");
   };
 
   const exitReviewMode = () => {
@@ -3819,6 +3841,9 @@ export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSu
           role="img"
         />
       </main>
+      <button type="button" style={HOME_BUTTON_STYLE} onClick={goHome}>
+        Home
+      </button>
       {activePlayerChipText ? (
         <button
           type="button"
@@ -3840,33 +3865,6 @@ export default function StatsModeSurface({ onRequestPadModeChange }: StatsModeSu
         <div className={utilityControlsClass}>
           {isUtilityOpen ? (
             <div className="utility-menu" ref={utilityMenuRef} style={utilityMenuStyle}>
-              <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.86 }}>
-                Mode
-              </div>
-              <button
-                type="button"
-                className="utility-menu-btn"
-                style={{ opacity: 0.86, cursor: "default" }}
-                onClick={() => {
-                  setIsUtilityOpen(false);
-                  onRequestPadModeChange?.("tactical");
-                }}
-              >
-                FlowLab Tactics
-              </button>
-              <button
-                type="button"
-                className="utility-menu-btn"
-                style={{
-                  border: "1px solid rgba(34,197,94,0.9)",
-                  background: "rgba(22,101,52,0.72)",
-                }}
-                onClick={() => {
-                  setIsUtilityOpen(false);
-                }}
-              >
-                FlowStats
-              </button>
               <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.86, marginTop: "2px" }}>
                 Sport
               </div>
