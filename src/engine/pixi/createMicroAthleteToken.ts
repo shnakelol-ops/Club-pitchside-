@@ -85,7 +85,7 @@ export function createMicroAthleteToken({
   const shadow = new Graphics();
   shadow
     .ellipse(0.66, badgeRadius * 0.92, badgeRadius * 1.18, badgeRadius * 0.62)
-    .fill({ color: 0x020617, alpha: 0.24 });
+    .fill({ color: 0x020617, alpha: 0.3 });
   token.addChild(shadow);
 
   const body = new Graphics();
@@ -105,33 +105,33 @@ export function createMicroAthleteToken({
 
   // Torso / jersey
   body
-    .roundRect(-2.72, -5.36, 5.44, 5.78, 1.24)
+    .roundRect(-2.9, -5.34, 5.8, 5.76, 1.26)
     .fill({ color: jerseyFill })
     .stroke({ color: resolved.outlineColor, width: outlineWidth });
 
   if (resolved.secondaryColor != null) {
     body
-      .roundRect(-2.24, -4.88, 4.48, 1.68, 0.72)
+      .roundRect(-2.44, -4.88, 4.88, 1.68, 0.72)
       .fill({ color: resolved.secondaryColor, alpha: 0.44 });
   }
 
   // Arms
   body
-    .roundRect(-3.78, -4.36, 1.02, 2.94, 0.46)
+    .roundRect(-3.98, -4.36, 1.1, 2.94, 0.46)
     .fill({ color: jerseyFill })
     .stroke({ color: resolved.outlineColor, width: outlineWidth })
-    .roundRect(2.76, -4.36, 1.02, 2.94, 0.46)
+    .roundRect(2.88, -4.36, 1.1, 2.94, 0.46)
     .fill({ color: jerseyFill })
     .stroke({ color: resolved.outlineColor, width: outlineWidth });
 
   // Head
   body
-    .circle(0, -7.16, 1.3)
+    .circle(0, -7.16, 1.18)
     .fill({ color: 0xf3d4b5 })
     .stroke({ color: resolved.outlineColor, width: outlineWidth })
-    .ellipse(0, -7.72, 1.08, 0.54)
-    .fill({ color: 0x1f2937, alpha: 0.95 })
-    .ellipse(-0.46, -7.54, 0.44, 0.26)
+    .ellipse(0, -7.68, 1.02, 0.52)
+    .fill({ color: 0x111827, alpha: 0.96 })
+    .ellipse(-0.4, -7.5, 0.36, 0.22)
     .fill({ color: 0xffffff, alpha: 0.22 });
   token.addChild(body);
 
