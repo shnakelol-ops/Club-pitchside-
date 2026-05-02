@@ -22,6 +22,15 @@ function pickRootComponent() {
   if (normalizedPath === "/tacticalpad-lite-clean") {
     return TacticalPadLiteClean;
   }
+  if (normalizedPath === "/flowlab") {
+    return TacticalPadLiteClean;
+  }
+  if (normalizedPath === "/flowstats") {
+    return () => <TacticalPadLiteClean initialMode="stats" />;
+  }
+  if (normalizedPath === "/whiteboard") {
+    return () => <TacticalPadLiteClean initialMode="whiteboard" />;
+  }
   if (normalizedPath === "/tacticalpad-lite") {
     return TacticalPadLitePage;
   }

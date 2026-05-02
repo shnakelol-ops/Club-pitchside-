@@ -1,16 +1,22 @@
-import { useState } from "react";
-
-export type PitchFlowTab = "board" | "library" | "sessions" | "plans";
+export type PitchFlowTab = "home" | "library" | "sessions" | "plans";
 
 type PitchFlowCoachShellProps = {
   initialTab: PitchFlowTab;
 };
 
-const NAV_ITEMS: ReadonlyArray<{ id: PitchFlowTab; label: string; short: string }> = [
-  { id: "board", label: "Board", short: "B" },
-  { id: "library", label: "Library", short: "L" },
-  { id: "sessions", label: "Sessions", short: "S" },
-  { id: "plans", label: "Plans", short: "P" },
+type BottomNavItem = {
+  id: "home" | "flowlab" | "flowstats" | "whiteboard" | "library";
+  label: string;
+  short: string;
+  path: string;
+};
+
+const BOTTOM_NAV_ITEMS: ReadonlyArray<BottomNavItem> = [
+  { id: "home", label: "Home", short: "H", path: "/board" },
+  { id: "flowlab", label: "FlowLab", short: "F", path: "/tacticalpad-lite-clean" },
+  { id: "flowstats", label: "FlowStats", short: "S", path: "/flowstats" },
+  { id: "whiteboard", label: "Whiteboard", short: "W", path: "/whiteboard" },
+  { id: "library", label: "Library", short: "L", path: "/library" },
 ];
 
 const BOARD_RECENT = ["Weekend Press Trigger", "Kickout Pressure 6v6", "Wide Attack Flow"];
@@ -242,7 +248,7 @@ const SHELL_CSS = `
   backdrop-filter: blur(12px);
   box-shadow: 0 14px 28px rgba(0,0,0,0.36);
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   padding: 5px;
   z-index: 50;
 }
@@ -290,11 +296,16 @@ const SHELL_CSS = `
 }
 `;
 
+function navigateTo(path: string) {
+  if (window.location.pathname === path) return;
+  window.location.assign(path);
+}
+
 function BoardPage() {
   return (
     <>
       <div className="pf-header-card">
-        <h1 className="pf-title">Pitchside</h1>
+        <h1 className="pf-title">PitchFlow</h1>
         <p className="pf-subtitle">
           Built for coaches.
           <br />
@@ -302,8 +313,32 @@ function BoardPage() {
         </p>
         <div className="pf-actions">
           <span className="pf-pill">Coach</span>
-          <button type="button" className="pf-btn">
+          <button type="button" className="pf-btn" onClick={() => navigateTo("/tacticalpad-lite-clean")}>
             New Board
+          </button>
+        </div>
+      </div>
+      <p className="pf-section-title">Launch</p>
+      <div className="pf-card">
+        <p className="pf-card-title">Open</p>
+        <div className="pf-chip-grid">
+          <button type="button" className="pf-chip" onClick={() => navigateTo("/tacticalpad-lite-clean")}>
+            FlowLab
+          </button>
+          <button type="button" className="pf-chip" onClick={() => navigateTo("/flowstats")}>
+            FlowStats
+          </button>
+          <button type="button" className="pf-chip" onClick={() => navigateTo("/whiteboard")}>
+            Whiteboard
+          </button>
+          <button type="button" className="pf-chip" onClick={() => navigateTo("/library")}>
+            Library
+          </button>
+          <button type="button" className="pf-chip" onClick={() => navigateTo("/sessions")}>
+            Sessions
+          </button>
+          <button type="button" className="pf-chip" onClick={() => navigateTo("/plans")}>
+            Plans
           </button>
         </div>
       </div>
@@ -312,9 +347,14 @@ function BoardPage() {
         <p className="pf-card-title">Recent Boards</p>
         <div className="pf-list">
           {BOARD_RECENT.map((item) => (
-            <div key={item} className="pf-list-item">
+            <button
+              key={item}
+              type="button"
+              className="pf-list-item"
+              onClick={() => navigateTo("/tacticalpad-lite-clean")}
+            >
               {item}
-            </div>
+            </button>
           ))}
         </div>
       </div>
@@ -337,10 +377,18 @@ function LibraryPage() {
       </div>
       <input className="pf-search" placeholder="Search systems, sessions, plans..." readOnly />
       <div className="pf-tabs" role="tablist" aria-label="Library filters">
-        <span className="pf-tab is-active">All</span>
-        <span className="pf-tab">Systems</span>
-        <span className="pf-tab">Sessions</span>
-        <span className="pf-tab">Plans</span>
+        <button type="button" className="pf-tab is-active" onClick={() => navigateTo("/library")}>
+          All
+        </button>
+        <button type="button" className="pf-tab" onClick={() => navigateTo("/library")}>
+          Systems
+        </button>
+        <button type="button" className="pf-tab" onClick={() => navigateTo("/sessions")}>
+          Sessions
+        </button>
+        <button type="button" className="pf-tab" onClick={() => navigateTo("/plans")}>
+          Plans
+        </button>
       </div>
       <div className="pf-card">
         <p className="pf-card-title">What&apos;s going wrong?</p>
@@ -373,13 +421,18 @@ function SessionsPage() {
         <h1 className="pf-title">Sessions</h1>
         <p className="pf-subtitle">Ready-to-run training sessions</p>
       </div>
-      <button type="button" className="pf-btn" style={{ justifySelf: "start" }}>
+      <button
+        type="button"
+        className="pf-btn"
+        style={{ justifySelf: "start" }}
+        onClick={() => navigateTo("/tacticalpad-lite-clean")}
+      >
         + Create Session
       </button>
       <div className="pf-card">
         <p className="pf-card-title">Share your session</p>
         <p className="pf-card-text">Help another coach solve a problem today</p>
-        <button type="button" className="pf-btn" style={{ marginTop: "10px" }}>
+        <button type="button" className="pf-btn" style={{ marginTop: "10px" }} onClick={() => navigateTo("/library")}>
           Share Session
         </button>
       </div>
@@ -426,21 +479,22 @@ function renderPage(activeTab: PitchFlowTab) {
 }
 
 export default function PitchFlowCoachShell({ initialTab }: PitchFlowCoachShellProps) {
-  const [activeTab, setActiveTab] = useState<PitchFlowTab>(initialTab);
+  const activeNav: BottomNavItem["id"] =
+    initialTab === "library" || initialTab === "sessions" || initialTab === "plans" ? "library" : "home";
 
   return (
     <main className="pf-shell">
       <style>{SHELL_CSS}</style>
-      <div className="pf-content">{renderPage(activeTab)}</div>
+      <div className="pf-content">{renderPage(initialTab)}</div>
       <nav className="pf-bottom-nav" aria-label="Bottom navigation">
-        {NAV_ITEMS.map((item) => {
-          const isActive = activeTab === item.id;
+        {BOTTOM_NAV_ITEMS.map((item) => {
+          const isActive = activeNav === item.id;
           return (
             <button
               key={item.id}
               type="button"
               className={isActive ? "pf-nav-item is-active" : "pf-nav-item"}
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => navigateTo(item.path)}
             >
               <span className="pf-nav-icon" aria-hidden="true">
                 {item.short}

@@ -47,6 +47,30 @@
     {
       "source": "/plans/(.*)",
       "destination": "/index.html"
+    },
+    {
+      "source": "/flowlab",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/flowlab/(.*)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/flowstats",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/flowstats/(.*)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/whiteboard",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/whiteboard/(.*)",
+      "destination": "/index.html"
     }
   ]
 }

@@ -11,6 +11,9 @@ import StatsModeSurface from "../StatsModeSurface";
 import OrientationGate from "../components/OrientationGate";
 
 type PadMode = "tactical" | "stats" | "whiteboard";
+type TacticalPadLiteCleanProps = {
+  initialMode?: PadMode;
+};
 
 const CONTENT_WIDTH_EXPR =
   "min(calc(100dvw - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), calc(100vw - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), calc((100dvh - 10px) * 1.6), calc((100vh - 10px) * 1.6), 1360px)";
@@ -880,7 +883,7 @@ const MODE_MENU_ITEM_ACTIVE_STYLE: CSSProperties = {
   color: "rgba(255, 255, 255, 0.97)",
 };
 
-export default function TacticalPadLiteClean() {
+export default function TacticalPadLiteClean({ initialMode = "tactical" }: TacticalPadLiteCleanProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const surfaceRef = useRef<TacticalPadLiteSurface | null>(null);
   const tacticalItemCounterRef = useRef(0);
@@ -895,7 +898,7 @@ export default function TacticalPadLiteClean() {
     moved: boolean;
   } | null>(null);
   const suppressWhiteboardBubbleClickRef = useRef(false);
-  const [mode, setMode] = useState<PadMode>("tactical");
+  const [mode, setMode] = useState<PadMode>(initialMode);
   const [whiteboardBlueCount, setWhiteboardBlueCount] = useState(1);
   const [whiteboardRedCount, setWhiteboardRedCount] = useState(1);
   const [whiteboardCountPickerTeam, setWhiteboardCountPickerTeam] = useState<"BLUE" | "RED">("BLUE");
