@@ -404,7 +404,7 @@ export async function createTacticalPadLiteSurface(
   const pitchMount = createTacticalPitchVisualRoot("gaelic", { theme: pitchTheme });
   world.addChild(pitchMount.root);
   const itemsLayer = new Container();
-  itemsLayer.eventMode = "none";
+  itemsLayer.eventMode = "passive";
   world.addChild(itemsLayer);
 
   if (surfaceVariant === "whiteboard") {
@@ -751,6 +751,7 @@ export async function createTacticalPadLiteSurface(
       setItemWorldPosition(item, mapper);
       drawTacticalItemGraphic(item.graphic, item);
       drawSelectedItemGraphic(item.selectionGraphic, item.id === selectedItemId);
+      console.log("ITEM RENDER", item.id, item.type, item.x, item.y, item.graphic.eventMode);
     }
   }
 
@@ -792,6 +793,7 @@ export async function createTacticalPadLiteSurface(
 
   function bindTacticalItemPointerDown(item: TacticalSurfaceItem): void {
     item.graphic.on("pointerdown", (event) => {
+      console.log("ITEM POINTERDOWN", item.id);
       beginItemDrag(item, event);
     });
   }
@@ -871,6 +873,7 @@ export async function createTacticalPadLiteSurface(
     item.x = normalized.x;
     item.y = normalized.y;
     setItemWorldPosition(item, mapper);
+    console.log("ITEM DRAG MOVE", selectedItemId, normalized.x, normalized.y);
     options.onItemMove?.(item.id, normalized.x, normalized.y);
   }
 
