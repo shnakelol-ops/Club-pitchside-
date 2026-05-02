@@ -9,6 +9,7 @@ import {
   PREMIUM_TOKEN_IDLE_SHADOW_ALPHA,
   type PremiumPlayerTokenColor,
 } from "./createPremiumPlayerToken";
+import { createMicroAthleteToken } from "./createMicroAthleteToken";
 import {
   createTacticalPitchVisualRoot,
   type TacticalPitchTheme,
@@ -398,11 +399,19 @@ export async function createTacticalPadLiteSurface(
   function createSurfacePlayer(base: PlayerSeed): TacticalPlayer {
     const tokenColor: PremiumPlayerTokenColor =
       surfaceVariant === "whiteboard" ? base.color : base.team === "RED" ? "red" : "blue";
-    const { token, shadow } = createPremiumPlayerToken({
-      color: tokenColor,
-      number: base.number,
-      radius: PLAYER_RADIUS,
-    });
+    const tokenPack =
+      surfaceVariant === "tactical"
+        ? createMicroAthleteToken({
+            label: String(base.number),
+            teamColor: tokenColor,
+            scale: PLAYER_RADIUS / 4.1,
+          })
+        : createPremiumPlayerToken({
+            color: tokenColor,
+            number: base.number,
+            radius: PLAYER_RADIUS,
+          });
+    const { token, shadow } = tokenPack;
     playersLayer.addChild(token);
     return {
       id: base.id,
