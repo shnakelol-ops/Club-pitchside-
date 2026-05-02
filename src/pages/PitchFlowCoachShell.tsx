@@ -7,7 +7,6 @@ import {
   LIBRARY_ITEMS,
   PROBLEM_OPTIONS,
   PROBLEM_TAB_OPTIONS,
-  QUICK_BROWSE_CATEGORIES,
   SPORT_FILTER_OPTIONS,
   SPORT_LABELS,
   type AgeGroupFilter,
@@ -31,6 +30,7 @@ type BottomNavItem = {
 };
 
 type ProblemTabId = (typeof PROBLEM_TAB_OPTIONS)[number]["id"];
+type QuickBrowseId = "systems" | "sessions" | "eight-week-plans" | "season-plans" | "underage" | "sport-filters";
 
 const BOTTOM_NAV_ITEMS: ReadonlyArray<BottomNavItem> = [
   { id: "home", label: "Home", short: "H", path: "/board" },
@@ -50,6 +50,46 @@ const PLAN_TYPES = [
   "Underage Development",
   "Team Identity Plans",
 ];
+
+const QUICK_BROWSE_OPTIONS: ReadonlyArray<{ id: QuickBrowseId; label: string }> = [
+  { id: "systems", label: "Systems" },
+  { id: "sessions", label: "Sessions" },
+  { id: "eight-week-plans", label: "8 Week Plans" },
+  { id: "season-plans", label: "Season Plans" },
+  { id: "underage", label: "Underage" },
+  { id: "sport-filters", label: "Sport Filters" },
+];
+
+const QUICK_BROWSE_CATEGORY_MAP: Partial<Record<QuickBrowseId, LibraryCategory>> = {
+  systems: "systems",
+  sessions: "training-sessions",
+  "eight-week-plans": "eight-week-plans",
+  "season-plans": "full-season-plans",
+  underage: "underage-club-development",
+};
+
+const QUICK_BROWSE_TITLES: Record<QuickBrowseId, string> = {
+  systems: "Systems",
+  sessions: "Sessions",
+  "eight-week-plans": "8 Week Plans",
+  "season-plans": "Season Plans",
+  underage: "Underage & Club Development",
+  "sport-filters": "Sport Filters",
+};
+
+const PROBLEM_LABELS: Record<ProblemTag, string> = {
+  "struggling-to-score": "Struggling to score",
+  "losing-kickouts-puckouts": "Losing kickouts / puckouts",
+  "too-slow-in-attack": "Too slow in attack",
+  "conceding-too-easy": "Conceding too easy",
+};
+
+const SPORT_FILTER_VIEW_LABELS: Record<SportFilter, string> = {
+  "gaelic-football": "Football",
+  "ladies-football": "Ladies Football",
+  hurling: "Hurling",
+  camogie: "Camogie",
+};
 
 const SHELL_CSS = `
 .pf-shell {
@@ -621,14 +661,6 @@ function navigateTo(path: string) {
   window.location.assign(path);
 }
 
-function formatSportList(sports: readonly SportFilter[]): string {
-  return sports.map((sport) => SPORT_LABELS[sport]).join(", ");
-}
-
-function formatAgeList(ages: readonly AgeGroupFilter[]): string {
-  return ages.map((age) => AGE_LABELS[age]).join(", ");
-}
-
 function BoardPage() {
   return (
     <>
@@ -705,15 +737,19 @@ function LibraryPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProblem, setSelectedProblem] = useState<ProblemTag | null>(null);
   const [selectedProblemTab, setSelectedProblemTab] = useState<ProblemTabId>("sessions");
-  const [selectedCategory, setSelectedCategory] = useState<LibraryCategory | "all">("all");
+  const [selectedQuickBrowse, setSelectedQuickBrowse] = useState<QuickBrowseId | null>(null);
   const [selectedSports, setSelectedSports] = useState<SportFilter[]>([]);
   const [selectedAges, setSelectedAges] = useState<AgeGroupFilter[]>([]);
   const [expandedItemIds, setExpandedItemIds] = useState<string[]>([]);
-  const [filtersOpen, setFiltersOpen] = useState(false);
-
-  const selectedProblemLabel = PROBLEM_OPTIONS.find((option) => option.id === selectedProblem)?.label ?? "";
   const activeProblemTab = PROBLEM_TAB_OPTIONS.find((tab) => tab.id === selectedProblemTab) ?? PROBLEM_TAB_OPTIONS[1];
-  const categoryFilter: LibraryCategory | "all" = selectedProblem ? activeProblemTab.category : selectedCategory;
+  const selectedQuickBrowseCategory = selectedQuickBrowse ? (QUICK_BROWSE_CATEGORY_MAP[selectedQuickBrowse] ?? "all") : "all";
+  const categoryFilter: LibraryCategory | "all" = selectedProblem ? activeProblemTab.category : selectedQuickBrowseCategory;
+  const selectedProblemLabel = selectedProblem ? PROBLEM_LABELS[selectedProblem] : "";
+  const selectedViewTitle = selectedProblem
+    ? selectedProblemLabel
+    : selectedQuickBrowse
+      ? QUICK_BROWSE_TITLES[selectedQuickBrowse]
+      : "";
 
   const filteredItems = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -736,9 +772,21 @@ function LibraryPage() {
     }
 
     if (query.length > 0) {
-      next = next.filter((item) =>
-        [item.title, item.summary, ...item.keywords].join(" ").toLowerCase().includes(query),
-      );
+      next = next.filter((item) => {
+        const searchableText = [
+          item.title,
+          item.summary,
+          LIBRARY_CATEGORY_LABELS[item.category],
+          ...item.sports.map((sport) => SPORT_LABELS[sport]),
+          ...item.ageGroups.map((age) => AGE_LABELS[age]),
+          ...item.problemTags.map((tag) => PROBLEM_LABELS[tag]),
+          ...item.keywords,
+        ]
+          .join(" ")
+          .toLowerCase();
+
+        return searchableText.includes(query);
+      });
     }
 
     return next;
@@ -752,18 +800,29 @@ function LibraryPage() {
     setSelectedAges((previous) => (previous.includes(age) ? previous.filter((item) => item !== age) : [...previous, age]));
   };
 
-  const toggleCategory = (category: LibraryCategory) => {
-    setSelectedCategory((previous) => (previous === category ? "all" : category));
+  const toggleQuickBrowse = (id: QuickBrowseId) => {
+    setExpandedItemIds([]);
+    setSelectedProblem(null);
+    setSelectedProblemTab("sessions");
+    setSelectedSports([]);
+    setSelectedAges([]);
+    setSelectedQuickBrowse((previous) => (previous === id ? null : id));
   };
 
   const handleProblemTap = (problem: ProblemTag) => {
     setExpandedItemIds([]);
+    setSelectedQuickBrowse(null);
+    setSelectedSports([]);
+    setSelectedAges([]);
     setSelectedProblemTab("sessions");
     setSelectedProblem((previous) => (previous === problem ? null : problem));
   };
 
-  const clearProblemView = () => {
+  const clearFilteredView = () => {
     setSelectedProblem(null);
+    setSelectedQuickBrowse(null);
+    setSelectedSports([]);
+    setSelectedAges([]);
     setSelectedProblemTab("sessions");
   };
 
@@ -816,97 +875,89 @@ function LibraryPage() {
       <p className="pf-section-title">Quick Browse</p>
       <div className="pf-card">
         <div className="pf-library-browse-grid">
-          {QUICK_BROWSE_CATEGORIES.map((category) => {
-            const isActive = !selectedProblem && selectedCategory === category.id;
+          {QUICK_BROWSE_OPTIONS.map((option) => {
+            const isActive = !selectedProblem && selectedQuickBrowse === option.id;
             return (
               <button
-                key={category.id}
+                key={option.id}
                 type="button"
                 className={isActive ? "pf-library-browse-btn is-active" : "pf-library-browse-btn"}
-                onClick={() => toggleCategory(category.id)}
+                onClick={() => toggleQuickBrowse(option.id)}
               >
-                {category.label}
+                {option.label}
               </button>
             );
           })}
         </div>
       </div>
 
-      <div className="pf-library-filter-toggle-wrap">
-        <button
-          type="button"
-          className={filtersOpen ? "pf-library-filter-toggle is-open" : "pf-library-filter-toggle"}
-          onClick={() => setFiltersOpen((open) => !open)}
-          aria-expanded={filtersOpen}
-          aria-label="Toggle filters"
-        >
-          Filters {filtersOpen ? "▴" : "▾"}
-        </button>
-      </div>
-
-      {filtersOpen ? (
-        <>
-          <p className="pf-section-title">Sport Filters</p>
-          <div className="pf-library-chip-row">
-            {SPORT_FILTER_OPTIONS.map((sport) => {
-              const isActive = selectedSports.includes(sport.id);
-              return (
-                <button
-                  key={sport.id}
-                  type="button"
-                  className={isActive ? "pf-library-chip-btn is-active" : "pf-library-chip-btn"}
-                  onClick={() => toggleSport(sport.id)}
-                >
-                  {sport.label}
-                </button>
-              );
-            })}
-          </div>
-
-          <p className="pf-section-title">Age Filters</p>
-          <div className="pf-library-age-grid">
-            {AGE_FILTER_OPTIONS.map((age) => {
-              const isActive = selectedAges.includes(age.id);
-              return (
-                <button
-                  key={age.id}
-                  type="button"
-                  className={isActive ? "pf-library-chip-btn is-active" : "pf-library-chip-btn"}
-                  onClick={() => toggleAge(age.id)}
-                >
-                  {age.label}
-                </button>
-              );
-            })}
-          </div>
-        </>
-      ) : null}
-
       <p className="pf-section-title">Results</p>
       <div className="pf-card pf-library-results-wrap">
-        {selectedProblem ? (
+        {(selectedProblem || selectedQuickBrowse) ? (
           <div>
             <div className="pf-library-problem-view-head">
-              <p className="pf-card-title">{selectedProblemLabel}</p>
-              <button type="button" className="pf-library-clear-btn" onClick={clearProblemView}>
+              <p className="pf-card-title">{selectedViewTitle}</p>
+              <button type="button" className="pf-library-clear-btn" onClick={clearFilteredView}>
                 Clear
               </button>
             </div>
-            <div className="pf-tabs" role="tablist" aria-label="Problem categories">
-              {PROBLEM_TAB_OPTIONS.map((tab) => {
-                const isActive = selectedProblemTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    className={isActive ? "pf-tab is-active" : "pf-tab"}
-                    onClick={() => setSelectedProblemTab(tab.id)}
-                  >
-                    {tab.label}
-                  </button>
-                );
-              })}
-            </div>
+            {selectedProblem ? (
+              <div className="pf-tabs" role="tablist" aria-label="Problem categories">
+                {PROBLEM_TAB_OPTIONS.map((tab) => {
+                  const isActive = selectedProblemTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      className={isActive ? "pf-tab is-active" : "pf-tab"}
+                      onClick={() => setSelectedProblemTab(tab.id)}
+                    >
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+            {selectedQuickBrowse === "sport-filters" ? (
+              <div className="pf-library-filters-inline">
+                <p className="pf-library-filters-label">Sports</p>
+                <div className="pf-library-chip-row">
+                  {SPORT_FILTER_OPTIONS.map((sport) => {
+                    const isActive = selectedSports.includes(sport.id);
+                    return (
+                      <button
+                        key={sport.id}
+                        type="button"
+                        className={isActive ? "pf-library-chip-btn is-active" : "pf-library-chip-btn"}
+                        onClick={() => toggleSport(sport.id)}
+                      >
+                        {SPORT_FILTER_VIEW_LABELS[sport.id]}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+            {selectedQuickBrowse === "underage" ? (
+              <div className="pf-library-filters-inline">
+                <p className="pf-library-filters-label">Age Groups</p>
+                <div className="pf-library-age-grid">
+                  {AGE_FILTER_OPTIONS.map((age) => {
+                    const isActive = selectedAges.includes(age.id);
+                    return (
+                      <button
+                        key={age.id}
+                        type="button"
+                        className={isActive ? "pf-library-chip-btn is-active" : "pf-library-chip-btn"}
+                        onClick={() => toggleAge(age.id)}
+                      >
+                        {age.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : null}
 
@@ -928,9 +979,19 @@ function LibraryPage() {
               >
                 <p className="pf-library-result-title">{item.title}</p>
                 <p className="pf-library-result-summary">{item.summary}</p>
-                <p className="pf-library-result-meta">
-                  {formatSportList(item.sports)} · {formatAgeList(item.ageGroups)} · {LIBRARY_CATEGORY_LABELS[item.category]}
-                </p>
+                <p className="pf-library-result-meta">{LIBRARY_CATEGORY_LABELS[item.category]}</p>
+                <div className="pf-library-result-badges">
+                  {item.sports.map((sport) => (
+                    <span key={`${item.id}-${sport}`} className="pf-library-result-badge">
+                      {SPORT_FILTER_VIEW_LABELS[sport]}
+                    </span>
+                  ))}
+                  {item.ageGroups.map((age) => (
+                    <span key={`${item.id}-${age}`} className="pf-library-result-badge">
+                      {AGE_LABELS[age]}
+                    </span>
+                  ))}
+                </div>
                 {(item.duration || item.difficulty) ? (
                   <div className="pf-library-result-badges">
                     {item.duration ? <span className="pf-library-result-badge">{item.duration}</span> : null}
