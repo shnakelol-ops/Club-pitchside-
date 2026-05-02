@@ -149,6 +149,10 @@ type TacticalSurfaceItem = TacticalItem & {
   selectionGraphic: Graphics;
 };
 
+function isPhaseBallType(type: TacticalItem["type"]): boolean {
+  return type === "football" || type === "sliotar";
+}
+
 type DragPointerState = {
   pointerId: number | null;
   startStagePoint: { x: number; y: number } | null;
@@ -734,19 +738,27 @@ export async function createTacticalPadLiteSurface(
         color: 0x334155,
         width: 0.32,
       });
+      return;
+    }
+    if (item.type === "sliotar") {
+      const radius = TACTICAL_ITEM_HALF_SIZE * 0.92;
+      graphic.circle(0, 0, radius).fill(0xd9f99d).stroke({ color: 0x365314, width: 0.3 });
+      const seamWidth = radius * 0.75;
       graphic
-        .moveTo(-0.8, -0.62)
-        .lineTo(0.8, 0.62)
-        .moveTo(0.8, -0.62)
-        .lineTo(-0.8, 0.62)
-        .stroke({ color: 0x334155, width: 0.24 });
+        .arc(0, 0, radius * 0.78, -1.05, 1.05)
+        .stroke({ color: 0x111111, width: 0.22 })
+        .arc(0, 0, radius * 0.78, 2.09, 4.18)
+        .stroke({ color: 0x111111, width: 0.22 });
+      graphic
+        .moveTo(-seamWidth * 0.5, -radius * 0.18)
+        .quadraticCurveTo(0, 0, seamWidth * 0.5, -radius * 0.18)
+        .stroke({ color: 0x111111, width: 0.18 });
       return;
     }
     graphic
-      .circle(0, 0, TACTICAL_ITEM_HALF_SIZE * 0.75)
-      .fill(0xffffff)
-      .stroke({ color: 0x6b7280, width: 0.28 });
-    graphic.circle(0, 0, TACTICAL_ITEM_HALF_SIZE * 0.22).fill(0xdbeafe);
+      .circle(0, 0, TACTICAL_ITEM_HALF_SIZE * 0.8)
+      .fill(0xe2e8f0)
+      .stroke({ color: 0x475569, width: 0.28 });
   }
 
   function drawSelectedItemGraphic(graphic: Graphics, selected: boolean): void {
@@ -1104,7 +1116,7 @@ export async function createTacticalPadLiteSurface(
     return {
       players: players.map((player) => ({ x: player.current.x, y: player.current.y })),
       football: tacticalItems
-        .filter((item) => item.type === "football")
+        .filter((item) => isPhaseBallType(item.type))
         .map((item) => ({ id: item.id, x: item.x, y: item.y })),
     };
   }
@@ -1118,7 +1130,7 @@ export async function createTacticalPadLiteSurface(
     }
     for (const ball of snapshot.football) {
       const item = findTacticalItemById(ball.id);
-      if (!item || item.type !== "football") continue;
+      if (!item || !isPhaseBallType(item.type)) continue;
       item.x = clampNormalizedValue(ball.x);
       item.y = clampNormalizedValue(ball.y);
       setItemWorldPosition(item, mapper);
@@ -1212,7 +1224,7 @@ export async function createTacticalPadLiteSurface(
       for (const toBall of toSnapshot.football) {
         const fromBall = fromSnapshot.football.find((point) => point.id === toBall.id) ?? toBall;
         const item = findTacticalItemById(toBall.id);
-        if (!item || item.type !== "football") continue;
+        if (!item || !isPhaseBallType(item.type)) continue;
         item.x = fromBall.x + (toBall.x - fromBall.x) * progress;
         item.y = fromBall.y + (toBall.y - fromBall.y) * progress;
         setItemWorldPosition(item, mapper);
