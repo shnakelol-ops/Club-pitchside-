@@ -1010,7 +1010,6 @@ export default function TacticalPadLiteClean() {
         if (disposed) return;
         const nextX = Math.max(0, Math.min(100, x));
         const nextY = Math.max(0, Math.min(100, y));
-        console.log("ON ITEM MOVE", itemId, nextX, nextY);
         setItems((previous) =>
           previous.map((item) =>
             item.id === itemId
@@ -1084,11 +1083,6 @@ export default function TacticalPadLiteClean() {
   const isPlaybackLocked = isPlaying || isPaused;
   const effectiveItemMode: ItemMode =
     itemMode === "edit" && tacticalTool === "move" && !isPlaybackLocked ? "edit" : "locked";
-
-  useEffect(() => {
-    if (isStatsMode || isWhiteboardMode) return;
-    console.log("ITEM MODE", itemMode, effectiveItemMode);
-  }, [isStatsMode, isWhiteboardMode, itemMode, effectiveItemMode]);
 
   useEffect(() => {
     if (isStatsMode || isWhiteboardMode) return;

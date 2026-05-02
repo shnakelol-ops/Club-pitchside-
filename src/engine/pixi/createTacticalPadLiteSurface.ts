@@ -85,7 +85,15 @@ type TacticalPadLiteSurfaceOptions = {
   onItemMove?: (id: string, x: number, y: number) => void;
 };
 
-type PhaseSnapshot = NormalizedPoint[];
+type PhaseBallSnapshot = {
+  id: string;
+  x: number;
+  y: number;
+};
+type PhaseSnapshot = {
+  players: NormalizedPoint[];
+  football: PhaseBallSnapshot[];
+};
 type WhiteboardPoint = { x: number; y: number };
 type WhiteboardDrawingType = "pen" | "line" | "arrow" | "dashedArrow";
 type WhiteboardPenGeometry = {
@@ -484,7 +492,10 @@ export async function createTacticalPadLiteSurface(
   let playbackPath: PhaseSnapshot[] = [];
   let activeSegmentIndex = 0;
   let loggedSegmentIndex = -1;
-  let startPositions: PhaseSnapshot = players.map((player) => ({ ...player.current }));
+  let startPositions: PhaseSnapshot = {
+    players: players.map((player) => ({ ...player.current })),
+    football: [],
+  };
   let phases: PhaseSnapshot[] = [];
 
   let activeDrag: ActiveDragState = null;
@@ -752,7 +763,6 @@ export async function createTacticalPadLiteSurface(
       setItemWorldPosition(item, mapper);
       drawTacticalItemGraphic(item.graphic, item);
       drawSelectedItemGraphic(item.selectionGraphic, item.id === selectedItemId);
-      console.log("ITEM RENDER", item.id, item.type, item.x, item.y, item.graphic.eventMode);
     }
   }
 
@@ -794,7 +804,6 @@ export async function createTacticalPadLiteSurface(
 
   function bindTacticalItemPointerDown(item: TacticalSurfaceItem): void {
     item.graphic.on("pointerdown", (event) => {
-      console.log("ITEM POINTERDOWN", item.id);
       beginItemDrag(item, event);
     });
   }
@@ -874,7 +883,6 @@ export async function createTacticalPadLiteSurface(
     item.x = normalized.x;
     item.y = normalized.y;
     setItemWorldPosition(item, mapper);
-    console.log("ITEM DRAG MOVE", selectedItemId, normalized.x, normalized.y);
     options.onItemMove?.(item.id, normalized.x, normalized.y);
   }
 
@@ -1086,19 +1094,34 @@ export async function createTacticalPadLiteSurface(
   }
 
   function cloneSnapshot(snapshot: PhaseSnapshot): PhaseSnapshot {
-    return snapshot.map((point) => ({ x: point.x, y: point.y }));
+    return {
+      players: snapshot.players.map((point) => ({ x: point.x, y: point.y })),
+      football: snapshot.football.map((point) => ({ id: point.id, x: point.x, y: point.y })),
+    };
   }
 
   function captureCurrentSnapshot(): PhaseSnapshot {
-    return players.map((player) => ({ x: player.current.x, y: player.current.y }));
+    return {
+      players: players.map((player) => ({ x: player.current.x, y: player.current.y })),
+      football: tacticalItems
+        .filter((item) => item.type === "football")
+        .map((item) => ({ id: item.id, x: item.x, y: item.y })),
+    };
   }
 
-  function applySnapshotToPlayers(snapshot: PhaseSnapshot): void {
+  function applySnapshotToSurface(snapshot: PhaseSnapshot): void {
     for (const player of players) {
-      const point = snapshot[players.indexOf(player)];
+      const point = snapshot.players[players.indexOf(player)];
       if (!point) continue;
       player.current = { x: point.x, y: point.y };
       setTokenWorldPositionForPoint(player, player.current, mapper);
+    }
+    for (const ball of snapshot.football) {
+      const item = findTacticalItemById(ball.id);
+      if (!item || item.type !== "football") continue;
+      item.x = clampNormalizedValue(ball.x);
+      item.y = clampNormalizedValue(ball.y);
+      setItemWorldPosition(item, mapper);
     }
   }
 
@@ -1120,7 +1143,7 @@ export async function createTacticalPadLiteSurface(
     isPlaying = true;
     isPaused = false;
     playElapsedMs = 0;
-    applySnapshotToPlayers(path[0]!);
+    applySnapshotToSurface(path[0]!);
     emitPlaybackStateChange();
   }
 
@@ -1177,8 +1200,8 @@ export async function createTacticalPadLiteSurface(
 
       for (const player of players) {
         const idx = players.indexOf(player);
-        const fromPoint = fromSnapshot[idx];
-        const toPoint = toSnapshot[idx];
+        const fromPoint = fromSnapshot.players[idx];
+        const toPoint = toSnapshot.players[idx];
         if (!fromPoint || !toPoint) continue;
         player.current = {
           x: fromPoint.x + (toPoint.x - fromPoint.x) * progress,
@@ -1186,9 +1209,17 @@ export async function createTacticalPadLiteSurface(
         };
         setTokenWorldPositionForPoint(player, player.current, mapper);
       }
+      for (const toBall of toSnapshot.football) {
+        const fromBall = fromSnapshot.football.find((point) => point.id === toBall.id) ?? toBall;
+        const item = findTacticalItemById(toBall.id);
+        if (!item || item.type !== "football") continue;
+        item.x = fromBall.x + (toBall.x - fromBall.x) * progress;
+        item.y = fromBall.y + (toBall.y - fromBall.y) * progress;
+        setItemWorldPosition(item, mapper);
+      }
 
       if (progress >= 1) {
-        applySnapshotToPlayers(toSnapshot);
+        applySnapshotToSurface(toSnapshot);
         activeSegmentIndex += 1;
         playElapsedMs = 0;
         if (activeSegmentIndex >= playbackPath.length - 1) {
@@ -1386,7 +1417,7 @@ export async function createTacticalPadLiteSurface(
       if (phases.length <= 0) return;
       phases = phases.slice(0, -1);
       const previousSnapshot = phases[phases.length - 1] ?? startPositions;
-      applySnapshotToPlayers(previousSnapshot);
+      applySnapshotToSurface(previousSnapshot);
       options.onPhaseCountChange?.(phases.length);
     },
     play: handlePlay,
@@ -1423,7 +1454,7 @@ export async function createTacticalPadLiteSurface(
     reset: () => {
       releaseActiveDrag();
       cancelPlaybackAnimation();
-      applySnapshotToPlayers(startPositions);
+      applySnapshotToSurface(startPositions);
     },
     reflow: () => {
       fitToHost();
