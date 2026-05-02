@@ -66,6 +66,7 @@ export type TacticalPadLiteSurface = {
 type TacticalPadLiteSurfaceOptions = {
   onPhaseCountChange?: (count: number) => void;
   onPlaybackStateChange?: (state: { isPlaying: boolean; isPaused: boolean }) => void;
+  onTacticalItemsPositionChange?: (items: TacticalItem[]) => void;
   surfaceVariant?: "tactical" | "whiteboard";
   whiteboardTeamCounts?: {
     blue: number;
@@ -114,6 +115,8 @@ const WORLD_SIZE = { width: 160, height: 100 } as const;
 const PLAYER_RADIUS = 4.1;
 const PLAYER_TOUCH_HIT_DIAMETER_PX = 48;
 const TACTICAL_ITEM_HALF_SIZE = 2.2;
+const TACTICAL_ITEM_LONG_PRESS_MS = 450;
+const TACTICAL_ITEM_LONG_PRESS_MOVE_THRESHOLD = 1.2;
 const WHITEBOARD_DEFAULT_STROKE_COLOR = 0x111111;
 const WHITEBOARD_STROKE_WIDTH = 1.1;
 const WHITEBOARD_BLUE_START_X = 30;
@@ -445,8 +448,18 @@ export async function createTacticalPadLiteSurface(
   let activeItemDrag:
     | {
         itemId: string;
+        pendingPosition: NormalizedPoint | null;
       }
     | null = null;
+  let activeItemLongPress:
+    | {
+        itemId: string;
+        startPoint: NormalizedPoint;
+        timerId: number;
+        didTrigger: boolean;
+      }
+    | null = null;
+  let selectedItemId: string | null = null;
   const isWhiteboardSurface = surfaceVariant === "whiteboard";
   const isDrawingEnabledSurface = surfaceVariant === "whiteboard" || surfaceVariant === "tactical";
   let activeWhiteboardTool: WhiteboardDrawTool = "move";
@@ -516,10 +529,17 @@ export async function createTacticalPadLiteSurface(
 
   function syncWhiteboardTokenInputMode(): void {
     if (!isDrawingEnabledSurface) return;
-    const canDragItems = surfaceVariant === "tactical" && activeWhiteboardTool === "move" && !isPlaybackInputLocked();
+    const canSelectItems = surfaceVariant === "tactical" && activeWhiteboardTool === "move" && !isPlaybackInputLocked();
     for (const item of tacticalItems) {
-      item.graphic.eventMode = canDragItems ? "static" : "none";
-      item.graphic.cursor = canDragItems ? "grab" : "default";
+      const isSelected = selectedItemId === item.id;
+      item.graphic.eventMode = canSelectItems ? "static" : "none";
+      item.graphic.cursor = canSelectItems
+        ? activeItemDrag?.itemId === item.id
+          ? "grabbing"
+          : isSelected
+            ? "grab"
+            : "pointer"
+        : "default";
     }
     const canDragPlayers = activeWhiteboardTool === "move" && !isPlaybackInputLocked();
     for (const player of players) {
@@ -560,7 +580,16 @@ export async function createTacticalPadLiteSurface(
     return tacticalItems.find((item) => item.id === itemId) ?? null;
   }
 
-  function drawTacticalItemGraphic(graphic: Graphics, item: TacticalItem): void {
+  function snapshotTacticalItems(): TacticalItem[] {
+    return tacticalItems.map((item) => ({
+      id: item.id,
+      type: item.type,
+      x: item.x,
+      y: item.y,
+    }));
+  }
+
+  function drawTacticalItemGraphic(graphic: Graphics, item: TacticalItem, isSelected: boolean): void {
     graphic.clear();
     if (item.type === "cone") {
       graphic
@@ -574,6 +603,12 @@ export async function createTacticalPadLiteSurface(
         ])
         .fill(0xf59e0b)
         .stroke({ color: 0xb45309, width: 0.45 });
+      if (!isSelected) return;
+      graphic
+        .circle(0, 0.2, TACTICAL_ITEM_HALF_SIZE * 1.6)
+        .stroke({ color: 0x7dd3fc, alpha: 0.94, width: 0.42 })
+        .circle(0, 0.2, TACTICAL_ITEM_HALF_SIZE * 1.84)
+        .stroke({ color: 0x7dd3fc, alpha: 0.42, width: 0.26 });
       return;
     }
     if (item.type === "pole") {
@@ -581,6 +616,12 @@ export async function createTacticalPadLiteSurface(
         .roundRect(-0.45, -TACTICAL_ITEM_HALF_SIZE, 0.9, TACTICAL_ITEM_HALF_SIZE * 2, 0.35)
         .fill(0xfde68a)
         .stroke({ color: 0x92400e, width: 0.32 });
+      if (!isSelected) return;
+      graphic
+        .circle(0, 0, TACTICAL_ITEM_HALF_SIZE * 1.52)
+        .stroke({ color: 0x7dd3fc, alpha: 0.94, width: 0.42 })
+        .circle(0, 0, TACTICAL_ITEM_HALF_SIZE * 1.78)
+        .stroke({ color: 0x7dd3fc, alpha: 0.42, width: 0.26 });
       return;
     }
     if (item.type === "ladder") {
@@ -606,6 +647,12 @@ export async function createTacticalPadLiteSurface(
           .lineTo(left + width - railInset, y)
           .stroke({ color: 0x94a3b8, width: 0.24 });
       }
+      if (!isSelected) return;
+      graphic
+        .circle(0, 0, TACTICAL_ITEM_HALF_SIZE * 1.95)
+        .stroke({ color: 0x7dd3fc, alpha: 0.94, width: 0.42 })
+        .circle(0, 0, TACTICAL_ITEM_HALF_SIZE * 2.22)
+        .stroke({ color: 0x7dd3fc, alpha: 0.4, width: 0.26 });
       return;
     }
     if (item.type === "bag") {
@@ -615,6 +662,12 @@ export async function createTacticalPadLiteSurface(
         .roundRect(-width / 2, -height / 2, width, height, 0.65)
         .fill(0x334155)
         .stroke({ color: 0x0f172a, width: 0.36 });
+      if (!isSelected) return;
+      graphic
+        .circle(0, 0, TACTICAL_ITEM_HALF_SIZE * 1.72)
+        .stroke({ color: 0x7dd3fc, alpha: 0.94, width: 0.42 })
+        .circle(0, 0, TACTICAL_ITEM_HALF_SIZE * 1.98)
+        .stroke({ color: 0x7dd3fc, alpha: 0.4, width: 0.26 });
       return;
     }
     if (item.type === "football") {
@@ -628,6 +681,12 @@ export async function createTacticalPadLiteSurface(
         .moveTo(0.8, -0.62)
         .lineTo(-0.8, 0.62)
         .stroke({ color: 0x334155, width: 0.24 });
+      if (!isSelected) return;
+      graphic
+        .circle(0, 0, TACTICAL_ITEM_HALF_SIZE * 1.62)
+        .stroke({ color: 0x7dd3fc, alpha: 0.94, width: 0.42 })
+        .circle(0, 0, TACTICAL_ITEM_HALF_SIZE * 1.86)
+        .stroke({ color: 0x7dd3fc, alpha: 0.42, width: 0.26 });
       return;
     }
     graphic
@@ -635,28 +694,104 @@ export async function createTacticalPadLiteSurface(
       .fill(0xffffff)
       .stroke({ color: 0x6b7280, width: 0.28 });
     graphic.circle(0, 0, TACTICAL_ITEM_HALF_SIZE * 0.22).fill(0xdbeafe);
+    if (!isSelected) return;
+    graphic
+      .circle(0, 0, TACTICAL_ITEM_HALF_SIZE * 1.54)
+      .stroke({ color: 0x7dd3fc, alpha: 0.94, width: 0.42 })
+      .circle(0, 0, TACTICAL_ITEM_HALF_SIZE * 1.78)
+      .stroke({ color: 0x7dd3fc, alpha: 0.42, width: 0.26 });
   }
 
   function renderTacticalItems(): void {
     if (surfaceVariant !== "tactical") return;
     for (const item of tacticalItems) {
       setItemWorldPosition(item, mapper);
-      drawTacticalItemGraphic(item.graphic, item);
+      drawTacticalItemGraphic(item.graphic, item, selectedItemId === item.id);
+    }
+  }
+
+  function clearSelectedItem(): void {
+    if (selectedItemId == null) return;
+    selectedItemId = null;
+    renderTacticalItems();
+    syncWhiteboardTokenInputMode();
+  }
+
+  function selectItem(itemId: string): void {
+    if (selectedItemId === itemId) return;
+    selectedItemId = itemId;
+    renderTacticalItems();
+    syncWhiteboardTokenInputMode();
+  }
+
+  function clearItemLongPressState(): void {
+    if (!activeItemLongPress) return;
+    window.clearTimeout(activeItemLongPress.timerId);
+    activeItemLongPress = null;
+  }
+
+  function updateItemLongPressFromEvent(event: unknown): void {
+    if (!activeItemLongPress || activeItemLongPress.didTrigger) return;
+    const normalized = getBoundedNormalizedPointFromEvent(event);
+    if (!normalized) return;
+    const dx = normalized.x - activeItemLongPress.startPoint.x;
+    const dy = normalized.y - activeItemLongPress.startPoint.y;
+    if (Math.hypot(dx, dy) >= TACTICAL_ITEM_LONG_PRESS_MOVE_THRESHOLD) {
+      clearItemLongPressState();
     }
   }
 
   function bindTacticalItemPointerDown(item: TacticalSurfaceItem): void {
     item.graphic.on("pointerdown", (event) => {
       if (activeWhiteboardTool !== "move" || isPlaybackInputLocked()) return;
-      releaseDrag();
-      activeItemDrag = { itemId: item.id };
-      item.graphic.cursor = "grabbing";
       const normalized = getBoundedNormalizedPointFromEvent(event);
-      if (normalized) {
+      if (!normalized) return;
+      releaseDrag();
+      releaseItemDrag();
+      clearItemLongPressState();
+      if (selectedItemId === item.id) {
+        activeItemDrag = { itemId: item.id, pendingPosition: normalized };
         item.x = normalized.x;
         item.y = normalized.y;
         setItemWorldPosition(item, mapper);
+        syncWhiteboardTokenInputMode();
+        (event as { stopPropagation?: () => void }).stopPropagation?.();
+        return;
       }
+      const timerId = window.setTimeout(() => {
+        if (!activeItemLongPress || activeItemLongPress.itemId !== item.id) return;
+        activeItemLongPress.didTrigger = true;
+        selectItem(item.id);
+        activeItemDrag = { itemId: item.id, pendingPosition: activeItemLongPress.startPoint };
+        item.x = activeItemLongPress.startPoint.x;
+        item.y = activeItemLongPress.startPoint.y;
+        setItemWorldPosition(item, mapper);
+        syncWhiteboardTokenInputMode();
+      }, TACTICAL_ITEM_LONG_PRESS_MS);
+      activeItemLongPress = {
+        itemId: item.id,
+        startPoint: normalized,
+        timerId,
+        didTrigger: false,
+      };
+      (event as { stopPropagation?: () => void }).stopPropagation?.();
+    });
+    item.graphic.on("pointermove", (event) => {
+      if (activeItemDrag?.itemId === item.id && selectedItemId === item.id) {
+        updateDraggedItemFromEvent(event);
+      } else {
+        updateItemLongPressFromEvent(event);
+      }
+      (event as { stopPropagation?: () => void }).stopPropagation?.();
+    });
+    item.graphic.on("pointerup", (event) => {
+      clearItemLongPressState();
+      releaseItemDrag();
+      (event as { stopPropagation?: () => void }).stopPropagation?.();
+    });
+    item.graphic.on("pointerupoutside", (event) => {
+      clearItemLongPressState();
+      releaseItemDrag();
       (event as { stopPropagation?: () => void }).stopPropagation?.();
     });
   }
@@ -674,6 +809,9 @@ export async function createTacticalPadLiteSurface(
       tacticalItems.splice(index, 1);
       if (activeItemDrag?.itemId === item.id) {
         activeItemDrag = null;
+      }
+      if (selectedItemId === item.id) {
+        selectedItemId = null;
       }
     }
 
@@ -702,6 +840,10 @@ export async function createTacticalPadLiteSurface(
 
   function updateDraggedItemFromEvent(event: unknown): void {
     if (!activeItemDrag || isPlaybackInputLocked() || activeWhiteboardTool !== "move") return;
+    if (selectedItemId !== activeItemDrag.itemId) {
+      releaseItemDrag();
+      return;
+    }
     const item = findTacticalItemById(activeItemDrag.itemId);
     if (!item) {
       activeItemDrag = null;
@@ -709,6 +851,7 @@ export async function createTacticalPadLiteSurface(
     }
     const normalized = getBoundedNormalizedPointFromEvent(event);
     if (!normalized) return;
+    activeItemDrag.pendingPosition = normalized;
     item.x = normalized.x;
     item.y = normalized.y;
     setItemWorldPosition(item, mapper);
@@ -716,11 +859,17 @@ export async function createTacticalPadLiteSurface(
 
   function releaseItemDrag(): void {
     if (!activeItemDrag) return;
-    const item = findTacticalItemById(activeItemDrag.itemId);
-    if (item) {
-      item.graphic.cursor = "grab";
-    }
+    const dragState = activeItemDrag;
     activeItemDrag = null;
+    syncWhiteboardTokenInputMode();
+    if (surfaceVariant !== "tactical") return;
+    const draggedItem = findTacticalItemById(dragState.itemId);
+    if (!draggedItem) return;
+    const finalPoint = dragState.pendingPosition ?? { x: draggedItem.x, y: draggedItem.y };
+    draggedItem.x = finalPoint.x;
+    draggedItem.y = finalPoint.y;
+    setItemWorldPosition(draggedItem, mapper);
+    options.onTacticalItemsPositionChange?.(snapshotTacticalItems());
   }
 
   function drawLineWithTool(
@@ -975,6 +1124,8 @@ export async function createTacticalPadLiteSurface(
   function handlePlay(): void {
     releaseDrag();
     releaseItemDrag();
+    clearItemLongPressState();
+    clearSelectedItem();
     if (isPaused && playbackPath.length >= 2) {
       isPaused = false;
       isPlaying = true;
@@ -1044,6 +1195,7 @@ export async function createTacticalPadLiteSurface(
   function bindPlayerPointerDown(player: TacticalPlayer): void {
     player.token.on("pointerdown", (event) => {
       if (isPlaybackInputLocked()) return;
+      clearSelectedItem();
       activeDrag = { player };
       setPlayerDragVisualTarget(player, true);
       player.token.cursor = "grabbing";
@@ -1149,21 +1301,33 @@ export async function createTacticalPadLiteSurface(
   syncPlayersToViewport();
 
   app.stage.on("pointermove", (event) => {
+    updateItemLongPressFromEvent(event);
     updateDraggedPlayerFromEvent(event);
     updateDraggedItemFromEvent(event);
     updateWhiteboardDrawing(event);
   });
   app.stage.on("pointerup", (event) => {
+    clearItemLongPressState();
     endWhiteboardDrawing(event);
     releaseItemDrag();
     releaseDrag();
   });
   app.stage.on("pointerupoutside", (event) => {
+    clearItemLongPressState();
     endWhiteboardDrawing(event);
     releaseItemDrag();
     releaseDrag();
   });
   app.stage.on("pointerdown", (event) => {
+    if (
+      surfaceVariant === "tactical" &&
+      activeWhiteboardTool === "move" &&
+      !isPlaybackInputLocked() &&
+      !activeDrag &&
+      !activeItemDrag
+    ) {
+      clearSelectedItem();
+    }
     startWhiteboardDrawing(event);
   });
   app.ticker.add(() => {
@@ -1202,6 +1366,8 @@ export async function createTacticalPadLiteSurface(
       if (!isPlaying) return;
       releaseDrag();
       releaseItemDrag();
+      clearItemLongPressState();
+      clearSelectedItem();
       resetActiveWhiteboardDrawing();
       isPlaying = false;
       isPaused = true;
@@ -1234,7 +1400,9 @@ export async function createTacticalPadLiteSurface(
     setWhiteboardDrawTool: (tool) => {
       if (!isDrawingEnabledSurface) return;
       if (tool !== "move") {
+        clearItemLongPressState();
         releaseItemDrag();
+        clearSelectedItem();
         releaseDrag();
       }
       activeWhiteboardTool = tool;
