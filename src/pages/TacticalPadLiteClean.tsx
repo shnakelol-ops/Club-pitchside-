@@ -989,7 +989,7 @@ export default function TacticalPadLiteClean() {
         setIsPlaying(state.isPlaying);
         setIsPaused(state.isPaused);
       },
-      onTacticalItemsCommit: (nextItems) => {
+      onTacticalItemsPositionChange: (nextItems) => {
         if (disposed) return;
         setItems(nextItems);
       },
