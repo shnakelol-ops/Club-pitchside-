@@ -586,7 +586,7 @@ export async function createTacticalPadLiteSurface(
       draggingItemId = activeDrag.itemId;
     }
     if (activeDrag && activeDrag.type === "player" && activeDrag.hasCrossedThreshold) {
-      draggingPlayerId = activePlayerId;
+      draggingPlayerId = activeDrag.playerId;
     }
     for (const item of tacticalItems) {
       const isCurrentItemDragging = draggingItemId === item.id;
