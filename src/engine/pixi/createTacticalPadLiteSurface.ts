@@ -714,12 +714,6 @@ export async function createTacticalPadLiteSurface(
     activeItemDrag = null;
   }
 
-  function syncTacticalItemPositions(): void {
-    for (const item of tacticalItems) {
-      setItemWorldPosition(item, mapper);
-    }
-  }
-
   function drawLineWithTool(
     tool: WhiteboardDrawingType,
     graphics: Graphics,
