@@ -1,3 +1,22 @@
+import { useMemo, useState, type KeyboardEvent } from "react";
+
+import {
+  AGE_FILTER_OPTIONS,
+  AGE_LABELS,
+  LIBRARY_CATEGORY_LABELS,
+  LIBRARY_ITEMS,
+  PROBLEM_OPTIONS,
+  PROBLEM_TAB_OPTIONS,
+  QUICK_BROWSE_CATEGORIES,
+  SPORT_FILTER_OPTIONS,
+  SPORT_LABELS,
+  type AgeGroupFilter,
+  type LibraryCategory,
+  type LibraryItem,
+  type ProblemTag,
+  type SportFilter,
+} from "../data/libraryContent";
+
 export type PitchFlowTab = "home" | "library" | "sessions" | "plans";
 
 type PitchFlowCoachShellProps = {
@@ -11,6 +30,8 @@ type BottomNavItem = {
   path: string;
 };
 
+type ProblemTabId = (typeof PROBLEM_TAB_OPTIONS)[number]["id"];
+
 const BOTTOM_NAV_ITEMS: ReadonlyArray<BottomNavItem> = [
   { id: "home", label: "Home", short: "H", path: "/board" },
   { id: "flowlab", label: "FlowLab", short: "F", path: "/tacticalpad-lite-clean" },
@@ -20,20 +41,6 @@ const BOTTOM_NAV_ITEMS: ReadonlyArray<BottomNavItem> = [
 ];
 
 const BOARD_RECENT = ["Weekend Press Trigger", "Kickout Pressure 6v6", "Wide Attack Flow"];
-const LIBRARY_PROBLEMS = [
-  "Struggling to score",
-  "Losing kickouts",
-  "Too slow in attack",
-  "Conceding too easy",
-];
-const LIBRARY_BROWSE = [
-  "Attacking Systems",
-  "Pressing Sessions",
-  "Kickout Problems",
-  "Score More",
-  "Defensive Shape",
-  "Week Plans",
-];
 const SESSION_CATEGORIES = ["Warm-Ups", "Skill Development", "Attack", "Defence"];
 const PLAN_TYPES = [
   "Pre-Season",
@@ -265,6 +272,189 @@ const SHELL_CSS = `
   line-height: 1.2;
 }
 
+.pf-library-problem-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.pf-library-problem-btn {
+  border-radius: 14px;
+  border: 1px solid var(--pf-border);
+  background: linear-gradient(180deg, rgba(24,61,41,0.96) 0%, rgba(18,48,32,0.92) 100%);
+  color: var(--pf-text);
+  text-align: left;
+  padding: 12px;
+  min-height: 68px;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.pf-library-problem-btn.is-active {
+  border-color: var(--pf-primary-strong);
+  background: var(--pf-primary-soft);
+  color: var(--pf-primary);
+}
+
+.pf-library-browse-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.pf-library-browse-btn {
+  border-radius: 12px;
+  border: 1px solid var(--pf-border);
+  background: rgba(20,52,33,0.92);
+  color: var(--pf-text);
+  padding: 11px 10px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.pf-library-browse-btn.is-active {
+  border-color: var(--pf-primary-strong);
+  color: var(--pf-primary);
+  background: var(--pf-primary-soft);
+}
+
+.pf-library-chip-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.pf-library-chip-btn {
+  border-radius: 999px;
+  border: 1px solid var(--pf-border);
+  background: rgba(20,52,33,0.9);
+  color: var(--pf-text-muted);
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+  padding: 8px 11px;
+}
+
+.pf-library-chip-btn.is-active {
+  border-color: var(--pf-primary-strong);
+  color: var(--pf-primary);
+  background: var(--pf-primary-soft);
+}
+
+.pf-library-age-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.pf-library-problem-view-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.pf-library-clear-btn {
+  border-radius: 999px;
+  border: 1px solid var(--pf-border);
+  background: rgba(20,52,33,0.9);
+  color: var(--pf-text-muted);
+  font-size: 11px;
+  font-weight: 650;
+  padding: 6px 10px;
+}
+
+.pf-library-results-wrap {
+  display: grid;
+  gap: 10px;
+}
+
+.pf-library-result-card {
+  border-radius: 14px;
+  border: 1px solid var(--pf-border);
+  background: linear-gradient(180deg, rgba(20,52,33,0.95) 0%, rgba(16,41,27,0.9) 100%);
+  padding: 12px;
+  cursor: pointer;
+}
+
+.pf-library-result-card:active {
+  transform: scale(0.995);
+}
+
+.pf-library-result-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.pf-library-result-summary {
+  margin: 6px 0 0;
+  color: var(--pf-text-muted);
+  font-size: 12px;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.pf-library-result-meta {
+  margin: 7px 0 0;
+  color: var(--pf-text-dim);
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.pf-library-result-badges {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pf-library-result-badge {
+  border-radius: 999px;
+  border: 1px solid var(--pf-border);
+  background: rgba(16,41,27,0.72);
+  color: var(--pf-text-muted);
+  font-size: 10px;
+  font-weight: 650;
+  padding: 4px 8px;
+}
+
+.pf-library-result-details {
+  margin-top: 10px;
+  border-top: 1px solid rgba(39, 92, 59, 0.45);
+  padding-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.pf-library-result-detail-line {
+  margin: 0;
+  color: var(--pf-text-muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.pf-library-result-detail-line strong {
+  color: var(--pf-text);
+  font-weight: 650;
+}
+
+.pf-library-empty {
+  border-radius: 14px;
+  border: 1px dashed var(--pf-border);
+  background: rgba(15,37,24,0.72);
+  color: var(--pf-text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 12px;
+}
+
 .pf-bottom-nav {
   position: fixed;
   left: 50%;
@@ -328,6 +518,14 @@ const SHELL_CSS = `
 function navigateTo(path: string) {
   if (window.location.pathname === path) return;
   window.location.assign(path);
+}
+
+function formatSportList(sports: readonly SportFilter[]): string {
+  return sports.map((sport) => SPORT_LABELS[sport]).join(", ");
+}
+
+function formatAgeList(ages: readonly AgeGroupFilter[]): string {
+  return ages.map((age) => AGE_LABELS[age]).join(", ");
 }
 
 function BoardPage() {
@@ -403,46 +601,251 @@ function BoardPage() {
 }
 
 function LibraryPage() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedProblem, setSelectedProblem] = useState<ProblemTag | null>(null);
+  const [selectedProblemTab, setSelectedProblemTab] = useState<ProblemTabId>("sessions");
+  const [selectedCategory, setSelectedCategory] = useState<LibraryCategory | "all">("all");
+  const [selectedSports, setSelectedSports] = useState<SportFilter[]>([]);
+  const [selectedAges, setSelectedAges] = useState<AgeGroupFilter[]>([]);
+  const [expandedItemIds, setExpandedItemIds] = useState<string[]>([]);
+
+  const selectedProblemLabel = PROBLEM_OPTIONS.find((option) => option.id === selectedProblem)?.label ?? "";
+  const activeProblemTab = PROBLEM_TAB_OPTIONS.find((tab) => tab.id === selectedProblemTab) ?? PROBLEM_TAB_OPTIONS[1];
+  const categoryFilter: LibraryCategory | "all" = selectedProblem ? activeProblemTab.category : selectedCategory;
+
+  const filteredItems = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    let next = [...LIBRARY_ITEMS];
+
+    if (selectedProblem) {
+      next = next.filter((item) => item.problemTags.includes(selectedProblem));
+    }
+
+    if (categoryFilter !== "all") {
+      next = next.filter((item) => item.category === categoryFilter);
+    }
+
+    if (selectedSports.length > 0) {
+      next = next.filter((item) => item.sports.some((sport) => selectedSports.includes(sport)));
+    }
+
+    if (selectedAges.length > 0) {
+      next = next.filter((item) => item.ageGroups.some((age) => selectedAges.includes(age)));
+    }
+
+    if (query.length > 0) {
+      next = next.filter((item) =>
+        [item.title, item.summary, ...item.keywords].join(" ").toLowerCase().includes(query),
+      );
+    }
+
+    return next;
+  }, [categoryFilter, searchQuery, selectedAges, selectedProblem, selectedSports]);
+
+  const toggleSport = (sport: SportFilter) => {
+    setSelectedSports((previous) => (previous.includes(sport) ? previous.filter((item) => item !== sport) : [...previous, sport]));
+  };
+
+  const toggleAge = (age: AgeGroupFilter) => {
+    setSelectedAges((previous) => (previous.includes(age) ? previous.filter((item) => item !== age) : [...previous, age]));
+  };
+
+  const toggleCategory = (category: LibraryCategory) => {
+    setSelectedCategory((previous) => (previous === category ? "all" : category));
+  };
+
+  const handleProblemTap = (problem: ProblemTag) => {
+    setExpandedItemIds([]);
+    setSelectedProblemTab("sessions");
+    setSelectedProblem((previous) => (previous === problem ? null : problem));
+  };
+
+  const clearProblemView = () => {
+    setSelectedProblem(null);
+    setSelectedProblemTab("sessions");
+  };
+
+  const toggleExpanded = (itemId: string) => {
+    setExpandedItemIds((previous) =>
+      previous.includes(itemId) ? previous.filter((id) => id !== itemId) : [...previous, itemId],
+    );
+  };
+
+  const onResultCardKeyDown = (event: KeyboardEvent<HTMLDivElement>, itemId: string) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      toggleExpanded(itemId);
+    }
+  };
+
   return (
     <>
       <div className="pf-header-card">
         <h1 className="pf-title">Library</h1>
         <p className="pf-subtitle">Systems · Sessions · Plans</p>
       </div>
-      <input className="pf-search" placeholder="Search systems, sessions, plans..." readOnly />
-      <div className="pf-tabs" role="tablist" aria-label="Library filters">
-        <button type="button" className="pf-tab is-active" onClick={() => navigateTo("/library")}>
-          All
-        </button>
-        <button type="button" className="pf-tab" onClick={() => navigateTo("/library")}>
-          Systems
-        </button>
-        <button type="button" className="pf-tab" onClick={() => navigateTo("/sessions")}>
-          Sessions
-        </button>
-        <button type="button" className="pf-tab" onClick={() => navigateTo("/plans")}>
-          Plans
-        </button>
-      </div>
+
+      <input
+        className="pf-search"
+        placeholder="Search systems, sessions, plans..."
+        value={searchQuery}
+        onChange={(event) => setSearchQuery(event.target.value)}
+      />
+
+      <p className="pf-section-title">Fix My Team</p>
       <div className="pf-card">
-        <p className="pf-card-title">What&apos;s going wrong?</p>
-        <div className="pf-chip-grid">
-          {LIBRARY_PROBLEMS.map((problem) => (
-            <div key={problem} className="pf-chip">
-              {problem}
-            </div>
-          ))}
+        <div className="pf-library-problem-grid">
+          {PROBLEM_OPTIONS.map((problem) => {
+            const isActive = selectedProblem === problem.id;
+            return (
+              <button
+                key={problem.id}
+                type="button"
+                className={isActive ? "pf-library-problem-btn is-active" : "pf-library-problem-btn"}
+                onClick={() => handleProblemTap(problem.id)}
+              >
+                {problem.label}
+              </button>
+            );
+          })}
         </div>
       </div>
+
+      <p className="pf-section-title">Quick Browse</p>
       <div className="pf-card">
-        <p className="pf-card-title">Quick Browse</p>
-        <div className="pf-chip-grid">
-          {LIBRARY_BROWSE.map((item) => (
-            <div key={item} className="pf-chip">
-              {item}
-            </div>
-          ))}
+        <div className="pf-library-browse-grid">
+          {QUICK_BROWSE_CATEGORIES.map((category) => {
+            const isActive = !selectedProblem && selectedCategory === category.id;
+            return (
+              <button
+                key={category.id}
+                type="button"
+                className={isActive ? "pf-library-browse-btn is-active" : "pf-library-browse-btn"}
+                onClick={() => toggleCategory(category.id)}
+              >
+                {category.label}
+              </button>
+            );
+          })}
         </div>
+      </div>
+
+      <p className="pf-section-title">Sport Filters</p>
+      <div className="pf-card">
+        <div className="pf-library-chip-row">
+          {SPORT_FILTER_OPTIONS.map((sport) => {
+            const isActive = selectedSports.includes(sport.id);
+            return (
+              <button
+                key={sport.id}
+                type="button"
+                className={isActive ? "pf-library-chip-btn is-active" : "pf-library-chip-btn"}
+                onClick={() => toggleSport(sport.id)}
+              >
+                {sport.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <p className="pf-section-title">Age Filters</p>
+      <div className="pf-card">
+        <div className="pf-library-age-grid">
+          {AGE_FILTER_OPTIONS.map((age) => {
+            const isActive = selectedAges.includes(age.id);
+            return (
+              <button
+                key={age.id}
+                type="button"
+                className={isActive ? "pf-library-chip-btn is-active" : "pf-library-chip-btn"}
+                onClick={() => toggleAge(age.id)}
+              >
+                {age.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <p className="pf-section-title">Results</p>
+      <div className="pf-card pf-library-results-wrap">
+        {selectedProblem ? (
+          <div>
+            <div className="pf-library-problem-view-head">
+              <p className="pf-card-title">{selectedProblemLabel}</p>
+              <button type="button" className="pf-library-clear-btn" onClick={clearProblemView}>
+                Clear
+              </button>
+            </div>
+            <div className="pf-tabs" role="tablist" aria-label="Problem categories">
+              {PROBLEM_TAB_OPTIONS.map((tab) => {
+                const isActive = selectedProblemTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    className={isActive ? "pf-tab is-active" : "pf-tab"}
+                    onClick={() => setSelectedProblemTab(tab.id)}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
+
+        {filteredItems.length === 0 ? (
+          <div className="pf-library-empty">
+            No content found for these filters. Clear one filter and try again.
+          </div>
+        ) : (
+          filteredItems.map((item: LibraryItem) => {
+            const isExpanded = expandedItemIds.includes(item.id);
+            return (
+              <div
+                key={item.id}
+                className="pf-library-result-card"
+                role="button"
+                tabIndex={0}
+                onClick={() => toggleExpanded(item.id)}
+                onKeyDown={(event) => onResultCardKeyDown(event, item.id)}
+              >
+                <p className="pf-library-result-title">{item.title}</p>
+                <p className="pf-library-result-summary">{item.summary}</p>
+                <p className="pf-library-result-meta">
+                  {formatSportList(item.sports)} · {formatAgeList(item.ageGroups)} · {LIBRARY_CATEGORY_LABELS[item.category]}
+                </p>
+                {(item.duration || item.difficulty) ? (
+                  <div className="pf-library-result-badges">
+                    {item.duration ? <span className="pf-library-result-badge">{item.duration}</span> : null}
+                    {item.difficulty ? <span className="pf-library-result-badge">{item.difficulty}</span> : null}
+                  </div>
+                ) : null}
+                {isExpanded ? (
+                  <div className="pf-library-result-details">
+                    <p className="pf-library-result-detail-line">
+                      <strong>Setup:</strong> {item.setup}
+                    </p>
+                    <p className="pf-library-result-detail-line">
+                      <strong>How it works:</strong> {item.howItWorks}
+                    </p>
+                    <p className="pf-library-result-detail-line">
+                      <strong>Coaching points:</strong> {item.coachingPoints}
+                    </p>
+                    <p className="pf-library-result-detail-line">
+                      <strong>Progression:</strong> {item.progression}
+                    </p>
+                    <p className="pf-library-result-detail-line">
+                      <strong>Match use:</strong> {item.matchUse}
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+            );
+          })
+        )}
       </div>
     </>
   );
