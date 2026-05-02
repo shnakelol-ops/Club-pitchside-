@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as R
 
 import {
   createTacticalPadLiteSurface,
+  type ItemMode,
   type TacticalPadLiteSurface,
   type TacticalItem,
   type WhiteboardTokenColor,
@@ -36,7 +37,7 @@ const TACTICAL_ITEM_CHOICES: ReadonlyArray<{ label: string; type: TacticalItem["
   { label: "Cone", type: "cone" },
   { label: "Pole", type: "pole" },
   { label: "Ladder", type: "ladder" },
-  { label: "Bag", type: "bag" },
+  { label: "Tackle Bag", type: "tackleBag" },
   { label: "Football", type: "football" },
   { label: "Sliotar", type: "sliotar" },
 ];
@@ -911,6 +912,7 @@ export default function TacticalPadLiteClean() {
   const [whiteboardTool, setWhiteboardTool] = useState<WhiteboardToolControl>("move");
   const [tacticalTool, setTacticalTool] = useState<WhiteboardToolControl>("move");
   const [items, setItems] = useState<TacticalItem[]>([]);
+  const [itemMode, setItemMode] = useState<ItemMode>("locked");
   const [phaseCount, setPhaseCount] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -997,6 +999,22 @@ export default function TacticalPadLiteClean() {
         setIsPlaying(state.isPlaying);
         setIsPaused(state.isPaused);
       },
+      onItemMove: (itemId, x, y) => {
+        if (disposed) return;
+        const nextX = Math.max(0, Math.min(100, x));
+        const nextY = Math.max(0, Math.min(100, y));
+        setItems((previous) =>
+          previous.map((item) =>
+            item.id === itemId
+              ? {
+                  ...item,
+                  x: nextX,
+                  y: nextY,
+                }
+              : item,
+          ),
+        );
+      },
     }).then((surface) => {
       if (disposed) {
         surface.destroy();
@@ -1010,6 +1028,7 @@ export default function TacticalPadLiteClean() {
       surface.setWhiteboardDrawColor(initialDrawColor);
       if (!isWhiteboardMode) {
         surface.setItems(items);
+        surface.setItemMode("locked");
       }
       window.requestAnimationFrame(() => {
         window.requestAnimationFrame(() => {
@@ -1049,6 +1068,15 @@ export default function TacticalPadLiteClean() {
     if (isStatsMode || isWhiteboardMode) return;
     surfaceRef.current?.setItems(items);
   }, [isStatsMode, isWhiteboardMode, items]);
+
+  const isPlaybackLocked = isPlaying || isPaused;
+  const effectiveItemMode: ItemMode =
+    itemMode === "edit" && tacticalTool === "move" && !isPlaybackLocked ? "edit" : "locked";
+
+  useEffect(() => {
+    if (isStatsMode || isWhiteboardMode) return;
+    surfaceRef.current?.setItemMode(effectiveItemMode);
+  }, [isStatsMode, isWhiteboardMode, effectiveItemMode]);
 
   useEffect(() => {
     if (!isWhiteboardMode) return;
@@ -1141,7 +1169,6 @@ export default function TacticalPadLiteClean() {
   const phaseItems = Array.from({ length: phaseCount }, (_, index) => index + 1);
   const floodlightDots = Array.from({ length: 12 }, (_, index) => index);
   const activeTacticalPenColor = tacticalPenColor;
-  const isPlaybackLocked = isPlaying || isPaused;
   const closeControlsMenu = () => setControlsOpen(false);
   const setPadMode = (nextMode: PadMode) => {
     setModeMenuOpen(false);
@@ -1218,19 +1245,10 @@ export default function TacticalPadLiteClean() {
     surfaceRef.current?.removeTacticalPlayer();
   };
 
-  const updateItemPosition = (id: string, x: number, y: number) => {
-    const nextX = Math.max(0, Math.min(100, x));
-    const nextY = Math.max(0, Math.min(100, y));
-    setItems((previous) =>
-      previous.map((item) => (item.id === id ? { ...item, x: nextX, y: nextY } : item)),
-    );
-  };
-
   const addItem = (type: TacticalItem["type"]) => {
     tacticalItemCounterRef.current += 1;
     const nextId = `item-${tacticalItemCounterRef.current}`;
     setItems((previous) => [...previous, { id: nextId, type, x: 50, y: 50 }]);
-    updateItemPosition(nextId, 50, 50);
   };
 
   const clearItems = () => {
@@ -1828,6 +1846,14 @@ export default function TacticalPadLiteClean() {
             <div style={COACH_HUB_SECTION_STYLE}>
               <p style={COACH_HUB_SECTION_TITLE_STYLE}>Items</p>
               <div style={COACH_HUB_ACTION_GRID_STYLE}>
+                <button
+                  type="button"
+                  style={{ ...COACH_HUB_ACTION_BUTTON_STYLE, gridColumn: "1 / -1" }}
+                  disabled={isPlaybackLocked}
+                  onClick={() => setItemMode((previous) => (previous === "edit" ? "locked" : "edit"))}
+                >
+                  {itemMode === "edit" ? "Lock Items" : "Edit Items"}
+                </button>
                 {TACTICAL_ITEM_CHOICES.map((choice) => (
                   <button
                     key={`item-${choice.type}`}
