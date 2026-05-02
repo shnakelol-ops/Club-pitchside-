@@ -47,6 +47,7 @@ export type TacticalItem = {
 export type TacticalPadLiteSurface = {
   setStart: () => void;
   addPhase: () => void;
+  undoPhase: () => void;
   play: () => void;
   pausePlayback: () => void;
   resumePlayback: () => void;
@@ -1376,6 +1377,16 @@ export async function createTacticalPadLiteSurface(
       clearSelectedItem();
       cancelPlaybackAnimation();
       phases = [...phases, captureCurrentSnapshot()];
+      options.onPhaseCountChange?.(phases.length);
+    },
+    undoPhase: () => {
+      releaseActiveDrag();
+      clearSelectedItem();
+      cancelPlaybackAnimation();
+      if (phases.length <= 0) return;
+      phases = phases.slice(0, -1);
+      const previousSnapshot = phases[phases.length - 1] ?? startPositions;
+      applySnapshotToPlayers(previousSnapshot);
       options.onPhaseCountChange?.(phases.length);
     },
     play: handlePlay,

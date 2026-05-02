@@ -595,6 +595,13 @@ const RESET_BUTTON_STYLE: CSSProperties = {
     "0 6px 20px rgba(0, 0, 0, 0.45), 0 0 18px rgba(239, 68, 68, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.25)",
 };
 
+const UNDO_PHASE_BUTTON_STYLE: CSSProperties = {
+  ...CONTROL_BUTTON_STYLE,
+  border: "1px solid rgba(168, 85, 247, 0.6)",
+  boxShadow:
+    "0 6px 20px rgba(0, 0, 0, 0.45), 0 0 18px rgba(168, 85, 247, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.25)",
+};
+
 const TOOLS_BUTTON_STYLE: CSSProperties = {
   height: "32px",
   minWidth: "100%",
@@ -1756,6 +1763,18 @@ export default function TacticalPadLiteClean() {
               onClick={handlePausePress}
             >
               Pause
+            </button>
+            <button
+              type="button"
+              className="control-button"
+              disabled={phaseCount <= 0}
+              style={phaseCount <= 0 ? DISABLED_CONTROL_BUTTON_STYLE : UNDO_PHASE_BUTTON_STYLE}
+              onClick={() => {
+                surfaceRef.current?.undoPhase();
+                closeControlsMenu();
+              }}
+            >
+              Undo Phase
             </button>
             <button
               type="button"
