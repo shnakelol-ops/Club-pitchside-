@@ -91,6 +91,7 @@ const SHELL_CSS = `
   margin: 0 auto;
   display: grid;
   gap: 12px;
+  overflow-x: clip;
 }
 
 .pf-header-card,
@@ -350,6 +351,40 @@ const SHELL_CSS = `
   gap: 8px;
 }
 
+.pf-library-filter-toggle-wrap {
+  display: none;
+}
+
+.pf-library-filter-toggle {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--pf-border);
+  background: rgba(20,52,33,0.9);
+  color: var(--pf-text);
+  font-size: 12px;
+  font-weight: 650;
+  text-align: left;
+  padding: 9px 11px;
+}
+
+.pf-library-filter-toggle.is-open {
+  border-color: var(--pf-primary-strong);
+  color: var(--pf-primary);
+  background: var(--pf-primary-soft);
+}
+
+.pf-library-filters-inline {
+  display: grid;
+  gap: 8px;
+}
+
+.pf-library-filters-label {
+  margin: 0;
+  color: var(--pf-text-dim);
+  font-size: 11px;
+  font-weight: 650;
+}
+
 .pf-library-problem-view-head {
   display: flex;
   align-items: center;
@@ -513,6 +548,72 @@ const SHELL_CSS = `
   border-radius: 999px;
   background: var(--pf-primary);
 }
+
+@media (orientation: portrait) {
+  .pf-content {
+    gap: 8px;
+    padding-bottom: 100px;
+  }
+
+  .pf-header-card,
+  .pf-card {
+    padding: 12px;
+  }
+
+  .pf-section-title {
+    margin: 1px 2px 0;
+    font-size: 13px;
+  }
+
+  .pf-library-filter-toggle-wrap {
+    display: block;
+  }
+
+  .pf-library-problem-grid,
+  .pf-library-browse-grid {
+    gap: 6px;
+  }
+
+  .pf-library-problem-btn {
+    min-height: 58px;
+    padding: 10px;
+    font-size: 12px;
+  }
+
+  .pf-library-browse-btn {
+    padding: 10px 9px;
+    font-size: 11px;
+  }
+
+  .pf-library-result-card {
+    padding: 9px 10px;
+  }
+
+  .pf-library-result-title {
+    font-size: 13px;
+  }
+
+  .pf-library-result-summary {
+    margin-top: 3px;
+    font-size: 11px;
+    -webkit-line-clamp: 1;
+  }
+
+  .pf-library-result-meta {
+    margin-top: 4px;
+    font-size: 10px;
+  }
+
+  .pf-library-result-badges {
+    margin-top: 6px;
+    gap: 4px;
+  }
+
+  .pf-library-result-badge {
+    font-size: 9px;
+    padding: 3px 6px;
+  }
+}
 `;
 
 function navigateTo(path: string) {
@@ -608,6 +709,7 @@ function LibraryPage() {
   const [selectedSports, setSelectedSports] = useState<SportFilter[]>([]);
   const [selectedAges, setSelectedAges] = useState<AgeGroupFilter[]>([]);
   const [expandedItemIds, setExpandedItemIds] = useState<string[]>([]);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const selectedProblemLabel = PROBLEM_OPTIONS.find((option) => option.id === selectedProblem)?.label ?? "";
   const activeProblemTab = PROBLEM_TAB_OPTIONS.find((tab) => tab.id === selectedProblemTab) ?? PROBLEM_TAB_OPTIONS[1];
@@ -730,43 +832,55 @@ function LibraryPage() {
         </div>
       </div>
 
-      <p className="pf-section-title">Sport Filters</p>
-      <div className="pf-card">
-        <div className="pf-library-chip-row">
-          {SPORT_FILTER_OPTIONS.map((sport) => {
-            const isActive = selectedSports.includes(sport.id);
-            return (
-              <button
-                key={sport.id}
-                type="button"
-                className={isActive ? "pf-library-chip-btn is-active" : "pf-library-chip-btn"}
-                onClick={() => toggleSport(sport.id)}
-              >
-                {sport.label}
-              </button>
-            );
-          })}
-        </div>
+      <div className="pf-library-filter-toggle-wrap">
+        <button
+          type="button"
+          className={filtersOpen ? "pf-library-filter-toggle is-open" : "pf-library-filter-toggle"}
+          onClick={() => setFiltersOpen((open) => !open)}
+          aria-expanded={filtersOpen}
+          aria-label="Toggle filters"
+        >
+          Filters {filtersOpen ? "▴" : "▾"}
+        </button>
       </div>
 
-      <p className="pf-section-title">Age Filters</p>
-      <div className="pf-card">
-        <div className="pf-library-age-grid">
-          {AGE_FILTER_OPTIONS.map((age) => {
-            const isActive = selectedAges.includes(age.id);
-            return (
-              <button
-                key={age.id}
-                type="button"
-                className={isActive ? "pf-library-chip-btn is-active" : "pf-library-chip-btn"}
-                onClick={() => toggleAge(age.id)}
-              >
-                {age.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      {filtersOpen ? (
+        <>
+          <p className="pf-section-title">Sport Filters</p>
+          <div className="pf-library-chip-row">
+            {SPORT_FILTER_OPTIONS.map((sport) => {
+              const isActive = selectedSports.includes(sport.id);
+              return (
+                <button
+                  key={sport.id}
+                  type="button"
+                  className={isActive ? "pf-library-chip-btn is-active" : "pf-library-chip-btn"}
+                  onClick={() => toggleSport(sport.id)}
+                >
+                  {sport.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <p className="pf-section-title">Age Filters</p>
+          <div className="pf-library-age-grid">
+            {AGE_FILTER_OPTIONS.map((age) => {
+              const isActive = selectedAges.includes(age.id);
+              return (
+                <button
+                  key={age.id}
+                  type="button"
+                  className={isActive ? "pf-library-chip-btn is-active" : "pf-library-chip-btn"}
+                  onClick={() => toggleAge(age.id)}
+                >
+                  {age.label}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      ) : null}
 
       <p className="pf-section-title">Results</p>
       <div className="pf-card pf-library-results-wrap">
