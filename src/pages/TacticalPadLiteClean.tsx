@@ -32,14 +32,6 @@ const WHITEBOARD_PEN_COLOR_CHOICES: ReadonlyArray<{ label: string; value: number
   { label: "Blue", value: 0x2563eb, css: "#2563eb" },
 ];
 const WHITEBOARD_DRAW_COLOR = WHITEBOARD_PEN_COLOR_CHOICES[0]?.value ?? 0x111111;
-const TACTICAL_ITEM_CHOICES: ReadonlyArray<{ label: string; type: TacticalItem["type"] }> = [
-  { label: "Cone", type: "cone" },
-  { label: "Pole", type: "pole" },
-  { label: "Ladder", type: "ladder" },
-  { label: "Bag", type: "bag" },
-  { label: "Football", type: "football" },
-  { label: "Sliotar", type: "sliotar" },
-];
 type WhiteboardToolControl = "move" | "pen" | "line" | "arrow" | "dashed";
 type WhiteboardToolAction = WhiteboardToolControl | "eraser";
 const WHITEBOARD_BUBBLE_SIZE = 36;
@@ -1828,17 +1820,39 @@ export default function TacticalPadLiteClean() {
             <div style={COACH_HUB_SECTION_STYLE}>
               <p style={COACH_HUB_SECTION_TITLE_STYLE}>Items</p>
               <div style={COACH_HUB_ACTION_GRID_STYLE}>
-                {TACTICAL_ITEM_CHOICES.map((choice) => (
-                  <button
-                    key={`item-${choice.type}`}
-                    type="button"
-                    style={COACH_HUB_ACTION_BUTTON_STYLE}
-                    disabled={isPlaybackLocked}
-                    onClick={() => addItem(choice.type)}
-                  >
-                    + {choice.label}
-                  </button>
-                ))}
+                <button type="button" style={COACH_HUB_ACTION_BUTTON_STYLE} disabled={isPlaybackLocked} onClick={() => addItem("cone")}>
+                  + Cone
+                </button>
+                <button type="button" style={COACH_HUB_ACTION_BUTTON_STYLE} disabled={isPlaybackLocked} onClick={() => addItem("pole")}>
+                  + Pole
+                </button>
+                <button
+                  type="button"
+                  style={COACH_HUB_ACTION_BUTTON_STYLE}
+                  disabled={isPlaybackLocked}
+                  onClick={() => addItem("ladder")}
+                >
+                  + Ladder
+                </button>
+                <button type="button" style={COACH_HUB_ACTION_BUTTON_STYLE} disabled={isPlaybackLocked} onClick={() => addItem("bag")}>
+                  + Bag
+                </button>
+                <button
+                  type="button"
+                  style={COACH_HUB_ACTION_BUTTON_STYLE}
+                  disabled={isPlaybackLocked}
+                  onClick={() => addItem("football")}
+                >
+                  + Football
+                </button>
+                <button
+                  type="button"
+                  style={COACH_HUB_ACTION_BUTTON_STYLE}
+                  disabled={isPlaybackLocked}
+                  onClick={() => addItem("sliotar")}
+                >
+                  + Sliotar
+                </button>
                 <button
                   type="button"
                   style={{ ...COACH_HUB_ACTION_BUTTON_STYLE, gridColumn: "1 / -1" }}
