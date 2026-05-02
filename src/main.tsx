@@ -1,21 +1,32 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
-import App from "./App";
 import PitchFlowCoachShell from "./pages/PitchFlowCoachShell";
 import TacticalPadLiteClean from "./pages/TacticalPadLiteClean";
 import TacticalPadLitePage from "./pages/TacticalPadLitePage";
 
+const boardShell = () => <PitchFlowCoachShell initialTab="board" />;
+
+function redirectToBoard() {
+  if (window.location.pathname !== "/board") {
+    window.history.replaceState(null, "", "/board");
+  }
+  return boardShell;
+}
+
 function pickRootComponent() {
   const normalizedPath = window.location.pathname.replace(/\/+$/, "") || "/";
-  if (normalizedPath === "/" || normalizedPath === "/tacticalpad-lite-clean") {
+  if (normalizedPath === "/") {
+    return redirectToBoard();
+  }
+  if (normalizedPath === "/tacticalpad-lite-clean") {
     return TacticalPadLiteClean;
   }
   if (normalizedPath === "/tacticalpad-lite") {
     return TacticalPadLitePage;
   }
   if (normalizedPath === "/board") {
-    return () => <PitchFlowCoachShell initialTab="board" />;
+    return boardShell;
   }
   if (normalizedPath === "/library") {
     return () => <PitchFlowCoachShell initialTab="library" />;
@@ -26,7 +37,7 @@ function pickRootComponent() {
   if (normalizedPath === "/plans") {
     return () => <PitchFlowCoachShell initialTab="plans" />;
   }
-  return App;
+  return redirectToBoard();
 }
 
 const RootComponent = pickRootComponent();
