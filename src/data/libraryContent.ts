@@ -31,6 +31,7 @@ export type LibraryItem = {
   setup: string;
   howItWorks: string;
   coachingPoints: string;
+  whatToWatchFor: string;
   progression: string;
   matchUse: string;
 };
@@ -103,7 +104,11 @@ export const AGE_LABELS: Record<AgeGroupFilter, string> = {
   adult: "Adult",
 };
 
-export const LIBRARY_ITEMS: ReadonlyArray<LibraryItem> = [
+type RawLibraryItem = Omit<LibraryItem, "whatToWatchFor"> & {
+  coachingPoints: string;
+};
+
+const RAW_LIBRARY_ITEMS: ReadonlyArray<RawLibraryItem> = [
   {
     id: "fix-shot-choice-checklist",
     title: "Shot Choice Checklist",
@@ -717,3 +722,23 @@ export const LIBRARY_ITEMS: ReadonlyArray<LibraryItem> = [
     matchUse: "Use when results swing and standards drift.",
   },
 ];
+
+function toWhatToWatchFor(coachingPoints: string): string {
+  const parts = coachingPoints
+    .split(".")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => `- ${part.charAt(0).toLowerCase()}${part.slice(1)}`);
+
+  return parts.length > 0 ? parts.join("\n") : `- ${coachingPoints.trim()}`;
+}
+
+export const LIBRARY_ITEMS: ReadonlyArray<LibraryItem> = RAW_LIBRARY_ITEMS.map(({ coachingPoints, ...item }) => {
+  const whatToWatchFor = toWhatToWatchFor(coachingPoints);
+
+  return {
+    ...item,
+    coachingPoints: whatToWatchFor,
+    whatToWatchFor,
+  };
+});
