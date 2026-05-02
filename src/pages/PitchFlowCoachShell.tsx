@@ -98,6 +98,35 @@ const SHELL_CSS = `
 .pf-header-card {
   padding: 16px;
   background: linear-gradient(180deg, rgba(18,56,33,0.96) 0%, rgba(16,41,27,0.95) 100%);
+  position: relative;
+}
+
+.pf-header-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.pf-home-icon-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid var(--pf-border);
+  background: rgba(16,41,27,0.84);
+  color: var(--pf-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.pf-home-icon-btn:active {
+  transform: scale(0.97);
 }
 
 .pf-title {
@@ -305,7 +334,12 @@ function BoardPage() {
   return (
     <>
       <div className="pf-header-card">
-        <h1 className="pf-title">PitchFlow</h1>
+        <div className="pf-header-top">
+          <h1 className="pf-title">PitchFlow</h1>
+          <button type="button" className="pf-home-icon-btn" aria-label="Go to Home" onClick={() => navigateTo("/board")}>
+            ⌂
+          </button>
+        </div>
         <p className="pf-subtitle">
           Built for coaches.
           <br />

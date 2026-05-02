@@ -17,6 +17,7 @@ type TacticalPadLiteCleanProps = {
 
 const CONTENT_WIDTH_EXPR =
   "min(calc(100dvw - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), calc(100vw - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), calc((100dvh - 10px) * 1.6), calc((100vh - 10px) * 1.6), 1360px)";
+const FLOWLAB_HOME_RIGHT = `calc(50vw - (${CONTENT_WIDTH_EXPR} / 2) + 8px)`;
 const WHITEBOARD_PLAYER_COLOR_CHOICES: ReadonlyArray<{
   value: WhiteboardTokenColor;
   css: string;
@@ -804,23 +805,25 @@ const WHITEBOARD_TOKEN_COLOR_SWATCH_STYLE: CSSProperties = {
 };
 
 const HOME_BUTTON_STYLE: CSSProperties = {
-  position: "fixed",
+  position: "absolute",
   top: "max(12px, calc(env(safe-area-inset-top, 0px) + 10px))",
-  right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
+  right: FLOWLAB_HOME_RIGHT,
+  width: "34px",
   height: "34px",
-  borderRadius: "11px",
-  border: "1px solid rgba(124, 255, 114, 0.46)",
-  background: "rgba(12, 34, 22, 0.86)",
+  borderRadius: "10px",
+  border: "1px solid rgba(120, 168, 143, 0.34)",
+  background: "rgba(13, 35, 23, 0.72)",
   color: "#f1f7f0",
-  fontFamily: "Inter, system-ui, sans-serif",
-  fontSize: "11px",
-  fontWeight: 700,
-  letterSpacing: "0.26px",
-  padding: "0 12px",
+  fontSize: "16px",
+  lineHeight: 1,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: 0,
   cursor: "pointer",
   backdropFilter: "blur(10px)",
   WebkitBackdropFilter: "blur(10px)",
-  boxShadow: "0 0 0 1px rgba(124, 255, 114, 0.22), 0 0 12px rgba(124, 255, 114, 0.28)",
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
   zIndex: 24,
 };
 
@@ -1837,8 +1840,8 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             </span>
           </button>
         ) : null}
-        <button type="button" style={HOME_BUTTON_STYLE} onClick={goHome}>
-          HOME
+        <button type="button" style={HOME_BUTTON_STYLE} onClick={goHome} aria-label="Go to Home">
+          ⌂
         </button>
       </div>
     </OrientationGate>

@@ -1563,27 +1563,22 @@ const PANEL_CSS = `
 }
 `;
 
-const HOME_BUTTON_STYLE: CSSProperties = {
-  position: "fixed",
-  top: "max(12px, calc(env(safe-area-inset-top, 0px) + 10px))",
-  left: "max(12px, calc(env(safe-area-inset-left, 0px) + 10px))",
+const HOME_ICON_BUTTON_STYLE: CSSProperties = {
   height: "34px",
-  minWidth: "74px",
+  width: "34px",
   borderRadius: "10px",
-  border: "1px solid rgba(124, 255, 114, 0.52)",
-  background: "rgba(16, 41, 27, 0.78)",
+  border: "1px solid rgba(124, 255, 114, 0.28)",
+  background: "rgba(16, 41, 27, 0.74)",
   color: "#f1f7f0",
-  fontFamily: "Inter, system-ui, sans-serif",
-  fontSize: "10.5px",
-  fontWeight: 700,
-  letterSpacing: "0.24px",
-  textTransform: "uppercase",
+  fontSize: "14px",
+  lineHeight: 1,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
   cursor: "pointer",
   backdropFilter: "blur(10px)",
   WebkitBackdropFilter: "blur(10px)",
-  boxShadow:
-    "0 0 0 1px rgba(124, 255, 114, 0.2), 0 0 12px rgba(124, 255, 114, 0.2), inset 0 1px 0 rgba(255,255,255,0.08)",
-  zIndex: 10002,
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
 };
 
 export default function StatsModeSurface() {
@@ -3841,9 +3836,6 @@ export default function StatsModeSurface() {
           role="img"
         />
       </main>
-      <button type="button" style={HOME_BUTTON_STYLE} onClick={goHome}>
-        Home
-      </button>
       {activePlayerChipText ? (
         <button
           type="button"
@@ -3865,6 +3857,16 @@ export default function StatsModeSurface() {
         <div className={utilityControlsClass}>
           {isUtilityOpen ? (
             <div className="utility-menu" ref={utilityMenuRef} style={utilityMenuStyle}>
+              <button
+                type="button"
+                className="utility-menu-btn"
+                aria-label="Go to Home"
+                title="Home"
+                style={{ ...HOME_ICON_BUTTON_STYLE, marginBottom: "4px" }}
+                onClick={goHome}
+              >
+                ⌂
+              </button>
               <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.86, marginTop: "2px" }}>
                 Sport
               </div>
