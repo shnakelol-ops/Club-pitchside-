@@ -7,6 +7,7 @@ import {
   worldToBoardNorm,
 } from "../coordinates/pitch-coordinates";
 import { drawStatsMarkers } from "../stats/draw-stats-markers";
+import { drawStatsHeatmap } from "../stats/draw-stats-heatmap";
 import {
   createMatchEvent,
   type MatchEvent,
@@ -39,6 +40,7 @@ export type PixiPitchSurfaceHandle = {
   setEventContext: (context: { half: 1 | 2; timestamp: number; canLog: boolean }) => void;
   setShowPlayerInitials: (show: boolean) => void;
   setOnMarkerTap: (handler: ((eventId: string) => void) | null) => void;
+  setHeatmapEnabled: (enabled: boolean) => void;
   setVisibleEventLimit: (limit: number | null) => void;
   undoLastEvent: () => void;
   destroy: () => void;
@@ -87,6 +89,9 @@ export async function createPixiPitchSurface(
 
   const pitchRoot = createPitchRoot(options.sport);
   world.addChild(pitchRoot.root);
+  const heatmapLayer = new Graphics();
+  heatmapLayer.eventMode = "none";
+  world.addChild(heatmapLayer);
   const statsMarkers = new Graphics();
   statsMarkers.eventMode = "none";
   world.addChild(statsMarkers);
@@ -99,6 +104,7 @@ export async function createPixiPitchSurface(
   let canLogEventsState = options.canLogEvents ?? true;
   let showPlayerInitialsState = options.showPlayerInitials ?? true;
   let onMarkerTapState = options.onMarkerTap ?? null;
+  let heatmapEnabledState = false;
   let visibleEventLimitState: number | null = null;
   const onEventLoggedState = options.onEventLogged;
   const onPitchTapState = options.onPitchTap;
@@ -109,7 +115,13 @@ export async function createPixiPitchSurface(
   };
 
   const redrawMarkers = () => {
-    drawStatsMarkers(statsMarkers, getRenderableEvents(), {
+    const renderableEvents = getRenderableEvents();
+    if (heatmapEnabledState) {
+      drawStatsHeatmap(heatmapLayer, renderableEvents);
+    } else {
+      heatmapLayer.clear();
+    }
+    drawStatsMarkers(statsMarkers, renderableEvents, {
       showPlayerLabels: showPlayerInitialsState,
       onMarkerTap: onMarkerTapState ?? undefined,
     });
@@ -196,6 +208,10 @@ export async function createPixiPitchSurface(
       onMarkerTapState = handler;
       redrawMarkers();
     },
+    setHeatmapEnabled: (enabled) => {
+      heatmapEnabledState = enabled;
+      redrawMarkers();
+    },
     setVisibleEventLimit: (limit) => {
       visibleEventLimitState = limit == null ? null : Math.max(1, Math.floor(limit));
       redrawMarkers();
@@ -209,6 +225,7 @@ export async function createPixiPitchSurface(
       resizeObserver.disconnect();
       pitchRoot.dispose();
       hitArea.destroy();
+      heatmapLayer.destroy();
       statsMarkers.destroy();
       try {
         host.removeChild(app.canvas as HTMLCanvasElement);
