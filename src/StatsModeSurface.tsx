@@ -173,6 +173,23 @@ function formatGaelicScore(score: TeamScore): string {
   return `${score.goals}-${String(score.points).padStart(2, "0")}`;
 }
 
+function formatPercentage(numerator: number, denominator: number): number {
+  if (denominator <= 0) return 0;
+  return Math.round((numerator / denominator) * 100);
+}
+
+function formatSignedCount(value: number): string {
+  if (value > 0) return `+${value}`;
+  return String(value);
+}
+
+function resolveEventTeam(event: MatchEvent & { team?: TeamSide }): TeamSide | null {
+  if (event.id.startsWith("team-home-")) return "HOME";
+  if (event.id.startsWith("team-away-")) return "AWAY";
+  if (event.team === "HOME" || event.team === "AWAY") return event.team;
+  return null;
+}
+
 function getRenderablePitchEvents(
   events: readonly LoggedMatchEvent[],
   reviewHalf: ReviewHalf,
@@ -2639,67 +2656,246 @@ export default function StatsModeSurface() {
       const player = playerById.get(activePlayerId);
       return player ? `#${player.number} ${player.name}` : null;
     })();
-  const reviewMatchSummaryLines = useMemo(() => {
-    const playerStats = new Map<
-      string,
-      { goals: number; points: number; twoPointers: number; turnoversWon: number; kickoutsWon: number; freesWon: number }
-    >();
-    let wides = 0;
-    let shots = 0;
-    let scores = 0;
-    for (const event of loggedEvents) {
-      if (event.team !== "HOME") continue;
-      if (event.kind === "WIDE") wides += 1;
-      if (event.kind === "SHOT" || event.kind === "GOAL" || event.kind === "POINT" || event.kind === "TWO_POINTER" || event.kind === "FORTY_FIVE_TWO_POINT" || event.kind === "FREE_SCORED" || event.kind === "WIDE") shots += 1;
-      if (event.kind === "GOAL" || event.kind === "POINT" || event.kind === "TWO_POINTER" || event.kind === "FORTY_FIVE_TWO_POINT" || event.kind === "FREE_SCORED") scores += 1;
-      const playerId = event.playerId;
-      if (!playerId || !playerById.has(playerId)) continue;
-      const stat = playerStats.get(playerId) ?? { goals: 0, points: 0, twoPointers: 0, turnoversWon: 0, kickoutsWon: 0, freesWon: 0 };
-      if (event.kind === "GOAL") stat.goals += 1;
-      else if (event.kind === "POINT") stat.points += 1;
-      else if (event.kind === "TWO_POINTER") stat.twoPointers += 1;
-      else if (event.kind === "FORTY_FIVE_TWO_POINT") stat.twoPointers += 1;
-      else if (event.kind === "FREE_SCORED") stat.points += 1;
-      else if (event.kind === "TURNOVER_WON") stat.turnoversWon += 1;
-      else if (event.kind === "KICKOUT_WON") stat.kickoutsWon += 1;
-      else if (event.kind === "FREE_WON") stat.freesWon += 1;
-      playerStats.set(playerId, stat);
-    }
-    const formatPlayer = (playerId: string) => {
-      const player = playerById.get(playerId);
-      return player ? `#${player.number} ${player.name}` : null;
-    };
-    const topBy = (key: "turnoversWon" | "kickoutsWon" | "freesWon", label: string) => {
-      let best: { playerId: string; value: number } | null = null;
-      for (const [playerId, stat] of playerStats) {
-        if (stat[key] <= 0) continue;
-        if (!best || stat[key] > best.value) best = { playerId, value: stat[key] };
-      }
-      if (!best) return null;
-      const playerLabel = formatPlayer(best.playerId);
-      return playerLabel ? `${playerLabel} — ${label} (${best.value})` : null;
-    };
-    let topScorerLine: string | null = null;
-    let bestScore = 0;
-    for (const [playerId, stat] of playerStats) {
-      const total = stat.goals * 3 + stat.points + stat.twoPointers * 2;
-      if (total <= 0 || total < bestScore) continue;
-      const playerLabel = formatPlayer(playerId);
-      if (!playerLabel) continue;
-      bestScore = total;
-      topScorerLine = `${playerLabel} — Top Scorer (${stat.goals}-${String(stat.points + stat.twoPointers * 2).padStart(2, "0")})`;
-    }
-    const restartSummaryLabel = mode.restartLabel === "Puckout" ? "Most Puckouts Won" : "Most Kickouts Won";
-    const lines = [topScorerLine, topBy("turnoversWon", "Most Turnovers Won"), topBy("kickoutsWon", restartSummaryLabel), topBy("freesWon", "Most Frees Won")].filter(
-      (line): line is string => line != null,
-    );
-    if (wides > 0) lines.push(`Wides: ${wides}`);
-    if (shots > 0) lines.push(`Conversion: ${Math.round((scores / shots) * 100)}%`);
-    return lines;
-  }, [loggedEvents, playerById, mode.restartLabel]);
-
   const homeScore = useMemo(() => computeTeamScore(loggedEvents, "HOME"), [loggedEvents]);
   const awayScore = useMemo(() => computeTeamScore(loggedEvents, "AWAY"), [loggedEvents]);
+  const matchSummary = useMemo(() => {
+    type TeamSummaryCounts = {
+      goals: number;
+      points: number;
+      twoPointers: number;
+      shots: number;
+      wides: number;
+      turnoversWon: number;
+      turnoversLost: number;
+      kickoutsWon: number;
+      kickoutsLost: number;
+      freesWon: number;
+      freesConceded: number;
+    };
+    type PlayerSummaryStat = {
+      label: string;
+      scorerPoints: number;
+      turnoversWon: number;
+      kickoutsWon: number;
+      freesWon: number;
+      involved: number;
+    };
+
+    const makeCounts = (): TeamSummaryCounts => ({
+      goals: 0,
+      points: 0,
+      twoPointers: 0,
+      shots: 0,
+      wides: 0,
+      turnoversWon: 0,
+      turnoversLost: 0,
+      kickoutsWon: 0,
+      kickoutsLost: 0,
+      freesWon: 0,
+      freesConceded: 0,
+    });
+    const countsByTeam: Record<TeamSide, TeamSummaryCounts> = {
+      HOME: makeCounts(),
+      AWAY: makeCounts(),
+    };
+    const playerStatsByTeam: Record<TeamSide, Map<string, PlayerSummaryStat>> = {
+      HOME: new Map(),
+      AWAY: new Map(),
+    };
+    const resolvePlayerLabel = (event: LoggedMatchEvent): string | null => {
+      const playerId = event.playerId;
+      if (!playerId || playerId.trim().length === 0) return null;
+      const knownPlayer = playerById.get(playerId);
+      if (knownPlayer) return `#${knownPlayer.number} ${knownPlayer.name}`;
+      const knownName = typeof event.playerName === "string" ? event.playerName.trim() : "";
+      if (knownName.length === 0) return null;
+      if (typeof event.playerNumber === "number" && Number.isFinite(event.playerNumber) && event.playerNumber > 0) {
+        return `#${Math.floor(event.playerNumber)} ${knownName}`;
+      }
+      return knownName;
+    };
+    const ensurePlayerStat = (team: TeamSide, event: LoggedMatchEvent): PlayerSummaryStat | null => {
+      const playerId = event.playerId;
+      if (!playerId || playerId.trim().length === 0) return null;
+      const statsMap = playerStatsByTeam[team];
+      const existing = statsMap.get(playerId);
+      if (existing) return existing;
+      const label = resolvePlayerLabel(event);
+      if (!label) return null;
+      const next: PlayerSummaryStat = {
+        label,
+        scorerPoints: 0,
+        turnoversWon: 0,
+        kickoutsWon: 0,
+        freesWon: 0,
+        involved: 0,
+      };
+      statsMap.set(playerId, next);
+      return next;
+    };
+
+    for (const event of loggedEvents) {
+      const team = resolveEventTeam(event);
+      if (!team) continue;
+      const counts = countsByTeam[team];
+      switch (event.kind) {
+        case "GOAL":
+          counts.goals += 1;
+          break;
+        case "POINT":
+          counts.points += 1;
+          break;
+        case "TWO_POINTER":
+        case "FORTY_FIVE_TWO_POINT":
+          counts.twoPointers += 1;
+          break;
+        case "SHOT":
+          counts.shots += 1;
+          break;
+        case "WIDE":
+          counts.wides += 1;
+          break;
+        case "TURNOVER_WON":
+          counts.turnoversWon += 1;
+          break;
+        case "TURNOVER_LOST":
+          counts.turnoversLost += 1;
+          break;
+        case "KICKOUT_WON":
+          counts.kickoutsWon += 1;
+          break;
+        case "KICKOUT_CONCEDED":
+          counts.kickoutsLost += 1;
+          break;
+        case "FREE_WON":
+          counts.freesWon += 1;
+          break;
+        case "FREE_CONCEDED":
+          counts.freesConceded += 1;
+          break;
+        default:
+          break;
+      }
+
+      const playerStat = ensurePlayerStat(team, event);
+      if (!playerStat) continue;
+      playerStat.involved += 1;
+      switch (event.kind) {
+        case "GOAL":
+          playerStat.scorerPoints += 3;
+          break;
+        case "POINT":
+          playerStat.scorerPoints += 1;
+          break;
+        case "TWO_POINTER":
+        case "FORTY_FIVE_TWO_POINT":
+          playerStat.scorerPoints += 2;
+          break;
+        case "TURNOVER_WON":
+          playerStat.turnoversWon += 1;
+          break;
+        case "KICKOUT_WON":
+          playerStat.kickoutsWon += 1;
+          break;
+        case "FREE_WON":
+          playerStat.freesWon += 1;
+          break;
+        default:
+          break;
+      }
+    }
+
+    const buildTeamLine = (team: TeamSide) => {
+      const counts = countsByTeam[team];
+      const scores = counts.goals + counts.points + counts.twoPointers;
+      const attempts = counts.shots + counts.wides + scores;
+      const turnoverNet = counts.turnoversWon - counts.turnoversLost;
+      const restartTotal = counts.kickoutsWon + counts.kickoutsLost;
+      const freesNet = counts.freesWon - counts.freesConceded;
+      return {
+        teamLabel: team === "HOME" ? teamNames.HOME : teamNames.AWAY,
+        score: team === "HOME" ? homeScore : awayScore,
+        shooting: {
+          goals: counts.goals,
+          points: counts.points,
+          twoPointers: counts.twoPointers,
+          shots: counts.shots,
+          wides: counts.wides,
+          attempts,
+          scores,
+          conversionPct: formatPercentage(scores, attempts),
+        },
+        turnovers: {
+          won: counts.turnoversWon,
+          lost: counts.turnoversLost,
+          net: turnoverNet,
+          netLabel: formatSignedCount(turnoverNet),
+        },
+        restarts: {
+          won: counts.kickoutsWon,
+          lost: counts.kickoutsLost,
+          successPct: formatPercentage(counts.kickoutsWon, restartTotal),
+        },
+        frees: {
+          won: counts.freesWon,
+          conceded: counts.freesConceded,
+          net: freesNet,
+          netLabel: formatSignedCount(freesNet),
+        },
+      };
+    };
+
+    const pickTopPlayer = (
+      team: TeamSide,
+      key: keyof Pick<PlayerSummaryStat, "scorerPoints" | "turnoversWon" | "kickoutsWon" | "freesWon" | "involved">,
+    ): { label: string; value: number } | null => {
+      let best: { label: string; value: number } | null = null;
+      for (const stat of playerStatsByTeam[team].values()) {
+        const value = stat[key];
+        if (value <= 0) continue;
+        if (!best || value > best.value) {
+          best = { label: stat.label, value };
+        }
+      }
+      return best;
+    };
+
+    const buildPlayerNotes = (team: TeamSide) => {
+      const topScorer = pickTopPlayer(team, "scorerPoints");
+      const mostTurnoversWon = pickTopPlayer(team, "turnoversWon");
+      const mostKickoutsWon = pickTopPlayer(team, "kickoutsWon");
+      const mostFreesWon = pickTopPlayer(team, "freesWon");
+      const mostInvolved = pickTopPlayer(team, "involved");
+      const hasAny = Boolean(
+        topScorer ||
+        mostTurnoversWon ||
+        mostKickoutsWon ||
+        mostFreesWon ||
+        mostInvolved,
+      );
+      return {
+        hasAny,
+        topScorer: topScorer ? `${topScorer.label} (${topScorer.value} pts)` : null,
+        mostTurnoversWon: mostTurnoversWon ? `${mostTurnoversWon.label} (${mostTurnoversWon.value})` : null,
+        mostKickoutsWon: mostKickoutsWon ? `${mostKickoutsWon.label} (${mostKickoutsWon.value})` : null,
+        mostFreesWon: mostFreesWon ? `${mostFreesWon.label} (${mostFreesWon.value})` : null,
+        mostInvolved: mostInvolved ? `${mostInvolved.label} (${mostInvolved.value})` : null,
+      };
+    };
+
+    const playerNotesByTeam = {
+      HOME: buildPlayerNotes("HOME"),
+      AWAY: buildPlayerNotes("AWAY"),
+    };
+    return {
+      teams: {
+        HOME: buildTeamLine("HOME"),
+        AWAY: buildTeamLine("AWAY"),
+      },
+      playerNotesByTeam,
+      hasAnyPlayerNotes: playerNotesByTeam.HOME.hasAny || playerNotesByTeam.AWAY.hasAny,
+    };
+  }, [loggedEvents, playerById, homeScore, awayScore, teamNames.HOME, teamNames.AWAY]);
 
   const scoreboard = isLandscape ? (
     <div className="scoreboard-rail" aria-label="Match scoreboard">
@@ -3403,15 +3599,48 @@ export default function StatsModeSurface() {
         <div className={utilityPanelClass} role="dialog" aria-label="Match summary">
           <div className="utility-review-scroll">
             <div className="utility-panel-title">MATCH SUMMARY</div>
-            {reviewMatchSummaryLines.length > 0 ? (
-              reviewMatchSummaryLines.map((line) => (
-                <div key={`summary-panel-${line}`} className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.9, textTransform: "none" }}>
-                  {line}
+            {(["HOME", "AWAY"] as const).map((team) => {
+              const teamLabel = team === "HOME" ? teamNames.HOME : teamNames.AWAY;
+              const teamSummary = matchSummary.teams[team];
+              const teamScore = matchSummary.score[team];
+              return (
+                <div key={`summary-team-${team}`} style={{ marginBottom: "8px" }}>
+                  <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.98, textTransform: "none" }}>
+                    {teamLabel}
+                  </div>
+                  <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.92, textTransform: "none" }}>
+                    Score: {formatGaelicScore(teamScore)} ({teamScore.total})
+                  </div>
+                  <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.84, textTransform: "none" }}>
+                    Shooting: G {teamSummary.goals} · P {teamSummary.points} · 2PT {teamSummary.twoPointers} · Shot {teamSummary.shots} · Wide {teamSummary.wides}
+                  </div>
+                  <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.84, textTransform: "none" }}>
+                    Attempts {teamSummary.attempts} · Scores {teamSummary.scores} · Conv {teamSummary.conversionPct}%
+                  </div>
+                  <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.84, textTransform: "none" }}>
+                    Turnovers: T+ {teamSummary.turnoversWon} · T- {teamSummary.turnoversLost} · Net {formatSignedCount(teamSummary.netTurnovers)}
+                  </div>
+                  <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.84, textTransform: "none" }}>
+                    Restarts: K+ {teamSummary.kickoutsWon} · K- {teamSummary.kickoutsLost} · Success {teamSummary.kickoutSuccessPct}%
+                  </div>
+                  <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.84, textTransform: "none" }}>
+                    Frees: F+ {teamSummary.freesWon} · F- {teamSummary.freesConceded} · Net {formatSignedCount(teamSummary.netFrees)}
+                  </div>
+                </div>
+              );
+            })}
+            <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.92 }}>
+              PLAYER NOTES
+            </div>
+            {matchSummary.hasAnyPlayerNotes ? (
+              matchSummary.playerNotes.map((note) => (
+                <div key={`summary-note-${note.id}`} className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.88, textTransform: "none" }}>
+                  {note.label}: {note.value}
                 </div>
               ))
             ) : (
-              <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.9, textTransform: "none" }}>
-                No tagged match data yet.
+              <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.88, textTransform: "none" }}>
+                No player tags yet
               </div>
             )}
           </div>
