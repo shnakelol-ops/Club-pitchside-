@@ -249,7 +249,12 @@ function parseSavedMatches(input: string | null): SavedMatch[] {
         const maybeOpponent = "opponent" in item ? item.opponent : null;
         const maybeVenue = "venue" in item ? item.venue : null;
         const maybeSquadId = "squadId" in item ? item.squadId : null;
-        const maybeEvents = "events" in item ? item.events : null;
+        const maybeEvents =
+          "events" in item
+            ? item.events
+            : "loggedEvents" in item
+              ? item.loggedEvents
+              : null;
         if (typeof maybeId !== "string" || maybeId.trim().length === 0) return null;
         if (typeof maybeDate !== "number" || !Number.isFinite(maybeDate)) return null;
         if (typeof maybeOpponent !== "string") return null;
@@ -261,17 +266,51 @@ function parseSavedMatches(input: string | null): SavedMatch[] {
             const rawKind = "kind" in event ? event.kind : null;
             const rawNx = "nx" in event ? event.nx : null;
             const rawNy = "ny" in event ? event.ny : null;
+            const rawX = "x" in event ? event.x : null;
+            const rawY = "y" in event ? event.y : null;
             const rawHalf = "half" in event ? event.half : null;
             const rawTimestamp = "timestamp" in event ? event.timestamp : null;
+            const normalizedNx =
+              typeof rawNx === "number" && Number.isFinite(rawNx)
+                ? rawNx
+                : typeof rawX === "number" && Number.isFinite(rawX)
+                  ? rawX
+                  : null;
+            const normalizedNy =
+              typeof rawNy === "number" && Number.isFinite(rawNy)
+                ? rawNy
+                : typeof rawY === "number" && Number.isFinite(rawY)
+                  ? rawY
+                  : null;
+            const normalizedHalf =
+              rawHalf === 1 || rawHalf === 2
+                ? rawHalf
+                : rawHalf === "1"
+                  ? 1
+                  : rawHalf === "2"
+                    ? 2
+                    : null;
+            const normalizedTimestamp =
+              typeof rawTimestamp === "number" && Number.isFinite(rawTimestamp)
+                ? rawTimestamp
+                : typeof rawTimestamp === "string" && Number.isFinite(Number(rawTimestamp))
+                  ? Number(rawTimestamp)
+                  : null;
             if (typeof rawId !== "string") return null;
             if (typeof rawKind !== "string") return null;
-            if (typeof rawNx !== "number" || !Number.isFinite(rawNx)) return null;
-            if (typeof rawNy !== "number" || !Number.isFinite(rawNy)) return null;
-            if (!(rawHalf === 1 || rawHalf === 2)) return null;
-            if (typeof rawTimestamp !== "number" || !Number.isFinite(rawTimestamp)) return null;
-            return { ...event } as MatchEvent;
+            if (normalizedNx == null || normalizedNy == null) return null;
+            if (normalizedHalf == null) return null;
+            if (normalizedTimestamp == null) return null;
+            return {
+              ...event,
+              nx: normalizedNx,
+              ny: normalizedNy,
+              half: normalizedHalf,
+              timestamp: normalizedTimestamp,
+            } as MatchEvent;
           })
           .filter((event): event is MatchEvent => event != null);
+        if (events.length === 0) return null;
         const nextMatch: SavedMatch = {
           id: maybeId,
           date: maybeDate,
@@ -2342,6 +2381,10 @@ export default function StatsModeSurface() {
   };
 
   const saveMatchSnapshot = () => {
+    if (loggedEvents.length === 0) {
+      window.alert("No events to save");
+      return;
+    }
     const nextSavedMatch: SavedMatch = {
       id: `saved-match-${newLocalEventId()}`,
       date: Date.now(),
