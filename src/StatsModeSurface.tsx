@@ -298,7 +298,13 @@ function deriveMyTeamReport(
       if (playerNote) playerNote.scorePoints += 1;
       continue;
     }
-    if (event.kind === "FREE_SCORED") {
+    const eventKind = String(event.kind);
+    const isFreeScoredKind =
+      eventKind === "FREE_SCORED" ||
+      eventKind === "FS" ||
+      eventKind === "FREE_SCORE" ||
+      eventKind === "free_scored";
+    if (isFreeScoredKind) {
       points += 1;
       scores += 1;
       attempts += 1;
