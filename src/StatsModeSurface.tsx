@@ -293,15 +293,92 @@ function parseSavedMatches(input: string | null): SavedMatch[] {
 }
 
 function mapSavedMatchEventToLoggedEvent(event: MatchEvent): LoggedMatchEvent {
-  const team: TeamSide | undefined = event.id.startsWith("team-home-")
+  const savedEvent = event as LoggedMatchEvent;
+  const inferredTeam: TeamSide | undefined = event.id.startsWith("team-home-")
     ? "HOME"
     : event.id.startsWith("team-away-")
       ? "AWAY"
       : undefined;
   return {
-    ...event,
-    team,
+    ...savedEvent,
+    team: savedEvent.team ?? inferredTeam,
   };
+}
+
+type WakeLockSentinelLike = {
+  released?: boolean;
+  release: () => Promise<void>;
+  addEventListener?: (
+    type: "release",
+    listener: (event: Event) => void,
+  ) => void;
+};
+
+type WakeLockNavigator = Navigator & {
+  wakeLock?: {
+    request: (type: "screen") => Promise<WakeLockSentinelLike>;
+  };
+};
+
+function useScreenWakeLock(enabled: boolean): void {
+  const sentinelRef = useRef<WakeLockSentinelLike | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof document === "undefined") return;
+    const wakeLockApi = (navigator as WakeLockNavigator).wakeLock;
+    if (!wakeLockApi || typeof wakeLockApi.request !== "function") return;
+
+    let cancelled = false;
+
+    const releaseWakeLock = async () => {
+      const sentinel = sentinelRef.current;
+      sentinelRef.current = null;
+      if (!sentinel) return;
+      try {
+        await sentinel.release();
+      } catch {
+        // Wake lock release can fail on browser lifecycle transitions.
+      }
+    };
+
+    const requestWakeLock = async () => {
+      if (!enabled) return;
+      if (document.visibilityState !== "visible") return;
+      if (sentinelRef.current && sentinelRef.current.released !== true) return;
+      try {
+        const sentinel = await wakeLockApi.request("screen");
+        if (cancelled) {
+          await sentinel.release();
+          return;
+        }
+        sentinelRef.current = sentinel;
+        sentinel.addEventListener?.("release", () => {
+          if (sentinelRef.current === sentinel) {
+            sentinelRef.current = null;
+          }
+        });
+      } catch {
+        // Wake lock request can fail if unsupported/denied; fail silently.
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void requestWakeLock();
+        return;
+      }
+      void releaseWakeLock();
+    };
+
+    void requestWakeLock();
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      void releaseWakeLock();
+    };
+  }, [enabled]);
 }
 
 function computeTeamScore(events: readonly MatchEvent[], team: TeamSide): TeamScore {
@@ -2280,11 +2357,12 @@ export default function StatsModeSurface() {
 
   const openSavedMatchesPanel = () => {
     setIsUtilityOpen(false);
+    setIsPickerOpen(false);
     if (savedMatches.length === 0) {
       window.alert("No saved matches yet.");
       return;
     }
-    setUtilityPanel("REVIEW");
+    setUtilityPanel("SAVED_MATCHES");
   };
 
   const loadSavedMatch = (savedMatchId: string) => {
@@ -2430,6 +2508,10 @@ export default function StatsModeSurface() {
   useEffect(() => {
     firstHalfAttackingDirectionRef.current = firstHalfAttackingDirection;
   }, [firstHalfAttackingDirection]);
+
+  const wakeLockEnabled =
+    matchState === "FIRST_HALF" || matchState === "SECOND_HALF";
+  useScreenWakeLock(wakeLockEnabled);
 
   useEffect(() => {
     const baseline = eventKindSwitchBaselineEventCountRef.current;
