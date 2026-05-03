@@ -298,6 +298,13 @@ function deriveMyTeamReport(
       if (playerNote) playerNote.scorePoints += 1;
       continue;
     }
+    if (event.kind === "FREE_SCORED") {
+      points += 1;
+      scores += 1;
+      attempts += 1;
+      if (playerNote) playerNote.scorePoints += 1;
+      continue;
+    }
     if (event.kind === "TWO_POINTER" || event.kind === "FORTY_FIVE_TWO_POINT") {
       twoPointers += 1;
       scores += 1;
