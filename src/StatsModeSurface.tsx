@@ -219,9 +219,16 @@ type MyTeamPlayerNote = {
   involved: number;
 };
 
-function deriveMyTeamReport(loggedEvents: readonly LoggedMatchEvent[]): string[] {
-  const homeScore = computeTeamScore(loggedEvents, "HOME");
-  const awayScore = computeTeamScore(loggedEvents, "AWAY");
+function deriveMyTeamReport(
+  loggedEvents: readonly LoggedMatchEvent[],
+  matchState: MatchState,
+): string[] {
+  const reportEvents =
+    matchState === "HALF_TIME"
+      ? loggedEvents.filter((event) => event.half === 1)
+      : loggedEvents;
+  const homeScore = computeTeamScore(reportEvents, "HOME");
+  const awayScore = computeTeamScore(reportEvents, "AWAY");
 
   let goals = 0;
   let points = 0;
@@ -270,7 +277,7 @@ function deriveMyTeamReport(loggedEvents: readonly LoggedMatchEvent[]): string[]
     return created;
   };
 
-  for (const event of loggedEvents) {
+  for (const event of reportEvents) {
     if (!(event.team === "HOME" || event.id.startsWith("team-home-"))) continue;
     const playerNote = getPlayerNote(event);
     if (playerNote) {
@@ -356,8 +363,15 @@ function deriveMyTeamReport(loggedEvents: readonly LoggedMatchEvent[]): string[]
   const topKickoutsWon = pickBest((note) => note.kickoutsWon);
   const topFreesWon = pickBest((note) => note.freesWon);
   const mostInvolved = pickBest((note) => note.involved);
+  const reportPhaseLabel =
+    matchState === "HALF_TIME"
+      ? "Phase: First Half"
+      : matchState === "FULL_TIME"
+        ? "Phase: Full Match"
+        : "Phase: Live";
 
   const lines = [
+    reportPhaseLabel,
     `Score: Team A ${formatGaelicScore(homeScore)} (${homeScore.total}) v Team B ${formatGaelicScore(awayScore)} (${awayScore.total})`,
     "Shooting:",
     `Goals: ${goals}`,
@@ -2837,8 +2851,8 @@ export default function StatsModeSurface() {
       return player ? `#${player.number} ${player.name}` : null;
     })();
   const myTeamReport = useMemo(
-    () => deriveMyTeamReport(loggedEvents),
-    [loggedEvents],
+    () => deriveMyTeamReport(loggedEvents, matchState),
+    [loggedEvents, matchState],
   );
 
   const homeScore = useMemo(() => computeTeamScore(loggedEvents, "HOME"), [loggedEvents]);
