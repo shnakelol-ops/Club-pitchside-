@@ -12,13 +12,13 @@ import {
   type MatchState,
 } from "./core/match/match-state-store";
 import { createPixiPitchSurface } from "./core/pitch/create-pixi-pitch-surface";
-import { type MatchEvent, type MatchEventKind } from "./core/stats/stats-event-model";
+import { MATCH_EVENT_KINDS, type MatchEvent, type MatchEventKind } from "./core/stats/stats-event-model";
 import { gaaModeConfig, type GaaModeKey } from "./config/gaaModeConfig";
 
 type VisibilityMode = "ALL" | "LAST_5" | "LAST_10";
 type TeamScore = { goals: number; points: number; total: number };
 type TeamSide = "HOME" | "AWAY";
-type UtilityPanel = "PLAYERS" | "REVIEW" | "SUMMARY" | null;
+type UtilityPanel = "PLAYERS" | "REVIEW" | "SUMMARY" | "SAVED_MATCHES" | null;
 type ReviewHalf = "H1" | "H2" | "FULL";
 type ReviewEventFilter =
   | "ALL"
@@ -46,6 +46,14 @@ type LoggedMatchEvent = MatchEvent & {
   squadId?: string;
   team?: TeamSide;
 };
+type SavedMatchRecord = {
+  id: string;
+  createdAt: string;
+  label: string;
+  events: readonly LoggedMatchEvent[];
+  eventCount: number;
+  scorelineSnapshot: string;
+};
 
 type ViewportRect = { left: number; top: number; width: number; height: number };
 
@@ -59,6 +67,8 @@ const MODE_MENU_OPTIONS: ReadonlyArray<{ key: GaaModeKey; label: string }> = [
 ];
 const FORMATION_ROW_SIZES = [1, 3, 3, 2, 3, 3] as const;
 const SQUADS_STORAGE_KEY = "pitchsideclub.squads";
+const SAVED_MATCHES_STORAGE_KEY = "pitchflow_matches_v1";
+const MAX_SAVED_MATCHES = 10;
 const REVIEW_FILTER_OPTIONS: ReadonlyArray<{ id: ReviewEventFilter; label: string }> = [
   { id: "ALL", label: "All" },
   { id: "SCORES", label: "Scores" },
@@ -91,6 +101,132 @@ const REVIEW_FILTER_KINDS: Record<
   FREE_WON: ["FREE_WON"],
   FREE_CONCEDED: ["FREE_CONCEDED"],
 };
+const MATCH_EVENT_KIND_SET = new Set<MatchEventKind>(MATCH_EVENT_KINDS);
+
+function parseStoredLoggedMatchEvent(input: unknown): LoggedMatchEvent | null {
+  if (!input || typeof input !== "object") return null;
+  const maybeId = "id" in input ? input.id : null;
+  const maybeKind = "kind" in input ? input.kind : null;
+  const maybeNx = "nx" in input ? input.nx : null;
+  const maybeNy = "ny" in input ? input.ny : null;
+  const maybeHalf = "half" in input ? input.half : null;
+  const maybeTimestamp = "timestamp" in input ? input.timestamp : null;
+
+  if (typeof maybeId !== "string" || maybeId.trim().length === 0) return null;
+  if (typeof maybeKind !== "string" || !MATCH_EVENT_KIND_SET.has(maybeKind as MatchEventKind)) return null;
+  if (typeof maybeNx !== "number" || !Number.isFinite(maybeNx)) return null;
+  if (typeof maybeNy !== "number" || !Number.isFinite(maybeNy)) return null;
+  if (maybeHalf !== 1 && maybeHalf !== 2) return null;
+  if (typeof maybeTimestamp !== "number" || !Number.isFinite(maybeTimestamp)) return null;
+
+  const next: LoggedMatchEvent = {
+    id: maybeId,
+    kind: maybeKind as MatchEventKind,
+    nx: maybeNx,
+    ny: maybeNy,
+    half: maybeHalf,
+    timestamp: maybeTimestamp,
+  };
+
+  const maybePlayerId = "playerId" in input ? input.playerId : null;
+  if (typeof maybePlayerId === "string" && maybePlayerId.trim().length > 0) {
+    next.playerId = maybePlayerId;
+  }
+
+  const maybePlayerName = "playerName" in input ? input.playerName : null;
+  if (typeof maybePlayerName === "string" && maybePlayerName.trim().length > 0) {
+    next.playerName = maybePlayerName;
+  }
+
+  const maybePlayerNumber = "playerNumber" in input ? input.playerNumber : null;
+  if (typeof maybePlayerNumber === "number" && Number.isFinite(maybePlayerNumber)) {
+    next.playerNumber = maybePlayerNumber;
+  }
+
+  const maybeSquadId = "squadId" in input ? input.squadId : null;
+  if (typeof maybeSquadId === "string" && maybeSquadId.trim().length > 0) {
+    next.squadId = maybeSquadId;
+  }
+
+  const maybeTeam = "team" in input ? input.team : null;
+  if (maybeTeam === "HOME" || maybeTeam === "AWAY") {
+    next.team = maybeTeam;
+  }
+
+  return next;
+}
+
+function parseStoredSavedMatch(input: unknown): SavedMatchRecord | null {
+  if (!input || typeof input !== "object") return null;
+  const maybeId = "id" in input ? input.id : null;
+  const maybeCreatedAt = "createdAt" in input ? input.createdAt : null;
+  const maybeLabel = "label" in input ? input.label : null;
+  const maybeEvents = "events" in input ? input.events : null;
+  const maybeEventCount = "eventCount" in input ? input.eventCount : null;
+  const maybeScorelineSnapshot = "scorelineSnapshot" in input ? input.scorelineSnapshot : null;
+
+  if (typeof maybeId !== "string" || maybeId.trim().length === 0) return null;
+  if (typeof maybeCreatedAt !== "string" || maybeCreatedAt.trim().length === 0) return null;
+  const parsedCreatedAt = Date.parse(maybeCreatedAt);
+  if (!Number.isFinite(parsedCreatedAt)) return null;
+  if (typeof maybeLabel !== "string" || maybeLabel.trim().length === 0) return null;
+  if (!Array.isArray(maybeEvents) || maybeEvents.length === 0) return null;
+  if (typeof maybeEventCount !== "number" || !Number.isFinite(maybeEventCount)) return null;
+  if (typeof maybeScorelineSnapshot !== "string" || maybeScorelineSnapshot.trim().length === 0) return null;
+
+  const parsedEvents = maybeEvents.map((event) => parseStoredLoggedMatchEvent(event));
+  if (parsedEvents.some((event) => event == null)) return null;
+  const events = parsedEvents.filter((event): event is LoggedMatchEvent => event != null);
+  if (events.length === 0) return null;
+  if (Math.floor(maybeEventCount) !== events.length) return null;
+
+  return {
+    id: maybeId,
+    createdAt: new Date(parsedCreatedAt).toISOString(),
+    label: maybeLabel.trim().slice(0, 64),
+    events,
+    eventCount: events.length,
+    scorelineSnapshot: maybeScorelineSnapshot.trim().slice(0, 120),
+  };
+}
+
+function sanitizeSavedMatches(matches: readonly SavedMatchRecord[]): SavedMatchRecord[] {
+  return [...matches]
+    .filter((match) => match.events.length > 0 && match.eventCount > 0)
+    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+    .slice(0, MAX_SAVED_MATCHES);
+}
+
+function parseStoredSavedMatches(input: string | null): SavedMatchRecord[] {
+  if (!input) return [];
+  try {
+    const parsed = JSON.parse(input);
+    if (!Array.isArray(parsed)) return [];
+    const matches = parsed
+      .map((record) => parseStoredSavedMatch(record))
+      .filter((record): record is SavedMatchRecord => record != null);
+    return sanitizeSavedMatches(matches);
+  } catch {
+    return [];
+  }
+}
+
+function persistSavedMatches(matches: readonly SavedMatchRecord[]) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(SAVED_MATCHES_STORAGE_KEY, JSON.stringify(sanitizeSavedMatches(matches)));
+}
+
+function formatSavedMatchCreatedAt(createdAtIso: string): string {
+  const timestamp = Date.parse(createdAtIso);
+  if (!Number.isFinite(timestamp)) return createdAtIso;
+  return new Intl.DateTimeFormat(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(timestamp));
+}
 function newLocalEventId(): string {
   const c = globalThis.crypto;
   if (c && "randomUUID" in c && typeof c.randomUUID === "function") {
@@ -1879,6 +2015,11 @@ export default function StatsModeSurface() {
   const [showReviewStrip, setShowReviewStrip] = useState(false);
   const [selectedReviewEventId, setSelectedReviewEventId] = useState<string | null>(null);
   const [loggedEvents, setLoggedEvents] = useState<readonly LoggedMatchEvent[]>([]);
+  const [savedMatches, setSavedMatches] = useState<SavedMatchRecord[]>(() => {
+    if (typeof window === "undefined") return [];
+    return parseStoredSavedMatches(window.localStorage.getItem(SAVED_MATCHES_STORAGE_KEY));
+  });
+  const [saveLoadBlockedReason, setSaveLoadBlockedReason] = useState<string | null>(null);
   const [visibilityMode, setVisibilityMode] = useState<VisibilityMode>("ALL");
   const [matchState, setMatchState] = useState<MatchState>("PRE_MATCH");
   const [currentHalf, setCurrentHalf] = useState<1 | 2>(1);
@@ -2278,6 +2419,10 @@ export default function StatsModeSurface() {
   }, [squads]);
 
   useEffect(() => {
+    persistSavedMatches(savedMatches);
+  }, [savedMatches]);
+
+  useEffect(() => {
     if (canEditTeamNames) return;
     setEditingTeam(null);
     setTeamNameDraft("");
@@ -2461,8 +2606,50 @@ export default function StatsModeSurface() {
     setIsPickerOpen(false);
   };
 
+  const openSavedMatchesPanel = () => {
+    setShowReviewStrip(false);
+    setUtilityPanel("SAVED_MATCHES");
+    setIsUtilityOpen(false);
+    setIsPickerOpen(false);
+    setSaveLoadBlockedReason(null);
+  };
+
+  const saveCurrentMatchSnapshot = () => {
+    if (loggedEvents.length === 0) {
+      setSaveLoadBlockedReason("Save blocked: no events logged.");
+      return;
+    }
+    const snapshotEvents = [...loggedEvents];
+    const snapshotHomeScore = computeTeamScore(snapshotEvents, "HOME");
+    const snapshotAwayScore = computeTeamScore(snapshotEvents, "AWAY");
+    const savedRecord: SavedMatchRecord = {
+      id: `saved-match-${newLocalEventId()}`,
+      createdAt: new Date().toISOString(),
+      label: `${teamNames.HOME} vs ${teamNames.AWAY}`,
+      events: snapshotEvents,
+      eventCount: snapshotEvents.length,
+      scorelineSnapshot: `${formatGaelicScore(snapshotHomeScore)} (${snapshotHomeScore.total}) v ${formatGaelicScore(
+        snapshotAwayScore,
+      )} (${snapshotAwayScore.total})`,
+    };
+    setSavedMatches((prev) => sanitizeSavedMatches([savedRecord, ...prev]));
+    setSaveLoadBlockedReason(null);
+  };
+
+  const loadSavedMatchRecord = (record: SavedMatchRecord) => {
+    const parsedRecord = parseStoredSavedMatch(record);
+    if (!parsedRecord || parsedRecord.events.length === 0) {
+      setSaveLoadBlockedReason("Load blocked: saved match is invalid.");
+      return;
+    }
+    setLoggedEvents(parsedRecord.events);
+    setSaveLoadBlockedReason(null);
+    setUtilityPanel(null);
+  };
+
   const closeUtilityPanel = () => {
     setUtilityPanel(null);
+    setSaveLoadBlockedReason(null);
   };
 
   const goHome = () => {
@@ -3618,6 +3805,59 @@ export default function StatsModeSurface() {
           </button>
         </div>
       ) : null}
+      {utilityPanel === "SAVED_MATCHES" ? (
+        <div className={utilityPanelClass} role="dialog" aria-label="Saved matches">
+          <div className="utility-review-scroll">
+            <div className="utility-panel-title">SAVED MATCHES</div>
+            {saveLoadBlockedReason ? (
+              <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.9, textTransform: "none" }}>
+                {saveLoadBlockedReason}
+              </div>
+            ) : null}
+            {savedMatches.length > 0 ? (
+              savedMatches.map((savedMatch) => (
+                <div
+                  key={savedMatch.id}
+                  style={{
+                    border: "1px solid rgba(148,163,184,0.32)",
+                    borderRadius: "8px",
+                    padding: "7px",
+                    background: "rgba(15,23,42,0.52)",
+                    marginBottom: "6px",
+                  }}
+                >
+                  <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.95, textTransform: "none" }}>
+                    {savedMatch.label}
+                  </div>
+                  <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.85, textTransform: "none" }}>
+                    {savedMatch.scorelineSnapshot}
+                  </div>
+                  <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.8, textTransform: "none" }}>
+                    {savedMatch.eventCount} events · {formatSavedMatchCreatedAt(savedMatch.createdAt)}
+                  </div>
+                  <button
+                    type="button"
+                    className="utility-review-btn"
+                    onClick={() => {
+                      loadSavedMatchRecord(savedMatch);
+                    }}
+                    style={{ marginTop: "4px" }}
+                  >
+                    Load Match
+                  </button>
+                </div>
+              ))
+            ) : (
+              <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.9, textTransform: "none" }}>
+                No valid saved matches yet.
+              </div>
+            )}
+          </div>
+          <button type="button" className="utility-panel-close" onClick={closeUtilityPanel}>
+            Close
+          </button>
+        </div>
+      ) : null}
       {showReviewStrip && utilityPanel !== "REVIEW" ? (
         <div
           className={`review-strip ${isLandscape ? "review-strip--landscape" : "review-strip--portrait"}`}
@@ -4118,6 +4358,23 @@ export default function StatsModeSurface() {
                   </button>
                 );
               })}
+              <button
+                type="button"
+                className="utility-menu-btn"
+                onClick={() => {
+                  saveCurrentMatchSnapshot();
+                }}
+              >
+                Save Match
+              </button>
+              <button type="button" className="utility-menu-btn" onClick={openSavedMatchesPanel}>
+                Load Match
+              </button>
+              {saveLoadBlockedReason ? (
+                <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.9, textTransform: "none" }}>
+                  {saveLoadBlockedReason}
+                </div>
+              ) : null}
               <button type="button" className="utility-menu-btn" onClick={resetMatch}>
                 Restart Match
               </button>
