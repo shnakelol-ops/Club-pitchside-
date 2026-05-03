@@ -331,6 +331,55 @@ function parseSavedMatches(input: string | null): SavedMatch[] {
   }
 }
 
+function isValidSavedMatch(match: SavedMatch): boolean {
+  return Array.isArray(match.events) && match.events.length > 0;
+}
+
+function normalizeEventForSave(event: LoggedMatchEvent): MatchEvent | null {
+  const eventLike = event as LoggedMatchEvent & {
+    type?: unknown;
+    x?: unknown;
+    y?: unknown;
+  };
+  const kindLike =
+    typeof eventLike.kind === "string"
+      ? eventLike.kind
+      : typeof eventLike.type === "string"
+        ? eventLike.type
+        : null;
+  const nxLike =
+    typeof eventLike.nx === "number"
+      ? eventLike.nx
+      : typeof eventLike.x === "number"
+        ? eventLike.x
+        : null;
+  const nyLike =
+    typeof eventLike.ny === "number"
+      ? eventLike.ny
+      : typeof eventLike.y === "number"
+        ? eventLike.y
+        : null;
+  if (
+    typeof eventLike.id !== "string" ||
+    kindLike == null ||
+    nxLike == null ||
+    nyLike == null ||
+    (eventLike.half !== 1 && eventLike.half !== 2) ||
+    typeof eventLike.timestamp !== "number" ||
+    !Number.isFinite(eventLike.timestamp)
+  ) {
+    return null;
+  }
+  return {
+    id: eventLike.id,
+    kind: kindLike as MatchEventKind,
+    nx: nxLike,
+    ny: nyLike,
+    half: eventLike.half,
+    timestamp: eventLike.timestamp,
+  };
+}
+
 function mapSavedMatchEventToLoggedEvent(event: MatchEvent): LoggedMatchEvent {
   const savedEvent = event as LoggedMatchEvent;
   const inferredTeam: TeamSide | undefined = event.id.startsWith("team-home-")
@@ -2136,6 +2185,10 @@ export default function StatsModeSurface() {
     if (typeof window === "undefined") return [];
     return parseSavedMatches(window.localStorage.getItem(SAVED_MATCHES_STORAGE_KEY));
   });
+  const cleanedMatches = useMemo(
+    () => savedMatches.filter((match) => isValidSavedMatch(match)),
+    [savedMatches],
+  );
   const [visibilityMode, setVisibilityMode] = useState<VisibilityMode>("ALL");
   const [matchState, setMatchState] = useState<MatchState>("PRE_MATCH");
   const [currentHalf, setCurrentHalf] = useState<1 | 2>(1);
@@ -2381,19 +2434,36 @@ export default function StatsModeSurface() {
   };
 
   const saveMatchSnapshot = () => {
-    if (loggedEvents.length === 0) {
+    if (!loggedEvents || loggedEvents.length === 0) {
       window.alert("No events to save");
       return;
     }
+    const validEvents = loggedEvents
+      .filter((event) => {
+        const eventLike = event as LoggedMatchEvent & {
+          type?: unknown;
+          x?: unknown;
+          y?: unknown;
+        };
+        const hasType = typeof eventLike.type === "string" || typeof eventLike.kind === "string";
+        const hasX = typeof eventLike.x === "number" || typeof eventLike.nx === "number";
+        const hasY = typeof eventLike.y === "number" || typeof eventLike.ny === "number";
+        return eventLike != null && hasType && hasX && hasY;
+      })
+      .map(normalizeEventForSave)
+      .filter((event): event is MatchEvent => event !== null);
+    if (validEvents.length === 0) {
+      window.alert("Invalid match data");
+      return;
+    }
+    console.log("Saving events count:", validEvents.length);
     const nextSavedMatch: SavedMatch = {
       id: `saved-match-${newLocalEventId()}`,
       date: Date.now(),
       opponent: teamNames.AWAY.trim().length > 0 ? teamNames.AWAY.trim().slice(0, 24) : "Opponent",
-      events: loggedEvents.map((event) => ({ ...event }) as MatchEvent),
+      venue: venueName.trim().slice(0, 24),
+      events: validEvents,
     };
-    if (venueName.trim().length > 0) {
-      nextSavedMatch.venue = venueName.trim().slice(0, 24);
-    }
     nextSavedMatch.squadId = activeSquad.id;
     setSavedMatches((prev) => [nextSavedMatch, ...prev]);
   };
@@ -2401,7 +2471,7 @@ export default function StatsModeSurface() {
   const openSavedMatchesPanel = () => {
     setIsUtilityOpen(false);
     setIsPickerOpen(false);
-    if (savedMatches.length === 0) {
+    if (cleanedMatches.length === 0) {
       window.alert("No saved matches yet.");
       return;
     }
@@ -2409,8 +2479,12 @@ export default function StatsModeSurface() {
   };
 
   const loadSavedMatch = (savedMatchId: string) => {
-    const targetMatch = savedMatches.find((savedMatch) => savedMatch.id === savedMatchId);
+    const targetMatch = cleanedMatches.find((savedMatch) => savedMatch.id === savedMatchId);
     if (!targetMatch) return;
+    if (!targetMatch.events || targetMatch.events.length === 0) {
+      window.alert("Saved match is empty or corrupted");
+      return;
+    }
     setLoggedEvents(targetMatch.events.map(mapSavedMatchEventToLoggedEvent));
     setShowReviewStrip(false);
     setUtilityPanel(null);
@@ -2619,6 +2693,16 @@ export default function StatsModeSurface() {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(SAVED_MATCHES_STORAGE_KEY, JSON.stringify(savedMatches));
   }, [savedMatches]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (cleanedMatches.length === savedMatches.length) return;
+    setSavedMatches(cleanedMatches);
+    window.localStorage.setItem(
+      SAVED_MATCHES_STORAGE_KEY,
+      JSON.stringify(cleanedMatches),
+    );
+  }, [cleanedMatches, savedMatches]);
 
   useEffect(() => {
     if (canEditTeamNames) return;
@@ -3974,8 +4058,8 @@ export default function StatsModeSurface() {
         <div className={utilityPanelClass} role="dialog" aria-label="Saved matches">
           <div className="utility-review-scroll">
             <div className="utility-panel-title">SAVED MATCHES</div>
-            {savedMatches.length > 0 ? (
-              savedMatches.map((savedMatch) => (
+            {cleanedMatches.length > 0 ? (
+              cleanedMatches.map((savedMatch) => (
                 <button
                   key={`saved-match-panel-${savedMatch.id}`}
                   type="button"
