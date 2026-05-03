@@ -39,6 +39,25 @@ type AttackingDirection = "LEFT" | "RIGHT";
 type PlayerRole = "STARTER" | "SUB";
 type SquadPlayer = { id: string; name: string; number: number; role: PlayerRole };
 type Squad = { id: string; name: string; players: SquadPlayer[] };
+type SavedSquadPlayer = {
+  id: string;
+  number: number;
+  name: string;
+};
+type SavedSquad = {
+  id: string;
+  name: string;
+  players: SavedSquadPlayer[];
+  createdAt: number;
+};
+type SavedMatch = {
+  id: string;
+  date: number;
+  opponent: string;
+  venue?: string;
+  squadId?: string;
+  events: MatchEvent[];
+};
 type LoggedMatchEvent = MatchEvent & {
   playerId?: string;
   playerName?: string;
@@ -59,6 +78,9 @@ const MODE_MENU_OPTIONS: ReadonlyArray<{ key: GaaModeKey; label: string }> = [
 ];
 const FORMATION_ROW_SIZES = [1, 3, 3, 2, 3, 3] as const;
 const SQUADS_STORAGE_KEY = "pitchsideclub.squads";
+const SAVED_SQUAD_STORAGE_KEY = "pitchflow_squad_v1";
+const SAVED_MATCHES_STORAGE_KEY = "pitchflow_matches_v1";
+
 const REVIEW_FILTER_OPTIONS: ReadonlyArray<{ id: ReviewEventFilter; label: string }> = [
   { id: "ALL", label: "All" },
   { id: "SCORES", label: "Scores" },
@@ -170,6 +192,117 @@ function parseStoredSquads(input: string | null): Squad[] {
   } catch {
     return [];
   }
+}
+
+function parseSavedSquad(input: string | null): SavedSquad | null {
+  if (!input) return null;
+  try {
+    const parsed = JSON.parse(input);
+    if (!parsed || typeof parsed !== "object") return null;
+    const maybeId = "id" in parsed ? parsed.id : null;
+    const maybeName = "name" in parsed ? parsed.name : null;
+    const maybePlayers = "players" in parsed ? parsed.players : null;
+    const maybeCreatedAt = "createdAt" in parsed ? parsed.createdAt : null;
+    if (typeof maybeId !== "string" || maybeId.trim().length === 0) return null;
+    if (typeof maybeName !== "string" || maybeName.trim().length === 0) return null;
+    if (!Array.isArray(maybePlayers)) return null;
+    const players = maybePlayers
+      .map((player) => {
+        if (!player || typeof player !== "object") return null;
+        const rawId = "id" in player ? player.id : null;
+        const rawName = "name" in player ? player.name : null;
+        const rawNumber = "number" in player ? player.number : null;
+        if (typeof rawId !== "string" || rawId.trim().length === 0) return null;
+        if (typeof rawName !== "string" || rawName.trim().length === 0) return null;
+        if (typeof rawNumber !== "number" || !Number.isFinite(rawNumber)) return null;
+        return {
+          id: rawId,
+          name: rawName.trim().slice(0, 24),
+          number: Math.max(1, Math.min(99, Math.floor(rawNumber))),
+        };
+      })
+      .filter((player): player is SavedSquadPlayer => player !== null);
+    return {
+      id: maybeId,
+      name: maybeName.trim().slice(0, 24),
+      players,
+      createdAt:
+        typeof maybeCreatedAt === "number" && Number.isFinite(maybeCreatedAt)
+          ? maybeCreatedAt
+          : Date.now(),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function parseSavedMatches(input: string | null): SavedMatch[] {
+  if (!input) return [];
+  try {
+    const parsed = JSON.parse(input);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((item) => {
+        if (!item || typeof item !== "object") return null;
+        const maybeId = "id" in item ? item.id : null;
+        const maybeDate = "date" in item ? item.date : null;
+        const maybeOpponent = "opponent" in item ? item.opponent : null;
+        const maybeVenue = "venue" in item ? item.venue : null;
+        const maybeSquadId = "squadId" in item ? item.squadId : null;
+        const maybeEvents = "events" in item ? item.events : null;
+        if (typeof maybeId !== "string" || maybeId.trim().length === 0) return null;
+        if (typeof maybeDate !== "number" || !Number.isFinite(maybeDate)) return null;
+        if (typeof maybeOpponent !== "string") return null;
+        if (!Array.isArray(maybeEvents)) return null;
+        const events = maybeEvents
+          .map((event) => {
+            if (!event || typeof event !== "object") return null;
+            const rawId = "id" in event ? event.id : null;
+            const rawKind = "kind" in event ? event.kind : null;
+            const rawNx = "nx" in event ? event.nx : null;
+            const rawNy = "ny" in event ? event.ny : null;
+            const rawHalf = "half" in event ? event.half : null;
+            const rawTimestamp = "timestamp" in event ? event.timestamp : null;
+            if (typeof rawId !== "string") return null;
+            if (typeof rawKind !== "string") return null;
+            if (typeof rawNx !== "number" || !Number.isFinite(rawNx)) return null;
+            if (typeof rawNy !== "number" || !Number.isFinite(rawNy)) return null;
+            if (!(rawHalf === 1 || rawHalf === 2)) return null;
+            if (typeof rawTimestamp !== "number" || !Number.isFinite(rawTimestamp)) return null;
+            return { ...event } as MatchEvent;
+          })
+          .filter((event): event is MatchEvent => event != null);
+        return {
+          id: maybeId,
+          date: maybeDate,
+          opponent: maybeOpponent.trim().slice(0, 24),
+          venue:
+            typeof maybeVenue === "string" && maybeVenue.trim().length > 0
+              ? maybeVenue.trim().slice(0, 24)
+              : undefined,
+          squadId:
+            typeof maybeSquadId === "string" && maybeSquadId.trim().length > 0
+              ? maybeSquadId
+              : undefined,
+          events,
+        };
+      })
+      .filter((match): match is SavedMatch => match !== null);
+  } catch {
+    return [];
+  }
+}
+
+function mapSavedMatchEventToLoggedEvent(event: MatchEvent): LoggedMatchEvent {
+  const team: TeamSide | undefined = event.id.startsWith("team-home-")
+    ? "HOME"
+    : event.id.startsWith("team-away-")
+      ? "AWAY"
+      : undefined;
+  return {
+    ...event,
+    team,
+  };
 }
 
 function computeTeamScore(events: readonly MatchEvent[], team: TeamSide): TeamScore {
@@ -1879,6 +2012,14 @@ export default function StatsModeSurface() {
   const [showReviewStrip, setShowReviewStrip] = useState(false);
   const [selectedReviewEventId, setSelectedReviewEventId] = useState<string | null>(null);
   const [loggedEvents, setLoggedEvents] = useState<readonly LoggedMatchEvent[]>([]);
+  const [savedSquadMeta, setSavedSquadMeta] = useState<SavedSquad | null>(() => {
+    if (typeof window === "undefined") return null;
+    return parseSavedSquad(window.localStorage.getItem(SAVED_SQUAD_STORAGE_KEY));
+  });
+  const [savedMatches, setSavedMatches] = useState<SavedMatch[]>(() => {
+    if (typeof window === "undefined") return [];
+    return parseSavedMatches(window.localStorage.getItem(SAVED_MATCHES_STORAGE_KEY));
+  });
   const [visibilityMode, setVisibilityMode] = useState<VisibilityMode>("ALL");
   const [matchState, setMatchState] = useState<MatchState>("PRE_MATCH");
   const [currentHalf, setCurrentHalf] = useState<1 | 2>(1);
@@ -2085,6 +2226,67 @@ export default function StatsModeSurface() {
     setSquadDraft("");
   };
 
+  const saveSquadSnapshot = () => {
+    const nextSavedSquad: SavedSquad = {
+      id: activeSquad.id,
+      name: activeSquad.name.slice(0, 24),
+      players: activeSquad.players.map((player) => ({
+        id: player.id,
+        number: player.number,
+        name: player.name.slice(0, 24),
+      })),
+      createdAt: Date.now(),
+    };
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(SAVED_SQUAD_STORAGE_KEY, JSON.stringify(nextSavedSquad));
+    }
+    setSavedSquadMeta(nextSavedSquad);
+  };
+
+  const loadSavedSquadIntoState = () => {
+    if (!savedSquadMeta) return;
+    const loadedPlayers: SquadPlayer[] = savedSquadMeta.players.map((player, index) => ({
+      id: player.id,
+      number: Math.max(1, Math.min(99, Math.floor(player.number))),
+      name: player.name.slice(0, 24),
+      role: index < 15 ? "STARTER" : "SUB",
+    }));
+    setSquads((prevSquads) => {
+      const existingIndex = prevSquads.findIndex((squad) => squad.id === savedSquadMeta.id);
+      const nextSquad: Squad = {
+        id: savedSquadMeta.id,
+        name: savedSquadMeta.name.slice(0, 24),
+        players: loadedPlayers,
+      };
+      if (existingIndex < 0) return [...prevSquads, nextSquad];
+      return prevSquads.map((squad, index) => (index === existingIndex ? nextSquad : squad));
+    });
+    setActiveSquadById(savedSquadMeta.id);
+  };
+
+  const saveMatchSnapshot = () => {
+    const nextSavedMatch: SavedMatch = {
+      id: `saved-match-${newLocalEventId()}`,
+      date: Date.now(),
+      opponent: teamNames.AWAY.trim().length > 0 ? teamNames.AWAY.trim().slice(0, 24) : "Opponent",
+      venue: venueName.trim().length > 0 ? venueName.trim().slice(0, 24) : undefined,
+      squadId: activeSquad.id,
+      events: loggedEvents.map((event) => ({ ...event }) as MatchEvent),
+    };
+    setSavedMatches((prev) => [nextSavedMatch, ...prev]);
+  };
+
+  const loadSavedMatch = (savedMatchId: string) => {
+    const targetMatch = savedMatches.find((savedMatch) => savedMatch.id === savedMatchId);
+    if (!targetMatch) return;
+    setLoggedEvents(targetMatch.events.map(mapSavedMatchEventToLoggedEvent));
+    setShowReviewStrip(false);
+    setUtilityPanel(null);
+    setIsUtilityOpen(false);
+    setIsPickerOpen(false);
+    setSelectedReviewEventId(null);
+  };
+
   const undoLastEventAction = () => {
     const lastEvent = loggedEvents.at(-1);
     if (!lastEvent) return;
@@ -2278,6 +2480,11 @@ export default function StatsModeSurface() {
   }, [squads]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(SAVED_MATCHES_STORAGE_KEY, JSON.stringify(savedMatches));
+  }, [savedMatches]);
+
+  useEffect(() => {
     if (canEditTeamNames) return;
     setEditingTeam(null);
     setTeamNameDraft("");
@@ -2392,6 +2599,7 @@ export default function StatsModeSurface() {
   }, []);
 
   const startFirstHalfAction = () => {
+    loadSavedSquadIntoState();
     const next = startFirstHalf(matchEngineStateRef.current);
     matchEngineStateRef.current = next;
     setMatchState(next.matchState);
@@ -3311,6 +3519,11 @@ export default function StatsModeSurface() {
         >
           <div className="utility-review-scroll">
           <div className="utility-panel-title">HOME Players</div>
+          {savedSquadMeta ? (
+            <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.82, textTransform: "none" }}>
+              Saved Squad: {savedSquadMeta.name}
+            </div>
+          ) : null}
           <div className="utility-squad-row">
             <select
               className="utility-squad-select"
@@ -3344,6 +3557,9 @@ export default function StatsModeSurface() {
               Rename
             </button>
           </div>
+          <button type="button" className="utility-review-btn" onClick={saveSquadSnapshot}>
+            Save Squad
+          </button>
           {activePlayerChipText ? (
             <div
               className="utility-active-player-chip"
@@ -4121,6 +4337,30 @@ export default function StatsModeSurface() {
               <button type="button" className="utility-menu-btn" onClick={resetMatch}>
                 Restart Match
               </button>
+              <button type="button" className="utility-menu-btn" onClick={saveMatchSnapshot}>
+                Save Match
+              </button>
+              <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.86, marginTop: "2px" }}>
+                Saved Matches
+              </div>
+              {savedMatches.length > 0 ? (
+                savedMatches.map((savedMatch) => (
+                  <button
+                    key={savedMatch.id}
+                    type="button"
+                    className="utility-menu-btn"
+                    onClick={() => {
+                      loadSavedMatch(savedMatch.id);
+                    }}
+                  >
+                    {new Date(savedMatch.date).toLocaleDateString()} · {savedMatch.opponent}
+                  </button>
+                ))
+              ) : (
+                <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.78, textTransform: "none" }}>
+                  No saved matches yet
+                </div>
+              )}
             </div>
           ) : null}
           <button
