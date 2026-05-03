@@ -18,7 +18,7 @@ import { gaaModeConfig, type GaaModeKey } from "./config/gaaModeConfig";
 type VisibilityMode = "ALL" | "LAST_5" | "LAST_10";
 type TeamScore = { goals: number; points: number; total: number };
 type TeamSide = "HOME" | "AWAY";
-type UtilityPanel = "PLAYERS" | "REVIEW" | "SUMMARY" | null;
+type UtilityPanel = "PLAYERS" | "REVIEW" | "SUMMARY" | "SAVED_MATCHES" | null;
 type ReviewHalf = "H1" | "H2" | "FULL";
 type ReviewEventFilter =
   | "ALL"
@@ -1237,6 +1237,7 @@ const PANEL_CSS = `
 .utility-squad-create {
   display: flex;
   gap: 6px;
+  flex-wrap: wrap;
 }
 
 .utility-squad-input {
@@ -2275,6 +2276,15 @@ export default function StatsModeSurface() {
     }
     nextSavedMatch.squadId = activeSquad.id;
     setSavedMatches((prev) => [nextSavedMatch, ...prev]);
+  };
+
+  const openSavedMatchesPanel = () => {
+    setIsUtilityOpen(false);
+    if (savedMatches.length === 0) {
+      window.alert("No saved matches yet.");
+      return;
+    }
+    setUtilityPanel("REVIEW");
   };
 
   const loadSavedMatch = (savedMatchId: string) => {
@@ -3557,10 +3567,10 @@ export default function StatsModeSurface() {
             <button type="button" className="utility-review-btn" onClick={saveActiveSquadName}>
               Rename
             </button>
+            <button type="button" className="utility-review-btn" onClick={saveSquadSnapshot}>
+              Save Squad
+            </button>
           </div>
-          <button type="button" className="utility-review-btn" onClick={saveSquadSnapshot}>
-            Save Squad
-          </button>
           {activePlayerChipText ? (
             <div
               className="utility-active-player-chip"
@@ -3827,6 +3837,34 @@ export default function StatsModeSurface() {
             ) : (
               <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.9, textTransform: "none" }}>
                 No tagged match data yet.
+              </div>
+            )}
+          </div>
+          <button type="button" className="utility-panel-close" onClick={closeUtilityPanel}>
+            Close
+          </button>
+        </div>
+      ) : null}
+      {utilityPanel === "SAVED_MATCHES" ? (
+        <div className={utilityPanelClass} role="dialog" aria-label="Saved matches">
+          <div className="utility-review-scroll">
+            <div className="utility-panel-title">SAVED MATCHES</div>
+            {savedMatches.length > 0 ? (
+              savedMatches.map((savedMatch) => (
+                <button
+                  key={`saved-match-panel-${savedMatch.id}`}
+                  type="button"
+                  className="utility-review-btn"
+                  onClick={() => {
+                    loadSavedMatch(savedMatch.id);
+                  }}
+                >
+                  {new Date(savedMatch.date).toLocaleDateString()} · {savedMatch.opponent}
+                </button>
+              ))
+            ) : (
+              <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.9, textTransform: "none" }}>
+                No saved matches yet
               </div>
             )}
           </div>
@@ -4341,27 +4379,9 @@ export default function StatsModeSurface() {
               <button type="button" className="utility-menu-btn" onClick={saveMatchSnapshot}>
                 Save Match
               </button>
-              <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.86, marginTop: "2px" }}>
+              <button type="button" className="utility-menu-btn" onClick={openSavedMatchesPanel}>
                 Saved Matches
-              </div>
-              {savedMatches.length > 0 ? (
-                savedMatches.map((savedMatch) => (
-                  <button
-                    key={savedMatch.id}
-                    type="button"
-                    className="utility-menu-btn"
-                    onClick={() => {
-                      loadSavedMatch(savedMatch.id);
-                    }}
-                  >
-                    {new Date(savedMatch.date).toLocaleDateString()} · {savedMatch.opponent}
-                  </button>
-                ))
-              ) : (
-                <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.78, textTransform: "none" }}>
-                  No saved matches yet
-                </div>
-              )}
+              </button>
             </div>
           ) : null}
           <button
