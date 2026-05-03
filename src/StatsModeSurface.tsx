@@ -385,6 +385,16 @@ function normalizeEventForSave(event: LoggedMatchEvent): MatchEvent | null {
   };
 }
 
+function formatSavedMatchDateTime(dateMs: number): string {
+  const date = new Date(dateMs);
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const yyyy = String(date.getFullYear());
+  const hh = String(date.getHours()).padStart(2, "0");
+  const min = String(date.getMinutes()).padStart(2, "0");
+  return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+}
+
 function mapSavedMatchEventToLoggedEvent(event: MatchEvent): LoggedMatchEvent {
   const savedEvent = event as LoggedMatchEvent;
   const inferredTeam: TeamSide | undefined = event.id.startsWith("team-home-")
@@ -2194,6 +2204,15 @@ export default function StatsModeSurface() {
     () => savedMatches.filter((match) => isValidSavedMatch(match)),
     [savedMatches],
   );
+  const sortedSavedMatches = useMemo(
+    () => [...cleanedMatches].sort((first, second) => second.date - first.date),
+    [cleanedMatches],
+  );
+  const latestSavedMatches = useMemo(
+    () => sortedSavedMatches.slice(0, 10),
+    [sortedSavedMatches],
+  );
+  const hasMoreSavedMatches = sortedSavedMatches.length > latestSavedMatches.length;
   const [visibilityMode, setVisibilityMode] = useState<VisibilityMode>("ALL");
   const [matchState, setMatchState] = useState<MatchState>("PRE_MATCH");
   const [currentHalf, setCurrentHalf] = useState<1 | 2>(1);
@@ -2491,7 +2510,7 @@ export default function StatsModeSurface() {
   const openSavedMatchesPanel = () => {
     setIsUtilityOpen(false);
     setIsPickerOpen(false);
-    if (cleanedMatches.length === 0) {
+    if (latestSavedMatches.length === 0) {
       window.alert("No saved matches yet.");
       return;
     }
@@ -4078,8 +4097,8 @@ export default function StatsModeSurface() {
         <div className={utilityPanelClass} role="dialog" aria-label="Saved matches">
           <div className="utility-review-scroll">
             <div className="utility-panel-title">SAVED MATCHES</div>
-            {cleanedMatches.length > 0 ? (
-              cleanedMatches.map((savedMatch) => (
+            {latestSavedMatches.length > 0 ? (
+              latestSavedMatches.map((savedMatch) => (
                 <button
                   key={`saved-match-panel-${savedMatch.id}`}
                   type="button"
@@ -4101,10 +4120,16 @@ export default function StatsModeSurface() {
                   <span style={{ fontSize: "9px", lineHeight: 1.15 }}>
                     {savedMatch.label && savedMatch.label.trim().length > 0
                       ? savedMatch.label
-                      : `${new Date(savedMatch.date).toLocaleDateString()} · ${savedMatch.opponent}`}
+                      : (() => {
+                          const homeMatchScore = computeTeamScore(savedMatch.events, "HOME");
+                          const awayMatchScore = computeTeamScore(savedMatch.events, "AWAY");
+                          const opponentLabel =
+                            savedMatch.opponent.trim().length > 0 ? savedMatch.opponent : "Opponent";
+                          return `Team A ${formatGaelicScore(homeMatchScore)} (${homeMatchScore.total}) v Team B ${formatGaelicScore(awayMatchScore)} (${awayMatchScore.total}) · ${opponentLabel}`;
+                        })()}
                   </span>
                   <span style={{ fontSize: "8px", opacity: 0.86, lineHeight: 1 }}>
-                    {savedMatch.events.length} events
+                    {formatSavedMatchDateTime(savedMatch.date)} · {savedMatch.events.length} events
                   </span>
                 </button>
               ))
@@ -4113,6 +4138,11 @@ export default function StatsModeSurface() {
                 No saved matches yet
               </div>
             )}
+            {hasMoreSavedMatches ? (
+              <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.82, textTransform: "none" }}>
+                Showing latest 10 saved matches
+              </div>
+            ) : null}
           </div>
           <button type="button" className="utility-panel-close" onClick={closeUtilityPanel}>
             Close
