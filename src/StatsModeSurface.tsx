@@ -54,6 +54,7 @@ type SavedMatch = {
   id: string;
   date: number;
   opponent: string;
+  label?: string;
   venue?: string;
   squadId?: string;
   events: MatchEvent[];
@@ -247,6 +248,7 @@ function parseSavedMatches(input: string | null): SavedMatch[] {
         const maybeId = "id" in item ? item.id : null;
         const maybeDate = "date" in item ? item.date : null;
         const maybeOpponent = "opponent" in item ? item.opponent : null;
+        const maybeLabel = "label" in item ? item.label : null;
         const maybeVenue = "venue" in item ? item.venue : null;
         const maybeSquadId = "squadId" in item ? item.squadId : null;
         const maybeEvents =
@@ -317,6 +319,9 @@ function parseSavedMatches(input: string | null): SavedMatch[] {
           opponent: maybeOpponent.trim().slice(0, 24),
           events,
         };
+        if (typeof maybeLabel === "string" && maybeLabel.trim().length > 0) {
+          nextMatch.label = maybeLabel.trim().slice(0, 120);
+        }
         if (typeof maybeVenue === "string" && maybeVenue.trim().length > 0) {
           nextMatch.venue = maybeVenue.trim().slice(0, 24);
         }
@@ -2457,10 +2462,25 @@ export default function StatsModeSurface() {
       return;
     }
     console.log("Saving events count:", validEvents.length);
+    const savedAt = Date.now();
+    const savedHomeScore = computeTeamScore(validEvents, "HOME");
+    const savedAwayScore = computeTeamScore(validEvents, "AWAY");
+    const savedOpponent =
+      teamNames.AWAY.trim().length > 0 ? teamNames.AWAY.trim().slice(0, 24) : "Opponent";
+    const savedDateLabel = new Date(savedAt).toLocaleDateString();
+    const savedTimeLabel = new Date(savedAt).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+    const defaultLabel = `Team A ${formatGaelicScore(savedHomeScore)} v Team B ${formatGaelicScore(savedAwayScore)} · ${savedOpponent} · ${savedDateLabel} ${savedTimeLabel}`;
+    const nextLabelInput = window.prompt("Save match as?", defaultLabel);
+    const nextLabel = (nextLabelInput ?? "").trim();
     const nextSavedMatch: SavedMatch = {
       id: `saved-match-${newLocalEventId()}`,
-      date: Date.now(),
-      opponent: teamNames.AWAY.trim().length > 0 ? teamNames.AWAY.trim().slice(0, 24) : "Opponent",
+      date: savedAt,
+      opponent: savedOpponent,
+      label: (nextLabel.length > 0 ? nextLabel : defaultLabel).slice(0, 120),
       venue: venueName.trim().slice(0, 24),
       events: validEvents,
     };
@@ -4064,11 +4084,28 @@ export default function StatsModeSurface() {
                   key={`saved-match-panel-${savedMatch.id}`}
                   type="button"
                   className="utility-review-btn"
+                  style={{
+                    height: "auto",
+                    minHeight: "30px",
+                    padding: "6px 9px",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "flex-start",
+                    gap: "2px",
+                    textTransform: "none",
+                  }}
                   onClick={() => {
                     loadSavedMatch(savedMatch.id);
                   }}
                 >
-                  {new Date(savedMatch.date).toLocaleDateString()} · {savedMatch.opponent}
+                  <span style={{ fontSize: "9px", lineHeight: 1.15 }}>
+                    {savedMatch.label && savedMatch.label.trim().length > 0
+                      ? savedMatch.label
+                      : `${new Date(savedMatch.date).toLocaleDateString()} · ${savedMatch.opponent}`}
+                  </span>
+                  <span style={{ fontSize: "8px", opacity: 0.86, lineHeight: 1 }}>
+                    {savedMatch.events.length} events
+                  </span>
                 </button>
               ))
             ) : (
