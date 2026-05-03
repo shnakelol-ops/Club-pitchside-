@@ -4098,7 +4098,7 @@ export default function StatsModeSurface() {
           <div className="utility-review-scroll">
             <div className="utility-panel-title">SAVED MATCHES</div>
             {latestSavedMatches.length > 0 ? (
-              latestSavedMatches.map((savedMatch) => (
+              latestSavedMatches.map((savedMatch, index) => (
                 <button
                   key={`saved-match-panel-${savedMatch.id}`}
                   type="button"
@@ -4117,18 +4117,51 @@ export default function StatsModeSurface() {
                     loadSavedMatch(savedMatch.id);
                   }}
                 >
-                  <span style={{ fontSize: "9px", lineHeight: 1.15 }}>
-                    {savedMatch.label && savedMatch.label.trim().length > 0
-                      ? savedMatch.label
-                      : (() => {
-                          const homeMatchScore = computeTeamScore(savedMatch.events, "HOME");
-                          const awayMatchScore = computeTeamScore(savedMatch.events, "AWAY");
-                          const opponentLabel =
-                            savedMatch.opponent.trim().length > 0 ? savedMatch.opponent : "Opponent";
-                          return `Team A ${formatGaelicScore(homeMatchScore)} (${homeMatchScore.total}) v Team B ${formatGaelicScore(awayMatchScore)} (${awayMatchScore.total}) · ${opponentLabel}`;
-                        })()}
-                  </span>
-                  <span style={{ fontSize: "8px", opacity: 0.86, lineHeight: 1 }}>
+                  {(() => {
+                    const homeMatchScore = computeTeamScore(savedMatch.events, "HOME");
+                    const awayMatchScore = computeTeamScore(savedMatch.events, "AWAY");
+                    const opponentLabel =
+                      savedMatch.opponent.trim().length > 0 ? savedMatch.opponent : "Opponent";
+                    const primaryLabel =
+                      savedMatch.label && savedMatch.label.trim().length > 0
+                        ? savedMatch.label
+                        : `Team A v ${opponentLabel}`;
+                    return (
+                      <>
+                        <span
+                          style={{
+                            width: "100%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            gap: "6px",
+                          }}
+                        >
+                          <span style={{ fontSize: "9px", lineHeight: 1.15 }}>
+                            {primaryLabel}
+                          </span>
+                          {index === 0 ? (
+                            <span
+                              style={{
+                                fontSize: "7px",
+                                letterSpacing: "0.2px",
+                                border: "1px solid rgba(125,211,252,0.65)",
+                                borderRadius: "999px",
+                                padding: "1px 6px",
+                                opacity: 0.9,
+                              }}
+                            >
+                              Latest
+                            </span>
+                          ) : null}
+                        </span>
+                        <span style={{ fontSize: "8px", opacity: 0.92, lineHeight: 1.1 }}>
+                          Team A {formatGaelicScore(homeMatchScore)} ({homeMatchScore.total}) v Team B {formatGaelicScore(awayMatchScore)} ({awayMatchScore.total})
+                        </span>
+                      </>
+                    );
+                  })()}
+                  <span style={{ fontSize: "8px", opacity: 0.86, lineHeight: 1.1 }}>
                     {formatSavedMatchDateTime(savedMatch.date)} · {savedMatch.events.length} events
                   </span>
                 </button>
