@@ -210,6 +210,215 @@ function formatGaelicScore(score: TeamScore): string {
   return `${score.goals}-${String(score.points).padStart(2, "0")}`;
 }
 
+type MyTeamPlayerNote = {
+  label: string;
+  scorePoints: number;
+  turnoversWon: number;
+  kickoutsWon: number;
+  freesWon: number;
+  involved: number;
+};
+
+function deriveMyTeamReport(
+  loggedEvents: readonly LoggedMatchEvent[],
+  matchState: MatchState,
+): string[] {
+  const reportEvents =
+    matchState === "HALF_TIME"
+      ? loggedEvents.filter((event) => event.half === 1)
+      : loggedEvents;
+  const homeScore = computeTeamScore(reportEvents, "HOME");
+  const awayScore = computeTeamScore(reportEvents, "AWAY");
+
+  let goals = 0;
+  let points = 0;
+  let twoPointers = 0;
+  let shots = 0;
+  let wides = 0;
+  let scores = 0;
+  let attempts = 0;
+  let turnoversWon = 0;
+  let turnoversLost = 0;
+  let kickoutsWon = 0;
+  let kickoutsLost = 0;
+  let freesWon = 0;
+  let freesConceded = 0;
+
+  const playerNotes = new Map<string, MyTeamPlayerNote>();
+
+  const resolvePlayerLabel = (event: LoggedMatchEvent) => {
+    const numberLabel =
+      typeof event.playerNumber === "number" && Number.isFinite(event.playerNumber)
+        ? `#${event.playerNumber}`
+        : null;
+    const nameLabel =
+      typeof event.playerName === "string" && event.playerName.trim().length > 0
+        ? event.playerName.trim()
+        : null;
+    if (numberLabel && nameLabel) return `${numberLabel} ${nameLabel}`;
+    if (nameLabel) return nameLabel;
+    if (numberLabel) return numberLabel;
+    return "Tagged player";
+  };
+
+  const getPlayerNote = (event: LoggedMatchEvent) => {
+    if (!event.playerId) return null;
+    const existing = playerNotes.get(event.playerId);
+    if (existing) return existing;
+    const created: MyTeamPlayerNote = {
+      label: resolvePlayerLabel(event),
+      scorePoints: 0,
+      turnoversWon: 0,
+      kickoutsWon: 0,
+      freesWon: 0,
+      involved: 0,
+    };
+    playerNotes.set(event.playerId, created);
+    return created;
+  };
+
+  for (const event of reportEvents) {
+    if (!(event.team === "HOME" || event.id.startsWith("team-home-"))) continue;
+    const playerNote = getPlayerNote(event);
+    if (playerNote) {
+      playerNote.involved += 1;
+    }
+
+    if (event.kind === "GOAL") {
+      goals += 1;
+      scores += 1;
+      attempts += 1;
+      if (playerNote) playerNote.scorePoints += 3;
+      continue;
+    }
+    if (event.kind === "POINT") {
+      points += 1;
+      scores += 1;
+      attempts += 1;
+      if (playerNote) playerNote.scorePoints += 1;
+      continue;
+    }
+    const eventKind = String(event.kind);
+    const isFreeScoredKind =
+      eventKind === "FREE_SCORED" ||
+      eventKind === "FS" ||
+      eventKind === "FREE_SCORE" ||
+      eventKind === "free_scored";
+    if (isFreeScoredKind) {
+      points += 1;
+      scores += 1;
+      attempts += 1;
+      if (playerNote) playerNote.scorePoints += 1;
+      continue;
+    }
+    if (event.kind === "TWO_POINTER" || event.kind === "FORTY_FIVE_TWO_POINT") {
+      twoPointers += 1;
+      scores += 1;
+      attempts += 1;
+      if (playerNote) playerNote.scorePoints += 2;
+      continue;
+    }
+    if (event.kind === "SHOT") {
+      shots += 1;
+      attempts += 1;
+      continue;
+    }
+    if (event.kind === "WIDE") {
+      wides += 1;
+      attempts += 1;
+      continue;
+    }
+    if (event.kind === "TURNOVER_WON") {
+      turnoversWon += 1;
+      if (playerNote) playerNote.turnoversWon += 1;
+      continue;
+    }
+    if (event.kind === "TURNOVER_LOST") {
+      turnoversLost += 1;
+      continue;
+    }
+    if (event.kind === "KICKOUT_WON") {
+      kickoutsWon += 1;
+      if (playerNote) playerNote.kickoutsWon += 1;
+      continue;
+    }
+    if (event.kind === "KICKOUT_CONCEDED") {
+      kickoutsLost += 1;
+      continue;
+    }
+    if (event.kind === "FREE_WON") {
+      freesWon += 1;
+      if (playerNote) playerNote.freesWon += 1;
+      continue;
+    }
+    if (event.kind === "FREE_CONCEDED") {
+      freesConceded += 1;
+    }
+  }
+
+  const conversionPct = attempts > 0 ? Math.round((scores / attempts) * 100) : 0;
+  const kickoutAttempts = kickoutsWon + kickoutsLost;
+  const kickoutSuccessPct = kickoutAttempts > 0 ? Math.round((kickoutsWon / kickoutAttempts) * 100) : 0;
+
+  const pickBest = (
+    valueOf: (note: MyTeamPlayerNote) => number,
+  ): MyTeamPlayerNote | null => {
+    let best: MyTeamPlayerNote | null = null;
+    for (const note of playerNotes.values()) {
+      if (valueOf(note) <= 0) continue;
+      if (!best || valueOf(note) > valueOf(best)) best = note;
+    }
+    return best;
+  };
+
+  const topScorer = pickBest((note) => note.scorePoints);
+  const topTurnoversWon = pickBest((note) => note.turnoversWon);
+  const topKickoutsWon = pickBest((note) => note.kickoutsWon);
+  const topFreesWon = pickBest((note) => note.freesWon);
+  const mostInvolved = pickBest((note) => note.involved);
+  const reportPhaseLabel =
+    matchState === "HALF_TIME"
+      ? "First Half"
+      : matchState === "FULL_TIME"
+        ? "Full Match"
+        : "Live";
+
+  const lines = [
+    reportPhaseLabel,
+    "",
+    `Team A ${formatGaelicScore(homeScore)} (${homeScore.total}) v Team B ${formatGaelicScore(awayScore)} (${awayScore.total})`,
+    "",
+    "SHOOTING",
+    `${goals}G · ${points}P · ${twoPointers}x2P`,
+    `Shots ${shots} · Wides ${wides}`,
+    `Conversion ${conversionPct}%`,
+    "",
+    "TURNOVERS",
+    `Won ${turnoversWon} · Lost ${turnoversLost} · Net ${turnoversWon - turnoversLost}`,
+    "",
+    "KICKOUTS",
+    `Won ${kickoutsWon} · Lost ${kickoutsLost} · Success ${kickoutSuccessPct}%`,
+    "",
+    "FREES",
+    `Won ${freesWon} · Conceded ${freesConceded} · Net ${freesWon - freesConceded}`,
+    "",
+    "PLAYER NOTES",
+  ];
+
+  if (playerNotes.size === 0) {
+    lines.push("No player tags yet");
+    return lines;
+  }
+
+  if (topScorer) lines.push(`Top scorer · ${topScorer.label} (${topScorer.scorePoints})`);
+  if (topTurnoversWon) lines.push(`Most turnovers won · ${topTurnoversWon.label} (${topTurnoversWon.turnoversWon})`);
+  if (topKickoutsWon) lines.push(`Most kickouts won · ${topKickoutsWon.label} (${topKickoutsWon.kickoutsWon})`);
+  if (topFreesWon) lines.push(`Most frees won · ${topFreesWon.label} (${topFreesWon.freesWon})`);
+  if (mostInvolved) lines.push(`Most involved player · ${mostInvolved.label} (${mostInvolved.involved})`);
+
+  return lines;
+}
+
 function getRenderablePitchEvents(
   events: readonly LoggedMatchEvent[],
   reviewHalf: ReviewHalf,
@@ -2651,64 +2860,10 @@ export default function StatsModeSurface() {
       const player = playerById.get(activePlayerId);
       return player ? `#${player.number} ${player.name}` : null;
     })();
-  const reviewMatchSummaryLines = useMemo(() => {
-    const playerStats = new Map<
-      string,
-      { goals: number; points: number; twoPointers: number; turnoversWon: number; kickoutsWon: number; freesWon: number }
-    >();
-    let wides = 0;
-    let shots = 0;
-    let scores = 0;
-    for (const event of loggedEvents) {
-      if (event.team !== "HOME") continue;
-      if (event.kind === "WIDE") wides += 1;
-      if (event.kind === "SHOT" || event.kind === "GOAL" || event.kind === "POINT" || event.kind === "TWO_POINTER" || event.kind === "FORTY_FIVE_TWO_POINT" || event.kind === "FREE_SCORED" || event.kind === "WIDE") shots += 1;
-      if (event.kind === "GOAL" || event.kind === "POINT" || event.kind === "TWO_POINTER" || event.kind === "FORTY_FIVE_TWO_POINT" || event.kind === "FREE_SCORED") scores += 1;
-      const playerId = event.playerId;
-      if (!playerId || !playerById.has(playerId)) continue;
-      const stat = playerStats.get(playerId) ?? { goals: 0, points: 0, twoPointers: 0, turnoversWon: 0, kickoutsWon: 0, freesWon: 0 };
-      if (event.kind === "GOAL") stat.goals += 1;
-      else if (event.kind === "POINT") stat.points += 1;
-      else if (event.kind === "TWO_POINTER") stat.twoPointers += 1;
-      else if (event.kind === "FORTY_FIVE_TWO_POINT") stat.twoPointers += 1;
-      else if (event.kind === "FREE_SCORED") stat.points += 1;
-      else if (event.kind === "TURNOVER_WON") stat.turnoversWon += 1;
-      else if (event.kind === "KICKOUT_WON") stat.kickoutsWon += 1;
-      else if (event.kind === "FREE_WON") stat.freesWon += 1;
-      playerStats.set(playerId, stat);
-    }
-    const formatPlayer = (playerId: string) => {
-      const player = playerById.get(playerId);
-      return player ? `#${player.number} ${player.name}` : null;
-    };
-    const topBy = (key: "turnoversWon" | "kickoutsWon" | "freesWon", label: string) => {
-      let best: { playerId: string; value: number } | null = null;
-      for (const [playerId, stat] of playerStats) {
-        if (stat[key] <= 0) continue;
-        if (!best || stat[key] > best.value) best = { playerId, value: stat[key] };
-      }
-      if (!best) return null;
-      const playerLabel = formatPlayer(best.playerId);
-      return playerLabel ? `${playerLabel} — ${label} (${best.value})` : null;
-    };
-    let topScorerLine: string | null = null;
-    let bestScore = 0;
-    for (const [playerId, stat] of playerStats) {
-      const total = stat.goals * 3 + stat.points + stat.twoPointers * 2;
-      if (total <= 0 || total < bestScore) continue;
-      const playerLabel = formatPlayer(playerId);
-      if (!playerLabel) continue;
-      bestScore = total;
-      topScorerLine = `${playerLabel} — Top Scorer (${stat.goals}-${String(stat.points + stat.twoPointers * 2).padStart(2, "0")})`;
-    }
-    const restartSummaryLabel = mode.restartLabel === "Puckout" ? "Most Puckouts Won" : "Most Kickouts Won";
-    const lines = [topScorerLine, topBy("turnoversWon", "Most Turnovers Won"), topBy("kickoutsWon", restartSummaryLabel), topBy("freesWon", "Most Frees Won")].filter(
-      (line): line is string => line != null,
-    );
-    if (wides > 0) lines.push(`Wides: ${wides}`);
-    if (shots > 0) lines.push(`Conversion: ${Math.round((scores / shots) * 100)}%`);
-    return lines;
-  }, [loggedEvents, playerById, mode.restartLabel]);
+  const myTeamReport = useMemo(
+    () => deriveMyTeamReport(loggedEvents, matchState),
+    [loggedEvents, matchState],
+  );
 
   const homeScore = useMemo(() => computeTeamScore(loggedEvents, "HOME"), [loggedEvents]);
   const awayScore = useMemo(() => computeTeamScore(loggedEvents, "AWAY"), [loggedEvents]);
@@ -3445,10 +3600,10 @@ export default function StatsModeSurface() {
       {utilityPanel === "SUMMARY" ? (
         <div className={utilityPanelClass} role="dialog" aria-label="Match summary">
           <div className="utility-review-scroll">
-            <div className="utility-panel-title">MATCH SUMMARY</div>
-            {reviewMatchSummaryLines.length > 0 ? (
-              reviewMatchSummaryLines.map((line) => (
-                <div key={`summary-panel-${line}`} className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.9, textTransform: "none" }}>
+            <div className="utility-panel-title">MATCH REPORT</div>
+            {myTeamReport.length > 0 ? (
+              myTeamReport.map((line, index) => (
+                <div key={`summary-panel-${index}-${line}`} className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.9, textTransform: "none" }}>
                   {line}
                 </div>
               ))
