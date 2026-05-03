@@ -372,34 +372,31 @@ function deriveMyTeamReport(
   const mostInvolved = pickBest((note) => note.involved);
   const reportPhaseLabel =
     matchState === "HALF_TIME"
-      ? "Phase: First Half"
+      ? "First Half"
       : matchState === "FULL_TIME"
-        ? "Phase: Full Match"
-        : "Phase: Live";
+        ? "Full Match"
+        : "Live";
 
   const lines = [
     reportPhaseLabel,
-    `Score: Team A ${formatGaelicScore(homeScore)} (${homeScore.total}) v Team B ${formatGaelicScore(awayScore)} (${awayScore.total})`,
-    "Shooting:",
-    `Goals: ${goals}`,
-    `Points: ${points}`,
-    `Two-pointers: ${twoPointers}`,
-    `Shots: ${shots}`,
-    `Wides: ${wides}`,
-    `Conversion %: ${conversionPct}%`,
-    "Turnovers:",
-    `Won (T+): ${turnoversWon}`,
-    `Lost (T-): ${turnoversLost}`,
-    `Net: ${turnoversWon - turnoversLost}`,
-    "Kickouts:",
-    `Won (K+): ${kickoutsWon}`,
-    `Lost (K-): ${kickoutsLost}`,
-    `Success %: ${kickoutSuccessPct}%`,
-    "Frees:",
-    `Won (F+): ${freesWon}`,
-    `Conceded (F-): ${freesConceded}`,
-    `Net: ${freesWon - freesConceded}`,
-    "Player Notes:",
+    "",
+    `Team A ${formatGaelicScore(homeScore)} (${homeScore.total}) v Team B ${formatGaelicScore(awayScore)} (${awayScore.total})`,
+    "",
+    "SHOOTING",
+    `${goals}G · ${points}P · ${twoPointers}x2P`,
+    `Shots ${shots} · Wides ${wides}`,
+    `Conversion ${conversionPct}%`,
+    "",
+    "TURNOVERS",
+    `Won ${turnoversWon} · Lost ${turnoversLost} · Net ${turnoversWon - turnoversLost}`,
+    "",
+    "KICKOUTS",
+    `Won ${kickoutsWon} · Lost ${kickoutsLost} · Success ${kickoutSuccessPct}%`,
+    "",
+    "FREES",
+    `Won ${freesWon} · Conceded ${freesConceded} · Net ${freesWon - freesConceded}`,
+    "",
+    "PLAYER NOTES",
   ];
 
   if (playerNotes.size === 0) {
@@ -407,11 +404,11 @@ function deriveMyTeamReport(
     return lines;
   }
 
-  if (topScorer) lines.push(`Top scorer: ${topScorer.label} (${topScorer.scorePoints})`);
-  if (topTurnoversWon) lines.push(`Most turnovers won: ${topTurnoversWon.label} (${topTurnoversWon.turnoversWon})`);
-  if (topKickoutsWon) lines.push(`Most kickouts won: ${topKickoutsWon.label} (${topKickoutsWon.kickoutsWon})`);
-  if (topFreesWon) lines.push(`Most frees won: ${topFreesWon.label} (${topFreesWon.freesWon})`);
-  if (mostInvolved) lines.push(`Most involved player: ${mostInvolved.label} (${mostInvolved.involved})`);
+  if (topScorer) lines.push(`Top scorer · ${topScorer.label} (${topScorer.scorePoints})`);
+  if (topTurnoversWon) lines.push(`Most turnovers won · ${topTurnoversWon.label} (${topTurnoversWon.turnoversWon})`);
+  if (topKickoutsWon) lines.push(`Most kickouts won · ${topKickoutsWon.label} (${topKickoutsWon.kickoutsWon})`);
+  if (topFreesWon) lines.push(`Most frees won · ${topFreesWon.label} (${topFreesWon.freesWon})`);
+  if (mostInvolved) lines.push(`Most involved player · ${mostInvolved.label} (${mostInvolved.involved})`);
 
   return lines;
 }
