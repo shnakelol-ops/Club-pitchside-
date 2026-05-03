@@ -242,7 +242,7 @@ function parseSavedMatches(input: string | null): SavedMatch[] {
     const parsed = JSON.parse(input);
     if (!Array.isArray(parsed)) return [];
     return parsed
-      .map((item) => {
+      .map((item): SavedMatch | null => {
         if (!item || typeof item !== "object") return null;
         const maybeId = "id" in item ? item.id : null;
         const maybeDate = "date" in item ? item.date : null;
@@ -272,20 +272,19 @@ function parseSavedMatches(input: string | null): SavedMatch[] {
             return { ...event } as MatchEvent;
           })
           .filter((event): event is MatchEvent => event != null);
-        return {
+        const nextMatch: SavedMatch = {
           id: maybeId,
           date: maybeDate,
           opponent: maybeOpponent.trim().slice(0, 24),
-          venue:
-            typeof maybeVenue === "string" && maybeVenue.trim().length > 0
-              ? maybeVenue.trim().slice(0, 24)
-              : undefined,
-          squadId:
-            typeof maybeSquadId === "string" && maybeSquadId.trim().length > 0
-              ? maybeSquadId
-              : undefined,
           events,
         };
+        if (typeof maybeVenue === "string" && maybeVenue.trim().length > 0) {
+          nextMatch.venue = maybeVenue.trim().slice(0, 24);
+        }
+        if (typeof maybeSquadId === "string" && maybeSquadId.trim().length > 0) {
+          nextMatch.squadId = maybeSquadId;
+        }
+        return nextMatch;
       })
       .filter((match): match is SavedMatch => match !== null);
   } catch {
@@ -2269,10 +2268,12 @@ export default function StatsModeSurface() {
       id: `saved-match-${newLocalEventId()}`,
       date: Date.now(),
       opponent: teamNames.AWAY.trim().length > 0 ? teamNames.AWAY.trim().slice(0, 24) : "Opponent",
-      venue: venueName.trim().length > 0 ? venueName.trim().slice(0, 24) : undefined,
-      squadId: activeSquad.id,
       events: loggedEvents.map((event) => ({ ...event }) as MatchEvent),
     };
+    if (venueName.trim().length > 0) {
+      nextSavedMatch.venue = venueName.trim().slice(0, 24);
+    }
+    nextSavedMatch.squadId = activeSquad.id;
     setSavedMatches((prev) => [nextSavedMatch, ...prev]);
   };
 
