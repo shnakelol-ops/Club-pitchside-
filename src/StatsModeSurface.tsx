@@ -2141,6 +2141,7 @@ export default function StatsModeSurface() {
   });
   const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
   const [saveLoadBlockedReason, setSaveLoadBlockedReason] = useState<string | null>(null);
+  const [pendingDeleteSavedMatchId, setPendingDeleteSavedMatchId] = useState<string | null>(null);
   const [visibilityMode, setVisibilityMode] = useState<VisibilityMode>("ALL");
   const [matchState, setMatchState] = useState<MatchState>("PRE_MATCH");
   const [currentHalf, setCurrentHalf] = useState<1 | 2>(1);
@@ -2859,6 +2860,7 @@ export default function StatsModeSurface() {
     setIsUtilityOpen(false);
     setIsPickerOpen(false);
     setSaveLoadBlockedReason(null);
+    setPendingDeleteSavedMatchId(null);
   };
 
   const saveCurrentMatchSnapshot = () => {
@@ -2908,9 +2910,23 @@ export default function StatsModeSurface() {
     setUtilityPanel(null);
   };
 
+  const deleteSavedMatchRecord = (matchId: string) => {
+    const matchExists = savedMatches.some((savedMatch) => savedMatch.id === matchId);
+    if (!matchExists) return;
+    const updated = sanitizeSavedMatches(savedMatches.filter((savedMatch) => savedMatch.id !== matchId));
+    setSavedMatches(updated);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(SAVED_MATCHES_STORAGE_KEY, JSON.stringify(updated));
+    }
+    setPendingDeleteSavedMatchId(null);
+    setSaveLoadBlockedReason(null);
+    setSaveFeedback("Match deleted");
+  };
+
   const closeUtilityPanel = () => {
     setUtilityPanel(null);
     setSaveLoadBlockedReason(null);
+    setPendingDeleteSavedMatchId(null);
   };
 
   const goHome = () => {
@@ -4166,16 +4182,80 @@ export default function StatsModeSurface() {
                     <div className="utility-panel-title" style={{ fontSize: "8px", opacity: 0.8, textTransform: "none" }}>
                       {savedMatch.venue} · {formatSavedMatchCreatedAt(savedMatch.createdAt)} · {savedMatch.eventCount} events
                     </div>
-                    <button
-                      type="button"
-                      className="utility-review-btn"
-                      onClick={() => {
-                        loadSavedMatchRecord(savedMatch);
-                      }}
-                      style={{ marginTop: "4px" }}
-                    >
-                      Load Match
-                    </button>
+                    {pendingDeleteSavedMatchId === savedMatch.id ? (
+                      <div
+                        style={{
+                          marginTop: "5px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <span
+                          className="utility-panel-title"
+                          style={{ fontSize: "8px", opacity: 0.9, textTransform: "none", marginRight: "2px" }}
+                        >
+                          Delete this saved match?
+                        </span>
+                        <button
+                          type="button"
+                          className="utility-review-btn"
+                          onClick={() => {
+                            setPendingDeleteSavedMatchId(null);
+                          }}
+                          style={{ marginTop: 0, padding: "4px 8px" }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          className="utility-review-btn"
+                          onClick={() => {
+                            deleteSavedMatchRecord(savedMatch.id);
+                          }}
+                          style={{
+                            marginTop: 0,
+                            padding: "4px 8px",
+                            border: "1px solid rgba(248,113,113,0.75)",
+                            background: "rgba(127,29,29,0.38)",
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ marginTop: "4px", display: "flex", gap: "6px", alignItems: "center" }}>
+                        <button
+                          type="button"
+                          className="utility-review-btn"
+                          onClick={() => {
+                            setPendingDeleteSavedMatchId(null);
+                            loadSavedMatchRecord(savedMatch);
+                          }}
+                          style={{ marginTop: 0 }}
+                        >
+                          Load Match
+                        </button>
+                        <button
+                          type="button"
+                          className="utility-review-btn"
+                          aria-label={`Delete ${savedMatch.homeTeamName} v ${savedMatch.awayTeamName}`}
+                          onClick={() => {
+                            setPendingDeleteSavedMatchId(savedMatch.id);
+                          }}
+                          style={{
+                            marginTop: 0,
+                            minWidth: "30px",
+                            padding: "4px 8px",
+                            border: "1px solid rgba(248,113,113,0.65)",
+                            background: "rgba(127,29,29,0.28)",
+                          }}
+                        >
+                          🗑
+                        </button>
+                      </div>
+                    )}
                   </div>
                 );
               })
