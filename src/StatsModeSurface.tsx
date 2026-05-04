@@ -2173,7 +2173,6 @@ export default function StatsModeSurface() {
   const venueInputRef = useRef<HTMLInputElement>(null);
   const matchEngineStateRef = useRef(createInitialMatchEngineState());
   const wakeLockRef = useRef<WakeLockSentinelLike>(null);
-  const lastTickMsRef = useRef<number | null>(null);
   const secondHalfSwitchBaselineEventCountRef = useRef<number | null>(null);
   const eventKindSwitchBaselineEventCountRef = useRef<number | null>(null);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
@@ -2715,24 +2714,12 @@ export default function StatsModeSurface() {
 
   useEffect(() => {
     const syncRealtimeClock = () => {
-      const state = matchEngineStateRef.current;
-      const now = Date.now();
-      if (!state.isRunning) {
-        lastTickMsRef.current = null;
-        return;
-      }
-      const lastTickMs = lastTickMsRef.current ?? now;
-      const elapsedSeconds = Math.floor((now - lastTickMs) / 1000);
-      if (elapsedSeconds <= 0) return;
-      let next = state;
-      for (let step = 0; step < elapsedSeconds; step += 1) {
-        next = tickMatchClock(next);
-      }
-      if (next !== state) {
+      const current = matchEngineStateRef.current;
+      const next = tickMatchClock(current, Date.now());
+      if (next !== current) {
         matchEngineStateRef.current = next;
         setMatchTimeSeconds(next.matchTimeSeconds);
       }
-      lastTickMsRef.current = lastTickMs + elapsedSeconds * 1000;
     };
     const timerId = window.setInterval(syncRealtimeClock, 250);
     const onVisibilityChange = () => {
@@ -2743,7 +2730,6 @@ export default function StatsModeSurface() {
     return () => {
       window.clearInterval(timerId);
       document.removeEventListener("visibilitychange", onVisibilityChange);
-      lastTickMsRef.current = null;
     };
   }, []);
 
@@ -2798,7 +2784,7 @@ export default function StatsModeSurface() {
   }, []);
 
   const startFirstHalfAction = () => {
-    const next = startFirstHalf(matchEngineStateRef.current);
+    const next = startFirstHalf(matchEngineStateRef.current, Date.now());
     matchEngineStateRef.current = next;
     setMatchState(next.matchState);
     setCurrentHalf(next.currentHalf);
@@ -2806,7 +2792,7 @@ export default function StatsModeSurface() {
   };
 
   const goToHalfTimeAction = () => {
-    const next = goToHalfTime(matchEngineStateRef.current);
+    const next = goToHalfTime(matchEngineStateRef.current, Date.now());
     matchEngineStateRef.current = next;
     setMatchState(next.matchState);
     setCurrentHalf(next.currentHalf);
@@ -2825,7 +2811,7 @@ export default function StatsModeSurface() {
     setReviewZone("FULL");
     setShowReviewStrip(false);
     setUtilityPanel(null);
-    const next = startSecondHalf(matchEngineStateRef.current);
+    const next = startSecondHalf(matchEngineStateRef.current, Date.now());
     matchEngineStateRef.current = next;
     setMatchState(next.matchState);
     setCurrentHalf(next.currentHalf);
@@ -2840,7 +2826,7 @@ export default function StatsModeSurface() {
   };
 
   const endMatchAction = () => {
-    const next = endMatch(matchEngineStateRef.current);
+    const next = endMatch(matchEngineStateRef.current, Date.now());
     matchEngineStateRef.current = next;
     setMatchState(next.matchState);
     setCurrentHalf(next.currentHalf);
