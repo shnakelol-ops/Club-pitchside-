@@ -620,20 +620,6 @@ const UNDO_PHASE_BUTTON_STYLE: CSSProperties = {
     "0 6px 20px rgba(0, 0, 0, 0.45), 0 0 18px rgba(168, 85, 247, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.25)",
 };
 
-const TOOLS_BUTTON_STYLE: CSSProperties = {
-  height: "32px",
-  minWidth: "100%",
-  borderRadius: "9px",
-  border: "1px solid rgba(129, 192, 151, 0.16)",
-  background: "rgba(14, 25, 19, 0.5)",
-  color: "#dff3e6",
-  fontFamily: "Inter, system-ui, sans-serif",
-  fontSize: "10px",
-  fontWeight: 550,
-  padding: "0 8px",
-  cursor: "pointer",
-};
-
 const WHITEBOARD_TOOLS_BUTTON_STYLE: CSSProperties = {
   ...COACH_HUB_TOOL_BUTTON_STYLE,
   minWidth: 0,
