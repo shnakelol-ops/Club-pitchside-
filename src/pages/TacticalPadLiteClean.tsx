@@ -696,6 +696,25 @@ const RECORD_GUIDE_CLEAN_BUTTON_STYLE: CSSProperties = {
   color: "#f3f8ff",
 };
 
+const HOME_MENU_ICON_BUTTON_STYLE: CSSProperties = {
+  width: "34px",
+  height: "34px",
+  borderRadius: "10px",
+  border: "1px solid rgba(120, 168, 143, 0.34)",
+  background: "rgba(13, 35, 23, 0.72)",
+  color: "#f1f7f0",
+  fontSize: "16px",
+  lineHeight: 1,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: 0,
+  cursor: "pointer",
+  backdropFilter: "blur(10px)",
+  WebkitBackdropFilter: "blur(10px)",
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
+};
+
 const EXIT_CLEAN_VIEW_BUTTON_STYLE: CSSProperties = {
   ...HOME_MENU_ICON_BUTTON_STYLE,
   position: "fixed",
@@ -919,25 +938,6 @@ const WHITEBOARD_TOKEN_COLOR_SWATCH_STYLE: CSSProperties = {
   height: "22px",
   borderRadius: "999px",
   border: "1px solid rgba(255, 255, 255, 0.48)",
-};
-
-const HOME_MENU_ICON_BUTTON_STYLE: CSSProperties = {
-  width: "34px",
-  height: "34px",
-  borderRadius: "10px",
-  border: "1px solid rgba(120, 168, 143, 0.34)",
-  background: "rgba(13, 35, 23, 0.72)",
-  color: "#f1f7f0",
-  fontSize: "16px",
-  lineHeight: 1,
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: 0,
-  cursor: "pointer",
-  backdropFilter: "blur(10px)",
-  WebkitBackdropFilter: "blur(10px)",
-  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
 };
 
 const WHITEBOARD_HOME_BUTTON_STYLE: CSSProperties = {
