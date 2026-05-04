@@ -375,6 +375,7 @@ type MyTeamPlayerNote = {
 function deriveMyTeamReport(
   loggedEvents: readonly LoggedMatchEvent[],
   matchState: MatchState,
+  teamNames: { HOME: string; AWAY: string },
 ): string[] {
   const reportEvents =
     matchState === "HALF_TIME"
@@ -382,6 +383,8 @@ function deriveMyTeamReport(
       : loggedEvents;
   const homeScore = computeTeamScore(reportEvents, "HOME");
   const awayScore = computeTeamScore(reportEvents, "AWAY");
+  const homeTeamName = teamNames.HOME.trim() || "Team A";
+  const awayTeamName = teamNames.AWAY.trim() || "Team B";
 
   let goals = 0;
   let points = 0;
@@ -539,7 +542,7 @@ function deriveMyTeamReport(
   const lines = [
     reportPhaseLabel,
     "",
-    `Team A ${formatGaelicScore(homeScore)} (${homeScore.total}) v Team B ${formatGaelicScore(awayScore)} (${awayScore.total})`,
+    `${homeTeamName} ${formatGaelicScore(homeScore)} (${homeScore.total}) v ${awayTeamName} ${formatGaelicScore(awayScore)} (${awayScore.total})`,
     "",
     "SHOOTING",
     `${goals}G · ${points}P · ${twoPointers}x2P`,
@@ -2036,6 +2039,7 @@ export default function StatsModeSurface() {
     if (typeof window === "undefined") return [];
     return parseStoredSavedMatches(window.localStorage.getItem(SAVED_MATCHES_STORAGE_KEY));
   });
+  const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
   const [saveLoadBlockedReason, setSaveLoadBlockedReason] = useState<string | null>(null);
   const [visibilityMode, setVisibilityMode] = useState<VisibilityMode>("ALL");
   const [matchState, setMatchState] = useState<MatchState>("PRE_MATCH");
@@ -2440,6 +2444,16 @@ export default function StatsModeSurface() {
   }, [savedMatches]);
 
   useEffect(() => {
+    if (!saveFeedback) return;
+    const timerId = window.setTimeout(() => {
+      setSaveFeedback(null);
+    }, 2000);
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, [saveFeedback]);
+
+  useEffect(() => {
     if (canEditTeamNames) return;
     setEditingTeam(null);
     setTeamNameDraft("");
@@ -2633,28 +2647,33 @@ export default function StatsModeSurface() {
 
   const saveCurrentMatchSnapshot = () => {
     if (loggedEvents.length === 0) {
-      setSaveLoadBlockedReason("Save blocked: no events logged.");
+      setSaveFeedback("No events to save");
       return;
     }
-    const snapshotEvents = [...loggedEvents];
-    const snapshotHomeScore = computeTeamScore(snapshotEvents, "HOME");
-    const snapshotAwayScore = computeTeamScore(snapshotEvents, "AWAY");
-    const homeTeamName = teamNames.HOME.trim() || "Team A";
-    const awayTeamName = teamNames.AWAY.trim() || "Opponent";
-    const venue = venueName.trim() || "Unknown venue";
-    const savedRecord: SavedMatch = {
-      id: `saved-match-${newLocalEventId()}`,
-      createdAt: Date.now(),
-      label: `${homeTeamName} v ${awayTeamName}`,
-      homeTeamName,
-      awayTeamName,
-      venue,
-      events: snapshotEvents,
-      eventCount: snapshotEvents.length,
-      scorelineSnapshot: `${homeTeamName} ${formatGaelicScore(snapshotHomeScore)} (${snapshotHomeScore.total}) v ${awayTeamName} ${formatGaelicScore(snapshotAwayScore)} (${snapshotAwayScore.total})`,
-    };
-    setSavedMatches((prev) => sanitizeSavedMatches([savedRecord, ...prev]));
-    setSaveLoadBlockedReason(null);
+    try {
+      const snapshotEvents = [...loggedEvents];
+      const snapshotHomeScore = computeTeamScore(snapshotEvents, "HOME");
+      const snapshotAwayScore = computeTeamScore(snapshotEvents, "AWAY");
+      const homeTeamName = teamNames.HOME.trim() || "Team A";
+      const awayTeamName = teamNames.AWAY.trim() || "Opponent";
+      const venue = venueName.trim() || "Unknown venue";
+      const savedRecord: SavedMatch = {
+        id: `saved-match-${newLocalEventId()}`,
+        createdAt: Date.now(),
+        label: `${homeTeamName} v ${awayTeamName}`,
+        homeTeamName,
+        awayTeamName,
+        venue,
+        events: snapshotEvents,
+        eventCount: snapshotEvents.length,
+        scorelineSnapshot: `${homeTeamName} ${formatGaelicScore(snapshotHomeScore)} (${snapshotHomeScore.total}) v ${awayTeamName} ${formatGaelicScore(snapshotAwayScore)} (${snapshotAwayScore.total})`,
+      };
+      setSavedMatches((prev) => sanitizeSavedMatches([savedRecord, ...prev]));
+      setSaveFeedback("Match saved");
+      setSaveLoadBlockedReason(null);
+    } catch {
+      setSaveFeedback("Could not save match");
+    }
   };
 
   const loadSavedMatchRecord = (record: SavedMatch) => {
@@ -3074,8 +3093,8 @@ export default function StatsModeSurface() {
       return player ? `#${player.number} ${player.name}` : null;
     })();
   const myTeamReport = useMemo(
-    () => deriveMyTeamReport(loggedEvents, matchState),
-    [loggedEvents, matchState],
+    () => deriveMyTeamReport(loggedEvents, matchState, teamNames),
+    [loggedEvents, matchState, teamNames],
   );
 
   const homeScore = useMemo(() => computeTeamScore(loggedEvents, "HOME"), [loggedEvents]);
@@ -4420,12 +4439,25 @@ export default function StatsModeSurface() {
                 onClick={() => {
                   saveCurrentMatchSnapshot();
                 }}
+                style={
+                  saveFeedback === "Match saved"
+                    ? {
+                        border: "1px solid rgba(34,197,94,0.92)",
+                        background: "rgba(22,101,52,0.76)",
+                      }
+                    : undefined
+                }
               >
-                Save Match
+                {saveFeedback === "Match saved" ? "Saved" : "Save Match"}
               </button>
               <button type="button" className="utility-menu-btn" onClick={openSavedMatchesPanel}>
                 Load Match
               </button>
+              {saveFeedback ? (
+                <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.9, textTransform: "none" }}>
+                  {saveFeedback}
+                </div>
+              ) : null}
               {saveLoadBlockedReason ? (
                 <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.9, textTransform: "none" }}>
                   {saveLoadBlockedReason}
