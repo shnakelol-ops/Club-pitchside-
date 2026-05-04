@@ -2317,10 +2317,6 @@ export default function StatsModeSurface() {
     if (nextNumberInput == null) return;
     const parsedNumber = Number.parseInt(nextNumberInput, 10);
     if (!Number.isFinite(parsedNumber) || parsedNumber <= 0) return;
-    const nextRoleInput = window.prompt("Role: STARTER or SUB", targetPlayer.role);
-    if (nextRoleInput == null) return;
-    const normalizedRoleInput = nextRoleInput.trim().toUpperCase();
-    const nextRole: PlayerRole = normalizedRoleInput === "SUB" ? "SUB" : "STARTER";
     updateActiveSquadPlayers(
       (prevPlayers) =>
         prevPlayers.map((player) =>
@@ -2329,7 +2325,6 @@ export default function StatsModeSurface() {
                 ...player,
                 name: nextName.slice(0, 24),
                 number: Math.max(1, Math.min(99, Math.floor(parsedNumber))),
-                role: nextRole,
               }
             : player,
         ),
@@ -3841,12 +3836,24 @@ export default function StatsModeSurface() {
             </div>
           ) : null}
           {activePlayerChipText ? (
-            <div
-              className="utility-active-player-chip"
-              aria-live="polite"
-              onClick={() => selectActivePlayerById(null)}
-            >
-              {activePlayerChipText}
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <div
+                className="utility-active-player-chip"
+                aria-live="polite"
+                onClick={() => selectActivePlayerById(null)}
+              >
+                {activePlayerChipText}
+              </div>
+              <button
+                type="button"
+                className="utility-review-btn"
+                onClick={() => {
+                  if (!activePlayerEntry) return;
+                  editPlayer(activePlayerEntry.id);
+                }}
+              >
+                Edit
+              </button>
             </div>
           ) : null}
           <div className="utility-player-add-row">
