@@ -381,6 +381,19 @@ const LEFT_BUBBLE_STYLE: CSSProperties = {
   bottom: "max(12px, calc(env(safe-area-inset-bottom, 0px) + 10px))",
 };
 
+const ACTIONS_BUBBLE_STYLE: CSSProperties = {
+  ...BUBBLE_BASE_STYLE,
+  left: "max(12px, calc(env(safe-area-inset-left, 0px) + 10px))",
+  top: "50%",
+  transform: "translateY(-50%)",
+  width: "38px",
+  height: "38px",
+  border: "1px solid rgba(196, 220, 240, 0.24)",
+  background: "rgba(16, 30, 40, 0.52)",
+  boxShadow: "0 6px 18px rgba(2, 10, 18, 0.28), inset 0 1px 1px rgba(255, 255, 255, 0.12)",
+  zIndex: 21,
+};
+
 const RIGHT_BUBBLE_STYLE: CSSProperties = {
   ...BUBBLE_BASE_STYLE,
   right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
@@ -446,6 +459,38 @@ const CONTROLS_POPOUT_STYLE: CSSProperties = {
   flexWrap: "nowrap",
   background: "rgba(20, 16, 17, 0.58)",
   border: "1px solid rgba(238, 146, 146, 0.16)",
+};
+
+const ACTIONS_POPOUT_STYLE: CSSProperties = {
+  ...POPOUT_BASE_STYLE,
+  left: "max(56px, calc(env(safe-area-inset-left, 0px) + 54px))",
+  top: "50%",
+  transform: "translateY(-50%)",
+  display: "flex",
+  flexDirection: "column",
+  gap: "5px",
+  width: "136px",
+  padding: "6px",
+  borderRadius: "12px",
+  background: "rgba(10, 19, 24, 0.74)",
+  border: "1px solid rgba(165, 194, 220, 0.24)",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+  boxShadow: "0 12px 24px rgba(2, 8, 15, 0.28)",
+  zIndex: 21,
+};
+
+const ACTIONS_POPOUT_BUTTON_STYLE: CSSProperties = {
+  ...COACH_HUB_TOOL_BUTTON_STYLE,
+  minWidth: 0,
+  height: "32px",
+};
+
+const ACTIONS_POPOUT_HOME_BUTTON_STYLE: CSSProperties = {
+  ...ACTIONS_POPOUT_BUTTON_STYLE,
+  border: "1px solid rgba(248, 113, 113, 0.46)",
+  background: "rgba(127, 29, 29, 0.58)",
+  color: "#ffe5e5",
 };
 
 const COACH_HUB_PANEL_STYLE: CSSProperties = {
@@ -618,14 +663,6 @@ const UNDO_PHASE_BUTTON_STYLE: CSSProperties = {
   border: "1px solid rgba(168, 85, 247, 0.6)",
   boxShadow:
     "0 6px 20px rgba(0, 0, 0, 0.45), 0 0 18px rgba(168, 85, 247, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.25)",
-};
-
-const RECORD_CLIP_BUTTON_STYLE: CSSProperties = {
-  ...CONTROL_BUTTON_STYLE,
-  border: "1px solid rgba(125, 211, 252, 0.58)",
-  background: "rgba(10, 30, 46, 0.72)",
-  boxShadow:
-    "0 6px 20px rgba(0, 0, 0, 0.45), 0 0 16px rgba(56, 189, 248, 0.24), inset 0 1px 2px rgba(255, 255, 255, 0.16)",
 };
 
 const RECORD_GUIDE_STYLE: CSSProperties = {
@@ -1006,6 +1043,8 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const hostRef = useRef<HTMLDivElement | null>(null);
   const surfaceRef = useRef<TacticalPadLiteSurface | null>(null);
   const tacticalItemCounterRef = useRef(0);
+  const actionsBubbleRef = useRef<HTMLButtonElement | null>(null);
+  const actionsPopoutRef = useRef<HTMLDivElement | null>(null);
   const recordGuideButtonRef = useRef<HTMLButtonElement | null>(null);
   const recordGuidePanelRef = useRef<HTMLDivElement | null>(null);
   const cleanViewRestoreRef = useRef<{ controlsOpen: boolean; toolsOpen: boolean; phasesOpen: boolean } | null>(null);
@@ -1052,6 +1091,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const [phaseCount, setPhaseCount] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [phasesOpen, setPhasesOpen] = useState(false);
@@ -1349,12 +1389,37 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   }, [isWhiteboardMode, recordGuideOpen]);
 
   useEffect(() => {
+    if (isWhiteboardMode || isStatsMode || !actionsOpen) return;
+
+    const handlePointerDownOutside = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (actionsBubbleRef.current?.contains(target)) return;
+      if (actionsPopoutRef.current?.contains(target)) return;
+      setActionsOpen(false);
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      setActionsOpen(false);
+    };
+
+    document.addEventListener("pointerdown", handlePointerDownOutside);
+    window.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDownOutside);
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [isWhiteboardMode, isStatsMode, actionsOpen]);
+
+  useEffect(() => {
     if (!(isWhiteboardMode || isStatsMode)) return;
-    if (!recordGuideOpen && !recordCleanView) return;
+    if (!recordGuideOpen && !recordCleanView && !actionsOpen) return;
+    setActionsOpen(false);
     setRecordGuideOpen(false);
     setRecordCleanView(false);
     cleanViewRestoreRef.current = null;
-  }, [isWhiteboardMode, isStatsMode, recordGuideOpen, recordCleanView]);
+  }, [isWhiteboardMode, isStatsMode, recordGuideOpen, recordCleanView, actionsOpen]);
 
   useEffect(() => {
     if (!isWhiteboardMode || !whiteboardBubbleOpen) return;
@@ -1395,6 +1460,59 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const goHome = () => {
     window.location.assign("/board");
   };
+  const closeActionsMenu = () => {
+    setActionsOpen(false);
+  };
+  const toggleActionsMenu = () => {
+    setControlsOpen(false);
+    setActionsOpen((open) => !open);
+  };
+  const shareTacticalImage = async () => {
+    const canvasCandidate = hostRef.current?.querySelector("canvas");
+    if (!(canvasCandidate instanceof HTMLCanvasElement)) {
+      closeActionsMenu();
+      return;
+    }
+
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvasCandidate.toBlob(resolve, "image/png");
+    });
+    if (!blob) {
+      closeActionsMenu();
+      return;
+    }
+
+    const fileName = `pitchflow-play-${Date.now()}.png`;
+    const file = new File([blob], fileName, { type: "image/png" });
+    const shareData: ShareData = {
+      title: "PitchFlow Play",
+      text: "Shared from PitchFlow",
+      files: [file],
+    };
+    const nav = navigator as Navigator & {
+      canShare?: (data: ShareData) => boolean;
+      share?: (data: ShareData) => Promise<void>;
+    };
+    if (typeof nav.share === "function" && (!nav.canShare || nav.canShare(shareData))) {
+      try {
+        await nav.share(shareData);
+        closeActionsMenu();
+        return;
+      } catch {
+        // Fall back to file download if native share is cancelled or unavailable.
+      }
+    }
+
+    const blobUrl = URL.createObjectURL(blob);
+    const downloadAnchor = document.createElement("a");
+    downloadAnchor.href = blobUrl;
+    downloadAnchor.download = fileName;
+    document.body.append(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+    URL.revokeObjectURL(blobUrl);
+    closeActionsMenu();
+  };
   const openRecordGuide = () => {
     setRecordGuideOpen(true);
   };
@@ -1419,6 +1537,14 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     setControlsOpen(restoreState.controlsOpen);
     setToolsOpen(restoreState.toolsOpen);
     setPhasesOpen(restoreState.phasesOpen);
+  };
+  const openRecordGuideFromActions = () => {
+    closeActionsMenu();
+    openRecordGuide();
+  };
+  const goHomeFromActions = () => {
+    closeActionsMenu();
+    goHome();
   };
   const openWhiteboardHomeConfirm = () => {
     if (whiteboardHomeConfirmOpen) return;
@@ -1915,15 +2041,6 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             <button
               type="button"
               className="control-button"
-              style={{ ...CONTROL_BUTTON_STYLE, ...HOME_MENU_ICON_BUTTON_STYLE, minWidth: "34px" }}
-              onClick={goHome}
-              aria-label="Go to Home"
-            >
-              ⌂
-            </button>
-            <button
-              type="button"
-              className="control-button"
               disabled={isPlaybackLocked}
               style={isPlaybackLocked ? DISABLED_CONTROL_BUTTON_STYLE : SET_START_BUTTON_STYLE}
               onClick={() => {
@@ -1962,15 +2079,6 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
               onClick={handlePausePress}
             >
               Pause
-            </button>
-            <button
-              ref={recordGuideButtonRef}
-              type="button"
-              className="control-button"
-              style={RECORD_CLIP_BUTTON_STYLE}
-              onClick={openRecordGuide}
-            >
-              Record Clip
             </button>
             <button
               type="button"
@@ -2137,12 +2245,48 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
           </div>
         ) : null}
         {!isWhiteboardMode && !recordCleanView ? (
+          <>
+            <button
+              ref={actionsBubbleRef}
+              type="button"
+              className="floating-bubble"
+              style={ACTIONS_BUBBLE_STYLE}
+              aria-label="Open actions menu"
+              aria-expanded={actionsOpen}
+              onClick={toggleActionsMenu}
+            >
+              ⋯
+            </button>
+            {actionsOpen ? (
+              <div ref={actionsPopoutRef} style={ACTIONS_POPOUT_STYLE}>
+                <button type="button" style={ACTIONS_POPOUT_BUTTON_STYLE} onClick={shareTacticalImage}>
+                  Share Image
+                </button>
+                <button
+                  ref={recordGuideButtonRef}
+                  type="button"
+                  style={ACTIONS_POPOUT_BUTTON_STYLE}
+                  onClick={openRecordGuideFromActions}
+                >
+                  Record Clip
+                </button>
+                <button type="button" style={ACTIONS_POPOUT_HOME_BUTTON_STYLE} onClick={goHomeFromActions}>
+                  Home
+                </button>
+              </div>
+            ) : null}
+          </>
+        ) : null}
+        {!isWhiteboardMode && !recordCleanView ? (
           <button
             type="button"
             className="floating-bubble"
             style={LEFT_BUBBLE_STYLE}
             aria-label="Open controls"
-            onClick={() => setControlsOpen((open) => !open)}
+            onClick={() => {
+              closeActionsMenu();
+              setControlsOpen((open) => !open);
+            }}
           >
             Ctrl
           </button>
