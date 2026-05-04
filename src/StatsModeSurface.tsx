@@ -2922,6 +2922,13 @@ export default function StatsModeSurface() {
     setUtilityPanel(null);
   };
 
+  const deleteSavedMatchRecord = (recordId: string) => {
+    const confirmed = window.confirm("Delete this saved match?");
+    if (!confirmed) return;
+    setSavedMatches((prev) => prev.filter((entry) => entry.id !== recordId));
+    setSaveLoadBlockedReason(null);
+  };
+
   const closeUtilityPanel = () => {
     setUtilityPanel(null);
     setSaveLoadBlockedReason(null);
@@ -4180,16 +4187,30 @@ export default function StatsModeSurface() {
                     <div className="utility-panel-title" style={{ fontSize: "8px", opacity: 0.8, textTransform: "none" }}>
                       {savedMatch.venue} · {formatSavedMatchCreatedAt(savedMatch.createdAt)} · {savedMatch.eventCount} events
                     </div>
-                    <button
-                      type="button"
-                      className="utility-review-btn"
-                      onClick={() => {
-                        loadSavedMatchRecord(savedMatch);
-                      }}
-                      style={{ marginTop: "4px" }}
-                    >
-                      Load Match
-                    </button>
+                    <div style={{ display: "flex", gap: "6px", marginTop: "4px" }}>
+                      <button
+                        type="button"
+                        className="utility-review-btn"
+                        onClick={() => {
+                          loadSavedMatchRecord(savedMatch);
+                        }}
+                      >
+                        Load Match
+                      </button>
+                      <button
+                        type="button"
+                        className="utility-review-btn"
+                        onClick={() => {
+                          deleteSavedMatchRecord(savedMatch.id);
+                        }}
+                        style={{
+                          border: "1px solid rgba(248,113,113,0.68)",
+                          background: "rgba(127,29,29,0.35)",
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 );
               })
