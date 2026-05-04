@@ -859,12 +859,69 @@ const WHITEBOARD_HOME_BUTTON_STYLE: CSSProperties = {
   zIndex: 23,
 };
 
+const WHITEBOARD_HOME_CONFIRM_STYLE: CSSProperties = {
+  position: "fixed",
+  top: "max(54px, calc(env(safe-area-inset-top, 0px) + 50px))",
+  right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
+  width: "min(244px, calc(100vw - 24px))",
+  display: "flex",
+  flexDirection: "column",
+  gap: "7px",
+  padding: "9px",
+  borderRadius: "12px",
+  border: "1px solid rgba(163, 190, 212, 0.24)",
+  background: "rgba(10, 19, 24, 0.76)",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+  boxShadow: "0 12px 24px rgba(2, 8, 15, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.08)",
+  zIndex: 24,
+};
+
+const WHITEBOARD_HOME_CONFIRM_TITLE_STYLE: CSSProperties = {
+  margin: 0,
+  color: "#e4eff8",
+  fontSize: "12px",
+  fontWeight: 700,
+  letterSpacing: "0.12px",
+  fontFamily: "Inter, system-ui, sans-serif",
+};
+
+const WHITEBOARD_HOME_CONFIRM_MESSAGE_STYLE: CSSProperties = {
+  margin: 0,
+  color: "rgba(215, 232, 245, 0.88)",
+  fontSize: "10px",
+  lineHeight: 1.35,
+  fontFamily: "Inter, system-ui, sans-serif",
+};
+
+const WHITEBOARD_HOME_CONFIRM_ACTIONS_STYLE: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  gap: "6px",
+};
+
+const WHITEBOARD_HOME_CONFIRM_BUTTON_STYLE: CSSProperties = {
+  ...COACH_HUB_TOOL_BUTTON_STYLE,
+  minWidth: 0,
+  height: "31px",
+};
+
+const WHITEBOARD_HOME_CONFIRM_GO_BUTTON_STYLE: CSSProperties = {
+  ...WHITEBOARD_HOME_CONFIRM_BUTTON_STYLE,
+  border: "1px solid rgba(248, 113, 113, 0.5)",
+  background: "rgba(127, 29, 29, 0.62)",
+  color: "#ffe5e5",
+};
+
 export default function TacticalPadLiteClean({ initialMode = "tactical" }: TacticalPadLiteCleanProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const surfaceRef = useRef<TacticalPadLiteSurface | null>(null);
   const tacticalItemCounterRef = useRef(0);
   const whiteboardBubbleButtonRef = useRef<HTMLButtonElement | null>(null);
   const whiteboardBubbleMenuRef = useRef<HTMLDivElement | null>(null);
+  const whiteboardHomeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const whiteboardHomeConfirmRef = useRef<HTMLDivElement | null>(null);
+  const whiteboardHomeConfirmHistoryRef = useRef(false);
   const whiteboardBubbleDragRef = useRef<{
     pointerId: number;
     startX: number;
@@ -879,6 +936,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const [whiteboardRedCount, setWhiteboardRedCount] = useState(1);
   const [whiteboardCountPickerTeam, setWhiteboardCountPickerTeam] = useState<"BLUE" | "RED">("BLUE");
   const [whiteboardBubbleOpen, setWhiteboardBubbleOpen] = useState(false);
+  const [whiteboardHomeConfirmOpen, setWhiteboardHomeConfirmOpen] = useState(false);
   const [whiteboardBubblePosition, setWhiteboardBubblePosition] = useState<{ left: number; top: number } | null>(
     null,
   );
@@ -1211,6 +1269,62 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const goHome = () => {
     window.location.assign("/board");
   };
+  const openWhiteboardHomeConfirm = () => {
+    if (whiteboardHomeConfirmOpen) return;
+    setWhiteboardHomeConfirmOpen(true);
+    if (!whiteboardHomeConfirmHistoryRef.current) {
+      window.history.pushState(
+        { ...(window.history.state as Record<string, unknown> | null), whiteboardHomeConfirmOpen: true },
+        "",
+        window.location.href,
+      );
+      whiteboardHomeConfirmHistoryRef.current = true;
+    }
+  };
+  const closeWhiteboardHomeConfirm = () => {
+    if (whiteboardHomeConfirmHistoryRef.current) {
+      whiteboardHomeConfirmHistoryRef.current = false;
+      window.history.back();
+      return;
+    }
+    setWhiteboardHomeConfirmOpen(false);
+  };
+  const confirmWhiteboardGoHome = () => {
+    whiteboardHomeConfirmHistoryRef.current = false;
+    setWhiteboardHomeConfirmOpen(false);
+    goHome();
+  };
+
+  useEffect(() => {
+    if (!isWhiteboardMode || !whiteboardHomeConfirmOpen) return;
+
+    const handlePointerDownOutside = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (whiteboardHomeButtonRef.current?.contains(target)) return;
+      if (whiteboardHomeConfirmRef.current?.contains(target)) return;
+      closeWhiteboardHomeConfirm();
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      closeWhiteboardHomeConfirm();
+    };
+    const handlePopState = () => {
+      if (!whiteboardHomeConfirmOpen) return;
+      whiteboardHomeConfirmHistoryRef.current = false;
+      setWhiteboardHomeConfirmOpen(false);
+    };
+
+    document.addEventListener("pointerdown", handlePointerDownOutside);
+    window.addEventListener("keydown", handleEscape);
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDownOutside);
+      window.removeEventListener("keydown", handleEscape);
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [isWhiteboardMode, whiteboardHomeConfirmOpen]);
 
   const setWhiteboardCount = (team: "BLUE" | "RED", count: number) => {
     const clamped = Math.max(1, Math.min(15, Math.floor(count)));
@@ -1890,9 +2004,32 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
           </button>
         ) : null}
         {isWhiteboardMode ? (
-          <button type="button" style={WHITEBOARD_HOME_BUTTON_STYLE} onClick={goHome} aria-label="Go to Home">
-            ⌂
-          </button>
+          <>
+            <button
+              ref={whiteboardHomeButtonRef}
+              type="button"
+              style={WHITEBOARD_HOME_BUTTON_STYLE}
+              onClick={openWhiteboardHomeConfirm}
+              aria-label="Go to Home"
+              aria-expanded={whiteboardHomeConfirmOpen}
+            >
+              ⌂
+            </button>
+            {whiteboardHomeConfirmOpen ? (
+              <div ref={whiteboardHomeConfirmRef} style={WHITEBOARD_HOME_CONFIRM_STYLE} role="dialog" aria-modal="false">
+                <p style={WHITEBOARD_HOME_CONFIRM_TITLE_STYLE}>Leave Whiteboard?</p>
+                <p style={WHITEBOARD_HOME_CONFIRM_MESSAGE_STYLE}>Your current board may not be saved.</p>
+                <div style={WHITEBOARD_HOME_CONFIRM_ACTIONS_STYLE}>
+                  <button type="button" style={WHITEBOARD_HOME_CONFIRM_BUTTON_STYLE} onClick={closeWhiteboardHomeConfirm}>
+                    Cancel
+                  </button>
+                  <button type="button" style={WHITEBOARD_HOME_CONFIRM_GO_BUTTON_STYLE} onClick={confirmWhiteboardGoHome}>
+                    Go Home
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </>
         ) : null}
       </div>
     </OrientationGate>
