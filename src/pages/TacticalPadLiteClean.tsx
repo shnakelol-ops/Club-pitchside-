@@ -45,7 +45,7 @@ const TACTICAL_ITEM_CHOICES: ReadonlyArray<{ label: string; type: TacticalItem["
 type WhiteboardToolControl = "move" | "pen" | "line" | "arrow" | "dashed";
 type WhiteboardToolAction = WhiteboardToolControl | "eraser";
 const WHITEBOARD_BUBBLE_SIZE = 36;
-const WHITEBOARD_BUBBLE_MARGIN = 12;
+const WHITEBOARD_BUBBLE_MARGIN = 16;
 
 type ViewportRect = { left: number; top: number; width: number; height: number };
 
@@ -84,8 +84,8 @@ function clampWhiteboardBubblePosition(
 function getDefaultWhiteboardBubblePosition(viewport: ViewportRect): { left: number; top: number } {
   return clampWhiteboardBubblePosition(
     {
-      left: viewport.left + 14,
-      top: viewport.top + 14,
+      left: viewport.left + WHITEBOARD_BUBBLE_MARGIN,
+      top: viewport.top + WHITEBOARD_BUBBLE_MARGIN,
     },
     viewport,
   );
@@ -109,10 +109,10 @@ const ROOT_WHITEBOARD_STYLE: CSSProperties = {
   ...ROOT_STYLE,
   background:
     "linear-gradient(165deg, rgba(245, 248, 251, 1) 0%, rgba(236, 241, 246, 1) 52%, rgba(228, 235, 242, 1) 100%)",
-  paddingTop: "8px",
-  paddingBottom: "8px",
-  paddingLeft: "max(12px, calc(env(safe-area-inset-left, 0px) + 8px))",
-  paddingRight: "max(12px, calc(env(safe-area-inset-right, 0px) + 8px))",
+  paddingTop: "max(16px, calc(env(safe-area-inset-top, 0px) + 16px))",
+  paddingBottom: "max(16px, calc(env(safe-area-inset-bottom, 0px) + 16px))",
+  paddingLeft: "max(16px, calc(env(safe-area-inset-left, 0px) + 16px))",
+  paddingRight: "max(16px, calc(env(safe-area-inset-right, 0px) + 16px))",
 };
 
 const BACKGROUND_LAYER_STYLE: CSSProperties = {
@@ -326,9 +326,9 @@ const CONTENT_STYLE: CSSProperties = {
 
 const WHITEBOARD_CONTENT_STYLE: CSSProperties = {
   width: "100%",
-  maxWidth: "min(900px, calc((100dvh - 16px) * 1.6), calc((100vh - 16px) * 1.6))",
+  maxWidth: "min(1100px, calc((100dvh - 32px) * 1.6), calc((100vh - 32px) * 1.6))",
   aspectRatio: "16 / 10",
-  maxHeight: "min(calc(100dvh - 16px), calc(100vh - 16px))",
+  maxHeight: "min(calc(100dvh - 32px), calc(100vh - 32px))",
   boxSizing: "border-box",
   position: "relative",
   zIndex: 1,
@@ -840,11 +840,21 @@ const HOME_MENU_ICON_BUTTON_STYLE: CSSProperties = {
 };
 
 const WHITEBOARD_HOME_BUTTON_STYLE: CSSProperties = {
-  ...HOME_MENU_ICON_BUTTON_STYLE,
-  position: "fixed",
-  top: "max(12px, calc(env(safe-area-inset-top, 0px) + 10px))",
-  right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
+  ...WHITEBOARD_HEAD_BUTTON_BASE_STYLE,
+  position: "absolute",
+  top: "16px",
+  right: "16px",
   zIndex: 23,
+};
+
+const WHITEBOARD_MOVE_BUTTON_STYLE: CSSProperties = {
+  ...WHITEBOARD_TOOLS_BUTTON_STYLE,
+  position: "absolute",
+  right: "max(16px, calc(env(safe-area-inset-right, 0px) + 16px))",
+  bottom: "max(16px, calc(env(safe-area-inset-bottom, 0px) + 16px))",
+  minWidth: "74px",
+  height: "34px",
+  zIndex: 22,
 };
 
 export default function TacticalPadLiteClean({ initialMode = "tactical" }: TacticalPadLiteCleanProps) {
@@ -1415,8 +1425,8 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
               style={{
                 ...WHITEBOARD_HEAD_BUTTON_BASE_STYLE,
                 position: "fixed",
-                left: "max(12px, calc(env(safe-area-inset-left, 0px) + 10px))",
-                top: "max(12px, calc(env(safe-area-inset-top, 0px) + 10px))",
+                left: "max(16px, calc(env(safe-area-inset-left, 0px) + 16px))",
+                top: "max(16px, calc(env(safe-area-inset-top, 0px) + 16px))",
                 zIndex: 23,
                 ...(whiteboardBubbleStyle ?? {}),
               }}
@@ -1635,13 +1645,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             <button
               type="button"
               style={{
-                ...WHITEBOARD_TOOLS_BUTTON_STYLE,
-                position: "fixed",
-                right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
-                bottom: "max(12px, calc(env(safe-area-inset-bottom, 0px) + 10px))",
-                minWidth: "74px",
-                height: "34px",
-                zIndex: 22,
+                ...WHITEBOARD_MOVE_BUTTON_STYLE,
                 ...(whiteboardTool === "move"
                   ? { border: "1px solid rgba(43, 95, 150, 0.58)", background: "rgba(196, 214, 232, 0.9)" }
                   : null),
