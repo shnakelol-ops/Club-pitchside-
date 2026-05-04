@@ -878,6 +878,56 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const [phasesOpen, setPhasesOpen] = useState(false);
   const isStatsMode = mode === "stats";
   const isWhiteboardMode = mode === "whiteboard";
+  const wakeLockRef = useRef<{ release: () => Promise<void> } | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!(isStatsMode || isWhiteboardMode)) return;
+    const typedNavigator = navigator as Navigator & {
+      wakeLock?: { request: (type: "screen") => Promise<{ release: () => Promise<void> }> };
+    };
+    if (!typedNavigator.wakeLock?.request) return;
+
+    let disposed = false;
+    const requestWakeLock = async () => {
+      try {
+        const sentinel = await typedNavigator.wakeLock?.request("screen");
+        if (disposed) {
+          await sentinel?.release?.();
+          return;
+        }
+        wakeLockRef.current = sentinel ?? null;
+      } catch {
+        wakeLockRef.current = null;
+      }
+    };
+    const releaseWakeLock = async () => {
+      try {
+        await wakeLockRef.current?.release?.();
+      } catch {
+        // Ignore wake lock release errors.
+      } finally {
+        wakeLockRef.current = null;
+      }
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void requestWakeLock();
+      } else {
+        void releaseWakeLock();
+      }
+    };
+
+    if (document.visibilityState === "visible") {
+      void requestWakeLock();
+    }
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      disposed = true;
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      void releaseWakeLock();
+    };
+  }, [isStatsMode, isWhiteboardMode]);
 
   useEffect(() => {
     const media = window.matchMedia("(orientation: landscape)");

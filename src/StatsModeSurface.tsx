@@ -39,6 +39,14 @@ type AttackingDirection = "LEFT" | "RIGHT";
 type PlayerRole = "STARTER" | "SUB";
 type SquadPlayer = { id: string; name: string; number: number; role: PlayerRole };
 type Squad = { id: string; name: string; players: SquadPlayer[] };
+type SavedSquadPlayer = { id: string; number: number; name: string };
+type SavedSquad = {
+  id: string;
+  name: string;
+  players: SavedSquadPlayer[];
+  updatedAt: number;
+};
+type WakeLockSentinelLike = { release: () => Promise<void> } | null;
 type LoggedMatchEvent = MatchEvent & {
   playerId?: string;
   playerName?: string;
@@ -70,9 +78,10 @@ const MODE_MENU_OPTIONS: ReadonlyArray<{ key: GaaModeKey; label: string }> = [
 ];
 const FORMATION_ROW_SIZES = [1, 3, 3, 2, 3, 3] as const;
 const SQUADS_STORAGE_KEY = "pitchsideclub.squads";
+const SAVED_SQUADS_STORAGE_KEY = "pitchflow_saved_squads_v1";
 const SAVED_MATCHES_STORAGE_KEY = "pitchflow_matches_v1";
 const MAX_SAVED_MATCHES = 10;
-const REVIEW_FILTER_OPTIONS: ReadonlyArray<{ id: ReviewEventFilter; label: string }> = [
+const REVIEW_FILTER_OPTIONS_BASE: ReadonlyArray<{ id: ReviewEventFilter; label: string }> = [
   { id: "ALL", label: "All" },
   { id: "SCORES", label: "Scores" },
   { id: "GOAL", label: "GOAL" },
@@ -105,6 +114,17 @@ const REVIEW_FILTER_KINDS: Record<
   FREE_CONCEDED: ["FREE_CONCEDED"],
 };
 const MATCH_EVENT_KIND_SET = new Set<MatchEventKind>(MATCH_EVENT_KINDS);
+function buildReviewFilterOptions(
+  isHurlingMode: boolean,
+): ReadonlyArray<{ id: ReviewEventFilter; label: string }> {
+  return REVIEW_FILTER_OPTIONS_BASE
+    .filter((option) => !(isHurlingMode && option.id === "TWO_POINT"))
+    .map((option) => {
+      if (option.id === "KICKOUT_WON") return { ...option, label: isHurlingMode ? "P+" : "K+" };
+      if (option.id === "KICKOUT_LOST") return { ...option, label: isHurlingMode ? "P-" : "K-" };
+      return option;
+    });
+}
 
 function parseStoredLoggedMatchEvent(input: unknown): LoggedMatchEvent | null {
   if (!input || typeof input !== "object") return null;
@@ -325,6 +345,58 @@ function parseStoredSquads(input: string | null): Squad[] {
   }
 }
 
+function parseStoredSavedSquadPlayer(input: unknown): SavedSquadPlayer | null {
+  if (!input || typeof input !== "object") return null;
+  const maybeId = "id" in input ? input.id : null;
+  const maybeNumber = "number" in input ? input.number : null;
+  const maybeName = "name" in input ? input.name : null;
+  if (typeof maybeId !== "string" || maybeId.trim().length === 0) return null;
+  if (typeof maybeNumber !== "number" || !Number.isFinite(maybeNumber)) return null;
+  if (typeof maybeName !== "string") return null;
+  const trimmedName = maybeName.trim().slice(0, 24);
+  if (trimmedName.length === 0) return null;
+  return {
+    id: maybeId,
+    number: Math.max(1, Math.min(99, Math.floor(maybeNumber))),
+    name: trimmedName,
+  };
+}
+
+function parseStoredSavedSquad(input: unknown): SavedSquad | null {
+  if (!input || typeof input !== "object") return null;
+  const maybeId = "id" in input ? input.id : null;
+  const maybeName = "name" in input ? input.name : null;
+  const maybePlayers = "players" in input ? input.players : null;
+  const maybeUpdatedAt = "updatedAt" in input ? input.updatedAt : null;
+  if (typeof maybeId !== "string" || maybeId.trim().length === 0) return null;
+  if (typeof maybeName !== "string") return null;
+  if (!Array.isArray(maybePlayers)) return null;
+  if (typeof maybeUpdatedAt !== "number" || !Number.isFinite(maybeUpdatedAt)) return null;
+  const players = maybePlayers
+    .map((player) => parseStoredSavedSquadPlayer(player))
+    .filter((player): player is SavedSquadPlayer => player !== null);
+  return {
+    id: maybeId,
+    name: maybeName.trim().slice(0, 24) || "HOME",
+    players,
+    updatedAt: maybeUpdatedAt,
+  };
+}
+
+function parseStoredSavedSquads(input: string | null): SavedSquad[] {
+  if (!input) return [];
+  try {
+    const parsed = JSON.parse(input);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((entry) => parseStoredSavedSquad(entry))
+      .filter((entry): entry is SavedSquad => entry !== null)
+      .sort((a, b) => b.updatedAt - a.updatedAt);
+  } catch {
+    return [];
+  }
+}
+
 function computeTeamScore(events: readonly MatchEvent[], team: TeamSide): TeamScore {
   let goals = 0;
   let points = 0;
@@ -365,6 +437,8 @@ function formatGaelicScore(score: TeamScore): string {
 
 type MyTeamPlayerNote = {
   label: string;
+  goals: number;
+  points: number;
   scorePoints: number;
   turnoversWon: number;
   kickoutsWon: number;
@@ -376,6 +450,7 @@ function deriveMyTeamReport(
   loggedEvents: readonly LoggedMatchEvent[],
   matchState: MatchState,
   teamNames: { HOME: string; AWAY: string },
+  currentMode: GaaModeKey,
 ): string[] {
   const reportEvents =
     matchState === "HALF_TIME"
@@ -385,6 +460,9 @@ function deriveMyTeamReport(
   const awayScore = computeTeamScore(reportEvents, "AWAY");
   const homeTeamName = teamNames.HOME.trim() || "Team A";
   const awayTeamName = teamNames.AWAY.trim() || "Team B";
+  const isHurlingMode = currentMode === "hurling" || currentMode === "camogie";
+  const restartLabel = isHurlingMode ? "PUCKOUTS" : "KICKOUTS";
+  const restartWonLabel = isHurlingMode ? "puckouts won" : "kickouts won";
 
   let goals = 0;
   let points = 0;
@@ -423,6 +501,8 @@ function deriveMyTeamReport(
     if (existing) return existing;
     const created: MyTeamPlayerNote = {
       label: resolvePlayerLabel(event),
+      goals: 0,
+      points: 0,
       scorePoints: 0,
       turnoversWon: 0,
       kickoutsWon: 0,
@@ -444,14 +524,20 @@ function deriveMyTeamReport(
       goals += 1;
       scores += 1;
       attempts += 1;
-      if (playerNote) playerNote.scorePoints += 3;
+      if (playerNote) {
+        playerNote.goals += 1;
+        playerNote.scorePoints += 3;
+      }
       continue;
     }
     if (event.kind === "POINT") {
       points += 1;
       scores += 1;
       attempts += 1;
-      if (playerNote) playerNote.scorePoints += 1;
+      if (playerNote) {
+        playerNote.points += 1;
+        playerNote.scorePoints += 1;
+      }
       continue;
     }
     const eventKind = String(event.kind);
@@ -464,14 +550,20 @@ function deriveMyTeamReport(
       points += 1;
       scores += 1;
       attempts += 1;
-      if (playerNote) playerNote.scorePoints += 1;
+      if (playerNote) {
+        playerNote.points += 1;
+        playerNote.scorePoints += 1;
+      }
       continue;
     }
     if (event.kind === "TWO_POINTER" || event.kind === "FORTY_FIVE_TWO_POINT") {
       twoPointers += 1;
       scores += 1;
       attempts += 1;
-      if (playerNote) playerNote.scorePoints += 2;
+      if (playerNote) {
+        playerNote.points += 2;
+        playerNote.scorePoints += 2;
+      }
       continue;
     }
     if (event.kind === "SHOT") {
@@ -545,14 +637,14 @@ function deriveMyTeamReport(
     `${homeTeamName} ${formatGaelicScore(homeScore)} (${homeScore.total}) v ${awayTeamName} ${formatGaelicScore(awayScore)} (${awayScore.total})`,
     "",
     "SHOOTING",
-    `${goals}G · ${points}P · ${twoPointers}x2P`,
+    isHurlingMode ? `Goals ${goals} · Points ${points}` : `${goals}G · ${points}P · ${twoPointers}x2P`,
     `Shots ${shots} · Wides ${wides}`,
     `Conversion ${conversionPct}%`,
     "",
     "TURNOVERS",
     `Won ${turnoversWon} · Lost ${turnoversLost} · Net ${turnoversWon - turnoversLost}`,
     "",
-    "KICKOUTS",
+    restartLabel,
     `Won ${kickoutsWon} · Lost ${kickoutsLost} · Success ${kickoutSuccessPct}%`,
     "",
     "FREES",
@@ -566,9 +658,13 @@ function deriveMyTeamReport(
     return lines;
   }
 
-  if (topScorer) lines.push(`Top scorer · ${topScorer.label} (${topScorer.scorePoints})`);
+  if (topScorer) {
+    lines.push(
+      `Top scorer · ${topScorer.label} ${topScorer.goals}-${String(topScorer.points).padStart(2, "0")} (${topScorer.scorePoints})`,
+    );
+  }
   if (topTurnoversWon) lines.push(`Most turnovers won · ${topTurnoversWon.label} (${topTurnoversWon.turnoversWon})`);
-  if (topKickoutsWon) lines.push(`Most kickouts won · ${topKickoutsWon.label} (${topKickoutsWon.kickoutsWon})`);
+  if (topKickoutsWon) lines.push(`Most ${restartWonLabel} · ${topKickoutsWon.label} (${topKickoutsWon.kickoutsWon})`);
   if (topFreesWon) lines.push(`Most frees won · ${topFreesWon.label} (${topFreesWon.freesWon})`);
   if (mostInvolved) lines.push(`Most involved player · ${mostInvolved.label} (${mostInvolved.involved})`);
 
@@ -2018,6 +2114,10 @@ export default function StatsModeSurface() {
     const parsed = parseStoredSquads(window.localStorage.getItem(SQUADS_STORAGE_KEY));
     return parsed.length > 0 ? parsed : [createDefaultSquad()];
   });
+  const [savedSquads, setSavedSquads] = useState<SavedSquad[]>(() => {
+    if (typeof window === "undefined") return [];
+    return parseStoredSavedSquads(window.localStorage.getItem(SAVED_SQUADS_STORAGE_KEY));
+  });
   const [activeSquadId, setActiveSquadId] = useState("");
   const [squadDraft, setSquadDraft] = useState("");
   const [activePlayer, setActivePlayer] = useState<string | null>(null);
@@ -2072,11 +2172,25 @@ export default function StatsModeSurface() {
   const awayNameInputRef = useRef<HTMLInputElement>(null);
   const venueInputRef = useRef<HTMLInputElement>(null);
   const matchEngineStateRef = useRef(createInitialMatchEngineState());
+  const wakeLockRef = useRef<WakeLockSentinelLike>(null);
+  const lastTickMsRef = useRef<number | null>(null);
   const secondHalfSwitchBaselineEventCountRef = useRef<number | null>(null);
   const eventKindSwitchBaselineEventCountRef = useRef<number | null>(null);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const EVENT_BUTTONS = mode.eventButtons;
   const EVENT_LABEL_BY_KIND = mode.eventLabels;
+  const isHurlingMode = currentMode === "hurling" || currentMode === "camogie";
+  const REVIEW_FILTER_OPTIONS = useMemo(
+    () => buildReviewFilterOptions(isHurlingMode),
+    [isHurlingMode],
+  );
+  const REVIEW_FILTER_KINDS_FOR_MODE = useMemo(() => {
+    if (!isHurlingMode) return REVIEW_FILTER_KINDS;
+    return {
+      ...REVIEW_FILTER_KINDS,
+      TWO_POINT: [] as readonly MatchEventKind[],
+    };
+  }, [isHurlingMode]);
   const AWAY_INSTANT_SCORING_KINDS = useMemo(
     () => new Set<MatchEventKind>(mode.scoringEvents),
     [mode],
@@ -2245,6 +2359,43 @@ export default function StatsModeSurface() {
       ),
     );
     setSquadDraft("");
+  };
+
+  const saveSquadSnapshot = () => {
+    const snapshotName = activeSquad.name.trim() || "HOME";
+    const snapshot: SavedSquad = {
+      id: activeSquad.id,
+      name: snapshotName,
+      players: activeSquad.players.map((player) => ({
+        id: player.id,
+        number: player.number,
+        name: player.name,
+      })),
+      updatedAt: Date.now(),
+    };
+    setSavedSquads((prev) => {
+      const withoutCurrent = prev.filter((entry) => entry.id !== snapshot.id);
+      return [snapshot, ...withoutCurrent].sort((a, b) => b.updatedAt - a.updatedAt);
+    });
+  };
+
+  const loadSavedSquadIntoActive = (savedSquad: SavedSquad) => {
+    const restoredPlayers: SquadPlayer[] = savedSquad.players.map((player, idx) => ({
+      id: player.id,
+      number: Math.max(1, Math.min(99, Math.floor(player.number))),
+      name: player.name.slice(0, 24),
+      role: idx < 15 ? "STARTER" : "SUB",
+    }));
+    setSquads((prevSquads) => {
+      const nextActiveSquad: Squad = {
+        id: savedSquad.id,
+        name: savedSquad.name.slice(0, 24) || "HOME",
+        players: restoredPlayers,
+      };
+      const remaining = prevSquads.filter((entry) => entry.id !== savedSquad.id);
+      return [nextActiveSquad, ...remaining];
+    });
+    setActiveSquadById(savedSquad.id);
   };
 
   const undoLastEventAction = () => {
@@ -2440,6 +2591,19 @@ export default function StatsModeSurface() {
   }, [squads]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(SAVED_SQUADS_STORAGE_KEY, JSON.stringify(savedSquads));
+  }, [savedSquads]);
+
+  useEffect(() => {
+    if (savedSquads.length === 0) return;
+    if (squads.length > 1 || (squads[0]?.players.length ?? 0) > 0) return;
+    loadSavedSquadIntoActive(savedSquads[0]);
+    // Only auto-load once from the newest saved squad on empty state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedSquads.length]);
+
+  useEffect(() => {
     persistSavedMatches(savedMatches);
   }, [savedMatches]);
 
@@ -2555,15 +2719,86 @@ export default function StatsModeSurface() {
   }, [mode.pitchSport]);
 
   useEffect(() => {
-    const timerId = window.setInterval(() => {
-      const next = tickMatchClock(matchEngineStateRef.current);
-      if (next === matchEngineStateRef.current) return;
-      matchEngineStateRef.current = next;
-      setMatchTimeSeconds(next.matchTimeSeconds);
-    }, 1000);
-
+    const syncRealtimeClock = () => {
+      const state = matchEngineStateRef.current;
+      const now = Date.now();
+      if (!state.isRunning) {
+        lastTickMsRef.current = null;
+        return;
+      }
+      const lastTickMs = lastTickMsRef.current ?? now;
+      const elapsedSeconds = Math.floor((now - lastTickMs) / 1000);
+      if (elapsedSeconds <= 0) return;
+      let next = state;
+      for (let step = 0; step < elapsedSeconds; step += 1) {
+        next = tickMatchClock(next);
+      }
+      if (next !== state) {
+        matchEngineStateRef.current = next;
+        setMatchTimeSeconds(next.matchTimeSeconds);
+      }
+      lastTickMsRef.current = lastTickMs + elapsedSeconds * 1000;
+    };
+    const timerId = window.setInterval(syncRealtimeClock, 250);
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== "visible") return;
+      syncRealtimeClock();
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {
       window.clearInterval(timerId);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      lastTickMsRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const typedNavigator = navigator as Navigator & {
+      wakeLock?: { request: (type: "screen") => Promise<WakeLockSentinelLike> };
+    };
+    if (!typedNavigator.wakeLock?.request) return;
+
+    let disposed = false;
+    const requestWakeLock = async () => {
+      try {
+        const sentinel = await typedNavigator.wakeLock?.request("screen");
+        if (disposed) {
+          await sentinel?.release?.();
+          return;
+        }
+        wakeLockRef.current = sentinel ?? null;
+      } catch {
+        wakeLockRef.current = null;
+      }
+    };
+
+    const releaseWakeLock = async () => {
+      try {
+        await wakeLockRef.current?.release?.();
+      } catch {
+        // Fail silently if release is rejected.
+      } finally {
+        wakeLockRef.current = null;
+      }
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void requestWakeLock();
+      } else {
+        void releaseWakeLock();
+      }
+    };
+
+    if (document.visibilityState === "visible") {
+      void requestWakeLock();
+    }
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      disposed = true;
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      void releaseWakeLock();
     };
   }, []);
 
@@ -2825,14 +3060,24 @@ export default function StatsModeSurface() {
         loggedEvents,
         reviewHalf,
         reviewEventFilter,
-        REVIEW_FILTER_KINDS,
+        REVIEW_FILTER_KINDS_FOR_MODE,
         reviewZone,
         getEffectiveAttackingDirection(firstHalfAttackingDirection, currentHalf),
         reviewActivePlayerOnly,
         activePlayerId,
       ),
     );
-  }, [loggedEvents, reviewHalf, reviewEventFilter, reviewZone, firstHalfAttackingDirection, currentHalf, reviewActivePlayerOnly, activePlayerId]);
+  }, [
+    loggedEvents,
+    reviewHalf,
+    reviewEventFilter,
+    reviewZone,
+    firstHalfAttackingDirection,
+    currentHalf,
+    reviewActivePlayerOnly,
+    activePlayerId,
+    REVIEW_FILTER_KINDS_FOR_MODE,
+  ]);
 
   useEffect(() => {
     if (!selectedReviewEventId) return;
@@ -3093,8 +3338,8 @@ export default function StatsModeSurface() {
       return player ? `#${player.number} ${player.name}` : null;
     })();
   const myTeamReport = useMemo(
-    () => deriveMyTeamReport(loggedEvents, matchState, teamNames),
-    [loggedEvents, matchState, teamNames],
+    () => deriveMyTeamReport(loggedEvents, matchState, teamNames, currentMode),
+    [loggedEvents, matchState, teamNames, currentMode],
   );
 
   const homeScore = useMemo(() => computeTeamScore(loggedEvents, "HOME"), [loggedEvents]);
@@ -3575,7 +3820,26 @@ export default function StatsModeSurface() {
             <button type="button" className="utility-review-btn" onClick={saveActiveSquadName}>
               Rename
             </button>
+            <button type="button" className="utility-review-btn" onClick={saveSquadSnapshot}>
+              Save Squad
+            </button>
+            <button
+              type="button"
+              className="utility-review-btn"
+              onClick={() => {
+                if (savedSquads.length === 0) return;
+                loadSavedSquadIntoActive(savedSquads[0]);
+              }}
+              disabled={savedSquads.length === 0}
+            >
+              Load Squad
+            </button>
           </div>
+          {savedSquads.length > 0 ? (
+            <div className="utility-panel-title" style={{ fontSize: "8px", opacity: 0.78, textTransform: "none" }}>
+              Last saved: {savedSquads[0].name} · {savedSquads[0].players.length} players
+            </div>
+          ) : null}
           {activePlayerChipText ? (
             <div
               className="utility-active-player-chip"
