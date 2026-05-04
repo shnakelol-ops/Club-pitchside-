@@ -3841,38 +3841,68 @@ export default function StatsModeSurface() {
               </div>
             ) : null}
             {savedMatches.length > 0 ? (
-              savedMatches.map((savedMatch) => (
-                <div
-                  key={savedMatch.id}
-                  style={{
-                    border: "1px solid rgba(148,163,184,0.32)",
-                    borderRadius: "8px",
-                    padding: "7px",
-                    background: "rgba(15,23,42,0.52)",
-                    marginBottom: "6px",
-                  }}
-                >
-                  <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.95, textTransform: "none" }}>
-                    {savedMatch.homeTeamName} v {savedMatch.awayTeamName}
-                  </div>
-                  <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.85, textTransform: "none" }}>
-                    {savedMatch.scorelineSnapshot}
-                  </div>
-                  <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.8, textTransform: "none" }}>
-                    {savedMatch.venue} · {formatSavedMatchCreatedAt(savedMatch.createdAt)} · {savedMatch.eventCount} events
-                  </div>
-                  <button
-                    type="button"
-                    className="utility-review-btn"
-                    onClick={() => {
-                      loadSavedMatchRecord(savedMatch);
+              savedMatches.map((savedMatch, index) => {
+                const isLatest = index === 0;
+                return (
+                  <div
+                    key={savedMatch.id}
+                    style={{
+                      border: isLatest ? "1px solid rgba(124,255,114,0.56)" : "1px solid rgba(148,163,184,0.32)",
+                      borderRadius: "8px",
+                      padding: "7px",
+                      background: isLatest ? "rgba(22,101,52,0.22)" : "rgba(15,23,42,0.52)",
+                      marginBottom: "6px",
+                      boxShadow: isLatest ? "0 0 0 1px rgba(124,255,114,0.22)" : "none",
                     }}
-                    style={{ marginTop: "4px" }}
                   >
-                    Load Match
-                  </button>
-                </div>
-              ))
+                    <div
+                      className="utility-panel-title"
+                      style={{
+                        fontSize: "9px",
+                        opacity: 0.98,
+                        textTransform: "none",
+                        fontWeight: 700,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: "8px",
+                      }}
+                    >
+                      <span>
+                        {savedMatch.homeTeamName} v {savedMatch.awayTeamName}
+                      </span>
+                      {isLatest ? (
+                        <span
+                          style={{
+                            fontSize: "8px",
+                            fontWeight: 700,
+                            letterSpacing: "0.2px",
+                            color: "#7CFF72",
+                          }}
+                        >
+                          LATEST
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.85, textTransform: "none" }}>
+                      {savedMatch.scorelineSnapshot}
+                    </div>
+                    <div className="utility-panel-title" style={{ fontSize: "8px", opacity: 0.8, textTransform: "none" }}>
+                      {savedMatch.venue} · {formatSavedMatchCreatedAt(savedMatch.createdAt)} · {savedMatch.eventCount} events
+                    </div>
+                    <button
+                      type="button"
+                      className="utility-review-btn"
+                      onClick={() => {
+                        loadSavedMatchRecord(savedMatch);
+                      }}
+                      style={{ marginTop: "4px" }}
+                    >
+                      Load Match
+                    </button>
+                  </div>
+                );
+              })
             ) : (
               <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.9, textTransform: "none" }}>
                 No valid saved matches yet.
