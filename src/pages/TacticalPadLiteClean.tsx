@@ -635,11 +635,16 @@ const TOOLS_BUTTON_STYLE: CSSProperties = {
 };
 
 const WHITEBOARD_TOOLS_BUTTON_STYLE: CSSProperties = {
-  ...TOOLS_BUTTON_STYLE,
-  border: "1px solid rgba(123, 146, 172, 0.28)",
-  background: "rgba(224, 233, 242, 0.72)",
-  color: "#1f3348",
+  ...COACH_HUB_TOOL_BUTTON_STYLE,
+  minWidth: 0,
   fontWeight: 600,
+};
+
+const WHITEBOARD_TOOLS_BUTTON_ACTIVE_STYLE: CSSProperties = {
+  ...WHITEBOARD_TOOLS_BUTTON_STYLE,
+  border: "1px solid rgba(125, 211, 252, 0.66)",
+  background: "rgba(38, 72, 102, 0.72)",
+  color: "#f8fcff",
 };
 
 const PHASES_CHIP_STYLE: CSSProperties = {
@@ -719,30 +724,50 @@ const WHITEBOARD_HEAD_BUTTON_BASE_STYLE: CSSProperties = {
 
 const WHITEBOARD_COUNT_SELECTOR_STYLE: CSSProperties = {
   position: "fixed",
-  left: "max(12px, calc(env(safe-area-inset-left, 0px) + 10px))",
-  top: "max(54px, calc(env(safe-area-inset-top, 0px) + 52px))",
+  right: "max(8px, calc(env(safe-area-inset-right, 0px) + 6px))",
+  bottom: "max(56px, calc(env(safe-area-inset-bottom, 0px) + 54px))",
   zIndex: 22,
-  width: "166px",
+  width: "clamp(148px, 23vw, 176px)",
   display: "flex",
   flexDirection: "column",
-  gap: "6px",
+  gap: "5px",
   padding: "7px",
-  borderRadius: "10px",
-  border: "1px solid rgba(148, 163, 184, 0.22)",
-  background: "rgba(10, 20, 35, 0.8)",
-  backdropFilter: "blur(8px)",
-  WebkitBackdropFilter: "blur(8px)",
-  boxShadow: "0 10px 22px rgba(4, 12, 24, 0.3)",
+  borderRadius: "12px",
+  border: "1px solid rgba(163, 190, 212, 0.26)",
+  background: "rgba(10, 19, 24, 0.74)",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+  boxShadow: "0 12px 24px rgba(2, 8, 15, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.1)",
+  maxHeight: "min(62vh, 380px)",
+  overflowY: "auto",
+  overflowX: "hidden",
 };
 
 const WHITEBOARD_COUNT_SELECTOR_TITLE_STYLE: CSSProperties = {
-  color: "#dbe7f5",
-  fontSize: "9px",
-  fontWeight: 600,
+  color: "#d7e8f5",
+  fontSize: "8px",
+  fontWeight: 700,
   letterSpacing: "0.2px",
   textTransform: "uppercase",
   margin: 0,
   fontFamily: "Inter, system-ui, sans-serif",
+};
+
+const WHITEBOARD_SUBSECTION_TITLE_STYLE: CSSProperties = {
+  ...WHITEBOARD_COUNT_SELECTOR_TITLE_STYLE,
+  opacity: 0.78,
+};
+
+const WHITEBOARD_PANEL_SECTION_STYLE: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "4px",
+};
+
+const WHITEBOARD_TOOL_GRID_STYLE: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  gap: "4px",
 };
 
 const WHITEBOARD_TEAM_SELECTOR_ROW_STYLE: CSSProperties = {
@@ -1344,29 +1369,11 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
           cursor: whiteboardBubbleDragRef.current ? "grabbing" : "grab",
         };
   const whiteboardBubbleMenuStyle = (() => {
-    if (whiteboardBubblePosition == null) return undefined;
     const viewport = getViewportRect();
-    const minLeft = viewport.left + WHITEBOARD_BUBBLE_MARGIN;
-    const maxLeft = viewport.left + viewport.width - WHITEBOARD_BUBBLE_MARGIN - whiteboardBubbleMenuSize.width;
-    let left = whiteboardBubblePosition.left + WHITEBOARD_BUBBLE_SIZE + 8;
-    if (left > maxLeft) {
-      left = whiteboardBubblePosition.left - whiteboardBubbleMenuSize.width - 8;
-    }
-    left = Math.min(Math.max(left, minLeft), Math.max(minLeft, maxLeft));
-    const minTop = viewport.top + WHITEBOARD_BUBBLE_MARGIN;
-    const maxTop = viewport.top + viewport.height - WHITEBOARD_BUBBLE_MARGIN - whiteboardBubbleMenuSize.height;
-    let top = whiteboardBubblePosition.top + WHITEBOARD_BUBBLE_SIZE - whiteboardBubbleMenuSize.height;
-    top = Math.min(Math.max(top, minTop), Math.max(minTop, maxTop));
+    const availableHeight = viewport.height - WHITEBOARD_BUBBLE_MARGIN * 2;
+    const preferredHeight = whiteboardBubbleMenuSize.height + 40;
     return {
-      position: "fixed",
-      left: `${left}px`,
-      top: `${top}px`,
-      marginLeft: 0,
-      marginBottom: 0,
-      maxHeight: `${Math.max(120, viewport.height - WHITEBOARD_BUBBLE_MARGIN * 2)}px`,
-      overflowY: "auto",
-      overflowX: "hidden",
-      width: "176px",
+      maxHeight: `${Math.max(140, Math.min(availableHeight, preferredHeight))}px`,
       zIndex: 22,
     } as const;
   })();
@@ -1438,122 +1445,88 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                   ...(whiteboardBubbleMenuStyle ?? {}),
                 }}
               >
-                <p style={WHITEBOARD_COUNT_SELECTOR_TITLE_STYLE}>Tools</p>
-                <button
-                  type="button"
-                  style={{
-                    ...WHITEBOARD_TOOLS_BUTTON_STYLE,
-                    ...(whiteboardTool === "pen"
-                      ? { border: "1px solid rgba(43, 95, 150, 0.58)", background: "rgba(196, 214, 232, 0.9)" }
-                      : null),
-                  }}
-                  onClick={() => applyWhiteboardTool("pen")}
-                >
-                  Pen
-                </button>
-                <button
-                  type="button"
-                  style={{
-                    ...WHITEBOARD_TOOLS_BUTTON_STYLE,
-                    ...(whiteboardTool === "line"
-                      ? { border: "1px solid rgba(43, 95, 150, 0.58)", background: "rgba(196, 214, 232, 0.9)" }
-                      : null),
-                  }}
-                  onClick={() => applyWhiteboardTool("line")}
-                >
-                  Line
-                </button>
-                <button
-                  type="button"
-                  style={{
-                    ...WHITEBOARD_TOOLS_BUTTON_STYLE,
-                    ...(whiteboardTool === "arrow"
-                      ? { border: "1px solid rgba(43, 95, 150, 0.58)", background: "rgba(196, 214, 232, 0.9)" }
-                      : null),
-                  }}
-                  onClick={() => applyWhiteboardTool("arrow")}
-                >
-                  Arrow
-                </button>
-                <button
-                  type="button"
-                  style={{
-                    ...WHITEBOARD_TOOLS_BUTTON_STYLE,
-                    ...(whiteboardTool === "dashed"
-                      ? { border: "1px solid rgba(43, 95, 150, 0.58)", background: "rgba(196, 214, 232, 0.9)" }
-                      : null),
-                  }}
-                  onClick={() => applyWhiteboardTool("dashed")}
-                >
-                  Dashed line
-                </button>
-                <button
-                  type="button"
-                  style={WHITEBOARD_TOOLS_BUTTON_STYLE}
-                  onClick={() => applyWhiteboardTool("eraser")}
-                >
-                  Eraser
-                </button>
-                <button
-                  type="button"
-                  style={WHITEBOARD_TOOLS_BUTTON_STYLE}
-                  onClick={() => surfaceRef.current?.undoWhiteboardStroke()}
-                >
-                  Undo
-                </button>
-                <button
-                  type="button"
-                  style={WHITEBOARD_TOOLS_BUTTON_STYLE}
-                  onClick={() => surfaceRef.current?.clearWhiteboardStrokes()}
-                >
-                  Clear All
-                </button>
-                <p style={WHITEBOARD_COUNT_SELECTOR_TITLE_STYLE}>Drawing colour</p>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: "4px" }}>
-                  {WHITEBOARD_PEN_COLOR_CHOICES.map((choice) => {
-                    const isActive = whiteboardPenColor === choice.value;
-                    return (
-                      <button
-                        key={`whiteboard-pen-color-${choice.label.toLowerCase()}`}
-                        type="button"
-                        aria-label={`Set pen colour ${choice.label}`}
-                        style={{
-                          ...WHITEBOARD_TOKEN_COLOR_OPTION_STYLE,
-                          width: "100%",
-                          ...(isActive
-                            ? {
-                                boxShadow: "0 0 0 2px rgba(125, 211, 252, 0.9)",
-                                border: "1px solid rgba(125, 211, 252, 0.75)",
-                              }
-                            : null),
-                        }}
-                        onClick={() => applyWhiteboardPenColor(choice.value)}
-                      >
-                        <span style={{ ...WHITEBOARD_TOKEN_COLOR_SWATCH_STYLE, background: choice.css }} />
-                      </button>
-                    );
-                  })}
+                <div style={WHITEBOARD_PANEL_SECTION_STYLE}>
+                  <p style={WHITEBOARD_COUNT_SELECTOR_TITLE_STYLE}>TOOLS</p>
+                  <div style={WHITEBOARD_TOOL_GRID_STYLE}>
+                    <button
+                      type="button"
+                      style={whiteboardTool === "move" ? WHITEBOARD_TOOLS_BUTTON_ACTIVE_STYLE : WHITEBOARD_TOOLS_BUTTON_STYLE}
+                      onClick={() => applyWhiteboardTool("move")}
+                    >
+                      Move
+                    </button>
+                    <button
+                      type="button"
+                      style={whiteboardTool === "pen" ? WHITEBOARD_TOOLS_BUTTON_ACTIVE_STYLE : WHITEBOARD_TOOLS_BUTTON_STYLE}
+                      onClick={() => applyWhiteboardTool("pen")}
+                    >
+                      Pen
+                    </button>
+                    <button
+                      type="button"
+                      style={whiteboardTool === "line" ? WHITEBOARD_TOOLS_BUTTON_ACTIVE_STYLE : WHITEBOARD_TOOLS_BUTTON_STYLE}
+                      onClick={() => applyWhiteboardTool("line")}
+                    >
+                      Line
+                    </button>
+                    <button
+                      type="button"
+                      style={whiteboardTool === "arrow" ? WHITEBOARD_TOOLS_BUTTON_ACTIVE_STYLE : WHITEBOARD_TOOLS_BUTTON_STYLE}
+                      onClick={() => applyWhiteboardTool("arrow")}
+                    >
+                      Arrow
+                    </button>
+                    <button
+                      type="button"
+                      style={whiteboardTool === "dashed" ? WHITEBOARD_TOOLS_BUTTON_ACTIVE_STYLE : WHITEBOARD_TOOLS_BUTTON_STYLE}
+                      onClick={() => applyWhiteboardTool("dashed")}
+                    >
+                      Dash
+                    </button>
+                    <button
+                      type="button"
+                      style={WHITEBOARD_TOOLS_BUTTON_STYLE}
+                      onClick={() => applyWhiteboardTool("eraser")}
+                    >
+                      Eraser
+                    </button>
+                    <button
+                      type="button"
+                      style={WHITEBOARD_TOOLS_BUTTON_STYLE}
+                      onClick={() => surfaceRef.current?.undoWhiteboardStroke()}
+                    >
+                      Undo
+                    </button>
+                    <button
+                      type="button"
+                      style={WHITEBOARD_TOOLS_BUTTON_STYLE}
+                      onClick={() => surfaceRef.current?.clearWhiteboardStrokes()}
+                    >
+                      Clear
+                    </button>
+                  </div>
                 </div>
-                <p style={WHITEBOARD_COUNT_SELECTOR_TITLE_STYLE}>Player colours</p>
-                <div style={{ display: "grid", gridTemplateColumns: "44px 1fr", gap: "6px", alignItems: "center" }}>
-                  <span style={{ color: "#dbe7f5", fontSize: "10px", fontWeight: 600, fontFamily: "Inter, system-ui, sans-serif" }}>
-                    Team A
-                  </span>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "4px" }}>
-                    {WHITEBOARD_PLAYER_COLOR_CHOICES.map((choice) => {
-                      const isActive = whiteboardBlueColor === choice.value;
+                <div style={WHITEBOARD_PANEL_SECTION_STYLE}>
+                  <p style={WHITEBOARD_SUBSECTION_TITLE_STYLE}>COLOUR</p>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: "4px" }}>
+                    {WHITEBOARD_PEN_COLOR_CHOICES.map((choice) => {
+                      const isActive = whiteboardPenColor === choice.value;
                       return (
                         <button
-                          key={`whiteboard-blue-color-${choice.value}`}
+                          key={`whiteboard-pen-color-${choice.label.toLowerCase()}`}
                           type="button"
-                          aria-label="Set Team A player colour"
+                          aria-label={`Set pen colour ${choice.label}`}
                           style={{
                             ...WHITEBOARD_TOKEN_COLOR_OPTION_STYLE,
+                            width: "100%",
                             ...(isActive
-                              ? { boxShadow: "0 0 0 2px rgba(125, 211, 252, 0.9)", border: "1px solid rgba(125, 211, 252, 0.75)" }
+                              ? {
+                                  boxShadow: "0 0 0 2px rgba(125, 211, 252, 0.9)",
+                                  border: "1px solid rgba(125, 211, 252, 0.75)",
+                                }
                               : null),
                           }}
-                          onClick={() => setWhiteboardBlueColor(choice.value)}
+                          onClick={() => applyWhiteboardPenColor(choice.value)}
                         >
                           <span style={{ ...WHITEBOARD_TOKEN_COLOR_SWATCH_STYLE, background: choice.css }} />
                         </button>
@@ -1561,95 +1534,105 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                     })}
                   </div>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "44px 1fr", gap: "6px", alignItems: "center" }}>
-                  <span style={{ color: "#dbe7f5", fontSize: "10px", fontWeight: 600, fontFamily: "Inter, system-ui, sans-serif" }}>
-                    Team B
-                  </span>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "4px" }}>
-                    {WHITEBOARD_PLAYER_COLOR_CHOICES.map((choice) => {
-                      const isActive = whiteboardRedColor === choice.value;
+                <div style={WHITEBOARD_PANEL_SECTION_STYLE}>
+                  <p style={WHITEBOARD_SUBSECTION_TITLE_STYLE}>PLAYERS</p>
+                  <div style={{ display: "grid", gridTemplateColumns: "44px 1fr", gap: "6px", alignItems: "center" }}>
+                    <span style={{ color: "#dbe7f5", fontSize: "10px", fontWeight: 600, fontFamily: "Inter, system-ui, sans-serif" }}>
+                      Team A
+                    </span>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "4px" }}>
+                      {WHITEBOARD_PLAYER_COLOR_CHOICES.map((choice) => {
+                        const isActive = whiteboardBlueColor === choice.value;
+                        return (
+                          <button
+                            key={`whiteboard-blue-color-${choice.value}`}
+                            type="button"
+                            aria-label="Set Team A player colour"
+                            style={{
+                              ...WHITEBOARD_TOKEN_COLOR_OPTION_STYLE,
+                              ...(isActive
+                                ? { boxShadow: "0 0 0 2px rgba(125, 211, 252, 0.9)", border: "1px solid rgba(125, 211, 252, 0.75)" }
+                                : null),
+                            }}
+                            onClick={() => setWhiteboardBlueColor(choice.value)}
+                          >
+                            <span style={{ ...WHITEBOARD_TOKEN_COLOR_SWATCH_STYLE, background: choice.css }} />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "44px 1fr", gap: "6px", alignItems: "center" }}>
+                    <span style={{ color: "#dbe7f5", fontSize: "10px", fontWeight: 600, fontFamily: "Inter, system-ui, sans-serif" }}>
+                      Team B
+                    </span>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "4px" }}>
+                      {WHITEBOARD_PLAYER_COLOR_CHOICES.map((choice) => {
+                        const isActive = whiteboardRedColor === choice.value;
+                        return (
+                          <button
+                            key={`whiteboard-red-color-${choice.value}`}
+                            type="button"
+                            aria-label="Set Team B player colour"
+                            style={{
+                              ...WHITEBOARD_TOKEN_COLOR_OPTION_STYLE,
+                              ...(isActive
+                                ? { boxShadow: "0 0 0 2px rgba(125, 211, 252, 0.9)", border: "1px solid rgba(125, 211, 252, 0.75)" }
+                                : null),
+                            }}
+                            onClick={() => setWhiteboardRedColor(choice.value)}
+                          >
+                            <span style={{ ...WHITEBOARD_TOKEN_COLOR_SWATCH_STYLE, background: choice.css }} />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div style={WHITEBOARD_TEAM_SELECTOR_ROW_STYLE}>
+                    <button
+                      type="button"
+                      style={
+                        whiteboardCountPickerTeam === "BLUE"
+                          ? WHITEBOARD_TEAM_OPTION_ACTIVE_STYLE
+                          : WHITEBOARD_TEAM_OPTION_STYLE
+                      }
+                      onClick={() => setWhiteboardCountPickerTeam("BLUE")}
+                    >
+                      Team A
+                    </button>
+                    <button
+                      type="button"
+                      style={
+                        whiteboardCountPickerTeam === "RED"
+                          ? WHITEBOARD_TEAM_OPTION_ACTIVE_STYLE
+                          : WHITEBOARD_TEAM_OPTION_STYLE
+                      }
+                      onClick={() => setWhiteboardCountPickerTeam("RED")}
+                    >
+                      Team B
+                    </button>
+                  </div>
+                  <div style={WHITEBOARD_COUNT_SELECTOR_GRID_STYLE}>
+                    {WHITEBOARD_COUNT_OPTIONS.map((count) => {
+                      const isActive =
+                        whiteboardCountPickerTeam === "BLUE"
+                          ? whiteboardBlueCount === count
+                          : whiteboardRedCount === count;
                       return (
                         <button
-                          key={`whiteboard-red-color-${choice.value}`}
+                          key={`${whiteboardCountPickerTeam}-count-${count}`}
                           type="button"
-                          aria-label="Set Team B player colour"
-                          style={{
-                            ...WHITEBOARD_TOKEN_COLOR_OPTION_STYLE,
-                            ...(isActive
-                              ? { boxShadow: "0 0 0 2px rgba(125, 211, 252, 0.9)", border: "1px solid rgba(125, 211, 252, 0.75)" }
-                              : null),
-                          }}
-                          onClick={() => setWhiteboardRedColor(choice.value)}
+                          style={isActive ? WHITEBOARD_COUNT_OPTION_ACTIVE_STYLE : WHITEBOARD_COUNT_OPTION_STYLE}
+                          onClick={() => setWhiteboardCount(whiteboardCountPickerTeam, count)}
                         >
-                          <span style={{ ...WHITEBOARD_TOKEN_COLOR_SWATCH_STYLE, background: choice.css }} />
+                          {count}
                         </button>
                       );
                     })}
                   </div>
-                </div>
-                <p style={WHITEBOARD_COUNT_SELECTOR_TITLE_STYLE}>Players</p>
-                <div style={WHITEBOARD_TEAM_SELECTOR_ROW_STYLE}>
-                  <button
-                    type="button"
-                    style={
-                      whiteboardCountPickerTeam === "BLUE"
-                        ? WHITEBOARD_TEAM_OPTION_ACTIVE_STYLE
-                        : WHITEBOARD_TEAM_OPTION_STYLE
-                    }
-                    onClick={() => setWhiteboardCountPickerTeam("BLUE")}
-                  >
-                    Team A
-                  </button>
-                  <button
-                    type="button"
-                    style={
-                      whiteboardCountPickerTeam === "RED"
-                        ? WHITEBOARD_TEAM_OPTION_ACTIVE_STYLE
-                        : WHITEBOARD_TEAM_OPTION_STYLE
-                    }
-                    onClick={() => setWhiteboardCountPickerTeam("RED")}
-                  >
-                    Team B
-                  </button>
-                </div>
-                <div style={WHITEBOARD_COUNT_SELECTOR_GRID_STYLE}>
-                  {WHITEBOARD_COUNT_OPTIONS.map((count) => {
-                    const isActive =
-                      whiteboardCountPickerTeam === "BLUE"
-                        ? whiteboardBlueCount === count
-                        : whiteboardRedCount === count;
-                    return (
-                      <button
-                        key={`${whiteboardCountPickerTeam}-count-${count}`}
-                        type="button"
-                        style={isActive ? WHITEBOARD_COUNT_OPTION_ACTIVE_STYLE : WHITEBOARD_COUNT_OPTION_STYLE}
-                        onClick={() => setWhiteboardCount(whiteboardCountPickerTeam, count)}
-                      >
-                        {count}
-                      </button>
-                    );
-                  })}
                 </div>
               </div>
             ) : null}
-            <button
-              type="button"
-              style={{
-                ...WHITEBOARD_TOOLS_BUTTON_STYLE,
-                position: "fixed",
-                right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
-                bottom: "max(12px, calc(env(safe-area-inset-bottom, 0px) + 10px))",
-                minWidth: "74px",
-                height: "34px",
-                zIndex: 22,
-                ...(whiteboardTool === "move"
-                  ? { border: "1px solid rgba(43, 95, 150, 0.58)", background: "rgba(196, 214, 232, 0.9)" }
-                  : null),
-              }}
-              onClick={() => applyWhiteboardTool("move")}
-            >
-              MOVE
-            </button>
           </>
         ) : null}
         {!isWhiteboardMode ? (
