@@ -132,7 +132,7 @@ const SHELL_CSS = `
   display: grid;
   gap: 12px;
   overflow-x: clip;
-  padding-bottom: 10px;
+  padding-bottom: 92px;
 }
 
 .pf-header-card,
@@ -323,6 +323,14 @@ const SHELL_CSS = `
   min-height: 68px;
   cursor: pointer;
   box-shadow: 0 0 0 1px var(--pf-primary-soft), 0 0 12px rgba(124,255,114,0.22);
+  transition: transform 110ms ease, box-shadow 160ms ease, opacity 130ms ease;
+  will-change: transform;
+}
+
+.pf-home-primary-btn:active {
+  transform: scale(0.97);
+  opacity: 0.96;
+  box-shadow: 0 0 0 1px var(--pf-primary-soft), 0 0 16px rgba(124,255,114,0.32);
 }
 
 .pf-home-primary-label {
@@ -352,11 +360,16 @@ const SHELL_CSS = `
   background: rgba(20,52,33,0.92);
   color: var(--pf-text);
   text-align: left;
-  padding: 12px 10px;
-  min-height: 66px;
+  padding: 10px 10px;
+  min-height: 58px;
   font-size: 12px;
   font-weight: 650;
   line-height: 1.25;
+  transition: transform 100ms ease, background-color 130ms ease;
+}
+
+.pf-home-secondary-btn:active {
+  transform: scale(0.985);
 }
 
 .pf-home-secondary-btn span {
@@ -368,17 +381,33 @@ const SHELL_CSS = `
   margin-top: 4px;
   color: var(--pf-text-dim);
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .pf-card.pf-card-soft {
   background: linear-gradient(180deg, rgba(14,34,23,0.82) 0%, rgba(11,28,18,0.86) 100%);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), 0 10px 18px rgba(0,0,0,0.2);
+  padding: 12px;
 }
 
 .pf-list-item.pf-list-item-soft {
   background: rgba(17,43,28,0.75);
   color: var(--pf-text-muted);
+  padding: 9px 10px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pf-home-section-title-actions {
+  margin-top: 10px;
+}
+
+.pf-home-section-title-recent {
+  margin-top: 14px;
 }
 
 .pf-library-problem-grid {
@@ -660,7 +689,7 @@ const SHELL_CSS = `
 @media (orientation: portrait) {
   .pf-content {
     gap: 8px;
-    padding-bottom: 100px;
+    padding-bottom: 108px;
   }
 
   .pf-header-card,
@@ -729,6 +758,10 @@ const SHELL_CSS = `
   .pf-home-primary-btn {
     min-height: 72px;
   }
+
+  .pf-home-secondary-btn {
+    min-height: 56px;
+  }
 }
 `;
 
@@ -756,7 +789,7 @@ function BoardPage() {
           </button>
         </div>
       </div>
-      <p className="pf-section-title">Quick Actions</p>
+      <p className="pf-section-title pf-home-section-title-actions">Quick Actions</p>
       <div className="pf-card">
         <div className="pf-home-secondary-grid">
           <button type="button" className="pf-home-secondary-btn" onClick={() => navigateTo("/tacticalpad-lite-clean")}>
@@ -773,7 +806,7 @@ function BoardPage() {
           </button>
         </div>
       </div>
-      <p className="pf-section-title">Recent Boards</p>
+      <p className="pf-section-title pf-home-section-title-recent">Recent Boards</p>
       <div className="pf-card pf-card-soft">
         <p className="pf-card-title">Recent Boards</p>
         <div className="pf-list">
