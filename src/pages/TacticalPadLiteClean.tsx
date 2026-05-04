@@ -109,6 +109,10 @@ const ROOT_WHITEBOARD_STYLE: CSSProperties = {
   ...ROOT_STYLE,
   background:
     "linear-gradient(165deg, rgba(245, 248, 251, 1) 0%, rgba(236, 241, 246, 1) 52%, rgba(228, 235, 242, 1) 100%)",
+  paddingTop: "8px",
+  paddingBottom: "8px",
+  paddingLeft: "max(12px, calc(env(safe-area-inset-left, 0px) + 8px))",
+  paddingRight: "max(12px, calc(env(safe-area-inset-right, 0px) + 8px))",
 };
 
 const BACKGROUND_LAYER_STYLE: CSSProperties = {
@@ -318,6 +322,19 @@ const CONTENT_STYLE: CSSProperties = {
   zIndex: 1,
   display: "flex",
   alignItems: "stretch",
+};
+
+const WHITEBOARD_CONTENT_STYLE: CSSProperties = {
+  width: "100%",
+  maxWidth: "min(900px, calc((100dvh - 16px) * 1.6), calc((100vh - 16px) * 1.6))",
+  aspectRatio: "16 / 10",
+  maxHeight: "min(calc(100dvh - 16px), calc(100vh - 16px))",
+  boxSizing: "border-box",
+  position: "relative",
+  zIndex: 1,
+  display: "flex",
+  alignItems: "stretch",
+  margin: "0 auto",
 };
 
 const PITCH_STYLE: CSSProperties = {
@@ -824,9 +841,9 @@ const HOME_MENU_ICON_BUTTON_STYLE: CSSProperties = {
 
 const WHITEBOARD_HOME_BUTTON_STYLE: CSSProperties = {
   ...HOME_MENU_ICON_BUTTON_STYLE,
-  position: "absolute",
-  top: "-42px",
-  right: "0px",
+  position: "fixed",
+  top: "max(12px, calc(env(safe-area-inset-top, 0px) + 10px))",
+  right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
   zIndex: 23,
 };
 
@@ -1387,7 +1404,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             <div style={BACKGROUND_VIGNETTE_STYLE} />
           </div>
         ) : null}
-        <div style={CONTENT_STYLE}>
+        <div style={isWhiteboardMode ? WHITEBOARD_CONTENT_STYLE : CONTENT_STYLE}>
           <div ref={hostRef} style={isWhiteboardMode ? PITCH_WHITEBOARD_STYLE : PITCH_STYLE} />
         </div>
         {isWhiteboardMode ? (
@@ -1903,11 +1920,9 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
           </button>
         ) : null}
         {isWhiteboardMode ? (
-          <div style={CONTENT_STYLE}>
-            <button type="button" style={WHITEBOARD_HOME_BUTTON_STYLE} onClick={goHome} aria-label="Go to Home">
-              ⌂
-            </button>
-          </div>
+          <button type="button" style={WHITEBOARD_HOME_BUTTON_STYLE} onClick={goHome} aria-label="Go to Home">
+            ⌂
+          </button>
         ) : null}
       </div>
     </OrientationGate>
