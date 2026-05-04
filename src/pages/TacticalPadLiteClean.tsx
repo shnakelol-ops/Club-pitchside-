@@ -324,9 +324,13 @@ const CONTENT_STYLE: CSSProperties = {
   alignItems: "stretch",
 };
 
+const WHITEBOARD_MAX_WIDTH_EXPR = "min(1100px, calc((100dvh - 32px) * 1.6), calc((100vh - 32px) * 1.6))";
+const WHITEBOARD_WIDTH_EXPR = `min(calc(100vw - 32px), ${WHITEBOARD_MAX_WIDTH_EXPR})`;
+const WHITEBOARD_HEIGHT_EXPR = `min(calc((${WHITEBOARD_WIDTH_EXPR}) * 0.625), calc(100dvh - 32px), calc(100vh - 32px))`;
+
 const WHITEBOARD_CONTENT_STYLE: CSSProperties = {
   width: "100%",
-  maxWidth: "min(1100px, calc((100dvh - 32px) * 1.6), calc((100vh - 32px) * 1.6))",
+  maxWidth: WHITEBOARD_MAX_WIDTH_EXPR,
   aspectRatio: "16 / 10",
   maxHeight: "min(calc(100dvh - 32px), calc(100vh - 32px))",
   boxSizing: "border-box",
@@ -730,11 +734,11 @@ const WHITEBOARD_COUNT_SELECTOR_STYLE: CSSProperties = {
   gap: "5px",
   padding: "6px",
   borderRadius: "10px",
-  border: "1px solid rgba(148, 163, 184, 0.22)",
-  background: "rgba(10, 20, 35, 0.92)",
-  backdropFilter: "blur(10px)",
-  WebkitBackdropFilter: "blur(10px)",
-  boxShadow: "0 10px 22px rgba(4, 12, 24, 0.3)",
+  border: "1px solid rgba(182, 198, 217, 0.28)",
+  background: "rgba(24, 35, 50, 0.9)",
+  backdropFilter: "blur(8px)",
+  WebkitBackdropFilter: "blur(8px)",
+  boxShadow: "0 7px 16px rgba(6, 15, 26, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.18)",
 };
 
 const WHITEBOARD_COUNT_SELECTOR_TITLE_STYLE: CSSProperties = {
@@ -749,8 +753,8 @@ const WHITEBOARD_COUNT_SELECTOR_TITLE_STYLE: CSSProperties = {
 
 const WHITEBOARD_SUBSECTION_TITLE_STYLE: CSSProperties = {
   ...WHITEBOARD_COUNT_SELECTOR_TITLE_STYLE,
-  fontSize: "8px",
-  opacity: 0.76,
+  fontSize: "7.5px",
+  opacity: 0.7,
 };
 
 const WHITEBOARD_TEAM_SELECTOR_ROW_STYLE: CSSProperties = {
@@ -858,10 +862,10 @@ const WHITEBOARD_HOME_BUTTON_STYLE: CSSProperties = {
 const WHITEBOARD_MOVE_BUTTON_STYLE: CSSProperties = {
   ...WHITEBOARD_TOOLS_BUTTON_STYLE,
   position: "absolute",
-  right: "max(10px, calc(env(safe-area-inset-right, 0px) + 10px))",
-  bottom: "max(10px, calc(env(safe-area-inset-bottom, 0px) + 10px))",
-  minWidth: "66px",
-  height: "31px",
+  right: `max(calc((100vw - ${WHITEBOARD_WIDTH_EXPR}) / 2 + 8px), calc(env(safe-area-inset-right, 0px) + 8px))`,
+  bottom: `max(calc((100vh - ${WHITEBOARD_HEIGHT_EXPR}) / 2 + 8px), calc(env(safe-area-inset-bottom, 0px) + 8px))`,
+  minWidth: "62px",
+  height: "29px",
   borderRadius: "12px",
   zIndex: 22,
 };
