@@ -711,7 +711,8 @@ const WHITEBOARD_HEAD_BUTTON_BASE_STYLE: CSSProperties = {
 const WHITEBOARD_COUNT_SELECTOR_STYLE: CSSProperties = {
   position: "fixed",
   right: "max(8px, calc(env(safe-area-inset-right, 0px) + 6px))",
-  bottom: "max(56px, calc(env(safe-area-inset-bottom, 0px) + 54px))",
+  top: "max(16px, env(safe-area-inset-top, 0px))",
+  bottom: "auto",
   zIndex: 22,
   width: "clamp(148px, 23vw, 176px)",
   display: "flex",
