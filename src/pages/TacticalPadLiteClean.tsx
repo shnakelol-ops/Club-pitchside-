@@ -381,6 +381,17 @@ const LEFT_BUBBLE_STYLE: CSSProperties = {
   bottom: "max(12px, calc(env(safe-area-inset-bottom, 0px) + 10px))",
 };
 
+const ACTIONS_BUBBLE_STYLE: CSSProperties = {
+  ...BUBBLE_BASE_STYLE,
+  left: "max(12px, calc(env(safe-area-inset-left, 0px) + 10px))",
+  top: "50%",
+  transform: "translateY(-50%)",
+  background: "rgba(32, 40, 50, 0.74)",
+  border: "1px solid rgba(233, 242, 255, 0.34)",
+  boxShadow: "0 8px 20px rgba(0, 0, 0, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.22)",
+  zIndex: 21,
+};
+
 const RIGHT_BUBBLE_STYLE: CSSProperties = {
   ...BUBBLE_BASE_STYLE,
   right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
@@ -446,6 +457,42 @@ const CONTROLS_POPOUT_STYLE: CSSProperties = {
   flexWrap: "nowrap",
   background: "rgba(20, 16, 17, 0.58)",
   border: "1px solid rgba(238, 146, 146, 0.16)",
+};
+
+const ACTIONS_POPOUT_STYLE: CSSProperties = {
+  ...POPOUT_BASE_STYLE,
+  left: "max(58px, calc(env(safe-area-inset-left, 0px) + 56px))",
+  top: "50%",
+  transform: "translateY(-50%)",
+  flexDirection: "column",
+  width: "132px",
+  padding: "7px",
+  gap: "5px",
+  overflow: "hidden",
+  background: "rgba(22, 30, 38, 0.78)",
+  border: "1px solid rgba(218, 232, 246, 0.24)",
+  boxShadow: "0 10px 24px rgba(0, 0, 0, 0.36)",
+  zIndex: 21,
+};
+
+const ACTIONS_MENU_BUTTON_STYLE: CSSProperties = {
+  borderRadius: "9px",
+  border: "1px solid rgba(224, 236, 248, 0.2)",
+  color: "rgba(255, 255, 255, 0.95)",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontWeight: 600,
+  width: "100%",
+  height: "30px",
+  minWidth: 0,
+  fontSize: "10px",
+  letterSpacing: "0.2px",
+  padding: "0 9px",
+  cursor: "pointer",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+  textAlign: "left",
+  background: "rgba(15, 24, 31, 0.82)",
+  boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.12)",
 };
 
 const COACH_HUB_PANEL_STYLE: CSSProperties = {
@@ -850,6 +897,12 @@ const WHITEBOARD_HOME_BUTTON_STYLE: CSSProperties = {
 export default function TacticalPadLiteClean({ initialMode = "tactical" }: TacticalPadLiteCleanProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const surfaceRef = useRef<TacticalPadLiteSurface | null>(null);
+  const clipRecorderRef = useRef<{
+    recorder: MediaRecorder;
+    stream: MediaStream;
+    chunks: BlobPart[];
+    stopTimer: number | null;
+  } | null>(null);
   const tacticalItemCounterRef = useRef(0);
   const whiteboardBubbleButtonRef = useRef<HTMLButtonElement | null>(null);
   const whiteboardBubbleMenuRef = useRef<HTMLDivElement | null>(null);
@@ -890,6 +943,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const [phaseCount, setPhaseCount] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [phasesOpen, setPhasesOpen] = useState(false);
@@ -1195,9 +1249,113 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const phaseItems = Array.from({ length: phaseCount }, (_, index) => index + 1);
   const floodlightDots = Array.from({ length: 12 }, (_, index) => index);
   const activeTacticalPenColor = tacticalPenColor;
+  const closeActionsMenu = () => setActionsOpen(false);
   const closeControlsMenu = () => setControlsOpen(false);
   const goHome = () => {
+    const shouldLeave = window.confirm("Leave FlowLab and return Home?");
+    if (!shouldLeave) return;
     window.location.assign("/board");
+  };
+  const handleShareImage = async () => {
+    closeActionsMenu();
+    const canvas = hostRef.current?.querySelector("canvas") as HTMLCanvasElement | null;
+    if (!canvas) return;
+
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob((nextBlob) => resolve(nextBlob), "image/png");
+    });
+    if (!blob) return;
+
+    const fileName = `flowlab-${new Date().toISOString().replace(/[:.]/g, "-")}.png`;
+    const typedNavigator = navigator as Navigator & {
+      share?: (data: ShareData) => Promise<void>;
+      canShare?: (data: ShareData) => boolean;
+    };
+    if (typedNavigator.share) {
+      const file = new File([blob], fileName, { type: "image/png" });
+      const sharePayload: ShareData = {
+        title: "FlowLab Tactics",
+        text: "FlowLab tactical board snapshot",
+        files: [file],
+      };
+      if (!typedNavigator.canShare || typedNavigator.canShare(sharePayload)) {
+        try {
+          await typedNavigator.share(sharePayload);
+          return;
+        } catch {
+          // Fall through to download if share is dismissed or unsupported.
+        }
+      }
+    }
+
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = objectUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1200);
+  };
+  const handleRecordClip = () => {
+    closeActionsMenu();
+    const activeRecorder = clipRecorderRef.current?.recorder;
+    if (activeRecorder && activeRecorder.state !== "inactive") {
+      activeRecorder.stop();
+      return;
+    }
+
+    const canvas = hostRef.current?.querySelector("canvas") as HTMLCanvasElement | null;
+    if (!canvas || typeof MediaRecorder === "undefined" || typeof canvas.captureStream !== "function") {
+      return;
+    }
+
+    const stream = canvas.captureStream(30);
+    const mimeCandidates = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"];
+    const mimeType = mimeCandidates.find((candidate) => MediaRecorder.isTypeSupported(candidate));
+    const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+    const chunks: BlobPart[] = [];
+
+    recorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        chunks.push(event.data);
+      }
+    };
+
+    recorder.onstop = () => {
+      const completed = clipRecorderRef.current;
+      if (!completed) return;
+      if (completed.stopTimer != null) {
+        window.clearTimeout(completed.stopTimer);
+      }
+      completed.stream.getTracks().forEach((track) => track.stop());
+      clipRecorderRef.current = null;
+
+      if (completed.chunks.length === 0) return;
+      const blob = new Blob(completed.chunks, {
+        type: completed.recorder.mimeType || "video/webm",
+      });
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = `flowlab-clip-${new Date().toISOString().replace(/[:.]/g, "-")}.webm`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1200);
+    };
+
+    recorder.start();
+    const stopTimer = window.setTimeout(() => {
+      if (recorder.state !== "inactive") {
+        recorder.stop();
+      }
+    }, 5000);
+    clipRecorderRef.current = { recorder, stream, chunks, stopTimer };
+  };
+  const handleActionsHome = () => {
+    closeActionsMenu();
+    goHome();
   };
 
   const setWhiteboardCount = (team: "BLUE" | "RED", count: number) => {
@@ -1680,15 +1838,6 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             <button
               type="button"
               className="control-button"
-              style={{ ...CONTROL_BUTTON_STYLE, ...HOME_MENU_ICON_BUTTON_STYLE, minWidth: "34px" }}
-              onClick={goHome}
-              aria-label="Go to Home"
-            >
-              ⌂
-            </button>
-            <button
-              type="button"
-              className="control-button"
               disabled={isPlaybackLocked}
               style={isPlaybackLocked ? DISABLED_CONTROL_BUTTON_STYLE : SET_START_BUTTON_STYLE}
               onClick={() => {
@@ -1892,13 +2041,60 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             </div>
           </div>
         ) : null}
+        {!isWhiteboardMode && actionsOpen ? (
+          <div style={ACTIONS_POPOUT_STYLE}>
+            <button
+              type="button"
+              className="control-button"
+              style={ACTIONS_MENU_BUTTON_STYLE}
+              onClick={() => {
+                void handleShareImage();
+              }}
+            >
+              Share Image
+            </button>
+            <button type="button" className="control-button" style={ACTIONS_MENU_BUTTON_STYLE} onClick={handleRecordClip}>
+              Record Clip
+            </button>
+            <button type="button" className="control-button" style={ACTIONS_MENU_BUTTON_STYLE} onClick={handleActionsHome}>
+              Home
+            </button>
+          </div>
+        ) : null}
+        {!isWhiteboardMode ? (
+          <button
+            type="button"
+            className="floating-bubble"
+            style={ACTIONS_BUBBLE_STYLE}
+            aria-label="Open actions"
+            onClick={() =>
+              setActionsOpen((open) => {
+                const next = !open;
+                if (next) {
+                  setControlsOpen(false);
+                }
+                return next;
+              })
+            }
+          >
+            ⋯
+          </button>
+        ) : null}
         {!isWhiteboardMode ? (
           <button
             type="button"
             className="floating-bubble"
             style={LEFT_BUBBLE_STYLE}
             aria-label="Open controls"
-            onClick={() => setControlsOpen((open) => !open)}
+            onClick={() =>
+              setControlsOpen((open) => {
+                const next = !open;
+                if (next) {
+                  setActionsOpen(false);
+                }
+                return next;
+              })
+            }
           >
             Ctrl
           </button>
