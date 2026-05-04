@@ -620,6 +620,95 @@ const UNDO_PHASE_BUTTON_STYLE: CSSProperties = {
     "0 6px 20px rgba(0, 0, 0, 0.45), 0 0 18px rgba(168, 85, 247, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.25)",
 };
 
+const RECORD_CLIP_BUTTON_STYLE: CSSProperties = {
+  ...CONTROL_BUTTON_STYLE,
+  border: "1px solid rgba(125, 211, 252, 0.58)",
+  background: "rgba(10, 30, 46, 0.72)",
+  boxShadow:
+    "0 6px 20px rgba(0, 0, 0, 0.45), 0 0 16px rgba(56, 189, 248, 0.24), inset 0 1px 2px rgba(255, 255, 255, 0.16)",
+};
+
+const RECORD_GUIDE_STYLE: CSSProperties = {
+  position: "fixed",
+  left: "50%",
+  transform: "translateX(-50%)",
+  bottom: "max(56px, calc(env(safe-area-inset-bottom, 0px) + 54px))",
+  width: "min(320px, calc(100vw - 24px))",
+  display: "flex",
+  flexDirection: "column",
+  gap: "8px",
+  padding: "10px",
+  borderRadius: "14px",
+  border: "1px solid rgba(163, 190, 212, 0.24)",
+  background: "rgba(10, 19, 24, 0.78)",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+  boxShadow: "0 12px 28px rgba(2, 8, 15, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08)",
+  zIndex: 24,
+};
+
+const RECORD_GUIDE_TITLE_STYLE: CSSProperties = {
+  margin: 0,
+  color: "#e4eff8",
+  fontSize: "12px",
+  fontWeight: 700,
+  letterSpacing: "0.12px",
+  fontFamily: "Inter, system-ui, sans-serif",
+};
+
+const RECORD_GUIDE_TEXT_STYLE: CSSProperties = {
+  margin: 0,
+  color: "rgba(215, 232, 245, 0.88)",
+  fontSize: "10px",
+  lineHeight: 1.35,
+  fontFamily: "Inter, system-ui, sans-serif",
+};
+
+const RECORD_GUIDE_LIST_STYLE: CSSProperties = {
+  ...RECORD_GUIDE_TEXT_STYLE,
+  margin: 0,
+  paddingLeft: "16px",
+  display: "grid",
+  gap: "3px",
+};
+
+const RECORD_GUIDE_NOTE_STYLE: CSSProperties = {
+  ...RECORD_GUIDE_TEXT_STYLE,
+  color: "rgba(196, 220, 240, 0.78)",
+};
+
+const RECORD_GUIDE_ACTIONS_STYLE: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  gap: "6px",
+};
+
+const RECORD_GUIDE_BUTTON_STYLE: CSSProperties = {
+  ...COACH_HUB_TOOL_BUTTON_STYLE,
+  minWidth: 0,
+  height: "32px",
+};
+
+const RECORD_GUIDE_CLEAN_BUTTON_STYLE: CSSProperties = {
+  ...RECORD_GUIDE_BUTTON_STYLE,
+  border: "1px solid rgba(125, 211, 252, 0.56)",
+  background: "rgba(30, 64, 175, 0.52)",
+  color: "#f3f8ff",
+};
+
+const EXIT_CLEAN_VIEW_BUTTON_STYLE: CSSProperties = {
+  ...HOME_MENU_ICON_BUTTON_STYLE,
+  position: "fixed",
+  top: "max(12px, calc(env(safe-area-inset-top, 0px) + 10px))",
+  right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
+  width: "auto",
+  minWidth: "98px",
+  padding: "0 10px",
+  fontSize: "11px",
+  fontWeight: 650,
+  zIndex: 24,
+};
+
 const WHITEBOARD_TOOLS_BUTTON_STYLE: CSSProperties = {
   ...COACH_HUB_TOOL_BUTTON_STYLE,
   minWidth: 0,
@@ -917,6 +1006,9 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const hostRef = useRef<HTMLDivElement | null>(null);
   const surfaceRef = useRef<TacticalPadLiteSurface | null>(null);
   const tacticalItemCounterRef = useRef(0);
+  const recordGuideButtonRef = useRef<HTMLButtonElement | null>(null);
+  const recordGuidePanelRef = useRef<HTMLDivElement | null>(null);
+  const cleanViewRestoreRef = useRef<{ controlsOpen: boolean; toolsOpen: boolean; phasesOpen: boolean } | null>(null);
   const whiteboardBubbleButtonRef = useRef<HTMLButtonElement | null>(null);
   const whiteboardBubbleMenuRef = useRef<HTMLDivElement | null>(null);
   const whiteboardHomeButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -963,6 +1055,8 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const [controlsOpen, setControlsOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [phasesOpen, setPhasesOpen] = useState(false);
+  const [recordGuideOpen, setRecordGuideOpen] = useState(false);
+  const [recordCleanView, setRecordCleanView] = useState(false);
   const isStatsMode = mode === "stats";
   const isWhiteboardMode = mode === "whiteboard";
   const wakeLockRef = useRef<{ release: () => Promise<void> } | null>(null);
@@ -1231,6 +1325,38 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   }, [isWhiteboardMode, whiteboardBubbleOpen]);
 
   useEffect(() => {
+    if (isWhiteboardMode || !recordGuideOpen) return;
+
+    const handlePointerDownOutside = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (recordGuideButtonRef.current?.contains(target)) return;
+      if (recordGuidePanelRef.current?.contains(target)) return;
+      setRecordGuideOpen(false);
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      setRecordGuideOpen(false);
+    };
+
+    document.addEventListener("pointerdown", handlePointerDownOutside);
+    window.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDownOutside);
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [isWhiteboardMode, recordGuideOpen]);
+
+  useEffect(() => {
+    if (!(isWhiteboardMode || isStatsMode)) return;
+    if (!recordGuideOpen && !recordCleanView) return;
+    setRecordGuideOpen(false);
+    setRecordCleanView(false);
+    cleanViewRestoreRef.current = null;
+  }, [isWhiteboardMode, isStatsMode, recordGuideOpen, recordCleanView]);
+
+  useEffect(() => {
     if (!isWhiteboardMode || !whiteboardBubbleOpen) return;
 
     const handlePointerDownOutside = (event: PointerEvent) => {
@@ -1268,6 +1394,31 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const closeControlsMenu = () => setControlsOpen(false);
   const goHome = () => {
     window.location.assign("/board");
+  };
+  const openRecordGuide = () => {
+    setRecordGuideOpen(true);
+  };
+  const closeRecordGuide = () => {
+    setRecordGuideOpen(false);
+  };
+  const enterRecordCleanView = () => {
+    if (cleanViewRestoreRef.current == null) {
+      cleanViewRestoreRef.current = { controlsOpen, toolsOpen, phasesOpen };
+    }
+    setRecordGuideOpen(false);
+    setRecordCleanView(true);
+    setToolsOpen(false);
+    setPhasesOpen(false);
+    setControlsOpen(true);
+  };
+  const exitRecordCleanView = () => {
+    setRecordCleanView(false);
+    const restoreState = cleanViewRestoreRef.current;
+    cleanViewRestoreRef.current = null;
+    if (!restoreState) return;
+    setControlsOpen(restoreState.controlsOpen);
+    setToolsOpen(restoreState.toolsOpen);
+    setPhasesOpen(restoreState.phasesOpen);
   };
   const openWhiteboardHomeConfirm = () => {
     if (whiteboardHomeConfirmOpen) return;
@@ -1736,7 +1887,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             ) : null}
           </>
         ) : null}
-        {!isWhiteboardMode ? (
+        {!isWhiteboardMode && !recordCleanView ? (
           <button
             type="button"
             style={PHASES_CHIP_STYLE}
@@ -1746,7 +1897,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             Phases: {phaseCount}
           </button>
         ) : null}
-        {!isWhiteboardMode && phasesOpen ? (
+        {!isWhiteboardMode && !recordCleanView && phasesOpen ? (
           <div style={PHASES_TRAY_STYLE}>
             {phaseItems.length > 0 ? (
               phaseItems.map((phase) => (
@@ -1759,7 +1910,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             )}
           </div>
         ) : null}
-        {!isWhiteboardMode && controlsOpen ? (
+        {!isWhiteboardMode && (controlsOpen || recordCleanView) ? (
           <div style={CONTROLS_POPOUT_STYLE}>
             <button
               type="button"
@@ -1813,6 +1964,15 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
               Pause
             </button>
             <button
+              ref={recordGuideButtonRef}
+              type="button"
+              className="control-button"
+              style={RECORD_CLIP_BUTTON_STYLE}
+              onClick={openRecordGuide}
+            >
+              Record Clip
+            </button>
+            <button
               type="button"
               className="control-button"
               disabled={phaseCount <= 0}
@@ -1839,7 +1999,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             </button>
           </div>
         ) : null}
-        {!isWhiteboardMode && toolsOpen ? (
+        {!isWhiteboardMode && !recordCleanView && toolsOpen ? (
           <div style={COACH_HUB_PANEL_STYLE}>
             <div style={COACH_HUB_SECTION_STYLE}>
               <p style={COACH_HUB_SECTION_TITLE_STYLE}>Tools</p>
@@ -1976,7 +2136,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             </div>
           </div>
         ) : null}
-        {!isWhiteboardMode ? (
+        {!isWhiteboardMode && !recordCleanView ? (
           <button
             type="button"
             className="floating-bubble"
@@ -1987,7 +2147,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             Ctrl
           </button>
         ) : null}
-        {!isWhiteboardMode ? (
+        {!isWhiteboardMode && !recordCleanView ? (
           <button
             type="button"
             className="floating-bubble floating-bubble-tool"
@@ -2001,6 +2161,31 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                 <span style={TOOL_BUBBLE_MONOGRAM_ACCENT_STYLE} />
               </span>
             </span>
+          </button>
+        ) : null}
+        {!isWhiteboardMode && recordGuideOpen ? (
+          <div ref={recordGuidePanelRef} style={RECORD_GUIDE_STYLE} role="dialog" aria-modal="false">
+            <p style={RECORD_GUIDE_TITLE_STYLE}>Record this play</p>
+            <ol style={RECORD_GUIDE_LIST_STYLE}>
+              <li>Swipe down from the top of your phone.</li>
+              <li>Tap Screen Record.</li>
+              <li>Press Play in PitchFlow.</li>
+              <li>Stop recording and share to WhatsApp.</li>
+            </ol>
+            <p style={RECORD_GUIDE_NOTE_STYLE}>PitchFlow does not record your screen — your phone does.</p>
+            <div style={RECORD_GUIDE_ACTIONS_STYLE}>
+              <button type="button" style={RECORD_GUIDE_BUTTON_STYLE} onClick={closeRecordGuide}>
+                Got it
+              </button>
+              <button type="button" style={RECORD_GUIDE_CLEAN_BUTTON_STYLE} onClick={enterRecordCleanView}>
+                Clean View
+              </button>
+            </div>
+          </div>
+        ) : null}
+        {!isWhiteboardMode && recordCleanView ? (
+          <button type="button" style={EXIT_CLEAN_VIEW_BUTTON_STYLE} onClick={exitRecordCleanView}>
+            Exit Clean View
           </button>
         ) : null}
         {isWhiteboardMode ? (
