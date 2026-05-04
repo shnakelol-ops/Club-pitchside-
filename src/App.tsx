@@ -1961,15 +1961,22 @@ export default function App() {
   }, [mode.pitchSport]);
 
   useEffect(() => {
-    const timerId = window.setInterval(() => {
-      const next = tickMatchClock(matchEngineStateRef.current);
-      if (next === matchEngineStateRef.current) return;
+    const syncRealtimeClock = () => {
+      const current = matchEngineStateRef.current;
+      const next = tickMatchClock(current, Date.now());
+      if (next === current) return;
       matchEngineStateRef.current = next;
       setMatchTimeSeconds(next.matchTimeSeconds);
-    }, 1000);
-
+    };
+    const timerId = window.setInterval(syncRealtimeClock, 250);
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== "visible") return;
+      syncRealtimeClock();
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {
       window.clearInterval(timerId);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, []);
 
