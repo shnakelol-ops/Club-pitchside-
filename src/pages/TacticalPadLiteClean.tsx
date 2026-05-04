@@ -640,6 +640,8 @@ const WHITEBOARD_TOOLS_BUTTON_STYLE: CSSProperties = {
   background: "rgba(224, 233, 242, 0.72)",
   color: "#1f3348",
   fontWeight: 600,
+  height: "30px",
+  padding: "0 7px",
 };
 
 const PHASES_CHIP_STYLE: CSSProperties = {
@@ -722,16 +724,16 @@ const WHITEBOARD_COUNT_SELECTOR_STYLE: CSSProperties = {
   left: "max(12px, calc(env(safe-area-inset-left, 0px) + 10px))",
   top: "max(54px, calc(env(safe-area-inset-top, 0px) + 52px))",
   zIndex: 22,
-  width: "166px",
+  width: "154px",
   display: "flex",
   flexDirection: "column",
-  gap: "6px",
-  padding: "7px",
+  gap: "5px",
+  padding: "6px",
   borderRadius: "10px",
   border: "1px solid rgba(148, 163, 184, 0.22)",
-  background: "rgba(10, 20, 35, 0.8)",
-  backdropFilter: "blur(8px)",
-  WebkitBackdropFilter: "blur(8px)",
+  background: "rgba(10, 20, 35, 0.92)",
+  backdropFilter: "blur(10px)",
+  WebkitBackdropFilter: "blur(10px)",
   boxShadow: "0 10px 22px rgba(4, 12, 24, 0.3)",
 };
 
@@ -743,6 +745,12 @@ const WHITEBOARD_COUNT_SELECTOR_TITLE_STYLE: CSSProperties = {
   textTransform: "uppercase",
   margin: 0,
   fontFamily: "Inter, system-ui, sans-serif",
+};
+
+const WHITEBOARD_SUBSECTION_TITLE_STYLE: CSSProperties = {
+  ...WHITEBOARD_COUNT_SELECTOR_TITLE_STYLE,
+  fontSize: "8px",
+  opacity: 0.76,
 };
 
 const WHITEBOARD_TEAM_SELECTOR_ROW_STYLE: CSSProperties = {
@@ -850,10 +858,11 @@ const WHITEBOARD_HOME_BUTTON_STYLE: CSSProperties = {
 const WHITEBOARD_MOVE_BUTTON_STYLE: CSSProperties = {
   ...WHITEBOARD_TOOLS_BUTTON_STYLE,
   position: "absolute",
-  right: "max(16px, calc(env(safe-area-inset-right, 0px) + 16px))",
-  bottom: "max(16px, calc(env(safe-area-inset-bottom, 0px) + 16px))",
-  minWidth: "74px",
-  height: "34px",
+  right: "max(10px, calc(env(safe-area-inset-right, 0px) + 10px))",
+  bottom: "max(10px, calc(env(safe-area-inset-bottom, 0px) + 10px))",
+  minWidth: "66px",
+  height: "31px",
+  borderRadius: "12px",
   zIndex: 22,
 };
 
@@ -881,7 +890,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     null,
   );
   const [whiteboardBubbleMenuSize, setWhiteboardBubbleMenuSize] = useState<{ width: number; height: number }>({
-    width: 176,
+    width: 154,
     height: 300,
   });
   const [whiteboardBlueColor, setWhiteboardBlueColor] = useState<WhiteboardTokenColor>("blue");
@@ -1376,7 +1385,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
       maxHeight: `${Math.max(120, viewport.height - WHITEBOARD_BUBBLE_MARGIN * 2)}px`,
       overflowY: "auto",
       overflowX: "hidden",
-      width: "176px",
+      width: "154px",
       zIndex: 22,
     } as const;
   })();
@@ -1518,7 +1527,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                 >
                   Clear All
                 </button>
-                <p style={WHITEBOARD_COUNT_SELECTOR_TITLE_STYLE}>Drawing colour</p>
+                <p style={{ ...WHITEBOARD_SUBSECTION_TITLE_STYLE, marginTop: "6px" }}>Drawing colour</p>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: "4px" }}>
                   {WHITEBOARD_PEN_COLOR_CHOICES.map((choice) => {
                     const isActive = whiteboardPenColor === choice.value;
@@ -1544,7 +1553,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                     );
                   })}
                 </div>
-                <p style={WHITEBOARD_COUNT_SELECTOR_TITLE_STYLE}>Player colours</p>
+                <p style={{ ...WHITEBOARD_SUBSECTION_TITLE_STYLE, marginTop: "8px" }}>Player colours</p>
                 <div style={{ display: "grid", gridTemplateColumns: "44px 1fr", gap: "6px", alignItems: "center" }}>
                   <span style={{ color: "#dbe7f5", fontSize: "10px", fontWeight: 600, fontFamily: "Inter, system-ui, sans-serif" }}>
                     Team A
