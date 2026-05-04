@@ -12,13 +12,13 @@ import {
   type MatchState,
 } from "./core/match/match-state-store";
 import { createPixiPitchSurface } from "./core/pitch/create-pixi-pitch-surface";
-import { type MatchEvent, type MatchEventKind } from "./core/stats/stats-event-model";
+import { MATCH_EVENT_KINDS, type MatchEvent, type MatchEventKind } from "./core/stats/stats-event-model";
 import { gaaModeConfig, type GaaModeKey } from "./config/gaaModeConfig";
 
 type VisibilityMode = "ALL" | "LAST_5" | "LAST_10";
 type TeamScore = { goals: number; points: number; total: number };
 type TeamSide = "HOME" | "AWAY";
-type UtilityPanel = "PLAYERS" | "REVIEW" | "SUMMARY" | null;
+type UtilityPanel = "PLAYERS" | "REVIEW" | "SUMMARY" | "SAVED_MATCHES" | null;
 type ReviewHalf = "H1" | "H2" | "FULL";
 type ReviewEventFilter =
   | "ALL"
@@ -46,6 +46,17 @@ type LoggedMatchEvent = MatchEvent & {
   squadId?: string;
   team?: TeamSide;
 };
+type SavedMatch = {
+  id: string;
+  createdAt: number;
+  label: string;
+  homeTeamName: string;
+  awayTeamName: string;
+  venue: string;
+  events: readonly LoggedMatchEvent[];
+  eventCount: number;
+  scorelineSnapshot: string;
+};
 
 type ViewportRect = { left: number; top: number; width: number; height: number };
 
@@ -59,6 +70,8 @@ const MODE_MENU_OPTIONS: ReadonlyArray<{ key: GaaModeKey; label: string }> = [
 ];
 const FORMATION_ROW_SIZES = [1, 3, 3, 2, 3, 3] as const;
 const SQUADS_STORAGE_KEY = "pitchsideclub.squads";
+const SAVED_MATCHES_STORAGE_KEY = "pitchflow_matches_v1";
+const MAX_SAVED_MATCHES = 10;
 const REVIEW_FILTER_OPTIONS: ReadonlyArray<{ id: ReviewEventFilter; label: string }> = [
   { id: "ALL", label: "All" },
   { id: "SCORES", label: "Scores" },
@@ -91,6 +104,146 @@ const REVIEW_FILTER_KINDS: Record<
   FREE_WON: ["FREE_WON"],
   FREE_CONCEDED: ["FREE_CONCEDED"],
 };
+const MATCH_EVENT_KIND_SET = new Set<MatchEventKind>(MATCH_EVENT_KINDS);
+
+function parseStoredLoggedMatchEvent(input: unknown): LoggedMatchEvent | null {
+  if (!input || typeof input !== "object") return null;
+  const maybeId = "id" in input ? input.id : null;
+  const maybeKind = "kind" in input ? input.kind : null;
+  const maybeNx = "nx" in input ? input.nx : null;
+  const maybeNy = "ny" in input ? input.ny : null;
+  const maybeHalf = "half" in input ? input.half : null;
+  const maybeTimestamp = "timestamp" in input ? input.timestamp : null;
+
+  if (typeof maybeId !== "string" || maybeId.trim().length === 0) return null;
+  if (typeof maybeKind !== "string" || !MATCH_EVENT_KIND_SET.has(maybeKind as MatchEventKind)) return null;
+  if (typeof maybeNx !== "number" || !Number.isFinite(maybeNx)) return null;
+  if (typeof maybeNy !== "number" || !Number.isFinite(maybeNy)) return null;
+  if (maybeHalf !== 1 && maybeHalf !== 2) return null;
+  if (typeof maybeTimestamp !== "number" || !Number.isFinite(maybeTimestamp)) return null;
+
+  const next: LoggedMatchEvent = {
+    id: maybeId,
+    kind: maybeKind as MatchEventKind,
+    nx: maybeNx,
+    ny: maybeNy,
+    half: maybeHalf,
+    timestamp: maybeTimestamp,
+  };
+
+  const maybePlayerId = "playerId" in input ? input.playerId : null;
+  if (typeof maybePlayerId === "string" && maybePlayerId.trim().length > 0) {
+    next.playerId = maybePlayerId;
+  }
+
+  const maybePlayerName = "playerName" in input ? input.playerName : null;
+  if (typeof maybePlayerName === "string" && maybePlayerName.trim().length > 0) {
+    next.playerName = maybePlayerName;
+  }
+
+  const maybePlayerNumber = "playerNumber" in input ? input.playerNumber : null;
+  if (typeof maybePlayerNumber === "number" && Number.isFinite(maybePlayerNumber)) {
+    next.playerNumber = maybePlayerNumber;
+  }
+
+  const maybeSquadId = "squadId" in input ? input.squadId : null;
+  if (typeof maybeSquadId === "string" && maybeSquadId.trim().length > 0) {
+    next.squadId = maybeSquadId;
+  }
+
+  const maybeTeam = "team" in input ? input.team : null;
+  if (maybeTeam === "HOME" || maybeTeam === "AWAY") {
+    next.team = maybeTeam;
+  }
+
+  return next;
+}
+
+function parseStoredSavedMatch(input: unknown): SavedMatch | null {
+  if (!input || typeof input !== "object") return null;
+  const maybeId = "id" in input ? input.id : null;
+  const maybeCreatedAt = "createdAt" in input ? input.createdAt : null;
+  const maybeLabel = "label" in input ? input.label : null;
+  const maybeHomeTeamName = "homeTeamName" in input ? input.homeTeamName : null;
+  const maybeAwayTeamName = "awayTeamName" in input ? input.awayTeamName : null;
+  const maybeVenue = "venue" in input ? input.venue : null;
+  const maybeEvents = "events" in input ? input.events : null;
+  const maybeEventCount = "eventCount" in input ? input.eventCount : null;
+  const maybeScorelineSnapshot = "scorelineSnapshot" in input ? input.scorelineSnapshot : null;
+
+  if (typeof maybeId !== "string" || maybeId.trim().length === 0) return null;
+  if (typeof maybeCreatedAt !== "number" || !Number.isFinite(maybeCreatedAt) || maybeCreatedAt <= 0) return null;
+  if (typeof maybeLabel !== "string" || maybeLabel.trim().length === 0) return null;
+  if (typeof maybeHomeTeamName !== "string" || maybeHomeTeamName.trim().length === 0) return null;
+  if (typeof maybeAwayTeamName !== "string" || maybeAwayTeamName.trim().length === 0) return null;
+  if (typeof maybeVenue !== "string" || maybeVenue.trim().length === 0) return null;
+  if (!Array.isArray(maybeEvents) || maybeEvents.length === 0) return null;
+  if (typeof maybeEventCount !== "number" || !Number.isFinite(maybeEventCount)) return null;
+  if (typeof maybeScorelineSnapshot !== "string" || maybeScorelineSnapshot.trim().length === 0) return null;
+
+  const parsedEvents = maybeEvents.map((event) => parseStoredLoggedMatchEvent(event));
+  if (parsedEvents.some((event) => event == null)) return null;
+  const events = parsedEvents.filter((event): event is LoggedMatchEvent => event != null);
+  if (events.length === 0) return null;
+  if (Math.floor(maybeEventCount) !== events.length) return null;
+
+  return {
+    id: maybeId,
+    createdAt: maybeCreatedAt,
+    label: maybeLabel.trim().slice(0, 64),
+    homeTeamName: maybeHomeTeamName.trim().slice(0, 24),
+    awayTeamName: maybeAwayTeamName.trim().slice(0, 24),
+    venue: maybeVenue.trim().slice(0, 64),
+    events,
+    eventCount: events.length,
+    scorelineSnapshot: maybeScorelineSnapshot.trim().slice(0, 120),
+  };
+}
+
+function sanitizeSavedMatches(matches: readonly SavedMatch[]): SavedMatch[] {
+  return [...matches]
+    .filter(
+      (match) =>
+        match.events.length > 0 &&
+        match.eventCount > 0 &&
+        match.homeTeamName.trim().length > 0 &&
+        match.awayTeamName.trim().length > 0 &&
+        match.venue.trim().length > 0,
+    )
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .slice(0, MAX_SAVED_MATCHES);
+}
+
+function parseStoredSavedMatches(input: string | null): SavedMatch[] {
+  if (!input) return [];
+  try {
+    const parsed = JSON.parse(input);
+    if (!Array.isArray(parsed)) return [];
+    const matches = parsed
+      .map((record) => parseStoredSavedMatch(record))
+      .filter((record): record is SavedMatch => record != null);
+    return sanitizeSavedMatches(matches);
+  } catch {
+    return [];
+  }
+}
+
+function persistSavedMatches(matches: readonly SavedMatch[]) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(SAVED_MATCHES_STORAGE_KEY, JSON.stringify(sanitizeSavedMatches(matches)));
+}
+
+function formatSavedMatchCreatedAt(createdAtMillis: number): string {
+  if (!Number.isFinite(createdAtMillis) || createdAtMillis <= 0) return "Unknown time";
+  const createdAtDate = new Date(createdAtMillis);
+  if (Number.isNaN(createdAtDate.getTime())) return "Unknown time";
+  const day = String(createdAtDate.getDate()).padStart(2, "0");
+  const month = String(createdAtDate.getMonth() + 1).padStart(2, "0");
+  const year = String(createdAtDate.getFullYear());
+  const hour = String(createdAtDate.getHours()).padStart(2, "0");
+  const minute = String(createdAtDate.getMinutes()).padStart(2, "0");
+  return `${day}/${month}/${year} ${hour}:${minute}`;
+}
 function newLocalEventId(): string {
   const c = globalThis.crypto;
   if (c && "randomUUID" in c && typeof c.randomUUID === "function") {
@@ -222,6 +375,7 @@ type MyTeamPlayerNote = {
 function deriveMyTeamReport(
   loggedEvents: readonly LoggedMatchEvent[],
   matchState: MatchState,
+  teamNames: { HOME: string; AWAY: string },
 ): string[] {
   const reportEvents =
     matchState === "HALF_TIME"
@@ -229,6 +383,8 @@ function deriveMyTeamReport(
       : loggedEvents;
   const homeScore = computeTeamScore(reportEvents, "HOME");
   const awayScore = computeTeamScore(reportEvents, "AWAY");
+  const homeTeamName = teamNames.HOME.trim() || "Team A";
+  const awayTeamName = teamNames.AWAY.trim() || "Team B";
 
   let goals = 0;
   let points = 0;
@@ -386,7 +542,7 @@ function deriveMyTeamReport(
   const lines = [
     reportPhaseLabel,
     "",
-    `Team A ${formatGaelicScore(homeScore)} (${homeScore.total}) v Team B ${formatGaelicScore(awayScore)} (${awayScore.total})`,
+    `${homeTeamName} ${formatGaelicScore(homeScore)} (${homeScore.total}) v ${awayTeamName} ${formatGaelicScore(awayScore)} (${awayScore.total})`,
     "",
     "SHOOTING",
     `${goals}G · ${points}P · ${twoPointers}x2P`,
@@ -1879,6 +2035,12 @@ export default function StatsModeSurface() {
   const [showReviewStrip, setShowReviewStrip] = useState(false);
   const [selectedReviewEventId, setSelectedReviewEventId] = useState<string | null>(null);
   const [loggedEvents, setLoggedEvents] = useState<readonly LoggedMatchEvent[]>([]);
+  const [savedMatches, setSavedMatches] = useState<SavedMatch[]>(() => {
+    if (typeof window === "undefined") return [];
+    return parseStoredSavedMatches(window.localStorage.getItem(SAVED_MATCHES_STORAGE_KEY));
+  });
+  const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
+  const [saveLoadBlockedReason, setSaveLoadBlockedReason] = useState<string | null>(null);
   const [visibilityMode, setVisibilityMode] = useState<VisibilityMode>("ALL");
   const [matchState, setMatchState] = useState<MatchState>("PRE_MATCH");
   const [currentHalf, setCurrentHalf] = useState<1 | 2>(1);
@@ -2278,6 +2440,20 @@ export default function StatsModeSurface() {
   }, [squads]);
 
   useEffect(() => {
+    persistSavedMatches(savedMatches);
+  }, [savedMatches]);
+
+  useEffect(() => {
+    if (!saveFeedback) return;
+    const timerId = window.setTimeout(() => {
+      setSaveFeedback(null);
+    }, 2000);
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, [saveFeedback]);
+
+  useEffect(() => {
     if (canEditTeamNames) return;
     setEditingTeam(null);
     setTeamNameDraft("");
@@ -2461,8 +2637,64 @@ export default function StatsModeSurface() {
     setIsPickerOpen(false);
   };
 
+  const openSavedMatchesPanel = () => {
+    setShowReviewStrip(false);
+    setUtilityPanel("SAVED_MATCHES");
+    setIsUtilityOpen(false);
+    setIsPickerOpen(false);
+    setSaveLoadBlockedReason(null);
+  };
+
+  const saveCurrentMatchSnapshot = () => {
+    if (loggedEvents.length === 0) {
+      setSaveFeedback("No events to save");
+      return;
+    }
+    try {
+      const snapshotEvents = [...loggedEvents];
+      const snapshotHomeScore = computeTeamScore(snapshotEvents, "HOME");
+      const snapshotAwayScore = computeTeamScore(snapshotEvents, "AWAY");
+      const homeTeamName = teamNames.HOME.trim() || "Team A";
+      const awayTeamName = teamNames.AWAY.trim() || "Opponent";
+      const venue = venueName.trim() || "Unknown venue";
+      const savedRecord: SavedMatch = {
+        id: `saved-match-${newLocalEventId()}`,
+        createdAt: Date.now(),
+        label: `${homeTeamName} v ${awayTeamName}`,
+        homeTeamName,
+        awayTeamName,
+        venue,
+        events: snapshotEvents,
+        eventCount: snapshotEvents.length,
+        scorelineSnapshot: `${homeTeamName} ${formatGaelicScore(snapshotHomeScore)} (${snapshotHomeScore.total}) v ${awayTeamName} ${formatGaelicScore(snapshotAwayScore)} (${snapshotAwayScore.total})`,
+      };
+      setSavedMatches((prev) => sanitizeSavedMatches([savedRecord, ...prev]));
+      setSaveFeedback("Match saved");
+      setSaveLoadBlockedReason(null);
+    } catch {
+      setSaveFeedback("Could not save match");
+    }
+  };
+
+  const loadSavedMatchRecord = (record: SavedMatch) => {
+    const parsedRecord = parseStoredSavedMatch(record);
+    if (!parsedRecord || parsedRecord.events.length === 0) {
+      setSaveLoadBlockedReason("Load blocked: saved match is invalid.");
+      return;
+    }
+    setLoggedEvents(parsedRecord.events);
+    setTeamNames({
+      HOME: parsedRecord.homeTeamName,
+      AWAY: parsedRecord.awayTeamName,
+    });
+    setVenueName(parsedRecord.venue);
+    setSaveLoadBlockedReason(null);
+    setUtilityPanel(null);
+  };
+
   const closeUtilityPanel = () => {
     setUtilityPanel(null);
+    setSaveLoadBlockedReason(null);
   };
 
   const goHome = () => {
@@ -2861,8 +3093,8 @@ export default function StatsModeSurface() {
       return player ? `#${player.number} ${player.name}` : null;
     })();
   const myTeamReport = useMemo(
-    () => deriveMyTeamReport(loggedEvents, matchState),
-    [loggedEvents, matchState],
+    () => deriveMyTeamReport(loggedEvents, matchState, teamNames),
+    [loggedEvents, matchState, teamNames],
   );
 
   const homeScore = useMemo(() => computeTeamScore(loggedEvents, "HOME"), [loggedEvents]);
@@ -3618,6 +3850,89 @@ export default function StatsModeSurface() {
           </button>
         </div>
       ) : null}
+      {utilityPanel === "SAVED_MATCHES" ? (
+        <div className={utilityPanelClass} role="dialog" aria-label="Saved matches">
+          <div className="utility-review-scroll">
+            <div className="utility-panel-title">SAVED MATCHES</div>
+            {saveLoadBlockedReason ? (
+              <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.9, textTransform: "none" }}>
+                {saveLoadBlockedReason}
+              </div>
+            ) : null}
+            {savedMatches.length > 0 ? (
+              savedMatches.map((savedMatch, index) => {
+                const isLatest = index === 0;
+                return (
+                  <div
+                    key={savedMatch.id}
+                    style={{
+                      border: isLatest ? "1px solid rgba(124,255,114,0.56)" : "1px solid rgba(148,163,184,0.32)",
+                      borderRadius: "8px",
+                      padding: "7px",
+                      background: isLatest ? "rgba(22,101,52,0.22)" : "rgba(15,23,42,0.52)",
+                      marginBottom: "6px",
+                      boxShadow: isLatest ? "0 0 0 1px rgba(124,255,114,0.22)" : "none",
+                    }}
+                  >
+                    <div
+                      className="utility-panel-title"
+                      style={{
+                        fontSize: "9px",
+                        opacity: 0.98,
+                        textTransform: "none",
+                        fontWeight: 700,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: "8px",
+                      }}
+                    >
+                      <span>
+                        {savedMatch.homeTeamName} v {savedMatch.awayTeamName}
+                      </span>
+                      {isLatest ? (
+                        <span
+                          style={{
+                            fontSize: "8px",
+                            fontWeight: 700,
+                            letterSpacing: "0.2px",
+                            color: "#7CFF72",
+                          }}
+                        >
+                          LATEST
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.85, textTransform: "none" }}>
+                      {savedMatch.scorelineSnapshot}
+                    </div>
+                    <div className="utility-panel-title" style={{ fontSize: "8px", opacity: 0.8, textTransform: "none" }}>
+                      {savedMatch.venue} · {formatSavedMatchCreatedAt(savedMatch.createdAt)} · {savedMatch.eventCount} events
+                    </div>
+                    <button
+                      type="button"
+                      className="utility-review-btn"
+                      onClick={() => {
+                        loadSavedMatchRecord(savedMatch);
+                      }}
+                      style={{ marginTop: "4px" }}
+                    >
+                      Load Match
+                    </button>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.9, textTransform: "none" }}>
+                No valid saved matches yet.
+              </div>
+            )}
+          </div>
+          <button type="button" className="utility-panel-close" onClick={closeUtilityPanel}>
+            Close
+          </button>
+        </div>
+      ) : null}
       {showReviewStrip && utilityPanel !== "REVIEW" ? (
         <div
           className={`review-strip ${isLandscape ? "review-strip--landscape" : "review-strip--portrait"}`}
@@ -4118,6 +4433,36 @@ export default function StatsModeSurface() {
                   </button>
                 );
               })}
+              <button
+                type="button"
+                className="utility-menu-btn"
+                onClick={() => {
+                  saveCurrentMatchSnapshot();
+                }}
+                style={
+                  saveFeedback === "Match saved"
+                    ? {
+                        border: "1px solid rgba(34,197,94,0.92)",
+                        background: "rgba(22,101,52,0.76)",
+                      }
+                    : undefined
+                }
+              >
+                {saveFeedback === "Match saved" ? "Saved" : "Save Match"}
+              </button>
+              <button type="button" className="utility-menu-btn" onClick={openSavedMatchesPanel}>
+                Load Match
+              </button>
+              {saveFeedback ? (
+                <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.9, textTransform: "none" }}>
+                  {saveFeedback}
+                </div>
+              ) : null}
+              {saveLoadBlockedReason ? (
+                <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.9, textTransform: "none" }}>
+                  {saveLoadBlockedReason}
+                </div>
+              ) : null}
               <button type="button" className="utility-menu-btn" onClick={resetMatch}>
                 Restart Match
               </button>
