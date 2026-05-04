@@ -132,6 +132,7 @@ const SHELL_CSS = `
   display: grid;
   gap: 12px;
   overflow-x: clip;
+  padding-bottom: 10px;
 }
 
 .pf-header-card,
@@ -144,7 +145,7 @@ const SHELL_CSS = `
 }
 
 .pf-header-card {
-  padding: 16px;
+  padding: 14px 16px;
   background: linear-gradient(180deg, rgba(18,56,33,0.96) 0%, rgba(16,41,27,0.95) 100%);
   position: relative;
 }
@@ -152,7 +153,7 @@ const SHELL_CSS = `
 .pf-header-top {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 10px;
 }
 
@@ -185,16 +186,10 @@ const SHELL_CSS = `
 }
 
 .pf-subtitle {
-  margin: 6px 0 0;
+  margin: 4px 0 0;
   color: var(--pf-text-muted);
   font-size: 14px;
   line-height: 1.35;
-}
-
-.pf-actions {
-  margin-top: 14px;
-  display: flex;
-  gap: 8px;
 }
 
 .pf-pill,
@@ -311,6 +306,79 @@ const SHELL_CSS = `
   font-size: 12px;
   font-weight: 600;
   line-height: 1.2;
+}
+
+.pf-home-primary-wrap {
+  margin-top: 12px;
+}
+
+.pf-home-primary-btn {
+  width: 100%;
+  border-radius: 16px;
+  border: 1px solid var(--pf-primary-strong);
+  background: linear-gradient(180deg, rgba(34,197,94,0.45) 0%, rgba(26,74,48,0.96) 100%);
+  color: var(--pf-text);
+  text-align: left;
+  padding: 16px 14px;
+  min-height: 68px;
+  cursor: pointer;
+  box-shadow: 0 0 0 1px var(--pf-primary-soft), 0 0 12px rgba(124,255,114,0.22);
+}
+
+.pf-home-primary-label {
+  display: block;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+}
+
+.pf-home-primary-sub {
+  display: block;
+  margin-top: 4px;
+  color: var(--pf-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pf-home-secondary-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.pf-home-secondary-btn {
+  border-radius: 14px;
+  border: 1px solid var(--pf-border);
+  background: rgba(20,52,33,0.92);
+  color: var(--pf-text);
+  text-align: left;
+  padding: 12px 10px;
+  min-height: 66px;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.pf-home-secondary-btn span {
+  display: block;
+}
+
+.pf-home-secondary-btn small {
+  display: block;
+  margin-top: 4px;
+  color: var(--pf-text-dim);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.pf-card.pf-card-soft {
+  background: linear-gradient(180deg, rgba(14,34,23,0.82) 0%, rgba(11,28,18,0.86) 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), 0 10px 18px rgba(0,0,0,0.2);
+}
+
+.pf-list-item.pf-list-item-soft {
+  background: rgba(17,43,28,0.75);
+  color: var(--pf-text-muted);
 }
 
 .pf-library-problem-grid {
@@ -653,6 +721,14 @@ const SHELL_CSS = `
     font-size: 9px;
     padding: 3px 6px;
   }
+
+  .pf-home-secondary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pf-home-primary-btn {
+    min-height: 72px;
+  }
 }
 `;
 
@@ -667,67 +743,51 @@ function BoardPage() {
       <div className="pf-header-card">
         <div className="pf-header-top">
           <h1 className="pf-title">PitchFlow</h1>
-          <button type="button" className="pf-home-icon-btn" aria-label="Go to Home" onClick={() => navigateTo("/board")}>
-            ⌂
-          </button>
         </div>
         <p className="pf-subtitle">
           Built for coaches.
           <br />
           From the heart of the Galtees.
         </p>
-        <div className="pf-actions">
-          <span className="pf-pill">Coach</span>
-          <button type="button" className="pf-btn" onClick={() => navigateTo("/tacticalpad-lite-clean")}>
-            New Board
+        <div className="pf-home-primary-wrap">
+          <button type="button" className="pf-home-primary-btn" onClick={() => navigateTo("/flowstats")}>
+            <span className="pf-home-primary-label">START MATCH</span>
+            <span className="pf-home-primary-sub">Launch FlowStats</span>
           </button>
         </div>
       </div>
-      <p className="pf-section-title">Launch</p>
+      <p className="pf-section-title">Quick Actions</p>
       <div className="pf-card">
-        <p className="pf-card-title">Open</p>
-        <div className="pf-chip-grid">
-          <button type="button" className="pf-chip" onClick={() => navigateTo("/tacticalpad-lite-clean")}>
-            FlowLab
+        <div className="pf-home-secondary-grid">
+          <button type="button" className="pf-home-secondary-btn" onClick={() => navigateTo("/tacticalpad-lite-clean")}>
+            <span>New Board</span>
+            <small>Open FlowLab</small>
           </button>
-          <button type="button" className="pf-chip" onClick={() => navigateTo("/flowstats")}>
-            FlowStats
+          <button type="button" className="pf-home-secondary-btn" onClick={() => navigateTo("/whiteboard")}>
+            <span>Quick Whiteboard</span>
+            <small>Open Whiteboard</small>
           </button>
-          <button type="button" className="pf-chip" onClick={() => navigateTo("/whiteboard")}>
-            Whiteboard
-          </button>
-          <button type="button" className="pf-chip" onClick={() => navigateTo("/library")}>
-            Library
-          </button>
-          <button type="button" className="pf-chip" onClick={() => navigateTo("/sessions")}>
-            Sessions
-          </button>
-          <button type="button" className="pf-chip" onClick={() => navigateTo("/plans")}>
-            Plans
+          <button type="button" className="pf-home-secondary-btn" onClick={() => navigateTo("/library")}>
+            <span>Open Library</span>
+            <small>Sessions & plans</small>
           </button>
         </div>
       </div>
       <p className="pf-section-title">Recent Boards</p>
-      <div className="pf-card">
+      <div className="pf-card pf-card-soft">
         <p className="pf-card-title">Recent Boards</p>
         <div className="pf-list">
           {BOARD_RECENT.map((item) => (
             <button
               key={item}
               type="button"
-              className="pf-list-item"
+              className="pf-list-item pf-list-item-soft"
               onClick={() => navigateTo("/tacticalpad-lite-clean")}
             >
               {item}
             </button>
           ))}
         </div>
-      </div>
-      <div className="pf-card">
-        <p className="pf-card-title">Coach Tip</p>
-        <p className="pf-card-text">
-          If your attack is slow, shape your first two support runs before the pass. Build speed with structure.
-        </p>
       </div>
     </>
   );
