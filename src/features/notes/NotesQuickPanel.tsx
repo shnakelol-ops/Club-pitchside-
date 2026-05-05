@@ -146,26 +146,40 @@ export function NotesQuickPanel({ defaultContext = "match", onRequestClose, pane
   }, []);
 
   const panelStyle = useMemo<CSSProperties>(() => {
-    const maxWidth = isLandscape ? "360px" : "380px";
-    const anchorStyle =
-      panelAnchorStyle ??
-      ({
-        position: "fixed",
-        right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
-        bottom: "max(140px, calc(env(safe-area-inset-bottom, 0px) + 136px))",
-      } as const);
+    if (isLandscape) {
+      const anchorStyle =
+        panelAnchorStyle ??
+        ({
+          position: "fixed",
+          right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
+          bottom: "max(140px, calc(env(safe-area-inset-bottom, 0px) + 136px))",
+        } as const);
+      return {
+        ...PANEL_STYLE_BASE,
+        ...anchorStyle,
+        width: "min(calc(100vw - 24px), 360px)",
+        maxHeight: "min(65vh, calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 20px))",
+        overflowY: "auto",
+        overflowX: "hidden",
+        overscrollBehavior: "contain",
+        gap: "6px",
+        padding: "7px",
+      };
+    }
+
     return {
       ...PANEL_STYLE_BASE,
-      ...anchorStyle,
-      width: `min(calc(100vw - 24px), ${maxWidth})`,
-      maxHeight: isLandscape
-        ? "min(65vh, calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 20px))"
-        : "min(70vh, calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 20px))",
+      position: "fixed",
+      left: "50%",
+      transform: "translateX(-50%)",
+      top: "max(18px, calc(env(safe-area-inset-top, 0px) + 12px))",
+      width: "min(360px, calc(100vw - 24px))",
+      maxHeight: "70vh",
       overflowY: "auto",
       overflowX: "hidden",
       overscrollBehavior: "contain",
-      gap: isLandscape ? "6px" : "8px",
-      padding: isLandscape ? "7px" : "10px",
+      gap: "8px",
+      padding: "10px",
     };
   }, [isLandscape, panelAnchorStyle]);
 
