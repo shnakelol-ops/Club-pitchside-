@@ -399,7 +399,8 @@ export function NotesQuickPanel({
         setPanelError(blobResult.error);
         return;
       }
-      const objectUrl = window.URL.createObjectURL(blobResult.data);
+      const blob = blobResult.data;
+      const objectUrl = window.URL.createObjectURL(blob);
       const audio = new Audio(objectUrl);
       audio.onended = () => {
         window.URL.revokeObjectURL(objectUrl);
