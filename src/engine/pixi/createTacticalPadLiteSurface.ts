@@ -1501,7 +1501,7 @@ export async function createTacticalPadLiteSurface(
     exportSnapshotCanvas: () => {
       const rendererWithExtract = app.renderer as typeof app.renderer & {
         extract?: {
-          canvas?: (target: unknown) => HTMLCanvasElement;
+          canvas?: (target: unknown) => unknown;
         };
       };
       const extractCanvas = rendererWithExtract.extract?.canvas;
@@ -1509,12 +1509,12 @@ export async function createTacticalPadLiteSurface(
         return null;
       }
       try {
-        return extractCanvas(app.stage);
+        return extractCanvas(app.stage) as HTMLCanvasElement;
       } catch {
         // Fallback for extractor variants that require a generated texture input.
         const generatedTexture = app.renderer.textureGenerator.generateTexture(app.stage);
         try {
-          return extractCanvas(generatedTexture);
+          return extractCanvas(generatedTexture) as HTMLCanvasElement;
         } catch {
           return null;
         } finally {
