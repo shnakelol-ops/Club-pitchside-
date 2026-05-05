@@ -14,11 +14,12 @@ import {
 import { createPixiPitchSurface } from "./core/pitch/create-pixi-pitch-surface";
 import { MATCH_EVENT_KINDS, type MatchEvent, type MatchEventKind } from "./core/stats/stats-event-model";
 import { gaaModeConfig, type GaaModeKey } from "./config/gaaModeConfig";
+import { NotesQuickPanel } from "./features/notes";
 
 type VisibilityMode = "ALL" | "LAST_5" | "LAST_10";
 type TeamScore = { goals: number; points: number; total: number };
 type TeamSide = "HOME" | "AWAY";
-type UtilityPanel = "PLAYERS" | "REVIEW" | "SUMMARY" | "SAVED_MATCHES" | null;
+type UtilityPanel = "PLAYERS" | "REVIEW" | "SUMMARY" | "SAVED_MATCHES" | "NOTES" | null;
 type ReviewHalf = "H1" | "H2" | "FULL";
 type ReviewEventFilter =
   | "ALL"
@@ -270,6 +271,10 @@ function newLocalEventId(): string {
     return c.randomUUID();
   }
   return `evt-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+}
+
+function newMatchSessionId(prefix: "live" | "loaded"): string {
+  return `${prefix}-match-${newLocalEventId()}`;
 }
 
 function createDefaultSquad(): Squad {
@@ -2145,6 +2150,7 @@ export default function StatsModeSurface() {
   const [matchState, setMatchState] = useState<MatchState>("PRE_MATCH");
   const [currentHalf, setCurrentHalf] = useState<1 | 2>(1);
   const [matchTimeSeconds, setMatchTimeSeconds] = useState(0);
+  const [currentMatchId, setCurrentMatchId] = useState<string>(() => newMatchSessionId("live"));
   const [keyboardInset, setKeyboardInset] = useState(0);
   const [utilityBubblePosition, setUtilityBubblePosition] = useState<{ left: number; top: number } | null>(null);
   const [utilityMenuSize, setUtilityMenuSize] = useState<{ width: number; height: number }>({
@@ -2172,6 +2178,7 @@ export default function StatsModeSurface() {
   const awayNameInputRef = useRef<HTMLInputElement>(null);
   const venueInputRef = useRef<HTMLInputElement>(null);
   const matchEngineStateRef = useRef(createInitialMatchEngineState());
+  const currentMatchIdRef = useRef(currentMatchId);
   const wakeLockRef = useRef<WakeLockSentinelLike>(null);
   const secondHalfSwitchBaselineEventCountRef = useRef<number | null>(null);
   const eventKindSwitchBaselineEventCountRef = useRef<number | null>(null);
@@ -2568,6 +2575,10 @@ export default function StatsModeSurface() {
   }, [activeSquadId]);
 
   useEffect(() => {
+    currentMatchIdRef.current = currentMatchId;
+  }, [currentMatchId]);
+
+  useEffect(() => {
     if (activeSquadId === "") {
       setActiveSquadId(squads[0]?.id ?? "");
       return;
@@ -2861,6 +2872,13 @@ export default function StatsModeSurface() {
     setSaveLoadBlockedReason(null);
   };
 
+  const openNotesPanel = () => {
+    setShowReviewStrip(false);
+    setUtilityPanel("NOTES");
+    setIsUtilityOpen(false);
+    setIsPickerOpen(false);
+  };
+
   const saveCurrentMatchSnapshot = () => {
     if (loggedEvents.length === 0) {
       setSaveFeedback("No events to save");
@@ -2898,6 +2916,10 @@ export default function StatsModeSurface() {
       setSaveLoadBlockedReason("Load blocked: saved match is invalid.");
       return;
     }
+    const loadedMatchId =
+      parsedRecord.id.trim().length > 0 ? parsedRecord.id : newMatchSessionId("loaded");
+    setCurrentMatchId(loadedMatchId);
+    currentMatchIdRef.current = loadedMatchId;
     setLoggedEvents(parsedRecord.events);
     setTeamNames({
       HOME: parsedRecord.homeTeamName,
@@ -2954,6 +2976,9 @@ export default function StatsModeSurface() {
   };
 
   const resetMatch = () => {
+    const nextMatchId = newMatchSessionId("live");
+    setCurrentMatchId(nextMatchId);
+    currentMatchIdRef.current = nextMatchId;
     setLoggedEvents([]);
     reviewHalfRef.current = "FULL";
     reviewEventFilterRef.current = "ALL";
@@ -4107,6 +4132,20 @@ export default function StatsModeSurface() {
           </button>
         </div>
       ) : null}
+      {utilityPanel === "NOTES" ? (
+        <div className={utilityPanelClass} role="dialog" aria-label="Notes">
+          <NotesQuickPanel
+            matchContext={{
+              matchId: currentMatchId,
+              half: currentHalf,
+              matchClockMs: Math.max(0, Math.floor(matchTimeSeconds * 1000)),
+            }}
+          />
+          <button type="button" className="utility-panel-close" onClick={closeUtilityPanel}>
+            Close
+          </button>
+        </div>
+      ) : null}
       {utilityPanel === "SAVED_MATCHES" ? (
         <div className={utilityPanelClass} role="dialog" aria-label="Saved matches">
           <div className="utility-review-scroll">
@@ -4709,6 +4748,9 @@ export default function StatsModeSurface() {
               </button>
               <button type="button" className="utility-menu-btn" onClick={openSavedMatchesPanel}>
                 Load Match
+              </button>
+              <button type="button" className="utility-menu-btn" onClick={openNotesPanel}>
+                Notes
               </button>
               {saveFeedback ? (
                 <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.9, textTransform: "none" }}>
