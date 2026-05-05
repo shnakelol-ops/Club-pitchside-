@@ -416,41 +416,29 @@ export function NotesQuickPanel({
     }));
   }, [notes]);
 
-  const handlePlayVoiceNote = async (note: CoachNote) => {
-    if (note.type !== "voice") {
-      setPanelError("Voice note audio is unavailable.");
+  const handlePlayVoiceNote = async (audioBlobId: string) => {
+    const result = await readVoiceNoteBlob(audioBlobId);
+
+    if (!result.ok) {
+      setPanelError(result.error);
+      setPlayingNoteId(null);
       return;
     }
-    const audioBlobId = note.audioBlobId;
-    if (!audioBlobId) {
-      setPanelError("Voice note audio is unavailable.");
-      return;
-    }
-    setPanelError(null);
-    setPlayingNoteId(note.id);
+
+    const audioUrl = URL.createObjectURL(result.data);
+    const audio = new Audio(audioUrl);
+
+    audio.onended = () => {
+      URL.revokeObjectURL(audioUrl);
+      setPlayingNoteId(null);
+    };
+
     try {
-      const result = await readVoiceNoteBlob(audioBlobId);
-      if (!result.ok) {
-        setPanelError(result.error);
-        setPlayingNoteId(null);
-        return;
-      }
-      const blob = result.data;
-      const objectUrl = window.URL.createObjectURL(blob);
-      const audio = new Audio(objectUrl);
-      audio.onended = () => {
-        window.URL.revokeObjectURL(objectUrl);
-        setPlayingNoteId((current) => (current === note.id ? null : current));
-      };
-      audio.onerror = () => {
-        window.URL.revokeObjectURL(objectUrl);
-        setPanelError("Could not play voice note.");
-        setPlayingNoteId((current) => (current === note.id ? null : current));
-      };
       await audio.play();
     } catch {
+      URL.revokeObjectURL(audioUrl);
       setPanelError("Could not play voice note.");
-      setPlayingNoteId((current) => (current === note.id ? null : current));
+      setPlayingNoteId(null);
     }
   };
 
@@ -492,7 +480,10 @@ export function NotesQuickPanel({
                     onPointerDown={stopPanelInteraction}
                     onTouchStart={stopPanelInteraction}
                     onClick={() => {
-                      void handlePlayVoiceNote(note);
+                      if (!note.audioBlobId) return;
+                      setPanelError(null);
+                      setPlayingNoteId(note.id);
+                      void handlePlayVoiceNote(note.audioBlobId);
                     }}
                   >
                     {playingNoteId === note.id ? "…" : "▶️"}
