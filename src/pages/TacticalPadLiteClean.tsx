@@ -1462,56 +1462,93 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const closeRecordGuide = () => {
     setRecordGuideOpen(false);
   };
+  const canvasToPngBlob = (canvas: HTMLCanvasElement): Promise<Blob> =>
+    new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          reject(new Error("PNG export returned empty blob"));
+          return;
+        }
+        resolve(blob);
+      }, "image/png");
+    });
+
   const exportCurrentBoardImageBlob = async (): Promise<Blob | null> => {
-    return await surfaceRef.current?.exportImageBlob?.();
+    const exportCanvas = surfaceRef.current?.exportImageCanvas?.();
+    if (!exportCanvas) {
+      throw new Error("Pixi export did not return a canvas");
+    }
+    return await canvasToPngBlob(exportCanvas);
   };
   const shareBoardImage = async (): Promise<void> => {
     closeActionsMenu();
     setShareStatus("Preparing image...");
+    const clearShareStatusLater = (timeoutMs = 2200) => window.setTimeout(() => setShareStatus(null), timeoutMs);
+    const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> =>
+      await new Promise<T>((resolve, reject) => {
+        const timeoutId = window.setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
+        promise.then(
+          (value) => {
+            window.clearTimeout(timeoutId);
+            resolve(value);
+          },
+          (error) => {
+            window.clearTimeout(timeoutId);
+            reject(error);
+          },
+        );
+      });
 
-    const clearShareStatusLater = (timeoutMs = 2200) => {
-      window.setTimeout(() => setShareStatus(null), timeoutMs);
-    };
-
-    const blob = await exportCurrentBoardImageBlob();
-    if (!blob) {
-      setShareStatus("Could not share image");
-      clearShareStatusLater();
-      return;
-    }
-
-    const file = new File([blob], "pitchflow-play.png", { type: "image/png" });
-    const sharePayload: ShareData = {
-      files: [file],
-      title: "PitchFlow Play",
-      text: "FlowLab tactical board snapshot",
-    };
-    const typedNavigator = navigator as Navigator & {
-      share?: (data: ShareData) => Promise<void>;
-      canShare?: (data: ShareData) => boolean;
-    };
-
-    if (typedNavigator.share && typedNavigator.canShare?.({ files: [file] })) {
-      setShareStatus("Image ready to share");
-      try {
-        await typedNavigator.share(sharePayload);
-      } catch {
-        setShareStatus("Could not share image");
+    try {
+      const blob = await withTimeout(exportCurrentBoardImageBlob(), 8000, "Image share timed out");
+      if (!blob) {
+        throw new Error("Image export returned empty blob");
       }
-      clearShareStatusLater();
-      return;
-    }
 
-    const objectUrl = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = objectUrl;
-    link.download = "pitchflow-play.png";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1200);
-    setShareStatus("Image downloaded");
-    clearShareStatusLater();
+      const file = new File([blob], "pitchflow-play.png", { type: "image/png" });
+      const sharePayload: ShareData = {
+        files: [file],
+        title: "PitchFlow Play",
+        text: "FlowLab tactical board snapshot",
+      };
+      const typedNavigator = navigator as Navigator & {
+        share?: (data: ShareData) => Promise<void>;
+        canShare?: (data: ShareData) => boolean;
+      };
+
+      if (typedNavigator.share && typedNavigator.canShare?.({ files: [file] })) {
+        setShareStatus("Image ready to share");
+        try {
+          await withTimeout(typedNavigator.share(sharePayload), 8000, "Image share timed out");
+        } catch (error) {
+          const maybeDomError = error as { name?: string };
+          if (maybeDomError?.name === "AbortError") {
+            setShareStatus("Share cancelled");
+            return;
+          }
+          throw error;
+        }
+        return;
+      }
+
+      const objectUrl = URL.createObjectURL(blob);
+      try {
+        const link = document.createElement("a");
+        link.href = objectUrl;
+        link.download = "pitchflow-play.png";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      } finally {
+        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1200);
+      }
+      setShareStatus("Image downloaded");
+    } catch (error) {
+      setShareStatus("Could not share image");
+      console.error("Unexpected Share Image failure", error);
+    } finally {
+      clearShareStatusLater();
+    }
   };
   const openWhiteboardHomeConfirm = () => {
     if (whiteboardHomeConfirmOpen) return;

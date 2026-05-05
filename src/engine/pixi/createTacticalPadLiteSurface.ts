@@ -66,7 +66,7 @@ export type TacticalPadLiteSurface = {
   eraseWhiteboardPenStroke: () => void;
   undoWhiteboardStroke: () => void;
   clearWhiteboardStrokes: () => void;
-  exportImageBlob: () => Promise<Blob | null>;
+  exportImageCanvas: () => HTMLCanvasElement | null;
   destroy: () => void;
 };
 
@@ -1498,7 +1498,7 @@ export async function createTacticalPadLiteSurface(
       completedWhiteboardDrawingObjects.length = 0;
       renderAllWhiteboardDrawings();
     },
-    exportImageBlob: async () => {
+    exportImageCanvas: () => {
       const rendererWithExtract = app.renderer as typeof app.renderer & {
         extract?: {
           canvas?: (target: unknown) => unknown;
@@ -1512,20 +1512,23 @@ export async function createTacticalPadLiteSurface(
       const resolveHtmlCanvas = (candidate: unknown): HTMLCanvasElement | null =>
         typeof HTMLCanvasElement !== "undefined" && candidate instanceof HTMLCanvasElement ? candidate : null;
 
-      let extractedCanvas = resolveHtmlCanvas(extractCanvas(app.stage));
-      if (!extractedCanvas) {
-        const generatedTexture = app.renderer.textureGenerator.generateTexture(app.stage);
-        try {
-          extractedCanvas = resolveHtmlCanvas(extractCanvas(generatedTexture));
-        } finally {
-          generatedTexture.destroy(true);
+      try {
+        const extractedFromStage = resolveHtmlCanvas(extractCanvas(app.stage));
+        if (extractedFromStage) {
+          return extractedFromStage;
         }
+      } catch {
+        // Fall back to texture extraction path.
       }
-      if (!extractedCanvas) return null;
 
-      return await new Promise<Blob | null>((resolve) => {
-        extractedCanvas.toBlob((nextBlob) => resolve(nextBlob), "image/png");
-      });
+      const generatedTexture = app.renderer.textureGenerator.generateTexture(app.stage);
+      try {
+        return resolveHtmlCanvas(extractCanvas(generatedTexture));
+      } catch {
+        return null;
+      } finally {
+        generatedTexture.destroy(true);
+      }
     },
     destroy: () => {
       resizeObserver.disconnect();
