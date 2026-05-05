@@ -31,7 +31,15 @@ export type MovePreviewEffect = {
   to: { x: number; y: number };
   startedAt: number;
   durationMs: number;
-};
+} & (
+  | {
+      pathKind: "straight";
+    }
+  | {
+      pathKind: "curved";
+      control: { x: number; y: number };
+    }
+);
 
 export const DRAW_ANIMATION_DURATION_MS: Record<DrawAnimationEffectKind, number> = {
   line: 140,

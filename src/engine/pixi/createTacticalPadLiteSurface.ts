@@ -53,7 +53,7 @@ type TacticalPlayer = {
 
 export type WhiteboardDrawTool = "move" | "pen" | "line" | "arrow" | "dashed";
 export type WhiteboardTokenColor = PremiumPlayerTokenColor;
-export type PlayerMovementBehavior = "free-drag" | "move-preview";
+export type PlayerMovementBehavior = "free-drag" | "straight-preview" | "curved-preview";
 export type MovePreviewSpeed = "slow" | "normal" | "fast";
 export type FlowItemType = "cone" | "pole" | "ladder" | "tackleBag" | "football" | "sliotar";
 export type ItemMode = "edit" | "locked";
@@ -140,6 +140,10 @@ const MOVE_PREVIEW_DURATION_BY_SPEED: Record<MovePreviewSpeed, number> = {
   normal: 450,
   fast: 250,
 };
+const CURVED_PREVIEW_MIN_DISTANCE = 5;
+const CURVED_PREVIEW_OFFSET_RATIO = 0.2;
+const CURVED_PREVIEW_OFFSET_MIN = 1;
+const CURVED_PREVIEW_OFFSET_MAX = 10;
 
 type PlayerSeed = {
   id: string;
@@ -456,6 +460,7 @@ export async function createTacticalPadLiteSurface(
   const playerMovePreviewEffects: MovePreviewEffect[] = [];
   let playerMovementBehavior: PlayerMovementBehavior = "free-drag";
   let movePreviewSpeed: MovePreviewSpeed = "normal";
+  let curvedPreviewDirectionSign: 1 | -1 = 1;
   let transientEffectIdCounter = 0;
   world.setChildIndex(ghostTrailEffectsLayer, world.getChildIndex(playersLayer));
   world.setChildIndex(playerFeedbackEffectsLayer, world.children.length - 1);
@@ -866,32 +871,91 @@ export async function createTacticalPadLiteSurface(
     });
   }
 
-  function queuePlayerMovePreviewEffect(
-    playerId: string,
-    from: NormalizedPoint,
-    to: NormalizedPoint,
-    speed: MovePreviewSpeed,
-  ): void {
+  function queuePlayerMovePreviewEffect(effectToQueue: MovePreviewEffect): void {
     for (let index = playerMovePreviewEffects.length - 1; index >= 0; index -= 1) {
       const effect = playerMovePreviewEffects[index];
       if (!effect) continue;
-      if (effect.playerId === playerId) {
+      if (effect.playerId === effectToQueue.playerId) {
         playerMovePreviewEffects.splice(index, 1);
       }
     }
-    playerMovePreviewEffects.push({
-      id: nextTransientId("move-preview"),
-      playerId,
-      from: { x: from.x, y: from.y },
-      to: { x: to.x, y: to.y },
-      startedAt: performance.now(),
-      durationMs: MOVE_PREVIEW_DURATION_BY_SPEED[speed],
-    });
+    playerMovePreviewEffects.push(effectToQueue);
   }
 
   function easeOutCubic(t: number): number {
     const clamped = Math.max(0, Math.min(1, t));
     return 1 - (1 - clamped) ** 3;
+  }
+
+  function quadraticBezierPosition(
+    from: NormalizedPoint,
+    control: NormalizedPoint,
+    to: NormalizedPoint,
+    t: number,
+  ): NormalizedPoint {
+    const u = 1 - t;
+    return {
+      x: u * u * from.x + 2 * u * t * control.x + t * t * to.x,
+      y: u * u * from.y + 2 * u * t * control.y + t * t * to.y,
+    };
+  }
+
+  function createAutoCurvedControlPoint(from: NormalizedPoint, to: NormalizedPoint): NormalizedPoint | null {
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const distance = Math.hypot(dx, dy);
+    if (distance < CURVED_PREVIEW_MIN_DISTANCE) {
+      return null;
+    }
+
+    const midpoint = {
+      x: (from.x + to.x) * 0.5,
+      y: (from.y + to.y) * 0.5,
+    };
+    const unitPerpendicular = {
+      x: -dy / distance,
+      y: dx / distance,
+    };
+    const rawOffset = distance * CURVED_PREVIEW_OFFSET_RATIO;
+    const offset = Math.max(CURVED_PREVIEW_OFFSET_MIN, Math.min(CURVED_PREVIEW_OFFSET_MAX, rawOffset));
+    const sign = curvedPreviewDirectionSign;
+    curvedPreviewDirectionSign = sign === 1 ? -1 : 1;
+
+    const control = {
+      x: clampNormalizedValue(midpoint.x + unitPerpendicular.x * offset * sign),
+      y: clampNormalizedValue(midpoint.y + unitPerpendicular.y * offset * sign),
+    };
+    return control;
+  }
+
+  function queueStraightMovePreviewEffect(playerId: string, from: NormalizedPoint, to: NormalizedPoint): void {
+    queuePlayerMovePreviewEffect({
+      id: nextTransientId("move-preview"),
+      playerId,
+      pathKind: "straight",
+      from: { x: from.x, y: from.y },
+      to: { x: to.x, y: to.y },
+      startedAt: performance.now(),
+      durationMs: MOVE_PREVIEW_DURATION_BY_SPEED[movePreviewSpeed],
+    });
+  }
+
+  function queueCurvedMovePreviewEffect(
+    playerId: string,
+    from: NormalizedPoint,
+    to: NormalizedPoint,
+    control: NormalizedPoint,
+  ): void {
+    queuePlayerMovePreviewEffect({
+      id: nextTransientId("move-preview"),
+      playerId,
+      pathKind: "curved",
+      from: { x: from.x, y: from.y },
+      control: { x: control.x, y: control.y },
+      to: { x: to.x, y: to.y },
+      startedAt: performance.now(),
+      durationMs: MOVE_PREVIEW_DURATION_BY_SPEED[movePreviewSpeed],
+    });
   }
 
   function getPlayerMovePreviewPosition(
@@ -903,6 +967,9 @@ export async function createTacticalPadLiteSurface(
     const progress = getEffectProgress(now, effect.startedAt, effect.durationMs);
     if (progress >= 1) return null;
     const eased = easeOutCubic(progress);
+    if (effect.pathKind === "curved") {
+      return quadraticBezierPosition(effect.from, effect.control, effect.to, eased);
+    }
     return {
       x: effect.from.x + (effect.to.x - effect.from.x) * eased,
       y: effect.from.y + (effect.to.y - effect.from.y) * eased,
@@ -1039,8 +1106,18 @@ export async function createTacticalPadLiteSurface(
         const hasIntentionalMovement =
           stageDistance >= GHOST_TRAIL_MIN_PIXEL_DISTANCE || normalizedDistance >= GHOST_TRAIL_MIN_NORMALIZED_DISTANCE;
         if (hasIntentionalMovement) {
-          if (playerMovementBehavior === "move-preview") {
-            queuePlayerMovePreviewEffect(player.id, dragFrom, dragTo, movePreviewSpeed);
+          if (playerMovementBehavior === "straight-preview") {
+            queueStraightMovePreviewEffect(player.id, dragFrom, dragTo);
+            // Render once at drag start point so preview visibly starts at A, then ticker advances.
+            const startWorld = mapper.normalizedToWorld(dragFrom);
+            player.token.position.set(startWorld.x, startWorld.y);
+          } else if (playerMovementBehavior === "curved-preview") {
+            const control = createAutoCurvedControlPoint(dragFrom, dragTo);
+            if (control) {
+              queueCurvedMovePreviewEffect(player.id, dragFrom, dragTo, control);
+            } else {
+              queueStraightMovePreviewEffect(player.id, dragFrom, dragTo);
+            }
             // Render once at drag start point so preview visibly starts at A, then ticker advances.
             const startWorld = mapper.normalizedToWorld(dragFrom);
             player.token.position.set(startWorld.x, startWorld.y);

@@ -48,14 +48,19 @@ type WhiteboardToolControl = "move" | "pen" | "line" | "arrow" | "dashed";
 type WhiteboardToolAction = WhiteboardToolControl | "eraser";
 const PLAYER_MOVEMENT_BEHAVIOR_LABEL: Record<PlayerMovementBehavior, string> = {
   "free-drag": "Free Drag",
-  "move-preview": "Move Preview",
+  "straight-preview": "Straight Preview",
+  "curved-preview": "Curved Preview",
 };
 const MOVE_PREVIEW_SPEED_LABEL: Record<MovePreviewSpeed, string> = {
   slow: "Slow",
   normal: "Normal",
   fast: "Fast",
 };
-const PLAYER_MOVEMENT_BEHAVIOR_OPTIONS: ReadonlyArray<PlayerMovementBehavior> = ["free-drag", "move-preview"];
+const PLAYER_MOVEMENT_BEHAVIOR_OPTIONS: ReadonlyArray<PlayerMovementBehavior> = [
+  "free-drag",
+  "straight-preview",
+  "curved-preview",
+];
 const MOVE_PREVIEW_SPEED_OPTIONS: ReadonlyArray<MovePreviewSpeed> = ["slow", "normal", "fast"];
 const WHITEBOARD_BUBBLE_SIZE = 36;
 const WHITEBOARD_BUBBLE_MARGIN = 12;
@@ -759,7 +764,7 @@ const COACH_HUB_ACTION_BUTTON_STYLE: CSSProperties = {
 
 const COACH_HUB_SEGMENTED_GRID_STYLE: CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
   gap: "3px",
 };
 
@@ -2344,7 +2349,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                   </button>
                 ))}
               </div>
-              {playerMovementBehavior === "move-preview" ? (
+              {playerMovementBehavior !== "free-drag" ? (
                 <div style={{ ...COACH_HUB_SEGMENTED_GRID_STYLE, gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
                   {MOVE_PREVIEW_SPEED_OPTIONS.map((speed) => (
                     <button
