@@ -465,7 +465,7 @@ const ACTIONS_POPOUT_STYLE: CSSProperties = {
   top: "50%",
   transform: "translateY(-50%)",
   flexDirection: "column",
-  width: "132px",
+  width: "128px",
   padding: "7px",
   gap: "5px",
   overflow: "hidden",
@@ -493,6 +493,57 @@ const ACTIONS_MENU_BUTTON_STYLE: CSSProperties = {
   textAlign: "left",
   background: "rgba(15, 24, 31, 0.82)",
   boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.12)",
+};
+
+const QUICK_SHARE_POPOUT_STYLE: CSSProperties = {
+  ...POPOUT_BASE_STYLE,
+  left: "max(194px, calc(env(safe-area-inset-left, 0px) + 192px))",
+  top: "50%",
+  transform: "translateY(-50%)",
+  flexDirection: "column",
+  width: "188px",
+  padding: "9px",
+  gap: "7px",
+  overflow: "hidden",
+  background: "rgba(20, 28, 36, 0.82)",
+  border: "1px solid rgba(212, 228, 244, 0.24)",
+  boxShadow: "0 12px 26px rgba(0, 0, 0, 0.34)",
+  zIndex: 22,
+};
+
+const QUICK_SHARE_TITLE_STYLE: CSSProperties = {
+  margin: 0,
+  color: "#eef7ff",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "11.5px",
+  fontWeight: 700,
+  letterSpacing: "0.14px",
+};
+
+const QUICK_SHARE_OPTION_BUTTON_STYLE: CSSProperties = {
+  ...ACTIONS_MENU_BUTTON_STYLE,
+  height: "40px",
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "flex-start",
+  justifyContent: "center",
+  gap: "2px",
+  padding: "6px 9px",
+  lineHeight: 1.1,
+};
+
+const QUICK_SHARE_OPTION_TITLE_STYLE: CSSProperties = {
+  color: "#eef6ff",
+  fontSize: "10px",
+  fontWeight: 650,
+  letterSpacing: "0.16px",
+};
+
+const QUICK_SHARE_OPTION_SUBTITLE_STYLE: CSSProperties = {
+  color: "rgba(206, 222, 238, 0.9)",
+  fontSize: "9px",
+  fontWeight: 520,
+  letterSpacing: "0.12px",
 };
 
 const COACH_HUB_PANEL_STYLE: CSSProperties = {
@@ -667,64 +718,34 @@ const UNDO_PHASE_BUTTON_STYLE: CSSProperties = {
     "0 6px 20px rgba(0, 0, 0, 0.45), 0 0 18px rgba(168, 85, 247, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.25)",
 };
 
-const RECORD_GUIDE_STYLE: CSSProperties = {
+const SHARE_TIP_TOAST_STYLE: CSSProperties = {
   position: "fixed",
-  left: "50%",
-  transform: "translateX(-50%)",
-  bottom: "max(56px, calc(env(safe-area-inset-bottom, 0px) + 54px))",
-  width: "min(320px, calc(100vw - 24px))",
+  left: "max(62px, calc(env(safe-area-inset-left, 0px) + 60px))",
+  top: "calc(50% + 98px)",
+  width: "min(286px, calc(100vw - 72px))",
   display: "flex",
   flexDirection: "column",
-  gap: "8px",
-  padding: "10px",
-  borderRadius: "14px",
-  border: "1px solid rgba(163, 190, 212, 0.24)",
-  background: "rgba(10, 19, 24, 0.78)",
+  gap: "6px",
+  padding: "9px 10px",
+  borderRadius: "12px",
+  border: "1px solid rgba(191, 214, 235, 0.26)",
+  background: "rgba(12, 22, 29, 0.84)",
   backdropFilter: "blur(12px)",
   WebkitBackdropFilter: "blur(12px)",
-  boxShadow: "0 12px 28px rgba(2, 8, 15, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08)",
-  zIndex: 24,
+  boxShadow: "0 12px 26px rgba(2, 8, 15, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.1)",
+  zIndex: 23,
+  pointerEvents: "none",
 };
 
-const RECORD_GUIDE_TITLE_STYLE: CSSProperties = {
+const SHARE_TIP_TEXT_STYLE: CSSProperties = {
   margin: 0,
-  color: "#e4eff8",
-  fontSize: "12px",
-  fontWeight: 700,
-  letterSpacing: "0.12px",
-  fontFamily: "Inter, system-ui, sans-serif",
-};
-
-const RECORD_GUIDE_TEXT_STYLE: CSSProperties = {
-  margin: 0,
-  color: "rgba(215, 232, 245, 0.88)",
-  fontSize: "10px",
+  color: "#e5f2ff",
+  fontSize: "10.5px",
+  fontWeight: 600,
+  letterSpacing: "0.14px",
   lineHeight: 1.35,
+  whiteSpace: "pre-line",
   fontFamily: "Inter, system-ui, sans-serif",
-};
-
-const RECORD_GUIDE_LIST_STYLE: CSSProperties = {
-  ...RECORD_GUIDE_TEXT_STYLE,
-  margin: 0,
-  paddingLeft: "16px",
-  display: "grid",
-  gap: "3px",
-};
-
-const RECORD_GUIDE_NOTE_STYLE: CSSProperties = {
-  ...RECORD_GUIDE_TEXT_STYLE,
-  color: "rgba(196, 220, 240, 0.78)",
-};
-
-const RECORD_GUIDE_ACTIONS_STYLE: CSSProperties = {
-  display: "flex",
-  justifyContent: "flex-end",
-};
-
-const RECORD_GUIDE_BUTTON_STYLE: CSSProperties = {
-  ...COACH_HUB_TOOL_BUTTON_STYLE,
-  minWidth: 0,
-  height: "32px",
 };
 
 const HOME_MENU_ICON_BUTTON_STYLE: CSSProperties = {
@@ -966,28 +987,6 @@ const WHITEBOARD_HOME_BUTTON_STYLE: CSSProperties = {
   zIndex: 23,
 };
 
-const SHARE_STATUS_STYLE: CSSProperties = {
-  position: "fixed",
-  left: "50%",
-  bottom: "max(56px, calc(env(safe-area-inset-bottom, 0px) + 54px))",
-  transform: "translateX(-50%)",
-  minHeight: "28px",
-  borderRadius: "9px",
-  border: "1px solid rgba(223, 235, 246, 0.28)",
-  background: "rgba(10, 18, 24, 0.84)",
-  color: "#e8f2f8",
-  fontFamily: "Inter, system-ui, sans-serif",
-  fontSize: "10.5px",
-  fontWeight: 600,
-  letterSpacing: "0.18px",
-  padding: "7px 10px",
-  backdropFilter: "blur(12px)",
-  WebkitBackdropFilter: "blur(12px)",
-  boxShadow: "0 10px 22px rgba(0, 0, 0, 0.34)",
-  zIndex: 22,
-  pointerEvents: "none",
-};
-
 const WHITEBOARD_HOME_CONFIRM_STYLE: CSSProperties = {
   position: "fixed",
   top: "max(54px, calc(env(safe-area-inset-top, 0px) + 50px))",
@@ -1048,7 +1047,8 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const tacticalItemCounterRef = useRef(0);
   const actionsBubbleButtonRef = useRef<HTMLButtonElement | null>(null);
   const actionsMenuRef = useRef<HTMLDivElement | null>(null);
-  const recordGuidePanelRef = useRef<HTMLDivElement | null>(null);
+  const quickSharePopoverRef = useRef<HTMLDivElement | null>(null);
+  const shareTipTimerRef = useRef<number | null>(null);
   const whiteboardBubbleButtonRef = useRef<HTMLButtonElement | null>(null);
   const whiteboardBubbleMenuRef = useRef<HTMLDivElement | null>(null);
   const whiteboardHomeButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -1093,11 +1093,12 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
-  const [shareStatus, setShareStatus] = useState<string | null>(null);
+  const [quickShareOpen, setQuickShareOpen] = useState(false);
+  const [shareTipMessage, setShareTipMessage] = useState<string | null>(null);
   const [controlsOpen, setControlsOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [phasesOpen, setPhasesOpen] = useState(false);
-  const [recordGuideOpen, setRecordGuideOpen] = useState(false);
+
   const isStatsMode = mode === "stats";
   const isWhiteboardMode = mode === "whiteboard";
   const wakeLockRef = useRef<{ release: () => Promise<void> } | null>(null);
@@ -1366,20 +1367,20 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   }, [isWhiteboardMode, whiteboardBubbleOpen]);
 
   useEffect(() => {
-    if (isWhiteboardMode || !recordGuideOpen) return;
+    if (isWhiteboardMode || !quickShareOpen) return;
 
     const handlePointerDownOutside = (event: PointerEvent) => {
       const target = event.target as Node | null;
       if (!target) return;
       if (actionsBubbleButtonRef.current?.contains(target)) return;
       if (actionsMenuRef.current?.contains(target)) return;
-      if (recordGuidePanelRef.current?.contains(target)) return;
-      setRecordGuideOpen(false);
+      if (quickSharePopoverRef.current?.contains(target)) return;
+      setQuickShareOpen(false);
     };
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       event.preventDefault();
-      setRecordGuideOpen(false);
+      setQuickShareOpen(false);
     };
 
     document.addEventListener("pointerdown", handlePointerDownOutside);
@@ -1388,7 +1389,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
       document.removeEventListener("pointerdown", handlePointerDownOutside);
       window.removeEventListener("keydown", handleEscape);
     };
-  }, [isWhiteboardMode, recordGuideOpen]);
+  }, [isWhiteboardMode, quickShareOpen]);
 
   useEffect(() => {
     if (isWhiteboardMode || !actionsOpen) return;
@@ -1398,12 +1399,15 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
       if (!target) return;
       if (actionsBubbleButtonRef.current?.contains(target)) return;
       if (actionsMenuRef.current?.contains(target)) return;
+      if (quickSharePopoverRef.current?.contains(target)) return;
       setActionsOpen(false);
+      setQuickShareOpen(false);
     };
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       event.preventDefault();
       setActionsOpen(false);
+      setQuickShareOpen(false);
     };
 
     document.addEventListener("pointerdown", handlePointerDownOutside);
@@ -1449,147 +1453,47 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const phaseItems = Array.from({ length: phaseCount }, (_, index) => index + 1);
   const floodlightDots = Array.from({ length: 12 }, (_, index) => index);
   const activeTacticalPenColor = tacticalPenColor;
-  const closeActionsMenu = () => setActionsOpen(false);
+  const closeActionsMenu = () => {
+    setActionsOpen(false);
+    setQuickShareOpen(false);
+  };
   const closeControlsMenu = () => setControlsOpen(false);
   const goHome = () => {
     closeActionsMenu();
     window.location.assign("/board");
   };
-  const openRecordGuide = () => {
+  const closeQuickShareMenu = () => setQuickShareOpen(false);
+  const showShareTip = (message: string) => {
+    if (shareTipTimerRef.current !== null) {
+      window.clearTimeout(shareTipTimerRef.current);
+    }
+    setShareTipMessage(message);
+    shareTipTimerRef.current = window.setTimeout(() => {
+      setShareTipMessage(null);
+      shareTipTimerRef.current = null;
+    }, 4000);
+  };
+  const openQuickShareMenu = () => {
     closeActionsMenu();
-    setRecordGuideOpen(true);
+    setQuickShareOpen(true);
   };
-  const closeRecordGuide = () => {
-    setRecordGuideOpen(false);
+  const handleQuickShareRecordClip = () => {
+    closeQuickShareMenu();
+    showShareTip(
+      "Use your phone’s screen recorder 🎥\nAndroid: swipe down twice → Screen Record\niPhone: Control Centre → Screen Recording",
+    );
   };
-  const canvasToPngBlob = (canvas: HTMLCanvasElement): Promise<Blob> =>
-    new Promise((resolve, reject) => {
-      canvas.toBlob((blob) => {
-        if (!blob) {
-          reject(new Error("PNG export returned empty blob"));
-          return;
-        }
-        resolve(blob);
-      }, "image/png");
-    });
-
-  const exportCurrentBoardImageBlob = async (): Promise<Blob | null> => {
-    const pixiSurface = surfaceRef.current;
-    console.log("share:pixiRef exists?", Boolean(pixiSurface));
-    const pixiCanvas = pixiSurface?.exportImageCanvas?.() ?? null;
-    if (pixiCanvas) {
-      console.log("share:extracted canvas size", `${pixiCanvas.width}x${pixiCanvas.height}`);
-      const pixiBlob = await canvasToPngBlob(pixiCanvas);
-      if (!pixiBlob || pixiBlob.size <= 0) {
-        throw new Error("Pixi canvas export returned empty blob");
-      }
-      console.log("share:blob size/type", `${pixiBlob.size}/${pixiBlob.type}`);
-      return pixiBlob;
-    }
-
-    const fallbackCanvas = hostRef.current?.querySelector("canvas");
-    if (!(fallbackCanvas instanceof HTMLCanvasElement)) {
-      throw new Error("Pixi extract failed and visible canvas fallback was unavailable");
-    }
-    console.log("share:extracted canvas size", `${fallbackCanvas.width}x${fallbackCanvas.height}`);
-    const fallbackBlob = await canvasToPngBlob(fallbackCanvas);
-    if (!fallbackBlob || fallbackBlob.size <= 0) {
-      throw new Error("Visible canvas fallback returned empty blob");
-    }
-    console.log("share:blob size/type", `${fallbackBlob.size}/${fallbackBlob.type}`);
-    return fallbackBlob;
+  const handleQuickShareSnapshot = () => {
+    closeQuickShareMenu();
+    showShareTip("Take a screenshot to share this setup 📸\nFastest way to send it to WhatsApp");
   };
-  const shareBoardImage = async (): Promise<void> => {
-    closeActionsMenu();
-    console.log("share:start");
-    setShareStatus("Preparing image...");
-    const clearShareStatusLater = (timeoutMs = 2200) => window.setTimeout(() => setShareStatus(null), timeoutMs);
-    const isTimeoutError = (error: unknown): boolean =>
-      error instanceof Error && (error.message === "Image export timed out" || error.message === "Image share timed out");
-    const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> =>
-      await new Promise<T>((resolve, reject) => {
-        const timeoutId = window.setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
-        promise.then(
-          (value) => {
-            window.clearTimeout(timeoutId);
-            resolve(value);
-          },
-          (error) => {
-            window.clearTimeout(timeoutId);
-            reject(error);
-          },
-        );
-      });
-    const runPngDownloadFallback = async (blob: Blob): Promise<void> => {
-      console.log("share:fallback download started");
-      const objectUrl = URL.createObjectURL(blob);
-      try {
-        const link = document.createElement("a");
-        link.href = objectUrl;
-        link.download = "pitchflow-play.png";
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-      } finally {
-        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1200);
+  useEffect(() => {
+    return () => {
+      if (shareTipTimerRef.current !== null) {
+        window.clearTimeout(shareTipTimerRef.current);
       }
     };
-
-    try {
-      const blob = await withTimeout(exportCurrentBoardImageBlob(), 8000, "Image export timed out");
-      if (!blob) {
-        throw new Error("Image export returned empty blob");
-      }
-
-      const file = new File([blob], "pitchflow-play.png", { type: "image/png" });
-      const sharePayload: ShareData = {
-        files: [file],
-        title: "PitchFlow Play",
-        text: "FlowLab tactical board snapshot",
-      };
-      const typedNavigator = navigator as Navigator & {
-        share?: (data: ShareData) => Promise<void>;
-        canShare?: (data: ShareData) => boolean;
-      };
-      const canShareFiles = Boolean(typedNavigator.share && typedNavigator.canShare?.({ files: [file] }));
-      console.log("share:canShare files?", canShareFiles);
-
-      if (canShareFiles) {
-        setShareStatus("Image ready to share");
-        try {
-          await withTimeout(typedNavigator.share(sharePayload), 8000, "Image share timed out");
-        } catch (error) {
-          console.log("share:navigator.share error", error);
-          const maybeDomError = error as { name?: string };
-          if (maybeDomError?.name === "AbortError") {
-            setShareStatus("Share cancelled");
-            return;
-          }
-          if (isTimeoutError(error)) {
-            throw error;
-          }
-          try {
-            await runPngDownloadFallback(blob);
-            setShareStatus("Image downloaded");
-            return;
-          } catch {
-            throw error;
-          }
-        }
-        return;
-      }
-
-      await runPngDownloadFallback(blob);
-      setShareStatus("Image downloaded");
-    } catch (error) {
-      setShareStatus("Could not share image");
-      if (!isTimeoutError(error)) {
-        console.error("Unexpected Share Image failure", error);
-      }
-    } finally {
-      clearShareStatusLater();
-    }
-  };
+  }, []);
   const openWhiteboardHomeConfirm = () => {
     if (whiteboardHomeConfirmOpen) return;
     setWhiteboardHomeConfirmOpen(true);
@@ -2290,18 +2194,8 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         ) : null}
         {!isWhiteboardMode && actionsOpen ? (
           <div ref={actionsMenuRef} style={ACTIONS_POPOUT_STYLE}>
-            <button
-              type="button"
-              className="control-button"
-              style={ACTIONS_MENU_BUTTON_STYLE}
-              onClick={() => {
-                void shareBoardImage();
-              }}
-            >
-              Share Image
-            </button>
-            <button type="button" className="control-button" style={ACTIONS_MENU_BUTTON_STYLE} onClick={openRecordGuide}>
-              Record Clip
+            <button type="button" className="control-button" style={ACTIONS_MENU_BUTTON_STYLE} onClick={openQuickShareMenu}>
+              Quick Share
             </button>
             <button type="button" className="control-button" style={ACTIONS_MENU_BUTTON_STYLE} onClick={goHome}>
               Home
@@ -2320,6 +2214,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                 const next = !open;
                 if (next) {
                   setControlsOpen(false);
+                  setQuickShareOpen(false);
                 }
                 return next;
               })
@@ -2339,6 +2234,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                 const next = !open;
                 if (next) {
                   setActionsOpen(false);
+                  setQuickShareOpen(false);
                 }
                 return next;
               })
@@ -2363,28 +2259,24 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             </span>
           </button>
         ) : null}
-        {!isWhiteboardMode && recordGuideOpen ? (
-          <div ref={recordGuidePanelRef} style={RECORD_GUIDE_STYLE} role="dialog" aria-modal="false">
-            <p style={RECORD_GUIDE_TITLE_STYLE}>Record this play</p>
-            <p style={RECORD_GUIDE_TEXT_STYLE}>We can’t record your clip, but your device can 😉</p>
-            <ol style={RECORD_GUIDE_LIST_STYLE}>
-              <li>Open your phone’s quick controls.</li>
-              <li>Tap Screen Record.</li>
-              <li>Come back here and press Play.</li>
-              <li>Stop recording.</li>
-              <li>Share the video to WhatsApp.</li>
-            </ol>
-            <p style={RECORD_GUIDE_NOTE_STYLE}>
-              Android: swipe down twice and tap Screen Record. iPhone: open Control Centre and tap Screen Recording.
-            </p>
-            <div style={RECORD_GUIDE_ACTIONS_STYLE}>
-              <button type="button" style={RECORD_GUIDE_BUTTON_STYLE} onClick={closeRecordGuide}>
-                Got it
-              </button>
-            </div>
+        {!isWhiteboardMode && quickShareOpen ? (
+          <div ref={quickSharePopoverRef} style={QUICK_SHARE_POPOUT_STYLE} role="dialog" aria-modal="false" aria-label="Quick Share">
+            <p style={QUICK_SHARE_TITLE_STYLE}>⚡ Quick Share</p>
+            <button type="button" className="control-button" style={QUICK_SHARE_OPTION_BUTTON_STYLE} onClick={handleQuickShareRecordClip}>
+              <span style={QUICK_SHARE_OPTION_TITLE_STYLE}>🎥 Record Clip</span>
+              <span style={QUICK_SHARE_OPTION_SUBTITLE_STYLE}>Best for movement & plays</span>
+            </button>
+            <button type="button" className="control-button" style={QUICK_SHARE_OPTION_BUTTON_STYLE} onClick={handleQuickShareSnapshot}>
+              <span style={QUICK_SHARE_OPTION_TITLE_STYLE}>📸 Share Snapshot</span>
+              <span style={QUICK_SHARE_OPTION_SUBTITLE_STYLE}>Best for setups & drills</span>
+            </button>
           </div>
         ) : null}
-        {!isWhiteboardMode && shareStatus ? <div style={SHARE_STATUS_STYLE}>{shareStatus}</div> : null}
+        {!isWhiteboardMode && shareTipMessage ? (
+          <div style={SHARE_TIP_TOAST_STYLE} role="status" aria-live="polite">
+            <p style={SHARE_TIP_TEXT_STYLE}>{shareTipMessage}</p>
+          </div>
+        ) : null}
         {isWhiteboardMode ? (
           <>
             <button
