@@ -546,6 +546,99 @@ const QUICK_SHARE_OPTION_SUBTITLE_STYLE: CSSProperties = {
   letterSpacing: "0.12px",
 };
 
+const QUICK_SHARE_ONBOARDING_OVERLAY_STYLE: CSSProperties = {
+  position: "fixed",
+  inset: 0,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "max(16px, calc(env(safe-area-inset-top, 0px) + 10px)) max(16px, calc(env(safe-area-inset-right, 0px) + 8px)) max(16px, calc(env(safe-area-inset-bottom, 0px) + 10px)) max(16px, calc(env(safe-area-inset-left, 0px) + 8px))",
+  background: "rgba(5, 11, 17, 0.36)",
+  transition: "opacity 180ms ease-out",
+  zIndex: 22,
+};
+
+const QUICK_SHARE_ONBOARDING_CARD_STYLE: CSSProperties = {
+  width: "min(420px, calc(100vw - 32px))",
+  display: "flex",
+  flexDirection: "column",
+  gap: "9px",
+  padding: "12px",
+  borderRadius: "14px",
+  border: "1px solid rgba(194, 216, 235, 0.28)",
+  background: "rgba(11, 21, 29, 0.84)",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+  boxShadow: "0 16px 34px rgba(2, 8, 15, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.11)",
+  transition: "transform 180ms ease-out, opacity 180ms ease-out",
+  zIndex: 23,
+};
+
+const QUICK_SHARE_ONBOARDING_TITLE_STYLE: CSSProperties = {
+  margin: 0,
+  color: "#eff8ff",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "13px",
+  fontWeight: 700,
+  letterSpacing: "0.16px",
+};
+
+const QUICK_SHARE_ONBOARDING_BODY_STYLE: CSSProperties = {
+  margin: 0,
+  color: "rgba(220, 236, 247, 0.92)",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "10px",
+  fontWeight: 520,
+  lineHeight: 1.4,
+};
+
+const QUICK_SHARE_ONBOARDING_ROW_STYLE: CSSProperties = {
+  borderRadius: "10px",
+  border: "1px solid rgba(187, 211, 233, 0.24)",
+  background: "rgba(16, 28, 37, 0.78)",
+  padding: "9px 10px",
+  display: "grid",
+  gap: "3px",
+};
+
+const QUICK_SHARE_ONBOARDING_ROW_TITLE_STYLE: CSSProperties = {
+  margin: 0,
+  color: "#edf7ff",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "10.5px",
+  fontWeight: 650,
+  letterSpacing: "0.14px",
+};
+
+const QUICK_SHARE_ONBOARDING_ROW_TEXT_STYLE: CSSProperties = {
+  margin: 0,
+  color: "rgba(208, 227, 242, 0.9)",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "9.5px",
+  fontWeight: 520,
+  lineHeight: 1.35,
+};
+
+const QUICK_SHARE_ONBOARDING_NOTE_STYLE: CSSProperties = {
+  margin: 0,
+  color: "rgba(199, 220, 238, 0.88)",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "9.5px",
+  fontWeight: 560,
+  letterSpacing: "0.1px",
+};
+
+const QUICK_SHARE_ONBOARDING_BUTTON_STYLE: CSSProperties = {
+  ...ACTIONS_MENU_BUTTON_STYLE,
+  height: "34px",
+  textAlign: "center",
+  fontSize: "10.5px",
+  fontWeight: 650,
+  justifyContent: "center",
+};
+
+const QUICK_SHARE_ONBOARDING_STORAGE_KEY = "flowlabs_quick_share_onboarding_seen";
+
 const COACH_HUB_PANEL_STYLE: CSSProperties = {
   ...POPOUT_BASE_STYLE,
   display: "flex",
@@ -1048,6 +1141,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const actionsBubbleButtonRef = useRef<HTMLButtonElement | null>(null);
   const actionsMenuRef = useRef<HTMLDivElement | null>(null);
   const quickSharePopoverRef = useRef<HTMLDivElement | null>(null);
+  const quickShareOnboardingCardRef = useRef<HTMLDivElement | null>(null);
   const shareTipTimerRef = useRef<number | null>(null);
   const whiteboardBubbleButtonRef = useRef<HTMLButtonElement | null>(null);
   const whiteboardBubbleMenuRef = useRef<HTMLDivElement | null>(null);
@@ -1094,6 +1188,9 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const [isPaused, setIsPaused] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [quickShareOpen, setQuickShareOpen] = useState(false);
+  const [quickShareOnboardingOpen, setQuickShareOnboardingOpen] = useState(false);
+  const [quickShareOnboardingSeen, setQuickShareOnboardingSeen] = useState(false);
+  const [quickShareOnboardingEntered, setQuickShareOnboardingEntered] = useState(false);
   const [shareTipMessage, setShareTipMessage] = useState<string | null>(null);
   const [controlsOpen, setControlsOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
@@ -1102,6 +1199,12 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const isStatsMode = mode === "stats";
   const isWhiteboardMode = mode === "whiteboard";
   const wakeLockRef = useRef<{ release: () => Promise<void> } | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const seen = window.localStorage.getItem(QUICK_SHARE_ONBOARDING_STORAGE_KEY) === "true";
+    setQuickShareOnboardingSeen(seen);
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1392,6 +1495,42 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   }, [isWhiteboardMode, quickShareOpen]);
 
   useEffect(() => {
+    if (isWhiteboardMode || !quickShareOnboardingOpen) return;
+
+    const handlePointerDownOutside = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (quickShareOnboardingCardRef.current?.contains(target)) return;
+      dismissQuickShareOnboarding(false);
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      dismissQuickShareOnboarding(false);
+    };
+
+    document.addEventListener("pointerdown", handlePointerDownOutside);
+    window.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDownOutside);
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [isWhiteboardMode, quickShareOnboardingOpen]);
+
+  useEffect(() => {
+    if (!quickShareOnboardingOpen) {
+      setQuickShareOnboardingEntered(false);
+      return;
+    }
+    const rafId = window.requestAnimationFrame(() => {
+      setQuickShareOnboardingEntered(true);
+    });
+    return () => {
+      window.cancelAnimationFrame(rafId);
+    };
+  }, [quickShareOnboardingOpen]);
+
+  useEffect(() => {
     if (isWhiteboardMode || !actionsOpen) return;
 
     const handlePointerDownOutside = (event: PointerEvent) => {
@@ -1473,10 +1612,6 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
       shareTipTimerRef.current = null;
     }, 4000);
   };
-  const openQuickShareMenu = () => {
-    closeActionsMenu();
-    setQuickShareOpen(true);
-  };
   const handleQuickShareRecordClip = () => {
     closeQuickShareMenu();
     showShareTip(
@@ -1486,6 +1621,26 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const handleQuickShareSnapshot = () => {
     closeQuickShareMenu();
     showShareTip("Take a screenshot to share this setup 📸\nFastest way to send it to WhatsApp");
+  };
+  const dismissQuickShareOnboarding = (openQuickShareAfter = false) => {
+    setQuickShareOnboardingOpen(false);
+    setQuickShareOnboardingSeen(true);
+    try {
+      window.localStorage.setItem(QUICK_SHARE_ONBOARDING_STORAGE_KEY, "true");
+    } catch {
+      // Keep onboarding state in-memory if storage is unavailable.
+    }
+    if (openQuickShareAfter) {
+      setQuickShareOpen(true);
+    }
+  };
+  const openQuickShareEntry = () => {
+    closeActionsMenu();
+    if (quickShareOnboardingSeen) {
+      setQuickShareOpen(true);
+      return;
+    }
+    setQuickShareOnboardingOpen(true);
   };
   useEffect(() => {
     return () => {
@@ -2194,7 +2349,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         ) : null}
         {!isWhiteboardMode && actionsOpen ? (
           <div ref={actionsMenuRef} style={ACTIONS_POPOUT_STYLE}>
-            <button type="button" className="control-button" style={ACTIONS_MENU_BUTTON_STYLE} onClick={openQuickShareMenu}>
+            <button type="button" className="control-button" style={ACTIONS_MENU_BUTTON_STYLE} onClick={openQuickShareEntry}>
               Quick Share
             </button>
             <button type="button" className="control-button" style={ACTIONS_MENU_BUTTON_STYLE} onClick={goHome}>
@@ -2258,6 +2413,47 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
               </span>
             </span>
           </button>
+        ) : null}
+        {!isWhiteboardMode && quickShareOnboardingOpen ? (
+          <div
+            style={{
+              ...QUICK_SHARE_ONBOARDING_OVERLAY_STYLE,
+              opacity: quickShareOnboardingEntered ? 1 : 0,
+            }}
+            role="presentation"
+          >
+            <div
+              ref={quickShareOnboardingCardRef}
+              style={{
+                ...QUICK_SHARE_ONBOARDING_CARD_STYLE,
+                opacity: quickShareOnboardingEntered ? 1 : 0,
+                transform: quickShareOnboardingEntered ? "scale(1)" : "scale(0.98)",
+              }}
+              role="dialog"
+              aria-modal="false"
+              aria-label="Quick Share onboarding"
+            >
+              <p style={QUICK_SHARE_ONBOARDING_TITLE_STYLE}>⚡ Quick Share</p>
+              <p style={QUICK_SHARE_ONBOARDING_BODY_STYLE}>Share plays using the tools already on your phone.</p>
+              <div style={QUICK_SHARE_ONBOARDING_ROW_STYLE}>
+                <p style={QUICK_SHARE_ONBOARDING_ROW_TITLE_STYLE}>🎥 Record Play</p>
+                <p style={QUICK_SHARE_ONBOARDING_ROW_TEXT_STYLE}>Swipe down → Screen Record → press Play</p>
+              </div>
+              <div style={QUICK_SHARE_ONBOARDING_ROW_STYLE}>
+                <p style={QUICK_SHARE_ONBOARDING_ROW_TITLE_STYLE}>📸 Snapshot</p>
+                <p style={QUICK_SHARE_ONBOARDING_ROW_TEXT_STYLE}>Take a screenshot → send it to WhatsApp</p>
+              </div>
+              <p style={QUICK_SHARE_ONBOARDING_NOTE_STYLE}>Fast, reliable, matchday-safe.</p>
+              <button
+                type="button"
+                className="control-button"
+                style={QUICK_SHARE_ONBOARDING_BUTTON_STYLE}
+                onClick={() => dismissQuickShareOnboarding(true)}
+              >
+                Got it 👍
+              </button>
+            </div>
+          </div>
         ) : null}
         {!isWhiteboardMode && quickShareOpen ? (
           <div ref={quickSharePopoverRef} style={QUICK_SHARE_POPOUT_STYLE} role="dialog" aria-modal="false" aria-label="Quick Share">
