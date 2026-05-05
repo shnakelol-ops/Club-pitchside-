@@ -381,6 +381,17 @@ const LEFT_BUBBLE_STYLE: CSSProperties = {
   bottom: "max(12px, calc(env(safe-area-inset-bottom, 0px) + 10px))",
 };
 
+const ACTIONS_BUBBLE_STYLE: CSSProperties = {
+  ...BUBBLE_BASE_STYLE,
+  left: "max(12px, calc(env(safe-area-inset-left, 0px) + 10px))",
+  top: "50%",
+  transform: "translateY(-50%)",
+  background: "rgba(32, 40, 50, 0.74)",
+  border: "1px solid rgba(233, 242, 255, 0.34)",
+  boxShadow: "0 8px 20px rgba(0, 0, 0, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.22)",
+  zIndex: 21,
+};
+
 const RIGHT_BUBBLE_STYLE: CSSProperties = {
   ...BUBBLE_BASE_STYLE,
   right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
@@ -447,6 +458,186 @@ const CONTROLS_POPOUT_STYLE: CSSProperties = {
   background: "rgba(20, 16, 17, 0.58)",
   border: "1px solid rgba(238, 146, 146, 0.16)",
 };
+
+const ACTIONS_POPOUT_STYLE: CSSProperties = {
+  ...POPOUT_BASE_STYLE,
+  left: "max(58px, calc(env(safe-area-inset-left, 0px) + 56px))",
+  top: "50%",
+  transform: "translateY(-50%)",
+  flexDirection: "column",
+  width: "128px",
+  padding: "7px",
+  gap: "5px",
+  overflow: "hidden",
+  background: "rgba(22, 30, 38, 0.78)",
+  border: "1px solid rgba(218, 232, 246, 0.24)",
+  boxShadow: "0 10px 24px rgba(0, 0, 0, 0.36)",
+  zIndex: 21,
+};
+
+const ACTIONS_MENU_BUTTON_STYLE: CSSProperties = {
+  borderRadius: "9px",
+  border: "1px solid rgba(224, 236, 248, 0.2)",
+  color: "rgba(255, 255, 255, 0.95)",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontWeight: 600,
+  width: "100%",
+  height: "30px",
+  minWidth: 0,
+  fontSize: "10px",
+  letterSpacing: "0.2px",
+  padding: "0 9px",
+  cursor: "pointer",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+  textAlign: "left",
+  background: "rgba(15, 24, 31, 0.82)",
+  boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.12)",
+};
+
+const QUICK_SHARE_POPOUT_STYLE: CSSProperties = {
+  ...POPOUT_BASE_STYLE,
+  left: "max(194px, calc(env(safe-area-inset-left, 0px) + 192px))",
+  top: "50%",
+  transform: "translateY(-50%)",
+  flexDirection: "column",
+  width: "188px",
+  padding: "9px",
+  gap: "7px",
+  overflow: "hidden",
+  background: "rgba(20, 28, 36, 0.82)",
+  border: "1px solid rgba(212, 228, 244, 0.24)",
+  boxShadow: "0 12px 26px rgba(0, 0, 0, 0.34)",
+  zIndex: 22,
+};
+
+const QUICK_SHARE_TITLE_STYLE: CSSProperties = {
+  margin: 0,
+  color: "#eef7ff",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "11.5px",
+  fontWeight: 700,
+  letterSpacing: "0.14px",
+};
+
+const QUICK_SHARE_OPTION_BUTTON_STYLE: CSSProperties = {
+  ...ACTIONS_MENU_BUTTON_STYLE,
+  height: "40px",
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "flex-start",
+  justifyContent: "center",
+  gap: "2px",
+  padding: "6px 9px",
+  lineHeight: 1.1,
+};
+
+const QUICK_SHARE_OPTION_TITLE_STYLE: CSSProperties = {
+  color: "#eef6ff",
+  fontSize: "10px",
+  fontWeight: 650,
+  letterSpacing: "0.16px",
+};
+
+const QUICK_SHARE_OPTION_SUBTITLE_STYLE: CSSProperties = {
+  color: "rgba(206, 222, 238, 0.9)",
+  fontSize: "9px",
+  fontWeight: 520,
+  letterSpacing: "0.12px",
+};
+
+const QUICK_SHARE_ONBOARDING_OVERLAY_STYLE: CSSProperties = {
+  position: "fixed",
+  inset: 0,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "max(16px, calc(env(safe-area-inset-top, 0px) + 10px)) max(16px, calc(env(safe-area-inset-right, 0px) + 8px)) max(16px, calc(env(safe-area-inset-bottom, 0px) + 10px)) max(16px, calc(env(safe-area-inset-left, 0px) + 8px))",
+  background: "rgba(5, 11, 17, 0.36)",
+  transition: "opacity 180ms ease-out",
+  zIndex: 22,
+};
+
+const QUICK_SHARE_ONBOARDING_CARD_STYLE: CSSProperties = {
+  width: "min(420px, calc(100vw - 32px))",
+  display: "flex",
+  flexDirection: "column",
+  gap: "9px",
+  padding: "12px",
+  borderRadius: "14px",
+  border: "1px solid rgba(194, 216, 235, 0.28)",
+  background: "rgba(11, 21, 29, 0.84)",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+  boxShadow: "0 16px 34px rgba(2, 8, 15, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.11)",
+  transition: "transform 180ms ease-out, opacity 180ms ease-out",
+  zIndex: 23,
+};
+
+const QUICK_SHARE_ONBOARDING_TITLE_STYLE: CSSProperties = {
+  margin: 0,
+  color: "#eff8ff",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "13px",
+  fontWeight: 700,
+  letterSpacing: "0.16px",
+};
+
+const QUICK_SHARE_ONBOARDING_BODY_STYLE: CSSProperties = {
+  margin: 0,
+  color: "rgba(220, 236, 247, 0.92)",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "10px",
+  fontWeight: 520,
+  lineHeight: 1.4,
+};
+
+const QUICK_SHARE_ONBOARDING_ROW_STYLE: CSSProperties = {
+  borderRadius: "10px",
+  border: "1px solid rgba(187, 211, 233, 0.24)",
+  background: "rgba(16, 28, 37, 0.78)",
+  padding: "9px 10px",
+  display: "grid",
+  gap: "3px",
+};
+
+const QUICK_SHARE_ONBOARDING_ROW_TITLE_STYLE: CSSProperties = {
+  margin: 0,
+  color: "#edf7ff",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "10.5px",
+  fontWeight: 650,
+  letterSpacing: "0.14px",
+};
+
+const QUICK_SHARE_ONBOARDING_ROW_TEXT_STYLE: CSSProperties = {
+  margin: 0,
+  color: "rgba(208, 227, 242, 0.9)",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "9.5px",
+  fontWeight: 520,
+  lineHeight: 1.35,
+};
+
+const QUICK_SHARE_ONBOARDING_NOTE_STYLE: CSSProperties = {
+  margin: 0,
+  color: "rgba(199, 220, 238, 0.88)",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "9.5px",
+  fontWeight: 560,
+  letterSpacing: "0.1px",
+};
+
+const QUICK_SHARE_ONBOARDING_BUTTON_STYLE: CSSProperties = {
+  ...ACTIONS_MENU_BUTTON_STYLE,
+  height: "34px",
+  textAlign: "center",
+  fontSize: "10.5px",
+  fontWeight: 650,
+  justifyContent: "center",
+};
+
+const QUICK_SHARE_ONBOARDING_STORAGE_KEY = "flowlabs_quick_share_onboarding_seen";
 
 const COACH_HUB_PANEL_STYLE: CSSProperties = {
   ...POPOUT_BASE_STYLE,
@@ -620,80 +811,34 @@ const UNDO_PHASE_BUTTON_STYLE: CSSProperties = {
     "0 6px 20px rgba(0, 0, 0, 0.45), 0 0 18px rgba(168, 85, 247, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.25)",
 };
 
-const RECORD_CLIP_BUTTON_STYLE: CSSProperties = {
-  ...CONTROL_BUTTON_STYLE,
-  border: "1px solid rgba(125, 211, 252, 0.58)",
-  background: "rgba(10, 30, 46, 0.72)",
-  boxShadow:
-    "0 6px 20px rgba(0, 0, 0, 0.45), 0 0 16px rgba(56, 189, 248, 0.24), inset 0 1px 2px rgba(255, 255, 255, 0.16)",
-};
-
-const RECORD_GUIDE_STYLE: CSSProperties = {
+const SHARE_TIP_TOAST_STYLE: CSSProperties = {
   position: "fixed",
-  left: "50%",
-  transform: "translateX(-50%)",
-  bottom: "max(56px, calc(env(safe-area-inset-bottom, 0px) + 54px))",
-  width: "min(320px, calc(100vw - 24px))",
+  left: "max(62px, calc(env(safe-area-inset-left, 0px) + 60px))",
+  top: "calc(50% + 98px)",
+  width: "min(286px, calc(100vw - 72px))",
   display: "flex",
   flexDirection: "column",
-  gap: "8px",
-  padding: "10px",
-  borderRadius: "14px",
-  border: "1px solid rgba(163, 190, 212, 0.24)",
-  background: "rgba(10, 19, 24, 0.78)",
+  gap: "6px",
+  padding: "9px 10px",
+  borderRadius: "12px",
+  border: "1px solid rgba(191, 214, 235, 0.26)",
+  background: "rgba(12, 22, 29, 0.84)",
   backdropFilter: "blur(12px)",
   WebkitBackdropFilter: "blur(12px)",
-  boxShadow: "0 12px 28px rgba(2, 8, 15, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08)",
-  zIndex: 24,
+  boxShadow: "0 12px 26px rgba(2, 8, 15, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.1)",
+  zIndex: 23,
+  pointerEvents: "none",
 };
 
-const RECORD_GUIDE_TITLE_STYLE: CSSProperties = {
+const SHARE_TIP_TEXT_STYLE: CSSProperties = {
   margin: 0,
-  color: "#e4eff8",
-  fontSize: "12px",
-  fontWeight: 700,
-  letterSpacing: "0.12px",
-  fontFamily: "Inter, system-ui, sans-serif",
-};
-
-const RECORD_GUIDE_TEXT_STYLE: CSSProperties = {
-  margin: 0,
-  color: "rgba(215, 232, 245, 0.88)",
-  fontSize: "10px",
+  color: "#e5f2ff",
+  fontSize: "10.5px",
+  fontWeight: 600,
+  letterSpacing: "0.14px",
   lineHeight: 1.35,
+  whiteSpace: "pre-line",
   fontFamily: "Inter, system-ui, sans-serif",
-};
-
-const RECORD_GUIDE_LIST_STYLE: CSSProperties = {
-  ...RECORD_GUIDE_TEXT_STYLE,
-  margin: 0,
-  paddingLeft: "16px",
-  display: "grid",
-  gap: "3px",
-};
-
-const RECORD_GUIDE_NOTE_STYLE: CSSProperties = {
-  ...RECORD_GUIDE_TEXT_STYLE,
-  color: "rgba(196, 220, 240, 0.78)",
-};
-
-const RECORD_GUIDE_ACTIONS_STYLE: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-  gap: "6px",
-};
-
-const RECORD_GUIDE_BUTTON_STYLE: CSSProperties = {
-  ...COACH_HUB_TOOL_BUTTON_STYLE,
-  minWidth: 0,
-  height: "32px",
-};
-
-const RECORD_GUIDE_CLEAN_BUTTON_STYLE: CSSProperties = {
-  ...RECORD_GUIDE_BUTTON_STYLE,
-  border: "1px solid rgba(125, 211, 252, 0.56)",
-  background: "rgba(30, 64, 175, 0.52)",
-  color: "#f3f8ff",
 };
 
 const HOME_MENU_ICON_BUTTON_STYLE: CSSProperties = {
@@ -713,19 +858,6 @@ const HOME_MENU_ICON_BUTTON_STYLE: CSSProperties = {
   backdropFilter: "blur(10px)",
   WebkitBackdropFilter: "blur(10px)",
   boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
-};
-
-const EXIT_CLEAN_VIEW_BUTTON_STYLE: CSSProperties = {
-  ...HOME_MENU_ICON_BUTTON_STYLE,
-  position: "fixed",
-  top: "max(12px, calc(env(safe-area-inset-top, 0px) + 10px))",
-  right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
-  width: "auto",
-  minWidth: "98px",
-  padding: "0 10px",
-  fontSize: "11px",
-  fontWeight: 650,
-  zIndex: 24,
 };
 
 const WHITEBOARD_TOOLS_BUTTON_STYLE: CSSProperties = {
@@ -1006,9 +1138,11 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const hostRef = useRef<HTMLDivElement | null>(null);
   const surfaceRef = useRef<TacticalPadLiteSurface | null>(null);
   const tacticalItemCounterRef = useRef(0);
-  const recordGuideButtonRef = useRef<HTMLButtonElement | null>(null);
-  const recordGuidePanelRef = useRef<HTMLDivElement | null>(null);
-  const cleanViewRestoreRef = useRef<{ controlsOpen: boolean; toolsOpen: boolean; phasesOpen: boolean } | null>(null);
+  const actionsBubbleButtonRef = useRef<HTMLButtonElement | null>(null);
+  const actionsMenuRef = useRef<HTMLDivElement | null>(null);
+  const quickSharePopoverRef = useRef<HTMLDivElement | null>(null);
+  const quickShareOnboardingCardRef = useRef<HTMLDivElement | null>(null);
+  const shareTipTimerRef = useRef<number | null>(null);
   const whiteboardBubbleButtonRef = useRef<HTMLButtonElement | null>(null);
   const whiteboardBubbleMenuRef = useRef<HTMLDivElement | null>(null);
   const whiteboardHomeButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -1052,14 +1186,25 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const [phaseCount, setPhaseCount] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
+  const [quickShareOpen, setQuickShareOpen] = useState(false);
+  const [quickShareOnboardingOpen, setQuickShareOnboardingOpen] = useState(false);
+  const [quickShareOnboardingSeen, setQuickShareOnboardingSeen] = useState(false);
+  const [quickShareOnboardingEntered, setQuickShareOnboardingEntered] = useState(false);
+  const [shareTipMessage, setShareTipMessage] = useState<string | null>(null);
   const [controlsOpen, setControlsOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [phasesOpen, setPhasesOpen] = useState(false);
-  const [recordGuideOpen, setRecordGuideOpen] = useState(false);
-  const [recordCleanView, setRecordCleanView] = useState(false);
+
   const isStatsMode = mode === "stats";
   const isWhiteboardMode = mode === "whiteboard";
   const wakeLockRef = useRef<{ release: () => Promise<void> } | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const seen = window.localStorage.getItem(QUICK_SHARE_ONBOARDING_STORAGE_KEY) === "true";
+    setQuickShareOnboardingSeen(seen);
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1325,19 +1470,20 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   }, [isWhiteboardMode, whiteboardBubbleOpen]);
 
   useEffect(() => {
-    if (isWhiteboardMode || !recordGuideOpen) return;
+    if (isWhiteboardMode || !quickShareOpen) return;
 
     const handlePointerDownOutside = (event: PointerEvent) => {
       const target = event.target as Node | null;
       if (!target) return;
-      if (recordGuideButtonRef.current?.contains(target)) return;
-      if (recordGuidePanelRef.current?.contains(target)) return;
-      setRecordGuideOpen(false);
+      if (actionsBubbleButtonRef.current?.contains(target)) return;
+      if (actionsMenuRef.current?.contains(target)) return;
+      if (quickSharePopoverRef.current?.contains(target)) return;
+      setQuickShareOpen(false);
     };
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       event.preventDefault();
-      setRecordGuideOpen(false);
+      setQuickShareOpen(false);
     };
 
     document.addEventListener("pointerdown", handlePointerDownOutside);
@@ -1346,15 +1492,70 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
       document.removeEventListener("pointerdown", handlePointerDownOutside);
       window.removeEventListener("keydown", handleEscape);
     };
-  }, [isWhiteboardMode, recordGuideOpen]);
+  }, [isWhiteboardMode, quickShareOpen]);
 
   useEffect(() => {
-    if (!(isWhiteboardMode || isStatsMode)) return;
-    if (!recordGuideOpen && !recordCleanView) return;
-    setRecordGuideOpen(false);
-    setRecordCleanView(false);
-    cleanViewRestoreRef.current = null;
-  }, [isWhiteboardMode, isStatsMode, recordGuideOpen, recordCleanView]);
+    if (isWhiteboardMode || !quickShareOnboardingOpen) return;
+
+    const handlePointerDownOutside = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (quickShareOnboardingCardRef.current?.contains(target)) return;
+      dismissQuickShareOnboarding(false);
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      dismissQuickShareOnboarding(false);
+    };
+
+    document.addEventListener("pointerdown", handlePointerDownOutside);
+    window.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDownOutside);
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [isWhiteboardMode, quickShareOnboardingOpen]);
+
+  useEffect(() => {
+    if (!quickShareOnboardingOpen) {
+      setQuickShareOnboardingEntered(false);
+      return;
+    }
+    const rafId = window.requestAnimationFrame(() => {
+      setQuickShareOnboardingEntered(true);
+    });
+    return () => {
+      window.cancelAnimationFrame(rafId);
+    };
+  }, [quickShareOnboardingOpen]);
+
+  useEffect(() => {
+    if (isWhiteboardMode || !actionsOpen) return;
+
+    const handlePointerDownOutside = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (actionsBubbleButtonRef.current?.contains(target)) return;
+      if (actionsMenuRef.current?.contains(target)) return;
+      if (quickSharePopoverRef.current?.contains(target)) return;
+      setActionsOpen(false);
+      setQuickShareOpen(false);
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      setActionsOpen(false);
+      setQuickShareOpen(false);
+    };
+
+    document.addEventListener("pointerdown", handlePointerDownOutside);
+    window.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDownOutside);
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [isWhiteboardMode, actionsOpen]);
 
   useEffect(() => {
     if (!isWhiteboardMode || !whiteboardBubbleOpen) return;
@@ -1391,35 +1592,63 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const phaseItems = Array.from({ length: phaseCount }, (_, index) => index + 1);
   const floodlightDots = Array.from({ length: 12 }, (_, index) => index);
   const activeTacticalPenColor = tacticalPenColor;
+  const closeActionsMenu = () => {
+    setActionsOpen(false);
+    setQuickShareOpen(false);
+  };
   const closeControlsMenu = () => setControlsOpen(false);
   const goHome = () => {
+    closeActionsMenu();
     window.location.assign("/board");
   };
-  const openRecordGuide = () => {
-    setRecordGuideOpen(true);
-  };
-  const closeRecordGuide = () => {
-    setRecordGuideOpen(false);
-  };
-  const enterRecordCleanView = () => {
-    if (cleanViewRestoreRef.current == null) {
-      cleanViewRestoreRef.current = { controlsOpen, toolsOpen, phasesOpen };
+  const closeQuickShareMenu = () => setQuickShareOpen(false);
+  const showShareTip = (message: string) => {
+    if (shareTipTimerRef.current !== null) {
+      window.clearTimeout(shareTipTimerRef.current);
     }
-    setRecordGuideOpen(false);
-    setRecordCleanView(true);
-    setToolsOpen(false);
-    setPhasesOpen(false);
-    setControlsOpen(true);
+    setShareTipMessage(message);
+    shareTipTimerRef.current = window.setTimeout(() => {
+      setShareTipMessage(null);
+      shareTipTimerRef.current = null;
+    }, 4000);
   };
-  const exitRecordCleanView = () => {
-    setRecordCleanView(false);
-    const restoreState = cleanViewRestoreRef.current;
-    cleanViewRestoreRef.current = null;
-    if (!restoreState) return;
-    setControlsOpen(restoreState.controlsOpen);
-    setToolsOpen(restoreState.toolsOpen);
-    setPhasesOpen(restoreState.phasesOpen);
+  const handleQuickShareRecordClip = () => {
+    closeQuickShareMenu();
+    showShareTip(
+      "Use your phone’s screen recorder 🎥\nAndroid: swipe down twice → Screen Record\niPhone: Control Centre → Screen Recording",
+    );
   };
+  const handleQuickShareSnapshot = () => {
+    closeQuickShareMenu();
+    showShareTip("Take a screenshot to share this setup 📸\nFastest way to send it to WhatsApp");
+  };
+  const dismissQuickShareOnboarding = (openQuickShareAfter = false) => {
+    setQuickShareOnboardingOpen(false);
+    setQuickShareOnboardingSeen(true);
+    try {
+      window.localStorage.setItem(QUICK_SHARE_ONBOARDING_STORAGE_KEY, "true");
+    } catch {
+      // Keep onboarding state in-memory if storage is unavailable.
+    }
+    if (openQuickShareAfter) {
+      setQuickShareOpen(true);
+    }
+  };
+  const openQuickShareEntry = () => {
+    closeActionsMenu();
+    if (quickShareOnboardingSeen) {
+      setQuickShareOpen(true);
+      return;
+    }
+    setQuickShareOnboardingOpen(true);
+  };
+  useEffect(() => {
+    return () => {
+      if (shareTipTimerRef.current !== null) {
+        window.clearTimeout(shareTipTimerRef.current);
+      }
+    };
+  }, []);
   const openWhiteboardHomeConfirm = () => {
     if (whiteboardHomeConfirmOpen) return;
     setWhiteboardHomeConfirmOpen(true);
@@ -1887,7 +2116,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             ) : null}
           </>
         ) : null}
-        {!isWhiteboardMode && !recordCleanView ? (
+        {!isWhiteboardMode ? (
           <button
             type="button"
             style={PHASES_CHIP_STYLE}
@@ -1897,7 +2126,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             Phases: {phaseCount}
           </button>
         ) : null}
-        {!isWhiteboardMode && !recordCleanView && phasesOpen ? (
+        {!isWhiteboardMode && phasesOpen ? (
           <div style={PHASES_TRAY_STYLE}>
             {phaseItems.length > 0 ? (
               phaseItems.map((phase) => (
@@ -1910,17 +2139,8 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             )}
           </div>
         ) : null}
-        {!isWhiteboardMode && (controlsOpen || recordCleanView) ? (
+        {!isWhiteboardMode && controlsOpen ? (
           <div style={CONTROLS_POPOUT_STYLE}>
-            <button
-              type="button"
-              className="control-button"
-              style={{ ...CONTROL_BUTTON_STYLE, ...HOME_MENU_ICON_BUTTON_STYLE, minWidth: "34px" }}
-              onClick={goHome}
-              aria-label="Go to Home"
-            >
-              ⌂
-            </button>
             <button
               type="button"
               className="control-button"
@@ -1964,15 +2184,6 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
               Pause
             </button>
             <button
-              ref={recordGuideButtonRef}
-              type="button"
-              className="control-button"
-              style={RECORD_CLIP_BUTTON_STYLE}
-              onClick={openRecordGuide}
-            >
-              Record Clip
-            </button>
-            <button
               type="button"
               className="control-button"
               disabled={phaseCount <= 0}
@@ -1999,7 +2210,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             </button>
           </div>
         ) : null}
-        {!isWhiteboardMode && !recordCleanView && toolsOpen ? (
+        {!isWhiteboardMode && toolsOpen ? (
           <div style={COACH_HUB_PANEL_STYLE}>
             <div style={COACH_HUB_SECTION_STYLE}>
               <p style={COACH_HUB_SECTION_TITLE_STYLE}>Tools</p>
@@ -2136,18 +2347,58 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             </div>
           </div>
         ) : null}
-        {!isWhiteboardMode && !recordCleanView ? (
+        {!isWhiteboardMode && actionsOpen ? (
+          <div ref={actionsMenuRef} style={ACTIONS_POPOUT_STYLE}>
+            <button type="button" className="control-button" style={ACTIONS_MENU_BUTTON_STYLE} onClick={openQuickShareEntry}>
+              Quick Share
+            </button>
+            <button type="button" className="control-button" style={ACTIONS_MENU_BUTTON_STYLE} onClick={goHome}>
+              Home
+            </button>
+          </div>
+        ) : null}
+        {!isWhiteboardMode ? (
+          <button
+            ref={actionsBubbleButtonRef}
+            type="button"
+            className="floating-bubble"
+            style={ACTIONS_BUBBLE_STYLE}
+            aria-label="Open actions"
+            onClick={() =>
+              setActionsOpen((open) => {
+                const next = !open;
+                if (next) {
+                  setControlsOpen(false);
+                  setQuickShareOpen(false);
+                }
+                return next;
+              })
+            }
+          >
+            ⋯
+          </button>
+        ) : null}
+        {!isWhiteboardMode ? (
           <button
             type="button"
             className="floating-bubble"
             style={LEFT_BUBBLE_STYLE}
             aria-label="Open controls"
-            onClick={() => setControlsOpen((open) => !open)}
+            onClick={() =>
+              setControlsOpen((open) => {
+                const next = !open;
+                if (next) {
+                  setActionsOpen(false);
+                  setQuickShareOpen(false);
+                }
+                return next;
+              })
+            }
           >
             Ctrl
           </button>
         ) : null}
-        {!isWhiteboardMode && !recordCleanView ? (
+        {!isWhiteboardMode ? (
           <button
             type="button"
             className="floating-bubble floating-bubble-tool"
@@ -2163,30 +2414,64 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             </span>
           </button>
         ) : null}
-        {!isWhiteboardMode && recordGuideOpen ? (
-          <div ref={recordGuidePanelRef} style={RECORD_GUIDE_STYLE} role="dialog" aria-modal="false">
-            <p style={RECORD_GUIDE_TITLE_STYLE}>Record this play</p>
-            <ol style={RECORD_GUIDE_LIST_STYLE}>
-              <li>Swipe down from the top of your phone.</li>
-              <li>Tap Screen Record.</li>
-              <li>Press Play in PitchFlow.</li>
-              <li>Stop recording and share to WhatsApp.</li>
-            </ol>
-            <p style={RECORD_GUIDE_NOTE_STYLE}>PitchFlow does not record your screen — your phone does.</p>
-            <div style={RECORD_GUIDE_ACTIONS_STYLE}>
-              <button type="button" style={RECORD_GUIDE_BUTTON_STYLE} onClick={closeRecordGuide}>
-                Got it
-              </button>
-              <button type="button" style={RECORD_GUIDE_CLEAN_BUTTON_STYLE} onClick={enterRecordCleanView}>
-                Clean View
+        {!isWhiteboardMode && quickShareOnboardingOpen ? (
+          <div
+            style={{
+              ...QUICK_SHARE_ONBOARDING_OVERLAY_STYLE,
+              opacity: quickShareOnboardingEntered ? 1 : 0,
+            }}
+            role="presentation"
+          >
+            <div
+              ref={quickShareOnboardingCardRef}
+              style={{
+                ...QUICK_SHARE_ONBOARDING_CARD_STYLE,
+                opacity: quickShareOnboardingEntered ? 1 : 0,
+                transform: quickShareOnboardingEntered ? "scale(1)" : "scale(0.98)",
+              }}
+              role="dialog"
+              aria-modal="false"
+              aria-label="Quick Share onboarding"
+            >
+              <p style={QUICK_SHARE_ONBOARDING_TITLE_STYLE}>⚡ Quick Share</p>
+              <p style={QUICK_SHARE_ONBOARDING_BODY_STYLE}>Share plays using the tools already on your phone.</p>
+              <div style={QUICK_SHARE_ONBOARDING_ROW_STYLE}>
+                <p style={QUICK_SHARE_ONBOARDING_ROW_TITLE_STYLE}>🎥 Record Play</p>
+                <p style={QUICK_SHARE_ONBOARDING_ROW_TEXT_STYLE}>Swipe down → Screen Record → press Play</p>
+              </div>
+              <div style={QUICK_SHARE_ONBOARDING_ROW_STYLE}>
+                <p style={QUICK_SHARE_ONBOARDING_ROW_TITLE_STYLE}>📸 Snapshot</p>
+                <p style={QUICK_SHARE_ONBOARDING_ROW_TEXT_STYLE}>Take a screenshot → send it to WhatsApp</p>
+              </div>
+              <p style={QUICK_SHARE_ONBOARDING_NOTE_STYLE}>Fast, reliable, matchday-safe.</p>
+              <button
+                type="button"
+                className="control-button"
+                style={QUICK_SHARE_ONBOARDING_BUTTON_STYLE}
+                onClick={() => dismissQuickShareOnboarding(true)}
+              >
+                Got it 👍
               </button>
             </div>
           </div>
         ) : null}
-        {!isWhiteboardMode && recordCleanView ? (
-          <button type="button" style={EXIT_CLEAN_VIEW_BUTTON_STYLE} onClick={exitRecordCleanView}>
-            Exit Clean View
-          </button>
+        {!isWhiteboardMode && quickShareOpen ? (
+          <div ref={quickSharePopoverRef} style={QUICK_SHARE_POPOUT_STYLE} role="dialog" aria-modal="false" aria-label="Quick Share">
+            <p style={QUICK_SHARE_TITLE_STYLE}>⚡ Quick Share</p>
+            <button type="button" className="control-button" style={QUICK_SHARE_OPTION_BUTTON_STYLE} onClick={handleQuickShareRecordClip}>
+              <span style={QUICK_SHARE_OPTION_TITLE_STYLE}>🎥 Record Clip</span>
+              <span style={QUICK_SHARE_OPTION_SUBTITLE_STYLE}>Best for movement & plays</span>
+            </button>
+            <button type="button" className="control-button" style={QUICK_SHARE_OPTION_BUTTON_STYLE} onClick={handleQuickShareSnapshot}>
+              <span style={QUICK_SHARE_OPTION_TITLE_STYLE}>📸 Share Snapshot</span>
+              <span style={QUICK_SHARE_OPTION_SUBTITLE_STYLE}>Best for setups & drills</span>
+            </button>
+          </div>
+        ) : null}
+        {!isWhiteboardMode && shareTipMessage ? (
+          <div style={SHARE_TIP_TOAST_STYLE} role="status" aria-live="polite">
+            <p style={SHARE_TIP_TEXT_STYLE}>{shareTipMessage}</p>
+          </div>
         ) : null}
         {isWhiteboardMode ? (
           <>
