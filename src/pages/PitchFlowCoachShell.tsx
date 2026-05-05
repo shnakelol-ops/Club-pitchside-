@@ -1,19 +1,14 @@
 import { useMemo, useState, type KeyboardEvent } from "react";
 
 import {
-  AGE_FILTER_OPTIONS,
   AGE_LABELS,
-  LIBRARY_CATEGORY_LABELS,
+  IDENTITY_LABELS,
   LIBRARY_ITEMS,
   PROBLEM_OPTIONS,
-  PROBLEM_TAB_OPTIONS,
-  SPORT_FILTER_OPTIONS,
-  SPORT_LABELS,
   type AgeGroupFilter,
   type LibraryCategory,
   type LibraryItem,
   type ProblemTag,
-  type SportFilter,
 } from "../data/libraryContent";
 
 export type PitchFlowTab = "home" | "library" | "sessions" | "plans";
@@ -29,8 +24,8 @@ type BottomNavItem = {
   path: string;
 };
 
-type ProblemTabId = (typeof PROBLEM_TAB_OPTIONS)[number]["id"];
-type QuickBrowseId = "systems" | "sessions" | "eight-week-plans" | "season-plans" | "underage" | "sport-filters";
+type LibraryPrimarySection = "fix-my-team" | "systems" | "sessions" | "plans" | "my-library";
+type ContentSection = Exclude<LibraryPrimarySection, "my-library">;
 
 const BOTTOM_NAV_ITEMS: ReadonlyArray<BottomNavItem> = [
   { id: "home", label: "Home", short: "H", path: "/board" },
@@ -51,45 +46,51 @@ const PLAN_TYPES = [
   "Team Identity Plans",
 ];
 
-const QUICK_BROWSE_OPTIONS: ReadonlyArray<{ id: QuickBrowseId; label: string }> = [
-  { id: "systems", label: "Systems" },
-  { id: "sessions", label: "Sessions" },
-  { id: "eight-week-plans", label: "8 Week Plans" },
-  { id: "season-plans", label: "Season Plans" },
-  { id: "underage", label: "Underage" },
-  { id: "sport-filters", label: "Sport Filters" },
+const LIBRARY_SECTIONS: ReadonlyArray<{ id: LibraryPrimarySection; label: string; description: string }> = [
+  {
+    id: "fix-my-team",
+    label: "Fix My Team",
+    description: "Problem-first actions to steady team performance quickly.",
+  },
+  {
+    id: "systems",
+    label: "Systems",
+    description: "How a team plays in and out of possession.",
+  },
+  {
+    id: "sessions",
+    label: "Sessions",
+    description: "One training night with ready-to-run coaching content.",
+  },
+  {
+    id: "plans",
+    label: "Plans",
+    description: "Multi-week programmes that build repeatable habits.",
+  },
+  {
+    id: "my-library",
+    label: "My Library",
+    description: "Saved content will appear here in a later phase.",
+  },
 ];
 
-const QUICK_BROWSE_CATEGORY_MAP: Partial<Record<QuickBrowseId, LibraryCategory>> = {
+const SECTION_BY_CATEGORY: Record<LibraryCategory, ContentSection> = {
+  "fix-my-team": "fix-my-team",
   systems: "systems",
-  sessions: "training-sessions",
-  "eight-week-plans": "eight-week-plans",
-  "season-plans": "full-season-plans",
-  underage: "underage-club-development",
+  "training-sessions": "sessions",
+  "eight-week-plans": "plans",
+  "full-season-plans": "plans",
+  "underage-club-development": "sessions",
 };
 
-const QUICK_BROWSE_TITLES: Record<QuickBrowseId, string> = {
-  systems: "Systems",
-  sessions: "Sessions",
-  "eight-week-plans": "8 Week Plans",
-  "season-plans": "Season Plans",
-  underage: "Underage & Club Development",
-  "sport-filters": "Sport Filters",
+const CONTENT_TYPE_LABELS: Record<ContentSection, string> = {
+  "fix-my-team": "Fix My Team",
+  systems: "System",
+  sessions: "Session",
+  plans: "Plan",
 };
 
-const PROBLEM_LABELS: Record<ProblemTag, string> = {
-  "struggling-to-score": "Struggling to score",
-  "losing-kickouts-puckouts": "Losing kickouts / puckouts",
-  "too-slow-in-attack": "Too slow in attack",
-  "conceding-too-easy": "Conceding too easy",
-};
-
-const SPORT_FILTER_VIEW_LABELS: Record<SportFilter, string> = {
-  "gaelic-football": "Football",
-  "ladies-football": "Ladies Football",
-  hurling: "Hurling",
-  camogie: "Camogie",
-};
+const AGE_GROUP_ORDER: ReadonlyArray<AgeGroupFilter> = ["u6-u8", "u10", "u12", "u14", "u16", "minor", "adult"];
 
 const SHELL_CSS = `
 .pf-shell {
@@ -548,7 +549,7 @@ const SHELL_CSS = `
   border-radius: 14px;
   border: 1px solid var(--pf-border);
   background: linear-gradient(180deg, rgba(20,52,33,0.95) 0%, rgba(16,41,27,0.9) 100%);
-  padding: 12px;
+  padding: 11px 12px;
   cursor: pointer;
 }
 
@@ -574,14 +575,14 @@ const SHELL_CSS = `
 }
 
 .pf-library-result-meta {
-  margin: 7px 0 0;
+  margin: 5px 0 0;
   color: var(--pf-text-dim);
   font-size: 11px;
   line-height: 1.3;
 }
 
 .pf-library-result-badges {
-  margin-top: 8px;
+  margin-top: 7px;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -594,7 +595,14 @@ const SHELL_CSS = `
   color: var(--pf-text-muted);
   font-size: 10px;
   font-weight: 650;
-  padding: 4px 8px;
+  padding: 4px 7px;
+}
+
+.pf-library-section-note {
+  margin: 0;
+  color: var(--pf-text-muted);
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 .pf-library-result-details {
@@ -621,6 +629,16 @@ const SHELL_CSS = `
   border-radius: 14px;
   border: 1px dashed var(--pf-border);
   background: rgba(15,37,24,0.72);
+  color: var(--pf-text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 12px;
+}
+
+.pf-library-placeholder {
+  border-radius: 14px;
+  border: 1px dashed var(--pf-border);
+  background: rgba(15,37,24,0.7);
   color: var(--pf-text-muted);
   font-size: 12px;
   line-height: 1.4;
@@ -828,64 +846,33 @@ function BoardPage() {
 
 function LibraryPage() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeSection, setActiveSection] = useState<LibraryPrimarySection>("fix-my-team");
   const [selectedProblem, setSelectedProblem] = useState<ProblemTag | null>(null);
-  const [selectedProblemTab, setSelectedProblemTab] = useState<ProblemTabId>("sessions");
-  const [selectedQuickBrowse, setSelectedQuickBrowse] = useState<QuickBrowseId | null>(null);
-  const [selectedSport, setSelectedSport] = useState<SportFilter | null>(null);
-  const [selectedAge, setSelectedAge] = useState<AgeGroupFilter | null>(null);
   const [expandedItemIds, setExpandedItemIds] = useState<string[]>([]);
-  const isUnderageQuickBrowse = selectedQuickBrowse === "underage";
-  const activeProblemTab = PROBLEM_TAB_OPTIONS.find((tab) => tab.id === selectedProblemTab) ?? PROBLEM_TAB_OPTIONS[1];
-  const selectedQuickBrowseCategory = selectedQuickBrowse ? (QUICK_BROWSE_CATEGORY_MAP[selectedQuickBrowse] ?? "all") : "all";
-  const categoryFilter: LibraryCategory | "all" = selectedProblem ? activeProblemTab.category : selectedQuickBrowseCategory;
-  const selectedProblemLabel = selectedProblem ? PROBLEM_LABELS[selectedProblem] : "";
-  const selectedViewTitle = selectedProblem
-    ? selectedProblemLabel
-    : selectedQuickBrowse
-      ? QUICK_BROWSE_TITLES[selectedQuickBrowse]
-      : "";
+  const activeSectionMeta = LIBRARY_SECTIONS.find((section) => section.id === activeSection) ?? LIBRARY_SECTIONS[0];
+  const sectionIsMyLibrary = activeSection === "my-library";
 
   const filteredItems = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     let next = [...LIBRARY_ITEMS];
 
-    if (selectedProblem) {
+    if (!sectionIsMyLibrary) {
+      next = next.filter((item) => SECTION_BY_CATEGORY[item.category] === activeSection);
+    }
+
+    if (activeSection === "fix-my-team" && selectedProblem) {
       next = next.filter((item) => item.problemTags.includes(selectedProblem));
-    }
-
-    if (isUnderageQuickBrowse) {
-      next = next.filter(
-        (item) => item.category === "underage-club-development" || item.sectionLabel === "Underage & Club Development",
-      );
-    } else if (categoryFilter !== "all") {
-      next = next.filter((item) => item.category === categoryFilter);
-    }
-
-    if (selectedSport) {
-      const footballFamily = selectedSport === "gaelic-football" || selectedSport === "ladies-football";
-      const oppositeFamily: SportFilter[] = footballFamily
-        ? ["hurling", "camogie"]
-        : ["gaelic-football", "ladies-football"];
-
-      next = next.filter(
-        (item) =>
-          item.sports.includes(selectedSport) && !item.sports.some((sport) => oppositeFamily.includes(sport)),
-      );
-    }
-
-    if (selectedAge) {
-      next = next.filter((item) => item.ageGroups.includes(selectedAge));
     }
 
     if (query.length > 0) {
       next = next.filter((item) => {
+        const sectionKey = SECTION_BY_CATEGORY[item.category];
         const searchableText = [
           item.title,
           item.summary,
-          LIBRARY_CATEGORY_LABELS[item.category],
-          ...item.sports.map((sport) => SPORT_LABELS[sport]),
+          IDENTITY_LABELS[item.identity],
           ...item.ageGroups.map((age) => AGE_LABELS[age]),
-          ...item.problemTags.map((tag) => PROBLEM_LABELS[tag]),
+          CONTENT_TYPE_LABELS[sectionKey],
           ...item.keywords,
         ]
           .join(" ")
@@ -896,40 +883,22 @@ function LibraryPage() {
     }
 
     return next;
-  }, [categoryFilter, isUnderageQuickBrowse, searchQuery, selectedAge, selectedProblem, selectedSport]);
+  }, [activeSection, searchQuery, sectionIsMyLibrary, selectedProblem]);
 
-  const toggleSport = (sport: SportFilter) => {
-    setSelectedSport((previous) => (previous === sport ? null : sport));
-  };
-
-  const toggleAge = (age: AgeGroupFilter) => {
-    setSelectedAge((previous) => (previous === age ? null : age));
-  };
-
-  const toggleQuickBrowse = (id: QuickBrowseId) => {
+  const setSection = (section: LibraryPrimarySection) => {
     setExpandedItemIds([]);
     setSelectedProblem(null);
-    setSelectedProblemTab("sessions");
-    setSelectedSport(null);
-    setSelectedAge(null);
-    setSelectedQuickBrowse((previous) => (previous === id ? null : id));
+    setActiveSection(section);
   };
 
   const handleProblemTap = (problem: ProblemTag) => {
     setExpandedItemIds([]);
-    setSelectedQuickBrowse(null);
-    setSelectedSport(null);
-    setSelectedAge(null);
-    setSelectedProblemTab("sessions");
+    setActiveSection("fix-my-team");
     setSelectedProblem((previous) => (previous === problem ? null : problem));
   };
 
-  const clearFilteredView = () => {
+  const clearProblemFilter = () => {
     setSelectedProblem(null);
-    setSelectedQuickBrowse(null);
-    setSelectedSport(null);
-    setSelectedAge(null);
-    setSelectedProblemTab("sessions");
   };
 
   const toggleExpanded = (itemId: string) => {
@@ -949,147 +918,79 @@ function LibraryPage() {
     <>
       <div className="pf-header-card">
         <h1 className="pf-title">Library</h1>
-        <p className="pf-subtitle">Systems · Sessions · Plans</p>
+        <p className="pf-subtitle">Fix My Team · Systems · Sessions · Plans</p>
       </div>
 
       <input
         className="pf-search"
-        placeholder="Search systems, sessions, plans..."
+        placeholder="Search library content..."
         value={searchQuery}
         onChange={(event) => setSearchQuery(event.target.value)}
       />
 
-      <p className="pf-section-title">Fix My Team</p>
-      <div className="pf-card">
-        <div className="pf-library-problem-grid">
-          {PROBLEM_OPTIONS.map((problem) => {
-            const isActive = selectedProblem === problem.id;
-            return (
-              <button
-                key={problem.id}
-                type="button"
-                className={isActive ? "pf-library-problem-btn is-active" : "pf-library-problem-btn"}
-                onClick={() => handleProblemTap(problem.id)}
-              >
-                {problem.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <p className="pf-section-title">Quick Browse</p>
+      <p className="pf-section-title">Sections</p>
       <div className="pf-card">
         <div className="pf-library-browse-grid">
-          {QUICK_BROWSE_OPTIONS.map((option) => {
-            const isActive = !selectedProblem && selectedQuickBrowse === option.id;
+          {LIBRARY_SECTIONS.map((section) => {
+            const isActive = activeSection === section.id;
             return (
               <button
-                key={option.id}
+                key={section.id}
                 type="button"
                 className={isActive ? "pf-library-browse-btn is-active" : "pf-library-browse-btn"}
-                onClick={() => toggleQuickBrowse(option.id)}
+                onClick={() => setSection(section.id)}
               >
-                {option.label}
+                {section.label}
               </button>
             );
           })}
         </div>
       </div>
 
-      <p className="pf-section-title">Results</p>
+      <p className="pf-section-title">Content</p>
       <div className="pf-card pf-library-results-wrap">
-        {(selectedProblem || selectedQuickBrowse) ? (
-          <div>
-            <div className="pf-library-problem-view-head">
-              <p className="pf-card-title">{selectedViewTitle}</p>
-              <button type="button" className="pf-library-clear-btn" onClick={clearFilteredView}>
-                Clear
+        <div>
+          <div className="pf-library-problem-view-head">
+            <p className="pf-card-title">{activeSectionMeta.label}</p>
+            {activeSection === "fix-my-team" && selectedProblem ? (
+              <button type="button" className="pf-library-clear-btn" onClick={clearProblemFilter}>
+                Clear problem
               </button>
+            ) : null}
+          </div>
+          <p className="pf-library-section-note">{activeSectionMeta.description}</p>
+          {activeSection === "fix-my-team" ? (
+            <div className="pf-library-problem-grid" style={{ marginTop: "10px" }}>
+              {PROBLEM_OPTIONS.map((problem) => {
+                const isActive = selectedProblem === problem.id;
+                return (
+                  <button
+                    key={problem.id}
+                    type="button"
+                    className={isActive ? "pf-library-problem-btn is-active" : "pf-library-problem-btn"}
+                    onClick={() => handleProblemTap(problem.id)}
+                  >
+                    {problem.label}
+                  </button>
+                );
+              })}
             </div>
-            {selectedProblem ? (
-              <div className="pf-tabs" role="tablist" aria-label="Problem categories">
-                {PROBLEM_TAB_OPTIONS.map((tab) => {
-                  const isActive = selectedProblemTab === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      className={isActive ? "pf-tab is-active" : "pf-tab"}
-                      onClick={() => setSelectedProblemTab(tab.id)}
-                    >
-                      {tab.label}
-                    </button>
-                  );
-                })}
-              </div>
-            ) : null}
-            {selectedQuickBrowse === "sport-filters" ? (
-              <div className="pf-library-filters-inline">
-                <p className="pf-library-filters-label">Sports</p>
-                <div className="pf-library-chip-row">
-                  {SPORT_FILTER_OPTIONS.map((sport) => {
-                    const isActive = selectedSport === sport.id;
-                    return (
-                      <button
-                        key={sport.id}
-                        type="button"
-                        className={isActive ? "pf-library-chip-btn is-active" : "pf-library-chip-btn"}
-                        onClick={() => toggleSport(sport.id)}
-                      >
-                        {SPORT_FILTER_VIEW_LABELS[sport.id]}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : null}
-            {selectedQuickBrowse === "underage" ? (
-              <div className="pf-library-filters-inline">
-                <p className="pf-library-filters-label">Sports</p>
-                <div className="pf-library-chip-row">
-                  {SPORT_FILTER_OPTIONS.map((sport) => {
-                    const isActive = selectedSport === sport.id;
-                    return (
-                      <button
-                        key={sport.id}
-                        type="button"
-                        className={isActive ? "pf-library-chip-btn is-active" : "pf-library-chip-btn"}
-                        onClick={() => toggleSport(sport.id)}
-                      >
-                        {SPORT_FILTER_VIEW_LABELS[sport.id]}
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="pf-library-filters-label">Age Groups</p>
-                <div className="pf-library-age-grid">
-                  {AGE_FILTER_OPTIONS.map((age) => {
-                    const isActive = selectedAge === age.id;
-                    return (
-                      <button
-                        key={age.id}
-                        type="button"
-                        className={isActive ? "pf-library-chip-btn is-active" : "pf-library-chip-btn"}
-                        onClick={() => toggleAge(age.id)}
-                      >
-                        {age.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
+          ) : null}
+        </div>
 
-        {filteredItems.length === 0 ? (
-          <div className="pf-library-empty">
-            No content found for these filters. Clear one filter and try again.
-          </div>
+        {sectionIsMyLibrary ? (
+          <div className="pf-library-placeholder">My Library is empty for now. Saved content will appear here.</div>
+        ) : filteredItems.length === 0 ? (
+          <div className="pf-library-empty">No content found for this section. Try another section or search term.</div>
         ) : (
           filteredItems.map((item: LibraryItem) => {
             const isExpanded = expandedItemIds.includes(item.id);
+            const itemSection = SECTION_BY_CATEGORY[item.category];
+            const ageBand = [...item.ageGroups]
+              .sort((left, right) => AGE_GROUP_ORDER.indexOf(left) - AGE_GROUP_ORDER.indexOf(right))
+              .map((age) => AGE_LABELS[age])
+              .join(" • ");
+
             return (
               <div
                 key={item.id}
@@ -1101,25 +1002,12 @@ function LibraryPage() {
               >
                 <p className="pf-library-result-title">{item.title}</p>
                 <p className="pf-library-result-summary">{item.summary}</p>
-                <p className="pf-library-result-meta">{LIBRARY_CATEGORY_LABELS[item.category]}</p>
+                <p className="pf-library-result-meta">{itemSection === "plans" ? item.duration : item.difficulty}</p>
                 <div className="pf-library-result-badges">
-                  {item.sports.map((sport) => (
-                    <span key={`${item.id}-${sport}`} className="pf-library-result-badge">
-                      {SPORT_FILTER_VIEW_LABELS[sport]}
-                    </span>
-                  ))}
-                  {item.ageGroups.map((age) => (
-                    <span key={`${item.id}-${age}`} className="pf-library-result-badge">
-                      {AGE_LABELS[age]}
-                    </span>
-                  ))}
+                  <span className="pf-library-result-badge">{IDENTITY_LABELS[item.identity]}</span>
+                  <span className="pf-library-result-badge">{ageBand}</span>
+                  <span className="pf-library-result-badge">{CONTENT_TYPE_LABELS[itemSection]}</span>
                 </div>
-                {(item.duration || item.difficulty) ? (
-                  <div className="pf-library-result-badges">
-                    {item.duration ? <span className="pf-library-result-badge">{item.duration}</span> : null}
-                    {item.difficulty ? <span className="pf-library-result-badge">{item.difficulty}</span> : null}
-                  </div>
-                ) : null}
                 {isExpanded ? (
                   <div className="pf-library-result-details">
                     <p className="pf-library-result-detail-line">
