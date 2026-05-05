@@ -147,51 +147,51 @@ export function NotesQuickPanel({ defaultContext = "match", onRequestClose }: No
       text: nextText,
       title: nextText.slice(0, 48),
     });
-    if (!result.ok) {
-      setPanelError(result.error);
-      setSaveMessage(null);
+    if (result.ok) {
+      setTextDraft("");
+      setPanelError(null);
+      setSaveMessage("Text note saved");
       return;
     }
-    setTextDraft("");
-    setPanelError(null);
-    setSaveMessage("Text note saved");
+    setPanelError(result.error);
+    setSaveMessage(null);
   };
 
   const handleStartVoiceRecording = async () => {
     clearFeedback();
     setPendingVoiceResult(null);
     const started = await recorder.startRecording();
-    if (!started.ok) {
-      setPanelError(started.error.message);
+    if (started.ok) {
+      setPendingVoiceLabel("");
       return;
     }
-    setPendingVoiceLabel("");
+    setPanelError(started.error.message);
   };
 
   const handleStopVoiceRecording = async () => {
     clearFeedback();
     const stopped = await recorder.stopRecording();
-    if (!stopped.ok) {
-      setPanelError(stopped.error.message);
+    if (stopped.ok) {
+      setPendingVoiceResult({
+        blob: stopped.blob,
+        durationMs: stopped.durationMs,
+      });
+      setSaveMessage("Recording ready to save");
       return;
     }
-    setPendingVoiceResult({
-      blob: stopped.blob,
-      durationMs: stopped.durationMs,
-    });
-    setSaveMessage("Recording ready to save");
+    setPanelError(stopped.error.message);
   };
 
   const handleCancelVoiceRecording = async () => {
     clearFeedback();
     const cancelled = await recorder.cancelRecording();
-    if (!cancelled.ok) {
-      setPanelError(cancelled.error.message);
+    if (cancelled.ok) {
+      setPendingVoiceResult(null);
+      setPendingVoiceLabel("");
+      setSaveMessage("Recording cleared");
       return;
     }
-    setPendingVoiceResult(null);
-    setPendingVoiceLabel("");
-    setSaveMessage("Recording cleared");
+    setPanelError(cancelled.error.message);
   };
 
   const handleSaveVoiceNote = async () => {
@@ -206,18 +206,18 @@ export function NotesQuickPanel({ defaultContext = "match", onRequestClose }: No
       durationMs: pendingVoiceResult.durationMs,
       title: pendingVoiceLabel.trim() || "Voice note",
     });
-    if (!result.ok) {
-      setPanelError(result.error);
-      return;
-    }
-    const cleared = await recorder.cancelRecording();
-    if (!cleared.ok) {
+    if (result.ok) {
+      const cleared = await recorder.cancelRecording();
+      if (cleared.ok) {
+        setPendingVoiceResult(null);
+        setPendingVoiceLabel("");
+        setSaveMessage("Voice note saved");
+        return;
+      }
       setPanelError(cleared.error.message);
       return;
     }
-    setPendingVoiceResult(null);
-    setPendingVoiceLabel("");
-    setSaveMessage("Voice note saved");
+    setPanelError(result.error);
   };
 
   const hasPendingVoiceClip = pendingVoiceResult != null;
