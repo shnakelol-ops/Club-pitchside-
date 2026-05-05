@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 
 import { NotesQuickPanel } from "./NotesQuickPanel";
 import type { CoachNoteContext } from "./types";
@@ -101,25 +102,40 @@ export function NotesButton({ defaultContext = "match", variant = "menu" }: Note
     const viewportHeight = window.innerHeight;
     const horizontalMargin = 12;
     const verticalMargin = 12;
-    const panelWidth = window.matchMedia("(orientation: landscape)").matches ? 360 : 380;
+    const isLandscape = window.matchMedia("(orientation: landscape)").matches;
+    const panelWidth = 360;
+    const estimatedPanelHeight = Math.min(viewportHeight * 0.65, 420);
 
-    const preferredRightSideLeft = anchorRect.left + anchorRect.width + 8;
-    const preferredLeftSideLeft = anchorRect.left - panelWidth - 8;
     const maxLeft = viewportWidth - horizontalMargin - panelWidth;
+    let resolvedLeft: number;
+    let resolvedTop: number;
 
-    const resolvedLeft =
-      preferredRightSideLeft <= maxLeft
-        ? preferredRightSideLeft
-        : Math.max(horizontalMargin, Math.min(preferredLeftSideLeft, maxLeft));
-    const resolvedTop = Math.min(
-      Math.max(anchorRect.top - 2, verticalMargin),
-      Math.max(verticalMargin, viewportHeight - verticalMargin - 120),
-    );
+    if (isLandscape) {
+      const preferredRightSideLeft = anchorRect.left + anchorRect.width + 8;
+      const preferredLeftSideLeft = anchorRect.left - panelWidth - 8;
+
+      resolvedLeft =
+        preferredRightSideLeft <= maxLeft
+          ? preferredRightSideLeft
+          : Math.max(horizontalMargin, Math.min(preferredLeftSideLeft, maxLeft));
+      resolvedTop = Math.min(
+        Math.max(anchorRect.top - 2, verticalMargin),
+        Math.max(verticalMargin, viewportHeight - verticalMargin - estimatedPanelHeight),
+      );
+    } else {
+      const centeredLeft = anchorRect.left + anchorRect.width / 2 - panelWidth / 2;
+      resolvedLeft = Math.max(horizontalMargin, Math.min(centeredLeft, maxLeft));
+      resolvedTop = Math.min(
+        Math.max(anchorRect.top - estimatedPanelHeight - 8, verticalMargin),
+        Math.max(verticalMargin, viewportHeight - verticalMargin - estimatedPanelHeight),
+      );
+    }
 
     return {
       position: "fixed",
       left: `${Math.round(resolvedLeft)}px`,
       top: `${Math.round(resolvedTop)}px`,
+      zIndex: 10030,
     };
   }, [anchorRect]);
 
@@ -152,13 +168,16 @@ export function NotesButton({ defaultContext = "match", variant = "menu" }: Note
       >
         📝 <span>Notes</span>
       </button>
-      {isOpen ? (
-        <NotesQuickPanel
-          defaultContext={defaultContext}
-          onRequestClose={() => setIsOpen(false)}
-          panelAnchorStyle={panelAnchorStyle}
-        />
-      ) : null}
+      {isOpen && typeof document !== "undefined"
+        ? createPortal(
+            <NotesQuickPanel
+              defaultContext={defaultContext}
+              onRequestClose={() => setIsOpen(false)}
+              panelAnchorStyle={panelAnchorStyle}
+            />,
+            document.body,
+          )
+        : null}
     </>
   );
 }
