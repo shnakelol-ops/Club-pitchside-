@@ -7,12 +7,10 @@ import { useNotes } from "./use-notes";
 type NotesQuickPanelProps = {
   defaultContext?: CoachNoteContext;
   onRequestClose?: () => void;
-  panelBottom?: string;
+  panelAnchorStyle?: CSSProperties;
 };
 
 const PANEL_STYLE_BASE: CSSProperties = {
-  position: "fixed",
-  right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
   display: "grid",
   borderRadius: "12px",
   border: "1px solid rgba(187, 211, 233, 0.24)",
@@ -107,7 +105,7 @@ function isDisabledRecorderStatus(status: string): boolean {
   return status === "requesting-permission" || status === "stopping";
 }
 
-export function NotesQuickPanel({ defaultContext = "match", onRequestClose }: NotesQuickPanelProps) {
+export function NotesQuickPanel({ defaultContext = "match", onRequestClose, panelAnchorStyle }: NotesQuickPanelProps) {
   const [textDraft, setTextDraft] = useState("");
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [panelError, setPanelError] = useState<string | null>(null);
@@ -148,25 +146,34 @@ export function NotesQuickPanel({ defaultContext = "match", onRequestClose }: No
   }, []);
 
   const panelStyle = useMemo<CSSProperties>(() => {
-    const maxWidth = isLandscape ? "420px" : "380px";
+    const maxWidth = isLandscape ? "360px" : "380px";
+    const anchorStyle =
+      panelAnchorStyle ??
+      ({
+        position: "fixed",
+        right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
+        bottom: "max(140px, calc(env(safe-area-inset-bottom, 0px) + 136px))",
+      } as const);
     return {
       ...PANEL_STYLE_BASE,
-      bottom: "max(140px, calc(env(safe-area-inset-bottom, 0px) + 136px))",
+      ...anchorStyle,
       width: `min(calc(100vw - 24px), ${maxWidth})`,
-      maxHeight: "min(70vh, calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 20px))",
+      maxHeight: isLandscape
+        ? "min(65vh, calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 20px))"
+        : "min(70vh, calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 20px))",
       overflowY: "auto",
       overflowX: "hidden",
       overscrollBehavior: "contain",
       gap: isLandscape ? "6px" : "8px",
-      padding: isLandscape ? "8px" : "10px",
+      padding: isLandscape ? "7px" : "10px",
     };
-  }, [isLandscape]);
+  }, [isLandscape, panelAnchorStyle]);
 
   const textAreaStyle = useMemo<CSSProperties>(() => {
     return {
       ...TEXTAREA_STYLE_BASE,
-      minHeight: isLandscape ? "64px" : "86px",
-      maxHeight: isLandscape ? "110px" : "150px",
+      minHeight: isLandscape ? "52px" : "86px",
+      maxHeight: isLandscape ? "82px" : "150px",
     };
   }, [isLandscape]);
 
@@ -332,10 +339,10 @@ export function NotesQuickPanel({ defaultContext = "match", onRequestClose }: No
             placeholder="Voice note title (optional)"
             style={{
               ...TEXTAREA_STYLE_BASE,
-              minHeight: "42px",
-              maxHeight: "42px",
+              minHeight: isLandscape ? "36px" : "42px",
+              maxHeight: isLandscape ? "36px" : "42px",
               resize: "none",
-              paddingTop: "11px",
+              paddingTop: isLandscape ? "8px" : "11px",
             }}
           />
           <button type="button" style={PRIMARY_BUTTON_STYLE} onClick={handleSaveVoiceNote} disabled={isSaving}>

@@ -1081,6 +1081,13 @@ const PANEL_CSS = `
   margin-bottom: 8px;
 }
 
+.utility-menu-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
 .utility-menu-btn {
   height: 28px;
   border-radius: 8px;
@@ -4655,16 +4662,19 @@ export default function StatsModeSurface() {
         <div className={utilityControlsClass}>
           {isUtilityOpen ? (
             <div className="utility-menu" ref={utilityMenuRef} style={utilityMenuStyle}>
-              <button
-                type="button"
-                className="utility-menu-btn"
-                aria-label="Go to Home"
-                title="Home"
-                style={{ ...HOME_ICON_BUTTON_STYLE, marginBottom: "4px" }}
-                onClick={goHome}
-              >
-                ⌂
-              </button>
+              <div style={{ display: "grid", gridTemplateColumns: "34px minmax(0, 1fr)", gap: "6px", marginBottom: "2px" }}>
+                <button
+                  type="button"
+                  className="utility-menu-btn"
+                  aria-label="Go to Home"
+                  title="Home"
+                  style={{ ...HOME_ICON_BUTTON_STYLE, marginBottom: 0 }}
+                  onClick={goHome}
+                >
+                  ⌂
+                </button>
+                <NotesButton defaultContext="match" />
+              </div>
               <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.86, marginTop: "2px" }}>
                 Sport
               </div>
@@ -4742,7 +4752,6 @@ export default function StatsModeSurface() {
           </button>
         </div>
       ) : null}
-      <NotesButton defaultContext="match" />
     </>
   );
 }
