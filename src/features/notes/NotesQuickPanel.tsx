@@ -171,27 +171,29 @@ export function NotesQuickPanel({ defaultContext = "match", onRequestClose }: No
   const handleStopVoiceRecording = async () => {
     clearFeedback();
     const stopped = await recorder.stopRecording();
-    if (stopped.ok) {
-      setPendingVoiceResult({
-        blob: stopped.blob,
-        durationMs: stopped.durationMs,
-      });
-      setSaveMessage("Recording ready to save");
+    if (!stopped.ok) {
+      const message = stopped.error.message;
+      setPanelError(message);
       return;
     }
-    setPanelError(stopped.error.message);
+    setPendingVoiceResult({
+      blob: stopped.blob,
+      durationMs: stopped.durationMs,
+    });
+    setSaveMessage("Recording ready to save");
   };
 
   const handleCancelVoiceRecording = async () => {
     clearFeedback();
     const cancelled = await recorder.cancelRecording();
-    if (cancelled.ok) {
-      setPendingVoiceResult(null);
-      setPendingVoiceLabel("");
-      setSaveMessage("Recording cleared");
+    if (!cancelled.ok) {
+      const message = cancelled.error.message;
+      setPanelError(message);
       return;
     }
-    setPanelError(cancelled.error.message);
+    setPendingVoiceResult(null);
+    setPendingVoiceLabel("");
+    setSaveMessage("Recording cleared");
   };
 
   const handleSaveVoiceNote = async () => {
@@ -206,18 +208,22 @@ export function NotesQuickPanel({ defaultContext = "match", onRequestClose }: No
       durationMs: pendingVoiceResult.durationMs,
       title: pendingVoiceLabel.trim() || "Voice note",
     });
-    if (result.ok) {
-      const cleared = await recorder.cancelRecording();
-      if (cleared.ok) {
-        setPendingVoiceResult(null);
-        setPendingVoiceLabel("");
-        setSaveMessage("Voice note saved");
-        return;
-      }
-      setPanelError(cleared.error.message);
+    if (!result.ok) {
+      const message = result.error;
+      setPanelError(message);
       return;
     }
-    setPanelError(result.error);
+
+    const cleared = await recorder.cancelRecording();
+    if (!cleared.ok) {
+      const message = cleared.error.message;
+      setPanelError(message);
+      return;
+    }
+
+    setPendingVoiceResult(null);
+    setPendingVoiceLabel("");
+    setSaveMessage("Voice note saved");
   };
 
   const hasPendingVoiceClip = pendingVoiceResult != null;
