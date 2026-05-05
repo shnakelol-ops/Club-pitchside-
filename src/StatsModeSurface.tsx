@@ -4468,6 +4468,20 @@ export default function StatsModeSurface() {
                     {mode.label}
                   </button>
                 ))}
+                <button
+                  type="button"
+                  className="visibility-btn"
+                  aria-label="Open notes"
+                  title="Open Notes"
+                  onClick={openNotesPanel}
+                  style={{
+                    border: "1px solid rgba(125,211,252,0.62)",
+                    background: "rgba(15,23,42,0.9)",
+                    boxShadow: "0 0 0 1px rgba(125,211,252,0.18), 0 0 8px rgba(125,211,252,0.16)",
+                  }}
+                >
+                  🎤
+                </button>
               </div>
               <div className="undo-wrap">
                 <div style={{ display: "flex", gap: "4px" }}>
@@ -4597,6 +4611,20 @@ export default function StatsModeSurface() {
                     {mode.label}
                   </button>
                 ))}
+                <button
+                  type="button"
+                  className="landscape-toolbar-secondary-btn"
+                  aria-label="Open notes"
+                  title="Open Notes"
+                  onClick={openNotesPanel}
+                  style={{
+                    border: "1px solid rgba(125,211,252,0.58)",
+                    background: "rgba(15,23,42,0.84)",
+                    boxShadow: "0 0 0 1px rgba(125,211,252,0.16), 0 0 7px rgba(125,211,252,0.14)",
+                  }}
+                >
+                  🎤
+                </button>
                 <button
                   type="button"
                   className="landscape-toolbar-secondary-btn"
