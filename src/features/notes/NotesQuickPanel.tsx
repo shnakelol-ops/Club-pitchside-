@@ -206,7 +206,7 @@ export function NotesQuickPanel({
     durationMs: number;
   } | null>(null);
   const [pendingVoiceLabel, setPendingVoiceLabel] = useState<string>("");
-  const { notes, saveTextNote, saveVoiceNote, getVoiceNoteBlob, isSaving } = useNotes();
+  const { notes, saveTextNote, saveVoiceNote, readVoiceNoteBlob, isSaving } = useNotes();
   const recorder = useVoiceRecorder();
   const [playingNoteId, setPlayingNoteId] = useState<string | null>(null);
 
@@ -394,7 +394,7 @@ export function NotesQuickPanel({
     setPanelError(null);
     setPlayingNoteId(note.id);
     try {
-      const blobResult = await getVoiceNoteBlob(note.id);
+      const blobResult = await readVoiceNoteBlob(note.audioBlobId);
       if (!blobResult.ok) {
         setPanelError(blobResult.error);
         return;
