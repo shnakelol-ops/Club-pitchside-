@@ -147,33 +147,32 @@ export function NotesQuickPanel({ defaultContext = "match", onRequestClose }: No
       text: nextText,
       title: nextText.slice(0, 48),
     });
-    if (result.ok) {
-      setTextDraft("");
-      setPanelError(null);
-      setSaveMessage("Text note saved");
+    if (!result.ok) {
+      setPanelError(result.error);
+      setSaveMessage(null);
       return;
     }
-    setPanelError(result.error);
-    setSaveMessage(null);
+    setTextDraft("");
+    setPanelError(null);
+    setSaveMessage("Text note saved");
   };
 
   const handleStartVoiceRecording = async () => {
     clearFeedback();
     setPendingVoiceResult(null);
     const started = await recorder.startRecording();
-    if (started.ok) {
-      setPendingVoiceLabel("");
+    if (!started.ok) {
+      setPanelError(started.error.message);
       return;
     }
-    setPanelError(started.error.message);
+    setPendingVoiceLabel("");
   };
 
   const handleStopVoiceRecording = async () => {
     clearFeedback();
     const stopped = await recorder.stopRecording();
     if (!stopped.ok) {
-      const message = stopped.error.message;
-      setPanelError(message);
+      setPanelError(stopped.error.message);
       return;
     }
     setPendingVoiceResult({
@@ -187,8 +186,7 @@ export function NotesQuickPanel({ defaultContext = "match", onRequestClose }: No
     clearFeedback();
     const cancelled = await recorder.cancelRecording();
     if (!cancelled.ok) {
-      const message = cancelled.error.message;
-      setPanelError(message);
+      setPanelError(cancelled.error.message);
       return;
     }
     setPendingVoiceResult(null);
@@ -209,15 +207,13 @@ export function NotesQuickPanel({ defaultContext = "match", onRequestClose }: No
       title: pendingVoiceLabel.trim() || "Voice note",
     });
     if (!result.ok) {
-      const message = result.error;
-      setPanelError(message);
+      setPanelError(result.error);
       return;
     }
 
     const cleared = await recorder.cancelRecording();
     if (!cleared.ok) {
-      const message = cleared.error.message;
-      setPanelError(message);
+      setPanelError(cleared.error.message);
       return;
     }
 

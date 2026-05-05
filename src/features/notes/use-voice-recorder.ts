@@ -321,9 +321,8 @@ export function useVoiceRecorder() {
     cancelRequestedRef.current = true;
     const result = await stopRecording();
     if (!result.ok) {
-      const stopError = result.error;
-      if (stopError.code !== "cancelled") {
-        return { ok: false, error: stopError };
+      if (result.error.code !== "cancelled") {
+        return { ok: false, error: result.error };
       }
     }
 
