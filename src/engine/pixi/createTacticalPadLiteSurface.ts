@@ -913,8 +913,8 @@ export async function createTacticalPadLiteSurface(
       y: (from.y + to.y) * 0.5,
     };
     const unitPerpendicular = {
-      x: -dy / distance,
-      y: dx / distance,
+      x: dy / distance,
+      y: -dx / distance,
     };
     const rawOffset = distance * CURVED_PREVIEW_OFFSET_RATIO;
     const offset = Math.max(CURVED_PREVIEW_OFFSET_MIN, Math.min(CURVED_PREVIEW_OFFSET_MAX, rawOffset));
