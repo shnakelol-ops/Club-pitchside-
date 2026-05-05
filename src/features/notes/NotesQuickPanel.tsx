@@ -431,8 +431,7 @@ export function NotesQuickPanel({
     try {
       const blobResult = await readVoiceNoteBlob(audioBlobId);
       if (!blobResult.ok) {
-        const failureResult: { ok: false; error: string } = blobResult;
-        setPanelError(failureResult.error);
+        setPanelError(blobResult.error);
         setPlayingNoteId(null);
         return;
       }
