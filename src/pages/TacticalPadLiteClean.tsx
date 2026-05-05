@@ -894,6 +894,28 @@ const WHITEBOARD_HOME_BUTTON_STYLE: CSSProperties = {
   zIndex: 23,
 };
 
+const SHARE_STATUS_STYLE: CSSProperties = {
+  position: "fixed",
+  left: "50%",
+  bottom: "max(56px, calc(env(safe-area-inset-bottom, 0px) + 54px))",
+  transform: "translateX(-50%)",
+  minHeight: "28px",
+  borderRadius: "9px",
+  border: "1px solid rgba(223, 235, 246, 0.28)",
+  background: "rgba(10, 18, 24, 0.84)",
+  color: "#e8f2f8",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "10.5px",
+  fontWeight: 600,
+  letterSpacing: "0.18px",
+  padding: "7px 10px",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+  boxShadow: "0 10px 22px rgba(0, 0, 0, 0.34)",
+  zIndex: 22,
+  pointerEvents: "none",
+};
+
 export default function TacticalPadLiteClean({ initialMode = "tactical" }: TacticalPadLiteCleanProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const surfaceRef = useRef<TacticalPadLiteSurface | null>(null);
@@ -944,6 +966,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
+  const [shareStatus, setShareStatus] = useState<string | null>(null);
   const [controlsOpen, setControlsOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [phasesOpen, setPhasesOpen] = useState(false);
@@ -1258,33 +1281,48 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   };
   const handleShareImage = async () => {
     closeActionsMenu();
-    const canvas = hostRef.current?.querySelector("canvas") as HTMLCanvasElement | null;
-    if (!canvas) return;
+    setShareStatus("Preparing image...");
+    const clearStatusLater = (timeoutMs = 2200) => {
+      window.setTimeout(() => setShareStatus(null), timeoutMs);
+    };
+
+    const exportCanvas = surfaceRef.current?.exportSnapshotCanvas();
+    if (!exportCanvas) {
+      setShareStatus("Could not share image");
+      clearStatusLater();
+      return;
+    }
 
     const blob = await new Promise<Blob | null>((resolve) => {
-      canvas.toBlob((nextBlob) => resolve(nextBlob), "image/png");
+      exportCanvas.toBlob((nextBlob) => resolve(nextBlob), "image/png");
     });
-    if (!blob) return;
+    if (!blob) {
+      setShareStatus("Could not share image");
+      clearStatusLater();
+      return;
+    }
 
-    const fileName = `flowlab-${new Date().toISOString().replace(/[:.]/g, "-")}.png`;
+    const fileName = "pitchflow-play.png";
     const typedNavigator = navigator as Navigator & {
       share?: (data: ShareData) => Promise<void>;
       canShare?: (data: ShareData) => boolean;
     };
-    if (typedNavigator.share) {
-      const file = new File([blob], fileName, { type: "image/png" });
-      const sharePayload: ShareData = {
-        title: "FlowLab Tactics",
-        text: "FlowLab tactical board snapshot",
-        files: [file],
-      };
-      if (!typedNavigator.canShare || typedNavigator.canShare(sharePayload)) {
-        try {
-          await typedNavigator.share(sharePayload);
-          return;
-        } catch {
-          // Fall through to download if share is dismissed or unsupported.
-        }
+    const file = new File([blob], fileName, { type: "image/png" });
+    const sharePayload: ShareData = {
+      files: [file],
+      title: "PitchFlow Play",
+      text: "FlowLab tactical board snapshot",
+    };
+    if (typedNavigator.share && typedNavigator.canShare?.({ files: [file] })) {
+      try {
+        setShareStatus("Image ready to share");
+        await typedNavigator.share(sharePayload);
+        clearStatusLater();
+        return;
+      } catch {
+        setShareStatus("Could not share image");
+        clearStatusLater();
+        return;
       }
     }
 
@@ -1296,6 +1334,8 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     link.click();
     link.remove();
     window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1200);
+    setShareStatus("Image downloaded");
+    clearStatusLater();
   };
   const handleRecordClip = () => {
     closeActionsMenu();
@@ -2115,6 +2155,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             </span>
           </button>
         ) : null}
+        {!isWhiteboardMode && shareStatus ? <div style={SHARE_STATUS_STYLE}>{shareStatus}</div> : null}
         {isWhiteboardMode ? (
           <button type="button" style={WHITEBOARD_HOME_BUTTON_STYLE} onClick={goHome} aria-label="Go to Home">
             ⌂
