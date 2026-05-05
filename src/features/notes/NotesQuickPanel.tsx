@@ -429,13 +429,13 @@ export function NotesQuickPanel({
     setPanelError(null);
     setPlayingNoteId(note.id);
     try {
-      const blobResult = await readVoiceNoteBlob(audioBlobId);
-      if (!blobResult.ok) {
-        setPanelError(blobResult.error);
+      const result = await readVoiceNoteBlob(audioBlobId);
+      if (!result.ok) {
+        setPanelError(result.error);
         setPlayingNoteId(null);
         return;
       }
-      const blob = blobResult.data;
+      const blob = result.data;
       const objectUrl = window.URL.createObjectURL(blob);
       const audio = new Audio(objectUrl);
       audio.onended = () => {
