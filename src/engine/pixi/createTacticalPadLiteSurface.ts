@@ -28,6 +28,7 @@ import {
   type DrawAnimationEffect,
   type DrawAnimationEffectKind,
   type GhostTrailEffect,
+  type MovePreviewEffect,
   type PlayerTapFeedbackEffect,
 } from "./interactionEffects";
 import { renderWhiteboardDrawing as renderWhiteboardDrawingToGraphics } from "./renderWhiteboardDrawing";
@@ -52,6 +53,8 @@ type TacticalPlayer = {
 
 export type WhiteboardDrawTool = "move" | "pen" | "line" | "arrow" | "dashed";
 export type WhiteboardTokenColor = PremiumPlayerTokenColor;
+export type PlayerMovementBehavior = "free-drag" | "move-preview";
+export type MovePreviewSpeed = "slow" | "normal" | "fast";
 export type FlowItemType = "cone" | "pole" | "ladder" | "tackleBag" | "football" | "sliotar";
 export type ItemMode = "edit" | "locked";
 export type TacticalItem = {
@@ -80,6 +83,8 @@ export type TacticalPadLiteSurface = {
     counts: { blue: number; red: number };
     colors: { blue: WhiteboardTokenColor; red: WhiteboardTokenColor };
   }) => void;
+  setPlayerMovementBehavior: (behavior: PlayerMovementBehavior) => void;
+  setMovePreviewSpeed: (speed: MovePreviewSpeed) => void;
   setWhiteboardDrawTool: (tool: WhiteboardDrawTool) => void;
   setWhiteboardDrawColor: (color: number) => void;
   eraseWhiteboardPenStroke: () => void;
@@ -130,6 +135,11 @@ const WHITEBOARD_BLUE_START_X = 30;
 const WHITEBOARD_RED_START_X = 70;
 const GHOST_TRAIL_MIN_PIXEL_DISTANCE = 3;
 const GHOST_TRAIL_MIN_NORMALIZED_DISTANCE = 1.2;
+const MOVE_PREVIEW_DURATION_BY_SPEED: Record<MovePreviewSpeed, number> = {
+  slow: 800,
+  normal: 450,
+  fast: 250,
+};
 
 type PlayerSeed = {
   id: string;
@@ -443,16 +453,9 @@ export async function createTacticalPadLiteSurface(
   const drawAnimationEffects: DrawAnimationEffect[] = [];
   const playerTapFeedbackEffects: PlayerTapFeedbackEffect[] = [];
   const ghostTrailEffects: GhostTrailEffect[] = [];
-  const MOVE_PREVIEW_DURATION_MS = 450;
-  type PlayerMovePreviewEffect = {
-    id: string;
-    playerId: string;
-    from: NormalizedPoint;
-    to: NormalizedPoint;
-    startedAt: number;
-    durationMs: number;
-  };
-  const playerMovePreviewEffects: PlayerMovePreviewEffect[] = [];
+  const playerMovePreviewEffects: MovePreviewEffect[] = [];
+  let playerMovementBehavior: PlayerMovementBehavior = "free-drag";
+  let movePreviewSpeed: MovePreviewSpeed = "normal";
   let transientEffectIdCounter = 0;
   world.setChildIndex(ghostTrailEffectsLayer, world.getChildIndex(playersLayer));
   world.setChildIndex(playerFeedbackEffectsLayer, world.children.length - 1);
@@ -863,7 +866,12 @@ export async function createTacticalPadLiteSurface(
     });
   }
 
-  function queuePlayerMovePreviewEffect(playerId: string, from: NormalizedPoint, to: NormalizedPoint): void {
+  function queuePlayerMovePreviewEffect(
+    playerId: string,
+    from: NormalizedPoint,
+    to: NormalizedPoint,
+    speed: MovePreviewSpeed,
+  ): void {
     for (let index = playerMovePreviewEffects.length - 1; index >= 0; index -= 1) {
       const effect = playerMovePreviewEffects[index];
       if (!effect) continue;
@@ -877,7 +885,7 @@ export async function createTacticalPadLiteSurface(
       from: { x: from.x, y: from.y },
       to: { x: to.x, y: to.y },
       startedAt: performance.now(),
-      durationMs: MOVE_PREVIEW_DURATION_MS,
+      durationMs: MOVE_PREVIEW_DURATION_BY_SPEED[speed],
     });
   }
 
@@ -899,6 +907,18 @@ export async function createTacticalPadLiteSurface(
       x: effect.from.x + (effect.to.x - effect.from.x) * eased,
       y: effect.from.y + (effect.to.y - effect.from.y) * eased,
     };
+  }
+
+  function syncPlayerTokensToCommittedPosition(): void {
+    for (const player of players) {
+      setTokenWorldPositionForPoint(player, player.current, mapper);
+    }
+  }
+
+  function clearPlayerMovePreviewEffects(): void {
+    if (playerMovePreviewEffects.length === 0) return;
+    playerMovePreviewEffects.length = 0;
+    syncPlayerTokensToCommittedPosition();
   }
 
   function renderTransientEffects(now: number): void {
@@ -1019,10 +1039,12 @@ export async function createTacticalPadLiteSurface(
         const hasIntentionalMovement =
           stageDistance >= GHOST_TRAIL_MIN_PIXEL_DISTANCE || normalizedDistance >= GHOST_TRAIL_MIN_NORMALIZED_DISTANCE;
         if (hasIntentionalMovement) {
-          queuePlayerMovePreviewEffect(player.id, dragFrom, dragTo);
-          // Render once at drag start point so preview visibly starts at A, then ticker advances.
-          const startWorld = mapper.normalizedToWorld(dragFrom);
-          player.token.position.set(startWorld.x, startWorld.y);
+          if (playerMovementBehavior === "move-preview") {
+            queuePlayerMovePreviewEffect(player.id, dragFrom, dragTo, movePreviewSpeed);
+            // Render once at drag start point so preview visibly starts at A, then ticker advances.
+            const startWorld = mapper.normalizedToWorld(dragFrom);
+            player.token.position.set(startWorld.x, startWorld.y);
+          }
           queueGhostTrailEffect(player.id, dragFrom, dragTo);
         } else {
           queuePlayerTapFeedback(player.id);
@@ -1225,7 +1247,7 @@ export async function createTacticalPadLiteSurface(
   }
 
   function applySnapshotToSurface(snapshot: PhaseSnapshot): void {
-    playerMovePreviewEffects.length = 0;
+    clearPlayerMovePreviewEffects();
     for (const player of players) {
       const point = snapshot.players[players.indexOf(player)];
       if (!point) continue;
@@ -1361,9 +1383,7 @@ export async function createTacticalPadLiteSurface(
       const pointerId = getPointerIdFromEvent(event);
       const startStagePoint = getStagePointFromEvent(event, app.stage);
       const dragStartWorld = mapper.normalizedToWorld(player.current);
-      if (playerMovePreviewEffects.length > 0) {
-        playerMovePreviewEffects.length = 0;
-      }
+      clearPlayerMovePreviewEffects();
       activeDrag = {
         type: "player",
         playerId: player.id,
@@ -1507,6 +1527,7 @@ export async function createTacticalPadLiteSurface(
     const now = performance.now();
     const hadDrawEffects = drawAnimationEffects.length > 0;
     const hadGhostOrTapEffects = ghostTrailEffects.length > 0 || playerTapFeedbackEffects.length > 0;
+    const hadMovePreviewEffects = playerMovePreviewEffects.length > 0;
     pruneTransientEffects(now);
     if (hadDrawEffects || drawAnimationEffects.length > 0) {
       renderAllWhiteboardDrawings(now);
@@ -1520,6 +1541,8 @@ export async function createTacticalPadLiteSurface(
         if (!previewPosition) continue;
         setTokenWorldPositionForPoint(player, previewPosition, mapper);
       }
+    } else if (hadMovePreviewEffects) {
+      syncPlayerTokensToCommittedPosition();
     }
   });
 
@@ -1602,6 +1625,15 @@ export async function createTacticalPadLiteSurface(
       if (!isWhiteboardSurface) return;
       rebuildWhiteboardPlayers(config.counts, config.colors);
     },
+    setPlayerMovementBehavior: (behavior) => {
+      playerMovementBehavior = behavior;
+      if (behavior === "free-drag") {
+        clearPlayerMovePreviewEffects();
+      }
+    },
+    setMovePreviewSpeed: (speed) => {
+      movePreviewSpeed = speed;
+    },
     setWhiteboardDrawTool: (tool) => {
       if (!isDrawingEnabledSurface) return;
       if (tool !== "move") {
@@ -1654,6 +1686,7 @@ export async function createTacticalPadLiteSurface(
       ghostTrailEffectsLayer.visible = false;
       playerFeedbackEffectsLayer.visible = false;
       renderAllWhiteboardDrawings(Number.POSITIVE_INFINITY);
+      syncPlayerTokensToCommittedPosition();
 
       try {
         const extractedFromStage = resolveHtmlCanvas(extractCanvas(app.stage));
@@ -1675,6 +1708,15 @@ export async function createTacticalPadLiteSurface(
         const now = performance.now();
         renderAllWhiteboardDrawings(now);
         renderTransientEffects(now);
+        if (playerMovePreviewEffects.length > 0) {
+          for (const player of players) {
+            const previewPosition = getPlayerMovePreviewPosition(player.id, now);
+            if (!previewPosition) continue;
+            setTokenWorldPositionForPoint(player, previewPosition, mapper);
+          }
+        } else {
+          syncPlayerTokensToCommittedPosition();
+        }
         generatedTexture.destroy(true);
       }
     },

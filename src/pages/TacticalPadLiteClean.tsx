@@ -3,6 +3,8 @@ import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as R
 import {
   createTacticalPadLiteSurface,
   type ItemMode,
+  type MovePreviewSpeed,
+  type PlayerMovementBehavior,
   type TacticalPadLiteSurface,
   type TacticalItem,
   type WhiteboardTokenColor,
@@ -44,6 +46,17 @@ const TACTICAL_ITEM_CHOICES: ReadonlyArray<{ label: string; type: TacticalItem["
 ];
 type WhiteboardToolControl = "move" | "pen" | "line" | "arrow" | "dashed";
 type WhiteboardToolAction = WhiteboardToolControl | "eraser";
+const PLAYER_MOVEMENT_BEHAVIOR_LABEL: Record<PlayerMovementBehavior, string> = {
+  "free-drag": "Free Drag",
+  "move-preview": "Move Preview",
+};
+const MOVE_PREVIEW_SPEED_LABEL: Record<MovePreviewSpeed, string> = {
+  slow: "Slow",
+  normal: "Normal",
+  fast: "Fast",
+};
+const PLAYER_MOVEMENT_BEHAVIOR_OPTIONS: ReadonlyArray<PlayerMovementBehavior> = ["free-drag", "move-preview"];
+const MOVE_PREVIEW_SPEED_OPTIONS: ReadonlyArray<MovePreviewSpeed> = ["slow", "normal", "fast"];
 const WHITEBOARD_BUBBLE_SIZE = 36;
 const WHITEBOARD_BUBBLE_MARGIN = 12;
 
@@ -744,6 +757,27 @@ const COACH_HUB_ACTION_BUTTON_STYLE: CSSProperties = {
   minWidth: 0,
 };
 
+const COACH_HUB_SEGMENTED_GRID_STYLE: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  gap: "3px",
+};
+
+const COACH_HUB_TINY_SEGMENT_BUTTON_STYLE: CSSProperties = {
+  ...COACH_HUB_TOOL_BUTTON_STYLE,
+  height: "24px",
+  borderRadius: "7px",
+  fontSize: "9px",
+  padding: "0 5px",
+};
+
+const COACH_HUB_TINY_SEGMENT_BUTTON_ACTIVE_STYLE: CSSProperties = {
+  ...COACH_HUB_TINY_SEGMENT_BUTTON_STYLE,
+  border: "1px solid rgba(125, 211, 252, 0.68)",
+  background: "rgba(38, 72, 102, 0.68)",
+  color: "#f7fcff",
+};
+
 const CONTROL_BUTTON_STYLE: CSSProperties = {
   height: "34px",
   minWidth: "78px",
@@ -1181,6 +1215,8 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   });
   const [whiteboardTool, setWhiteboardTool] = useState<WhiteboardToolControl>("move");
   const [tacticalTool, setTacticalTool] = useState<WhiteboardToolControl>("move");
+  const [playerMovementBehavior, setPlayerMovementBehavior] = useState<PlayerMovementBehavior>("free-drag");
+  const [movePreviewSpeed, setMovePreviewSpeed] = useState<MovePreviewSpeed>("normal");
   const [items, setItems] = useState<TacticalItem[]>([]);
   const [itemMode, setItemMode] = useState<ItemMode>("locked");
   const [phaseCount, setPhaseCount] = useState(0);
@@ -1358,6 +1394,8 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
       surface.setWhiteboardDrawTool(initialDrawTool);
       surface.setWhiteboardDrawColor(initialDrawColor);
       if (!isWhiteboardMode) {
+        surface.setPlayerMovementBehavior(playerMovementBehavior);
+        surface.setMovePreviewSpeed(movePreviewSpeed);
         surface.setItems(items);
         const initialSurfaceItemMode: ItemMode =
           itemMode === "edit" && tacticalTool === "move" && !(isPlaying || isPaused)
@@ -1412,6 +1450,14 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     if (isStatsMode || isWhiteboardMode) return;
     surfaceRef.current?.setItemMode(effectiveItemMode);
   }, [isStatsMode, isWhiteboardMode, effectiveItemMode]);
+
+  useEffect(() => {
+    if (isStatsMode || isWhiteboardMode) return;
+    const surface = surfaceRef.current;
+    if (!surface) return;
+    surface.setPlayerMovementBehavior(playerMovementBehavior);
+    surface.setMovePreviewSpeed(movePreviewSpeed);
+  }, [isStatsMode, isWhiteboardMode, playerMovementBehavior, movePreviewSpeed]);
 
   useEffect(() => {
     if (!isWhiteboardMode) return;
@@ -2281,6 +2327,42 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             </div>
             <div style={COACH_HUB_SECTION_STYLE}>
               <p style={COACH_HUB_SECTION_TITLE_STYLE}>Players</p>
+              <div style={COACH_HUB_SEGMENTED_GRID_STYLE}>
+                {PLAYER_MOVEMENT_BEHAVIOR_OPTIONS.map((behavior) => (
+                  <button
+                    key={behavior}
+                    type="button"
+                    style={
+                      playerMovementBehavior === behavior
+                        ? COACH_HUB_TINY_SEGMENT_BUTTON_ACTIVE_STYLE
+                        : COACH_HUB_TINY_SEGMENT_BUTTON_STYLE
+                    }
+                    disabled={isPlaybackLocked}
+                    onClick={() => setPlayerMovementBehavior(behavior)}
+                  >
+                    {PLAYER_MOVEMENT_BEHAVIOR_LABEL[behavior]}
+                  </button>
+                ))}
+              </div>
+              {playerMovementBehavior === "move-preview" ? (
+                <div style={{ ...COACH_HUB_SEGMENTED_GRID_STYLE, gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
+                  {MOVE_PREVIEW_SPEED_OPTIONS.map((speed) => (
+                    <button
+                      key={speed}
+                      type="button"
+                      style={
+                        movePreviewSpeed === speed
+                          ? COACH_HUB_TINY_SEGMENT_BUTTON_ACTIVE_STYLE
+                          : COACH_HUB_TINY_SEGMENT_BUTTON_STYLE
+                      }
+                      disabled={isPlaybackLocked}
+                      onClick={() => setMovePreviewSpeed(speed)}
+                    >
+                      {MOVE_PREVIEW_SPEED_LABEL[speed]}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
               <div style={COACH_HUB_ACTION_GRID_STYLE}>
                 <button type="button" style={COACH_HUB_ACTION_BUTTON_STYLE} disabled={isPlaybackLocked} onClick={addTacticalPlayer}>
                   + Player
