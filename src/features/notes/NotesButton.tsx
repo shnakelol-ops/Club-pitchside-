@@ -7,6 +7,13 @@ import type { CoachNoteContext } from "./types";
 type NotesButtonProps = {
   defaultContext?: CoachNoteContext;
   variant?: "menu" | "floating";
+  matchContext?: {
+    half?: 1 | 2;
+    matchClockMs?: number;
+    matchId?: string;
+    eventId?: string;
+    sessionId?: string;
+  };
 };
 
 type PanelAnchorRect = {
@@ -71,7 +78,7 @@ const MENU_BUTTON_ACTIVE_STYLE: CSSProperties = {
   background: "rgba(14, 116, 144, 0.36)",
 };
 
-export function NotesButton({ defaultContext = "match", variant = "menu" }: NotesButtonProps) {
+export function NotesButton({ defaultContext = "match", variant = "menu", matchContext }: NotesButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [anchorRect, setAnchorRect] = useState<PanelAnchorRect | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
@@ -174,6 +181,7 @@ export function NotesButton({ defaultContext = "match", variant = "menu" }: Note
               defaultContext={defaultContext}
               onRequestClose={() => setIsOpen(false)}
               panelAnchorStyle={panelAnchorStyle}
+              matchContext={matchContext}
             />,
             document.body,
           )

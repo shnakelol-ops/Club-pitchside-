@@ -1,13 +1,20 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 
 import { useVoiceRecorder } from "./use-voice-recorder";
-import type { CoachNoteContext } from "./types";
+import type { CoachNote, CoachNoteContext } from "./types";
 import { useNotes } from "./use-notes";
 
 type NotesQuickPanelProps = {
   defaultContext?: CoachNoteContext;
   onRequestClose?: () => void;
   panelAnchorStyle?: CSSProperties;
+  matchContext?: {
+    matchId?: string;
+    sessionId?: string;
+    eventId?: string;
+    matchClockMs?: number;
+    half?: 1 | 2;
+  };
 };
 
 const PANEL_STYLE_BASE: CSSProperties = {
@@ -92,6 +99,72 @@ const ERROR_TEXT_STYLE: CSSProperties = {
   color: "#fecaca",
 };
 
+const RECENT_NOTES_WRAP_STYLE: CSSProperties = {
+  display: "grid",
+  gap: "6px",
+  marginTop: "2px",
+  maxHeight: "170px",
+  overflowY: "auto",
+  overflowX: "hidden",
+  overscrollBehavior: "contain",
+};
+
+const RECENT_NOTE_ITEM_STYLE: CSSProperties = {
+  display: "grid",
+  gap: "4px",
+  padding: "7px",
+  borderRadius: "9px",
+  border: "1px solid rgba(163, 190, 212, 0.22)",
+  background: "rgba(10, 19, 24, 0.62)",
+};
+
+const RECENT_NOTE_TOP_ROW_STYLE: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: "8px",
+};
+
+const RECENT_NOTE_TYPE_STYLE: CSSProperties = {
+  color: "#dbeafe",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "9px",
+  fontWeight: 700,
+  letterSpacing: "0.16px",
+  textTransform: "uppercase",
+};
+
+const RECENT_NOTE_TIME_STYLE: CSSProperties = {
+  color: "rgba(208, 227, 242, 0.78)",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "9px",
+  fontWeight: 560,
+};
+
+const RECENT_NOTE_TEXT_STYLE: CSSProperties = {
+  margin: 0,
+  color: "#e4eff8",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "10.5px",
+  lineHeight: 1.35,
+  whiteSpace: "pre-wrap",
+  wordBreak: "break-word",
+};
+
+const RECENT_NOTE_META_STYLE: CSSProperties = {
+  color: "rgba(208, 227, 242, 0.82)",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "9.5px",
+  fontWeight: 560,
+};
+
+const RECENT_NOTE_PLAY_STYLE: CSSProperties = {
+  ...BUTTON_STYLE,
+  minHeight: "34px",
+  fontSize: "10px",
+  textTransform: "uppercase",
+};
+
 function formatDuration(durationMs: number): string {
   const seconds = Math.max(0, Math.floor(durationMs / 1000));
   const mm = Math.floor(seconds / 60)
@@ -101,11 +174,27 @@ function formatDuration(durationMs: number): string {
   return `${mm}:${ss}`;
 }
 
+function formatTimestamp(timestampMs: number): string {
+  if (!Number.isFinite(timestampMs) || timestampMs <= 0) return "Unknown";
+  const date = new Date(timestampMs);
+  if (Number.isNaN(date.getTime())) return "Unknown";
+  const hh = String(date.getHours()).padStart(2, "0");
+  const mm = String(date.getMinutes()).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mo = String(date.getMonth() + 1).padStart(2, "0");
+  return `${dd}/${mo} ${hh}:${mm}`;
+}
+
 function isDisabledRecorderStatus(status: string): boolean {
   return status === "requesting-permission" || status === "stopping";
 }
 
-export function NotesQuickPanel({ defaultContext = "match", onRequestClose, panelAnchorStyle }: NotesQuickPanelProps) {
+export function NotesQuickPanel({
+  defaultContext = "match",
+  onRequestClose,
+  panelAnchorStyle,
+  matchContext,
+}: NotesQuickPanelProps) {
   const [textDraft, setTextDraft] = useState("");
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [panelError, setPanelError] = useState<string | null>(null);
@@ -117,8 +206,9 @@ export function NotesQuickPanel({ defaultContext = "match", onRequestClose, pane
     durationMs: number;
   } | null>(null);
   const [pendingVoiceLabel, setPendingVoiceLabel] = useState<string>("");
-  const { saveTextNote, saveVoiceNote, isSaving } = useNotes();
+  const { notes, saveTextNote, saveVoiceNote, getVoiceNoteBlob, isSaving } = useNotes();
   const recorder = useVoiceRecorder();
+  const [playingNoteId, setPlayingNoteId] = useState<string | null>(null);
 
   const recorderErrorText = useMemo(() => {
     if (!recorder.error) return null;
@@ -208,6 +298,11 @@ export function NotesQuickPanel({ defaultContext = "match", onRequestClose, pane
       context: defaultContext,
       text: nextText,
       title: nextText.slice(0, 48),
+      matchId: matchContext?.matchId,
+      sessionId: matchContext?.sessionId,
+      eventId: matchContext?.eventId,
+      matchClockMs: matchContext?.matchClockMs,
+      half: matchContext?.half,
     });
     if (result.ok === false) {
       setPanelError(result.error);
@@ -267,6 +362,11 @@ export function NotesQuickPanel({ defaultContext = "match", onRequestClose, pane
       blob: pendingVoiceResult.blob,
       durationMs: pendingVoiceResult.durationMs,
       title: pendingVoiceLabel.trim() || "Voice note",
+      matchId: matchContext?.matchId,
+      sessionId: matchContext?.sessionId,
+      eventId: matchContext?.eventId,
+      matchClockMs: matchContext?.matchClockMs,
+      half: matchContext?.half,
     });
     if (result.ok === false) {
       setPanelError(result.error);
@@ -282,6 +382,39 @@ export function NotesQuickPanel({ defaultContext = "match", onRequestClose, pane
     setPendingVoiceResult(null);
     setPendingVoiceLabel("");
     setSaveMessage("Voice note saved");
+  };
+
+  const recentNotes = useMemo(() => notes.slice(0, 6), [notes]);
+
+  const handlePlayVoiceNote = async (note: CoachNote) => {
+    if (note.type !== "voice" || !note.audioBlobId) {
+      setPanelError("Voice note audio is unavailable.");
+      return;
+    }
+    setPanelError(null);
+    setPlayingNoteId(note.id);
+    try {
+      const blobResult = await getVoiceNoteBlob(note.id);
+      if (!blobResult.ok) {
+        setPanelError(blobResult.error);
+        return;
+      }
+      const objectUrl = window.URL.createObjectURL(blobResult.data);
+      const audio = new Audio(objectUrl);
+      audio.onended = () => {
+        window.URL.revokeObjectURL(objectUrl);
+        setPlayingNoteId((current) => (current === note.id ? null : current));
+      };
+      audio.onerror = () => {
+        window.URL.revokeObjectURL(objectUrl);
+        setPanelError("Could not play voice note.");
+        setPlayingNoteId((current) => (current === note.id ? null : current));
+      };
+      await audio.play();
+    } catch {
+      setPanelError("Could not play voice note.");
+      setPlayingNoteId((current) => (current === note.id ? null : current));
+    }
   };
 
   const hasPendingVoiceClip = pendingVoiceResult != null;
@@ -373,6 +506,43 @@ export function NotesQuickPanel({ defaultContext = "match", onRequestClose, pane
           </button>
         </>
       ) : null}
+
+      <p style={TITLE_STYLE}>Recent Notes</p>
+      {recentNotes.length === 0 ? (
+        <p style={META_TEXT_STYLE}>No saved notes yet.</p>
+      ) : (
+        <div style={RECENT_NOTES_WRAP_STYLE}>
+          {recentNotes.map((note) => (
+            <div key={note.id} style={RECENT_NOTE_ITEM_STYLE}>
+              <div style={RECENT_NOTE_TOP_ROW_STYLE}>
+                <span style={RECENT_NOTE_TYPE_STYLE}>{note.type === "voice" ? "Voice" : "Text"}</span>
+                <span style={RECENT_NOTE_TIME_STYLE}>{formatTimestamp(note.createdAt)}</span>
+              </div>
+              {note.type === "text" ? (
+                <p style={RECENT_NOTE_TEXT_STYLE}>{note.text ?? "(empty note)"}</p>
+              ) : (
+                <>
+                  <span style={RECENT_NOTE_META_STYLE}>
+                    Duration: {formatDuration(note.durationMs ?? 0)}
+                    {note.half ? ` · H${note.half}` : ""}
+                    {note.matchClockMs != null ? ` · ${formatDuration(note.matchClockMs)}` : ""}
+                  </span>
+                  <button
+                    type="button"
+                    style={RECENT_NOTE_PLAY_STYLE}
+                    disabled={!note.audioBlobId || playingNoteId === note.id}
+                    onClick={() => {
+                      void handlePlayVoiceNote(note);
+                    }}
+                  >
+                    {playingNoteId === note.id ? "Playing..." : "Play"}
+                  </button>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {saveMessage ? <p style={META_TEXT_STYLE}>{saveMessage}</p> : null}
       {panelError ? <p style={ERROR_TEXT_STYLE}>{panelError}</p> : null}

@@ -4679,7 +4679,18 @@ export default function StatsModeSurface() {
                 >
                   ⌂
                 </button>
-                <NotesButton defaultContext="match" />
+                <NotesButton
+                  defaultContext="match"
+                  matchContext={{
+                    half: currentHalf,
+                    matchClockMs: matchTimeSeconds * 1000,
+                    matchId:
+                      venueName.trim().length > 0
+                        ? `match-${venueName.trim().toLowerCase().replace(/\s+/g, "-")}`
+                        : undefined,
+                    eventId: selectedReviewEventId ?? undefined,
+                  }}
+                />
               </div>
               <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.86, marginTop: "2px" }}>
                 Sport

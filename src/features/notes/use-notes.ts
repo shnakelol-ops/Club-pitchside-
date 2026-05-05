@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 
-import { deleteAudioBlob, saveAudioBlob } from "./audio-storage";
+import { deleteAudioBlob, readAudioBlob, saveAudioBlob } from "./audio-storage";
 import { readCoachNotes, removeCoachNote, upsertCoachNote } from "./notes-store";
 import type { CoachNote, CoachNoteContext } from "./types";
 
@@ -8,6 +8,11 @@ export type SaveTextNoteInput = {
   text: string;
   title?: string;
   context?: CoachNoteContext;
+  matchId?: string;
+  sessionId?: string;
+  eventId?: string;
+  matchClockMs?: number;
+  half?: 1 | 2;
 };
 
 export type SaveVoiceNoteInput = {
@@ -15,6 +20,11 @@ export type SaveVoiceNoteInput = {
   durationMs: number;
   title?: string;
   context?: CoachNoteContext;
+  matchId?: string;
+  sessionId?: string;
+  eventId?: string;
+  matchClockMs?: number;
+  half?: 1 | 2;
 };
 
 export type NotesActionResult<T> =
@@ -27,6 +37,23 @@ function newLocalId(prefix: string): string {
     return `${prefix}-${c.randomUUID()}`;
   }
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+}
+
+function applyContextMetadata(
+  note: CoachNote,
+  input: Pick<SaveTextNoteInput, "matchId" | "sessionId" | "eventId" | "matchClockMs" | "half">,
+): CoachNote {
+  const nextNote: CoachNote = { ...note };
+  if (input.matchId) nextNote.matchId = input.matchId;
+  if (input.sessionId) nextNote.sessionId = input.sessionId;
+  if (input.eventId) nextNote.eventId = input.eventId;
+  if (typeof input.matchClockMs === "number" && Number.isFinite(input.matchClockMs)) {
+    nextNote.matchClockMs = Math.max(0, Math.floor(input.matchClockMs));
+  }
+  if (input.half === 1 || input.half === 2) {
+    nextNote.half = input.half;
+  }
+  return nextNote;
 }
 
 export function useNotes() {
@@ -50,7 +77,7 @@ export function useNotes() {
       }
 
       const now = Date.now();
-      const nextNote: CoachNote = {
+      const baseNote: CoachNote = {
         id: newLocalId("note"),
         type: "text",
         context: input.context ?? "match",
@@ -59,6 +86,7 @@ export function useNotes() {
         createdAt: now,
         updatedAt: now,
       };
+      const nextNote = applyContextMetadata(baseNote, input);
 
       try {
         setIsSaving(true);
@@ -86,7 +114,7 @@ export function useNotes() {
       const now = Date.now();
       const noteId = newLocalId("note");
       const blobId = newLocalId("blob");
-      const nextNote: CoachNote = {
+      const baseNote: CoachNote = {
         id: noteId,
         type: "voice",
         context: input.context ?? "match",
@@ -96,6 +124,7 @@ export function useNotes() {
         createdAt: now,
         updatedAt: now,
       };
+      const nextNote = applyContextMetadata(baseNote, input);
 
       setIsSaving(true);
       setError(null);
@@ -143,6 +172,24 @@ export function useNotes() {
     [notes],
   );
 
+  const readVoiceNoteBlob = useCallback(
+    async (audioBlobId: string): Promise<NotesActionResult<Blob>> => {
+      if (!audioBlobId.trim()) {
+        return { ok: false, error: "Voice note audio is unavailable." };
+      }
+      try {
+        const blob = await readAudioBlob(audioBlobId);
+        if (!blob) {
+          return { ok: false, error: "Voice recording data is missing." };
+        }
+        return { ok: true, data: blob };
+      } catch {
+        return { ok: false, error: "Could not load voice note audio." };
+      }
+    },
+    [],
+  );
+
   return {
     notes,
     isSaving,
@@ -152,5 +199,6 @@ export function useNotes() {
     saveTextNote,
     saveVoiceNote,
     deleteNote,
+    readVoiceNoteBlob,
   };
 }
