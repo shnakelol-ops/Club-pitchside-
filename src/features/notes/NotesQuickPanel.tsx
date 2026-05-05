@@ -103,7 +103,6 @@ const RECENT_NOTES_WRAP_STYLE: CSSProperties = {
   display: "grid",
   gap: "6px",
   marginTop: "2px",
-  maxHeight: "170px",
   overflowY: "auto",
   overflowX: "hidden",
   overscrollBehavior: "contain",
@@ -151,18 +150,19 @@ const RECENT_NOTE_TEXT_STYLE: CSSProperties = {
   wordBreak: "break-word",
 };
 
-const RECENT_NOTE_META_STYLE: CSSProperties = {
-  color: "rgba(208, 227, 242, 0.82)",
-  fontFamily: "Inter, system-ui, sans-serif",
-  fontSize: "9.5px",
-  fontWeight: 560,
+const RECENT_NOTE_ROW_STYLE: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr) auto",
+  gap: "8px",
+  alignItems: "center",
 };
 
 const RECENT_NOTE_PLAY_STYLE: CSSProperties = {
   ...BUTTON_STYLE,
-  minHeight: "34px",
-  fontSize: "10px",
-  textTransform: "uppercase",
+  minHeight: "28px",
+  minWidth: "34px",
+  padding: "0 8px",
+  fontSize: "12px",
 };
 
 function formatDuration(durationMs: number): string {
@@ -174,15 +174,19 @@ function formatDuration(durationMs: number): string {
   return `${mm}:${ss}`;
 }
 
-function formatTimestamp(timestampMs: number): string {
-  if (!Number.isFinite(timestampMs) || timestampMs <= 0) return "Unknown";
-  const date = new Date(timestampMs);
-  if (Number.isNaN(date.getTime())) return "Unknown";
-  const hh = String(date.getHours()).padStart(2, "0");
-  const mm = String(date.getMinutes()).padStart(2, "0");
-  const dd = String(date.getDate()).padStart(2, "0");
-  const mo = String(date.getMonth() + 1).padStart(2, "0");
-  return `${dd}/${mo} ${hh}:${mm}`;
+function formatRelativeTime(timestampMs: number, nowMs: number): string {
+  if (!Number.isFinite(timestampMs) || timestampMs <= 0) return "just now";
+  const deltaSeconds = Math.max(0, Math.floor((nowMs - timestampMs) / 1000));
+  if (deltaSeconds < 60) return "just now";
+  if (deltaSeconds < 3600) return `${Math.floor(deltaSeconds / 60)}m ago`;
+  if (deltaSeconds < 86400) return `${Math.floor(deltaSeconds / 3600)}h ago`;
+  return `${Math.floor(deltaSeconds / 86400)}d ago`;
+}
+
+function trimPreview(text: string): string {
+  const normalized = text.trim().replace(/\s+/g, " ");
+  if (normalized.length <= 40) return normalized;
+  return `${normalized.slice(0, 40)}…`;
 }
 
 function isDisabledRecorderStatus(status: string): boolean {
@@ -209,6 +213,9 @@ export function NotesQuickPanel({
   const { notes, saveTextNote, saveVoiceNote, readVoiceNoteBlob, isSaving } = useNotes();
   const recorder = useVoiceRecorder();
   const [playingNoteId, setPlayingNoteId] = useState<string | null>(null);
+  const stopPanelInteraction = (event: { stopPropagation: () => void }) => {
+    event.stopPropagation();
+  };
 
   const recorderErrorText = useMemo(() => {
     if (!recorder.error) return null;
@@ -234,6 +241,16 @@ export function NotesQuickPanel({
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!saveMessage) return;
+    const timeoutId = window.setTimeout(() => {
+      setSaveMessage(null);
+    }, 2000);
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [saveMessage]);
 
   const panelStyle = useMemo<CSSProperties>(() => {
     if (isLandscape) {
@@ -281,6 +298,14 @@ export function NotesQuickPanel({
     };
   }, [isLandscape]);
 
+  const recentNotesWrapStyle = useMemo<CSSProperties>(
+    () => ({
+      ...RECENT_NOTES_WRAP_STYLE,
+      maxHeight: isLandscape ? "100px" : "140px",
+    }),
+    [isLandscape],
+  );
+
   const clearFeedback = () => {
     setSaveMessage(null);
     setPanelError(null);
@@ -311,7 +336,7 @@ export function NotesQuickPanel({
     }
     setTextDraft("");
     setPanelError(null);
-    setSaveMessage("Text note saved");
+    setSaveMessage("Saved ✓");
   };
 
   const handleStartVoiceRecording = async () => {
@@ -336,7 +361,6 @@ export function NotesQuickPanel({
       blob: stopped.blob,
       durationMs: stopped.durationMs,
     });
-    setSaveMessage("Recording ready to save");
   };
 
   const handleCancelVoiceRecording = async () => {
@@ -348,7 +372,6 @@ export function NotesQuickPanel({
     }
     setPendingVoiceResult(null);
     setPendingVoiceLabel("");
-    setSaveMessage("Recording cleared");
   };
 
   const handleSaveVoiceNote = async () => {
@@ -381,23 +404,36 @@ export function NotesQuickPanel({
 
     setPendingVoiceResult(null);
     setPendingVoiceLabel("");
-    setSaveMessage("Voice note saved");
+    setSaveMessage("Saved ✓");
   };
 
-  const recentNotes = useMemo(() => notes.slice(0, 6), [notes]);
+  const recentNotes = useMemo(() => {
+    const now = Date.now();
+    return notes.slice(0, 5).map((note) => ({
+      note,
+      label: formatRelativeTime(note.createdAt, now),
+      preview: note.type === "text" ? trimPreview(note.text ?? "") : "Voice note",
+    }));
+  }, [notes]);
 
   const handlePlayVoiceNote = async (note: CoachNote) => {
-    if (note.type !== "voice" || !note.audioBlobId) {
+    if (note.type !== "voice") {
+      setPanelError("Voice note audio is unavailable.");
+      return;
+    }
+    const audioBlobId = note.audioBlobId;
+    if (!audioBlobId) {
       setPanelError("Voice note audio is unavailable.");
       return;
     }
     setPanelError(null);
     setPlayingNoteId(note.id);
     try {
-      const blobResult = await readVoiceNoteBlob(note.audioBlobId);
+      const blobResult = await readVoiceNoteBlob(audioBlobId);
       if (!blobResult.ok) {
         const failureResult: { ok: false; error: string } = blobResult;
         setPanelError(failureResult.error);
+        setPlayingNoteId(null);
         return;
       }
       const blob = blobResult.data;
@@ -436,20 +472,70 @@ export function NotesQuickPanel({
     >
       <p style={TITLE_STYLE}>My Notes</p>
 
+      <p style={TITLE_STYLE}>Recent Notes</p>
+      {recentNotes.length === 0 ? (
+        <p style={META_TEXT_STYLE}>No notes yet</p>
+      ) : (
+        <div style={recentNotesWrapStyle}>
+          {recentNotes.map(({ note, label, preview }) => (
+            <div key={note.id} style={RECENT_NOTE_ITEM_STYLE}>
+              <div style={RECENT_NOTE_TOP_ROW_STYLE}>
+                <span style={RECENT_NOTE_TYPE_STYLE}>{note.type === "voice" ? "Voice" : "Text"}</span>
+                <span style={RECENT_NOTE_TIME_STYLE}>{label}</span>
+              </div>
+              <div style={RECENT_NOTE_ROW_STYLE}>
+                <p style={RECENT_NOTE_TEXT_STYLE}>{preview || "(empty note)"}</p>
+                {note.type === "voice" ? (
+                  <button
+                    type="button"
+                    style={RECENT_NOTE_PLAY_STYLE}
+                    disabled={!note.audioBlobId || playingNoteId === note.id}
+                    onPointerDown={stopPanelInteraction}
+                    onTouchStart={stopPanelInteraction}
+                    onClick={() => {
+                      void handlePlayVoiceNote(note);
+                    }}
+                  >
+                    {playingNoteId === note.id ? "…" : "▶️"}
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       <textarea
         style={textAreaStyle}
         placeholder="Quick text note..."
         value={textDraft}
+        onPointerDown={stopPanelInteraction}
+        onClick={stopPanelInteraction}
+        onTouchStart={stopPanelInteraction}
         onChange={(event) => setTextDraft(event.target.value)}
       />
       <div style={ROW_STYLE}>
-        <button type="button" style={PRIMARY_BUTTON_STYLE} onClick={handleSaveTextNote} disabled={isSaving}>
+        <button
+          type="button"
+          style={PRIMARY_BUTTON_STYLE}
+          onPointerDown={stopPanelInteraction}
+          onTouchStart={stopPanelInteraction}
+          onClick={handleSaveTextNote}
+          disabled={isSaving}
+        >
           Save Text
         </button>
-        <button type="button" style={BUTTON_STYLE} onClick={onRequestClose}>
+        <button
+          type="button"
+          style={BUTTON_STYLE}
+          onPointerDown={stopPanelInteraction}
+          onTouchStart={stopPanelInteraction}
+          onClick={onRequestClose}
+        >
           Close
         </button>
       </div>
+      {saveMessage ? <p style={META_TEXT_STYLE}>{saveMessage}</p> : null}
 
       <p style={TITLE_STYLE}>Voice Note</p>
       <div style={ROW_STYLE}>
@@ -458,6 +544,8 @@ export function NotesQuickPanel({
             type="button"
             style={PRIMARY_BUTTON_STYLE}
             disabled={!recorder.isSupported || recorderBusy || isSaving}
+            onPointerDown={stopPanelInteraction}
+            onTouchStart={stopPanelInteraction}
             onClick={handleStartVoiceRecording}
           >
             {recorder.status === "requesting-permission" ? "Requesting..." : "Start Voice"}
@@ -467,6 +555,8 @@ export function NotesQuickPanel({
             type="button"
             style={PRIMARY_BUTTON_STYLE}
             disabled={recorderBusy || isSaving}
+            onPointerDown={stopPanelInteraction}
+            onTouchStart={stopPanelInteraction}
             onClick={handleStopVoiceRecording}
           >
             Stop Voice
@@ -477,6 +567,8 @@ export function NotesQuickPanel({
           type="button"
           style={DANGER_BUTTON_STYLE}
           disabled={recorderBusy || isSaving}
+          onPointerDown={stopPanelInteraction}
+          onTouchStart={stopPanelInteraction}
           onClick={handleCancelVoiceRecording}
         >
           Clear
@@ -493,6 +585,9 @@ export function NotesQuickPanel({
         <>
           <input
             value={pendingVoiceLabel}
+            onPointerDown={stopPanelInteraction}
+            onClick={stopPanelInteraction}
+            onTouchStart={stopPanelInteraction}
             onChange={(event) => setPendingVoiceLabel(event.target.value)}
             placeholder="Voice note title (optional)"
             style={{
@@ -503,50 +598,18 @@ export function NotesQuickPanel({
               paddingTop: isLandscape ? "8px" : "11px",
             }}
           />
-          <button type="button" style={PRIMARY_BUTTON_STYLE} onClick={handleSaveVoiceNote} disabled={isSaving}>
+          <button
+            type="button"
+            style={PRIMARY_BUTTON_STYLE}
+            onPointerDown={stopPanelInteraction}
+            onTouchStart={stopPanelInteraction}
+            onClick={handleSaveVoiceNote}
+            disabled={isSaving}
+          >
             Save Voice
           </button>
         </>
       ) : null}
-
-      <p style={TITLE_STYLE}>Recent Notes</p>
-      {recentNotes.length === 0 ? (
-        <p style={META_TEXT_STYLE}>No saved notes yet.</p>
-      ) : (
-        <div style={RECENT_NOTES_WRAP_STYLE}>
-          {recentNotes.map((note) => (
-            <div key={note.id} style={RECENT_NOTE_ITEM_STYLE}>
-              <div style={RECENT_NOTE_TOP_ROW_STYLE}>
-                <span style={RECENT_NOTE_TYPE_STYLE}>{note.type === "voice" ? "Voice" : "Text"}</span>
-                <span style={RECENT_NOTE_TIME_STYLE}>{formatTimestamp(note.createdAt)}</span>
-              </div>
-              {note.type === "text" ? (
-                <p style={RECENT_NOTE_TEXT_STYLE}>{note.text ?? "(empty note)"}</p>
-              ) : (
-                <>
-                  <span style={RECENT_NOTE_META_STYLE}>
-                    Duration: {formatDuration(note.durationMs ?? 0)}
-                    {note.half ? ` · H${note.half}` : ""}
-                    {note.matchClockMs != null ? ` · ${formatDuration(note.matchClockMs)}` : ""}
-                  </span>
-                  <button
-                    type="button"
-                    style={RECENT_NOTE_PLAY_STYLE}
-                    disabled={!note.audioBlobId || playingNoteId === note.id}
-                    onClick={() => {
-                      void handlePlayVoiceNote(note);
-                    }}
-                  >
-                    {playingNoteId === note.id ? "Playing..." : "Play"}
-                  </button>
-                </>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {saveMessage ? <p style={META_TEXT_STYLE}>{saveMessage}</p> : null}
       {panelError ? <p style={ERROR_TEXT_STYLE}>{panelError}</p> : null}
       {!panelError && recorderErrorText ? <p style={ERROR_TEXT_STYLE}>{recorderErrorText}</p> : null}
     </div>
