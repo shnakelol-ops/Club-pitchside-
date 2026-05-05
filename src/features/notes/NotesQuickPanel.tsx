@@ -407,14 +407,21 @@ export function NotesQuickPanel({
     setSaveMessage("Saved ✓");
   };
 
+  const currentMatchId = matchContext?.matchId;
   const recentNotes = useMemo(() => {
+    if (!currentMatchId) {
+      return [];
+    }
     const now = Date.now();
-    return notes.slice(0, 5).map((note) => ({
-      note,
-      label: formatRelativeTime(note.createdAt, now),
-      preview: note.type === "text" ? trimPreview(note.text ?? "") : "Voice note",
-    }));
-  }, [notes]);
+    return notes
+      .filter((note) => note.matchId === currentMatchId)
+      .slice(0, 5)
+      .map((note) => ({
+        note,
+        label: formatRelativeTime(note.createdAt, now),
+        preview: note.type === "text" ? trimPreview(note.text ?? "") : "Voice note",
+      }));
+  }, [notes, currentMatchId]);
 
   const handlePlayVoiceNote = async (audioBlobId: string) => {
     const result = await readVoiceNoteBlob(audioBlobId);
