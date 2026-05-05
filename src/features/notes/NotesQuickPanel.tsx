@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 
 import { useVoiceRecorder } from "./use-voice-recorder";
-import type { CoachNote, CoachNoteContext } from "./types";
+import type { CoachNoteContext } from "./types";
 import { useNotes } from "./use-notes";
 
 type NotesQuickPanelProps = {
@@ -419,7 +419,7 @@ export function NotesQuickPanel({
   const handlePlayVoiceNote = async (audioBlobId: string) => {
     const result = await readVoiceNoteBlob(audioBlobId);
 
-    if (!result.ok) {
+    if (result.ok === false) {
       setPanelError(result.error);
       setPlayingNoteId(null);
       return;
