@@ -147,7 +147,7 @@ export function NotesQuickPanel({ defaultContext = "match", onRequestClose }: No
       text: nextText,
       title: nextText.slice(0, 48),
     });
-    if (!result.ok) {
+    if (result.ok === false) {
       setPanelError(result.error);
       setSaveMessage(null);
       return;
@@ -161,7 +161,7 @@ export function NotesQuickPanel({ defaultContext = "match", onRequestClose }: No
     clearFeedback();
     setPendingVoiceResult(null);
     const started = await recorder.startRecording();
-    if (!started.ok) {
+    if (started.ok === false) {
       setPanelError(started.error.message);
       return;
     }
@@ -171,7 +171,7 @@ export function NotesQuickPanel({ defaultContext = "match", onRequestClose }: No
   const handleStopVoiceRecording = async () => {
     clearFeedback();
     const stopped = await recorder.stopRecording();
-    if (!stopped.ok) {
+    if (stopped.ok === false) {
       setPanelError(stopped.error.message);
       return;
     }
@@ -185,7 +185,7 @@ export function NotesQuickPanel({ defaultContext = "match", onRequestClose }: No
   const handleCancelVoiceRecording = async () => {
     clearFeedback();
     const cancelled = await recorder.cancelRecording();
-    if (!cancelled.ok) {
+    if (cancelled.ok === false) {
       setPanelError(cancelled.error.message);
       return;
     }
@@ -206,13 +206,13 @@ export function NotesQuickPanel({ defaultContext = "match", onRequestClose }: No
       durationMs: pendingVoiceResult.durationMs,
       title: pendingVoiceLabel.trim() || "Voice note",
     });
-    if (!result.ok) {
+    if (result.ok === false) {
       setPanelError(result.error);
       return;
     }
 
     const cleared = await recorder.cancelRecording();
-    if (!cleared.ok) {
+    if (cleared.ok === false) {
       setPanelError(cleared.error.message);
       return;
     }
