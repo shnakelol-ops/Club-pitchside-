@@ -289,7 +289,16 @@ export function NotesQuickPanel({ defaultContext = "match", onRequestClose, pane
   const isRecording = recorder.status === "recording";
 
   return (
-    <div style={panelStyle} role="dialog" aria-modal="false" aria-label="Quick notes panel">
+    <div
+      style={panelStyle}
+      role="dialog"
+      aria-modal="false"
+      aria-label="Quick notes panel"
+      data-notes-quick-panel-root="true"
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => event.stopPropagation()}
+      onTouchStart={(event) => event.stopPropagation()}
+    >
       <p style={TITLE_STYLE}>My Notes</p>
 
       <textarea

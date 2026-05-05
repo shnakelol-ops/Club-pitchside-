@@ -3129,6 +3129,12 @@ export default function StatsModeSurface() {
       if ((event.currentTarget as Node | null) === null) {
         // no-op guard to keep TS satisfied about event usage shape
       }
+      if (
+        target instanceof Element &&
+        target.closest('[data-notes-quick-panel-root="true"]')
+      ) {
+        return;
+      }
       if ((document.querySelector(".utility-controls") as HTMLElement | null)?.contains(target)) return;
       setIsUtilityOpen(false);
     };
