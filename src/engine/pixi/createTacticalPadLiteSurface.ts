@@ -66,6 +66,7 @@ export type TacticalPadLiteSurface = {
   eraseWhiteboardPenStroke: () => void;
   undoWhiteboardStroke: () => void;
   clearWhiteboardStrokes: () => void;
+  exportImageBlob: () => Promise<Blob | null>;
   destroy: () => void;
 };
 
@@ -1496,6 +1497,35 @@ export async function createTacticalPadLiteSurface(
       resetActiveWhiteboardDrawing();
       completedWhiteboardDrawingObjects.length = 0;
       renderAllWhiteboardDrawings();
+    },
+    exportImageBlob: async () => {
+      const rendererWithExtract = app.renderer as typeof app.renderer & {
+        extract?: {
+          canvas?: (target: unknown) => unknown;
+        };
+      };
+      const extractCanvas = rendererWithExtract.extract?.canvas;
+      if (typeof extractCanvas !== "function") {
+        return null;
+      }
+
+      const resolveHtmlCanvas = (candidate: unknown): HTMLCanvasElement | null =>
+        typeof HTMLCanvasElement !== "undefined" && candidate instanceof HTMLCanvasElement ? candidate : null;
+
+      let extractedCanvas = resolveHtmlCanvas(extractCanvas(app.stage));
+      if (!extractedCanvas) {
+        const generatedTexture = app.renderer.textureGenerator.generateTexture(app.stage);
+        try {
+          extractedCanvas = resolveHtmlCanvas(extractCanvas(generatedTexture));
+        } finally {
+          generatedTexture.destroy(true);
+        }
+      }
+      if (!extractedCanvas) return null;
+
+      return await new Promise<Blob | null>((resolve) => {
+        extractedCanvas.toBlob((nextBlob) => resolve(nextBlob), "image/png");
+      });
     },
     destroy: () => {
       resizeObserver.disconnect();
