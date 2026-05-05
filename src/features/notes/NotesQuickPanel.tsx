@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 
 import { useVoiceRecorder } from "./use-voice-recorder";
 import type { CoachNoteContext } from "./types";
@@ -7,16 +7,13 @@ import { useNotes } from "./use-notes";
 type NotesQuickPanelProps = {
   defaultContext?: CoachNoteContext;
   onRequestClose?: () => void;
+  panelBottom?: string;
 };
 
-const PANEL_STYLE: CSSProperties = {
+const PANEL_STYLE_BASE: CSSProperties = {
   position: "fixed",
   right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
-  bottom: "max(62px, calc(env(safe-area-inset-bottom, 0px) + 60px))",
-  width: "min(320px, calc(100vw - 24px))",
   display: "grid",
-  gap: "8px",
-  padding: "10px",
   borderRadius: "12px",
   border: "1px solid rgba(187, 211, 233, 0.24)",
   background: "rgba(11, 21, 29, 0.86)",
@@ -35,10 +32,8 @@ const TITLE_STYLE: CSSProperties = {
   letterSpacing: "0.16px",
 };
 
-const TEXTAREA_STYLE: CSSProperties = {
+const TEXTAREA_STYLE_BASE: CSSProperties = {
   width: "100%",
-  minHeight: "86px",
-  maxHeight: "150px",
   resize: "vertical",
   borderRadius: "10px",
   border: "1px solid rgba(163, 190, 212, 0.32)",
@@ -116,6 +111,9 @@ export function NotesQuickPanel({ defaultContext = "match", onRequestClose }: No
   const [textDraft, setTextDraft] = useState("");
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [panelError, setPanelError] = useState<string | null>(null);
+  const [isLandscape, setIsLandscape] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(orientation: landscape)").matches,
+  );
   const [pendingVoiceResult, setPendingVoiceResult] = useState<{
     blob: Blob;
     durationMs: number;
@@ -128,6 +126,49 @@ export function NotesQuickPanel({ defaultContext = "match", onRequestClose }: No
     if (!recorder.error) return null;
     return recorder.error.message;
   }, [recorder.error]);
+
+  useEffect(() => {
+    const media = window.matchMedia("(orientation: landscape)");
+    const updateOrientation = () => {
+      setIsLandscape(media.matches);
+    };
+    updateOrientation();
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", updateOrientation);
+    } else {
+      media.addListener(updateOrientation);
+    }
+    return () => {
+      if (typeof media.removeEventListener === "function") {
+        media.removeEventListener("change", updateOrientation);
+      } else {
+        media.removeListener(updateOrientation);
+      }
+    };
+  }, []);
+
+  const panelStyle = useMemo<CSSProperties>(() => {
+    const maxWidth = isLandscape ? "420px" : "380px";
+    return {
+      ...PANEL_STYLE_BASE,
+      bottom: "max(140px, calc(env(safe-area-inset-bottom, 0px) + 136px))",
+      width: `min(calc(100vw - 24px), ${maxWidth})`,
+      maxHeight: "min(70vh, calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 20px))",
+      overflowY: "auto",
+      overflowX: "hidden",
+      overscrollBehavior: "contain",
+      gap: isLandscape ? "6px" : "8px",
+      padding: isLandscape ? "8px" : "10px",
+    };
+  }, [isLandscape]);
+
+  const textAreaStyle = useMemo<CSSProperties>(() => {
+    return {
+      ...TEXTAREA_STYLE_BASE,
+      minHeight: isLandscape ? "64px" : "86px",
+      maxHeight: isLandscape ? "110px" : "150px",
+    };
+  }, [isLandscape]);
 
   const clearFeedback = () => {
     setSaveMessage(null);
@@ -227,11 +268,11 @@ export function NotesQuickPanel({ defaultContext = "match", onRequestClose }: No
   const isRecording = recorder.status === "recording";
 
   return (
-    <div style={PANEL_STYLE} role="dialog" aria-modal="false" aria-label="Quick notes panel">
+    <div style={panelStyle} role="dialog" aria-modal="false" aria-label="Quick notes panel">
       <p style={TITLE_STYLE}>My Notes</p>
 
       <textarea
-        style={TEXTAREA_STYLE}
+        style={textAreaStyle}
         placeholder="Quick text note..."
         value={textDraft}
         onChange={(event) => setTextDraft(event.target.value)}
@@ -290,7 +331,7 @@ export function NotesQuickPanel({ defaultContext = "match", onRequestClose }: No
             onChange={(event) => setPendingVoiceLabel(event.target.value)}
             placeholder="Voice note title (optional)"
             style={{
-              ...TEXTAREA_STYLE,
+              ...TEXTAREA_STYLE_BASE,
               minHeight: "42px",
               maxHeight: "42px",
               resize: "none",

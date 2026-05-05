@@ -30,6 +30,14 @@ const BUTTON_STYLE: CSSProperties = {
   touchAction: "manipulation",
 };
 
+const PANEL_ANCHOR_STYLE: CSSProperties = {
+  position: "fixed",
+  right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
+  bottom: "max(136px, calc(env(safe-area-inset-bottom, 0px) + 132px))",
+  zIndex: 27,
+  pointerEvents: "none",
+};
+
 const BUTTON_ACTIVE_STYLE: CSSProperties = {
   ...BUTTON_STYLE,
   border: "1px solid rgba(125, 211, 252, 0.82)",
@@ -54,7 +62,11 @@ export function NotesButton({ defaultContext = "match" }: NotesButtonProps) {
       >
         📝
       </button>
-      {isOpen ? <NotesQuickPanel defaultContext={defaultContext} onRequestClose={() => setIsOpen(false)} /> : null}
+      {isOpen ? (
+        <div style={PANEL_ANCHOR_STYLE}>
+          <NotesQuickPanel defaultContext={defaultContext} onRequestClose={() => setIsOpen(false)} />
+        </div>
+      ) : null}
     </>
   );
 }
