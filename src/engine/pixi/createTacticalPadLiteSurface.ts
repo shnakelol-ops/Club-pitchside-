@@ -31,6 +31,13 @@ import {
   type PlayerTapFeedbackEffect,
 } from "./interactionEffects";
 import { renderWhiteboardDrawing as renderWhiteboardDrawingToGraphics } from "./renderWhiteboardDrawing";
+import {
+  type WhiteboardDrawingObject,
+  type WhiteboardDrawingType,
+  type WhiteboardLinearGeometry,
+  type WhiteboardPenGeometry,
+  type WhiteboardDrawingGeometry,
+} from "./whiteboardDrawingTypes";
 
 type TacticalPlayer = {
   id: string;
@@ -107,19 +114,6 @@ type PhaseSnapshot = {
   players: NormalizedPoint[];
   football: PhaseBallSnapshot[];
 };
-type WhiteboardDrawingType = "pen" | "line" | "arrow" | "dashedArrow";
-type WhiteboardPoint = { x: number; y: number };
-type WhiteboardPenGeometry = { points: WhiteboardPoint[] };
-type WhiteboardLinearGeometry = { start: WhiteboardPoint; end: WhiteboardPoint; controlPoint: WhiteboardPoint | null };
-type WhiteboardDrawingGeometry = WhiteboardPenGeometry | WhiteboardLinearGeometry;
-type WhiteboardDrawingObject = {
-  id: string;
-  type: WhiteboardDrawingType;
-  color: number;
-  geometry: WhiteboardDrawingGeometry;
-  createdAt: number;
-};
-
 function isWhiteboardPenGeometry(geometry: WhiteboardDrawingGeometry): geometry is WhiteboardPenGeometry {
   return "points" in geometry;
 }

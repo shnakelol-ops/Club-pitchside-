@@ -1,24 +1,13 @@
 import { Graphics } from "pixi.js";
+import {
+  isWhiteboardLinearGeometry,
+  isWhiteboardPenGeometry,
+  type WhiteboardDrawingObject,
+} from "./whiteboardDrawingTypes";
 
 export type WhiteboardRenderPoint = { x: number; y: number };
 
-export type WhiteboardRenderDrawing =
-  | {
-      type: "pen";
-      color: number;
-      geometry: {
-        points: WhiteboardRenderPoint[];
-      };
-    }
-  | {
-      type: "line" | "arrow" | "dashedArrow";
-      color: number;
-      geometry: {
-        start: WhiteboardRenderPoint;
-        end: WhiteboardRenderPoint;
-        controlPoint: WhiteboardRenderPoint | null;
-      };
-    };
+export type WhiteboardRenderDrawing = WhiteboardDrawingObject;
 
 function drawSolidSegment(
   graphics: Graphics,
@@ -140,6 +129,7 @@ export function renderWhiteboardDrawing(
   const strokeWidth = options?.strokeWidth ?? 1.1;
 
   if (drawing.type === "pen") {
+    if (!isWhiteboardPenGeometry(drawing.geometry)) return;
     const points = drawing.geometry.points;
     if (points.length < 2) return;
     if (revealProgress >= 1) {
@@ -175,6 +165,7 @@ export function renderWhiteboardDrawing(
     return;
   }
 
+  if (!isWhiteboardLinearGeometry(drawing.geometry)) return;
   const from = drawing.geometry.start;
   const to = drawing.geometry.end;
   const revealedEnd = revealProgress >= 1 ? to : lerpPoint(from, to, revealProgress);
