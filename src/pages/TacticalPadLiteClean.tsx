@@ -1474,16 +1474,38 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     });
 
   const exportCurrentBoardImageBlob = async (): Promise<Blob | null> => {
-    const exportCanvas = surfaceRef.current?.exportImageCanvas?.();
-    if (!exportCanvas) {
-      throw new Error("Pixi export did not return a canvas");
+    const pixiSurface = surfaceRef.current;
+    console.log("share:pixiRef exists?", Boolean(pixiSurface));
+    const pixiCanvas = pixiSurface?.exportImageCanvas?.() ?? null;
+    if (pixiCanvas) {
+      console.log("share:extracted canvas size", `${pixiCanvas.width}x${pixiCanvas.height}`);
+      const pixiBlob = await canvasToPngBlob(pixiCanvas);
+      if (!pixiBlob || pixiBlob.size <= 0) {
+        throw new Error("Pixi canvas export returned empty blob");
+      }
+      console.log("share:blob size/type", `${pixiBlob.size}/${pixiBlob.type}`);
+      return pixiBlob;
     }
-    return await canvasToPngBlob(exportCanvas);
+
+    const fallbackCanvas = hostRef.current?.querySelector("canvas");
+    if (!(fallbackCanvas instanceof HTMLCanvasElement)) {
+      throw new Error("Pixi extract failed and visible canvas fallback was unavailable");
+    }
+    console.log("share:extracted canvas size", `${fallbackCanvas.width}x${fallbackCanvas.height}`);
+    const fallbackBlob = await canvasToPngBlob(fallbackCanvas);
+    if (!fallbackBlob || fallbackBlob.size <= 0) {
+      throw new Error("Visible canvas fallback returned empty blob");
+    }
+    console.log("share:blob size/type", `${fallbackBlob.size}/${fallbackBlob.type}`);
+    return fallbackBlob;
   };
   const shareBoardImage = async (): Promise<void> => {
     closeActionsMenu();
+    console.log("share:start");
     setShareStatus("Preparing image...");
     const clearShareStatusLater = (timeoutMs = 2200) => window.setTimeout(() => setShareStatus(null), timeoutMs);
+    const isTimeoutError = (error: unknown): boolean =>
+      error instanceof Error && (error.message === "Image export timed out" || error.message === "Image share timed out");
     const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> =>
       await new Promise<T>((resolve, reject) => {
         const timeoutId = window.setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
@@ -1498,9 +1520,23 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
           },
         );
       });
+    const runPngDownloadFallback = async (blob: Blob): Promise<void> => {
+      console.log("share:fallback download started");
+      const objectUrl = URL.createObjectURL(blob);
+      try {
+        const link = document.createElement("a");
+        link.href = objectUrl;
+        link.download = "pitchflow-play.png";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      } finally {
+        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1200);
+      }
+    };
 
     try {
-      const blob = await withTimeout(exportCurrentBoardImageBlob(), 8000, "Image share timed out");
+      const blob = await withTimeout(exportCurrentBoardImageBlob(), 8000, "Image export timed out");
       if (!blob) {
         throw new Error("Image export returned empty blob");
       }
@@ -1515,37 +1551,41 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         share?: (data: ShareData) => Promise<void>;
         canShare?: (data: ShareData) => boolean;
       };
+      const canShareFiles = Boolean(typedNavigator.share && typedNavigator.canShare?.({ files: [file] }));
+      console.log("share:canShare files?", canShareFiles);
 
-      if (typedNavigator.share && typedNavigator.canShare?.({ files: [file] })) {
+      if (canShareFiles) {
         setShareStatus("Image ready to share");
         try {
           await withTimeout(typedNavigator.share(sharePayload), 8000, "Image share timed out");
         } catch (error) {
+          console.log("share:navigator.share error", error);
           const maybeDomError = error as { name?: string };
           if (maybeDomError?.name === "AbortError") {
             setShareStatus("Share cancelled");
             return;
           }
-          throw error;
+          if (isTimeoutError(error)) {
+            throw error;
+          }
+          try {
+            await runPngDownloadFallback(blob);
+            setShareStatus("Image downloaded");
+            return;
+          } catch {
+            throw error;
+          }
         }
         return;
       }
 
-      const objectUrl = URL.createObjectURL(blob);
-      try {
-        const link = document.createElement("a");
-        link.href = objectUrl;
-        link.download = "pitchflow-play.png";
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-      } finally {
-        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1200);
-      }
+      await runPngDownloadFallback(blob);
       setShareStatus("Image downloaded");
     } catch (error) {
       setShareStatus("Could not share image");
-      console.error("Unexpected Share Image failure", error);
+      if (!isTimeoutError(error)) {
+        console.error("Unexpected Share Image failure", error);
+      }
     } finally {
       clearShareStatusLater();
     }
