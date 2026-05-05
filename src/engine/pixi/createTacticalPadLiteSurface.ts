@@ -160,6 +160,7 @@ type ActiveDragState =
       type: "player";
       playerId: string;
       dragStartNormalized: NormalizedPoint;
+      dragStartWorld: { x: number; y: number };
     } & DragPointerState)
   | null;
 
@@ -442,6 +443,16 @@ export async function createTacticalPadLiteSurface(
   const drawAnimationEffects: DrawAnimationEffect[] = [];
   const playerTapFeedbackEffects: PlayerTapFeedbackEffect[] = [];
   const ghostTrailEffects: GhostTrailEffect[] = [];
+  const MOVE_PREVIEW_DURATION_MS = 450;
+  type PlayerMovePreviewEffect = {
+    id: string;
+    playerId: string;
+    from: NormalizedPoint;
+    to: NormalizedPoint;
+    startedAt: number;
+    durationMs: number;
+  };
+  const playerMovePreviewEffects: PlayerMovePreviewEffect[] = [];
   let transientEffectIdCounter = 0;
   world.setChildIndex(ghostTrailEffectsLayer, world.getChildIndex(playersLayer));
   world.setChildIndex(playerFeedbackEffectsLayer, world.children.length - 1);
@@ -810,7 +821,7 @@ export async function createTacticalPadLiteSurface(
     options.onItemMove?.(item.id, normalized.x, normalized.y);
   }
 
-  function nextTransientId(prefix: "draw" | "tap" | "ghost"): string {
+  function nextTransientId(prefix: "draw" | "tap" | "ghost" | "move-preview"): string {
     transientEffectIdCounter += 1;
     return `${prefix}-${transientEffectIdCounter}`;
   }
@@ -850,6 +861,44 @@ export async function createTacticalPadLiteSurface(
       startedAt: performance.now(),
       durationMs: GHOST_TRAIL_DURATION_MS,
     });
+  }
+
+  function queuePlayerMovePreviewEffect(playerId: string, from: NormalizedPoint, to: NormalizedPoint): void {
+    for (let index = playerMovePreviewEffects.length - 1; index >= 0; index -= 1) {
+      const effect = playerMovePreviewEffects[index];
+      if (!effect) continue;
+      if (effect.playerId === playerId) {
+        playerMovePreviewEffects.splice(index, 1);
+      }
+    }
+    playerMovePreviewEffects.push({
+      id: nextTransientId("move-preview"),
+      playerId,
+      from: { x: from.x, y: from.y },
+      to: { x: to.x, y: to.y },
+      startedAt: performance.now(),
+      durationMs: MOVE_PREVIEW_DURATION_MS,
+    });
+  }
+
+  function easeOutCubic(t: number): number {
+    const clamped = Math.max(0, Math.min(1, t));
+    return 1 - (1 - clamped) ** 3;
+  }
+
+  function getPlayerMovePreviewPosition(
+    playerId: string,
+    now: number,
+  ): { x: number; y: number } | null {
+    const effect = playerMovePreviewEffects.find((entry) => entry.playerId === playerId);
+    if (!effect) return null;
+    const progress = getEffectProgress(now, effect.startedAt, effect.durationMs);
+    if (progress >= 1) return null;
+    const eased = easeOutCubic(progress);
+    return {
+      x: effect.from.x + (effect.to.x - effect.from.x) * eased,
+      y: effect.from.y + (effect.to.y - effect.from.y) * eased,
+    };
   }
 
   function renderTransientEffects(now: number): void {
@@ -941,6 +990,13 @@ export async function createTacticalPadLiteSurface(
         ghostTrailEffects.splice(index, 1);
       }
     }
+    for (let index = playerMovePreviewEffects.length - 1; index >= 0; index -= 1) {
+      const effect = playerMovePreviewEffects[index];
+      if (!effect) continue;
+      if (!isEffectActive(now, effect.startedAt, effect.durationMs)) {
+        playerMovePreviewEffects.splice(index, 1);
+      }
+    }
   }
 
   function releaseActiveDrag(): void {
@@ -963,6 +1019,10 @@ export async function createTacticalPadLiteSurface(
         const hasIntentionalMovement =
           stageDistance >= GHOST_TRAIL_MIN_PIXEL_DISTANCE || normalizedDistance >= GHOST_TRAIL_MIN_NORMALIZED_DISTANCE;
         if (hasIntentionalMovement) {
+          queuePlayerMovePreviewEffect(player.id, dragFrom, dragTo);
+          // Render once at drag start point so preview visibly starts at A, then ticker advances.
+          const startWorld = mapper.normalizedToWorld(dragFrom);
+          player.token.position.set(startWorld.x, startWorld.y);
           queueGhostTrailEffect(player.id, dragFrom, dragTo);
         } else {
           queuePlayerTapFeedback(player.id);
@@ -1165,6 +1225,7 @@ export async function createTacticalPadLiteSurface(
   }
 
   function applySnapshotToSurface(snapshot: PhaseSnapshot): void {
+    playerMovePreviewEffects.length = 0;
     for (const player of players) {
       const point = snapshot.players[players.indexOf(player)];
       if (!point) continue;
@@ -1299,10 +1360,15 @@ export async function createTacticalPadLiteSurface(
       const useDragThreshold = surfaceVariant === "tactical";
       const pointerId = getPointerIdFromEvent(event);
       const startStagePoint = getStagePointFromEvent(event, app.stage);
+      const dragStartWorld = mapper.normalizedToWorld(player.current);
+      if (playerMovePreviewEffects.length > 0) {
+        playerMovePreviewEffects.length = 0;
+      }
       activeDrag = {
         type: "player",
         playerId: player.id,
         dragStartNormalized: { ...player.current },
+        dragStartWorld: { x: dragStartWorld.x, y: dragStartWorld.y },
         pointerId,
         startStagePoint,
         hasCrossedThreshold: !useDragThreshold,
@@ -1447,6 +1513,13 @@ export async function createTacticalPadLiteSurface(
     }
     if (hadGhostOrTapEffects || ghostTrailEffects.length > 0 || playerTapFeedbackEffects.length > 0) {
       renderTransientEffects(now);
+    }
+    if (playerMovePreviewEffects.length > 0) {
+      for (const player of players) {
+        const previewPosition = getPlayerMovePreviewPosition(player.id, now);
+        if (!previewPosition) continue;
+        setTokenWorldPositionForPoint(player, previewPosition, mapper);
+      }
     }
   });
 
