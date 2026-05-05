@@ -786,6 +786,8 @@ const PANEL_CSS = `
   z-index: 0;
   pointer-events: none;
   overflow: hidden;
+  opacity: 0;
+  transition: opacity 150ms ease;
   background:
     radial-gradient(circle at top left, rgba(0, 120, 100, 0.09), transparent 60%),
     radial-gradient(circle at top right, rgba(0, 120, 100, 0.09), transparent 60%),
@@ -793,6 +795,10 @@ const PANEL_CSS = `
     linear-gradient(to top, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0) 35%),
     linear-gradient(to bottom, rgba(0, 0, 0, 0) 58%, rgba(0, 80, 60, 0.13) 100%),
     linear-gradient(135deg, rgba(220, 238, 242, 1) 0%, rgba(172, 203, 214, 1) 45%, rgba(108, 158, 183, 1) 100%);
+}
+
+.stats-stadium-background.stats-stadium-background--ready {
+  opacity: 1;
 }
 
 .stats-stadium-background::before {
@@ -2150,6 +2156,7 @@ export default function StatsModeSurface() {
   const [matchState, setMatchState] = useState<MatchState>("PRE_MATCH");
   const [currentHalf, setCurrentHalf] = useState<1 | 2>(1);
   const [matchTimeSeconds, setMatchTimeSeconds] = useState(0);
+  const [isPitchReady, setIsPitchReady] = useState(false);
   const [currentMatchId, setCurrentMatchId] = useState<string>(() => newMatchSessionId("live"));
   const [keyboardInset, setKeyboardInset] = useState(0);
   const [utilityBubblePosition, setUtilityBubblePosition] = useState<{ left: number; top: number } | null>(null);
@@ -2648,6 +2655,9 @@ export default function StatsModeSurface() {
     if (!host) return;
 
     let disposed = false;
+    setIsPitchReady(false);
+    let pitchReadyRafA: number | null = null;
+    let pitchReadyRafB: number | null = null;
     let handle: {
       destroy: () => void;
       setEvents: (events: readonly import("./core/stats/stats-event-model").MatchEvent[]) => void;
@@ -2715,9 +2725,18 @@ export default function StatsModeSurface() {
           isLoggingActive(matchEngineStateRef.current.matchState) &&
           activeTeamRef.current === "HOME",
       });
+      pitchReadyRafA = window.requestAnimationFrame(() => {
+        pitchReadyRafB = window.requestAnimationFrame(() => {
+          if (disposed) return;
+          setIsPitchReady(true);
+        });
+      });
     });
     return () => {
       disposed = true;
+      if (pitchReadyRafA != null) window.cancelAnimationFrame(pitchReadyRafA);
+      if (pitchReadyRafB != null) window.cancelAnimationFrame(pitchReadyRafB);
+      setIsPitchReady(false);
       handleRef.current = null;
       handle?.destroy();
     };
@@ -3772,7 +3791,10 @@ export default function StatsModeSurface() {
     <>
       <main className="app-root">
         <style>{PANEL_CSS}</style>
-        <div className="stats-stadium-background" aria-hidden="true">
+        <div
+          className={`stats-stadium-background${isPitchReady ? " stats-stadium-background--ready" : ""}`}
+          aria-hidden="true"
+        >
           <div className="stats-stadium-light stats-stadium-light-left" aria-hidden="true">
             {stadiumLightDots.map((dot) => (
               <span key={`stats-left-light-${dot}`} />
@@ -4693,7 +4715,9 @@ export default function StatsModeSurface() {
             zIndex: 1,
             width: "100%",
             height: "100%",
-            background: "transparent",
+            background: isPitchReady
+              ? "transparent"
+              : "radial-gradient(ellipse at center, rgba(29,90,54,0.96) 0%, rgba(29,90,54,0.88) 40%, rgba(29,90,54,0) 70%)",
             overflow: "hidden",
           }}
           aria-label="PitchsideCLUB Pixi pitch"
