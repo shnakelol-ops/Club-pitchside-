@@ -856,10 +856,23 @@ export async function createTacticalPadLiteSurface(
     ghostTrailEffectsGraphic.clear();
     for (const effect of ghostTrailEffects) {
       const progress = getEffectProgress(now, effect.startedAt, effect.durationMs);
-      const alpha = (1 - progress) * 0.32;
-      if (alpha <= 0) continue;
+      const alpha = (1 - progress) * 0.38;
+      if (alpha <= 0.005) continue;
       const fromWorld = mapper.normalizedToWorld(effect.from);
       const toWorld = mapper.normalizedToWorld(effect.to);
+      // Subtle under-stroke improves visibility on light whiteboard backgrounds.
+      ghostTrailEffectsGraphic
+        .moveTo(fromWorld.x, fromWorld.y)
+        .lineTo(toWorld.x, toWorld.y)
+        .stroke({
+          color: 0x0f172a,
+          width: 1.4,
+          alpha: alpha * 0.12,
+          cap: "round",
+          join: "round",
+          alignment: 0.5,
+        });
+      // Keep the main tint soft while adding slight glow presence.
       ghostTrailEffectsGraphic
         .moveTo(fromWorld.x, fromWorld.y)
         .lineTo(toWorld.x, toWorld.y)
@@ -873,7 +886,11 @@ export async function createTacticalPadLiteSurface(
         });
       ghostTrailEffectsGraphic.circle(toWorld.x, toWorld.y, 0.5).fill({
         color: 0x7dd3fc,
-        alpha: alpha * 0.5,
+        alpha: alpha * 0.46,
+      });
+      ghostTrailEffectsGraphic.circle(toWorld.x, toWorld.y, 0.95).fill({
+        color: 0x7dd3fc,
+        alpha: alpha * 0.11,
       });
     }
 

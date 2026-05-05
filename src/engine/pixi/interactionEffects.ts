@@ -33,7 +33,7 @@ export const DRAW_ANIMATION_DURATION_MS: Record<DrawAnimationEffectKind, number>
 };
 
 export const PLAYER_TAP_FEEDBACK_DURATION_MS = 160;
-export const GHOST_TRAIL_DURATION_MS = 450;
+export const GHOST_TRAIL_DURATION_MS = 650;
 
 export function getEffectProgress(now: number, startedAt: number, durationMs: number): number {
   if (durationMs <= 0) return 1;
