@@ -210,6 +210,7 @@ export function NotesQuickPanel({
     durationMs: number;
   } | null>(null);
   const [pendingVoiceLabel, setPendingVoiceLabel] = useState<string>("");
+  const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const { notes, saveTextNote, saveVoiceNote, readVoiceNoteBlob, isSaving } = useNotes();
   const recorder = useVoiceRecorder();
   const [playingNoteId, setPlayingNoteId] = useState<string | null>(null);
@@ -423,10 +424,17 @@ export function NotesQuickPanel({
       }));
   }, [notes, currentMatchId]);
 
+  const selectedTextNote = useMemo(() => {
+    if (!selectedNoteId) return null;
+    const note = notes.find((entry) => entry.id === selectedNoteId);
+    if (!note || note.type !== "text") return null;
+    return note;
+  }, [notes, selectedNoteId]);
+
   const handlePlayVoiceNote = async (audioBlobId: string) => {
     const result = await readVoiceNoteBlob(audioBlobId);
 
-    if (result.ok === false) {
+    if (!result.ok) {
       setPanelError(result.error);
       setPlayingNoteId(null);
       return;
@@ -472,7 +480,21 @@ export function NotesQuickPanel({
       ) : (
         <div style={recentNotesWrapStyle}>
           {recentNotes.map(({ note, label, preview }) => (
-            <div key={note.id} style={RECENT_NOTE_ITEM_STYLE}>
+            <div
+              key={note.id}
+              style={{
+                ...RECENT_NOTE_ITEM_STYLE,
+                cursor: note.type === "text" ? "pointer" : "default",
+              }}
+              onPointerDown={stopPanelInteraction}
+              onTouchStart={stopPanelInteraction}
+              onClick={(event) => {
+                event.stopPropagation();
+                if (note.type === "text") {
+                  setSelectedNoteId(note.id);
+                }
+              }}
+            >
               <div style={RECENT_NOTE_TOP_ROW_STYLE}>
                 <span style={RECENT_NOTE_TYPE_STYLE}>{note.type === "voice" ? "Voice" : "Text"}</span>
                 <span style={RECENT_NOTE_TIME_STYLE}>{label}</span>
@@ -486,7 +508,8 @@ export function NotesQuickPanel({
                     disabled={!note.audioBlobId || playingNoteId === note.id}
                     onPointerDown={stopPanelInteraction}
                     onTouchStart={stopPanelInteraction}
-                    onClick={() => {
+                    onClick={(event) => {
+                      event.stopPropagation();
                       if (!note.audioBlobId) return;
                       setPanelError(null);
                       setPlayingNoteId(note.id);
@@ -501,6 +524,32 @@ export function NotesQuickPanel({
           ))}
         </div>
       )}
+      {selectedTextNote ? (
+        <div
+          style={RECENT_NOTE_ITEM_STYLE}
+          onPointerDown={stopPanelInteraction}
+          onTouchStart={stopPanelInteraction}
+          onClick={stopPanelInteraction}
+        >
+          <div style={RECENT_NOTE_TOP_ROW_STYLE}>
+            <span style={RECENT_NOTE_TYPE_STYLE}>Full Text</span>
+            <button
+              type="button"
+              style={RECENT_NOTE_PLAY_STYLE}
+              onPointerDown={stopPanelInteraction}
+              onTouchStart={stopPanelInteraction}
+              onClick={(event) => {
+                event.stopPropagation();
+                setSelectedNoteId(null);
+              }}
+            >
+              Back
+            </button>
+          </div>
+          <p style={RECENT_NOTE_TEXT_STYLE}>{selectedTextNote.text ?? "(empty note)"}</p>
+          <p style={RECENT_NOTE_TIME_STYLE}>Saved {formatRelativeTime(selectedTextNote.createdAt, Date.now())}</p>
+        </div>
+      ) : null}
 
       <textarea
         style={textAreaStyle}
