@@ -14,6 +14,7 @@ import {
 import { createPixiPitchSurface } from "./core/pitch/create-pixi-pitch-surface";
 import { MATCH_EVENT_KINDS, type MatchEvent, type MatchEventKind } from "./core/stats/stats-event-model";
 import { gaaModeConfig, type GaaModeKey } from "./config/gaaModeConfig";
+import { NotesButton } from "./features/notes/NotesButton";
 
 type VisibilityMode = "ALL" | "LAST_5" | "LAST_10";
 type TeamScore = { goals: number; points: number; total: number };
@@ -4741,6 +4742,7 @@ export default function StatsModeSurface() {
           </button>
         </div>
       ) : null}
+      <NotesButton defaultContext="match" />
     </>
   );
 }
