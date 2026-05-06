@@ -19,6 +19,26 @@ import {
   NORMALIZED_MIN,
   type NormalizedPoint,
 } from "../shared/normalization";
+import {
+  DRAW_ANIMATION_DURATION_MS,
+  GHOST_TRAIL_DURATION_MS,
+  PLAYER_TAP_FEEDBACK_DURATION_MS,
+  getEffectProgress,
+  isEffectActive,
+  type DrawAnimationEffect,
+  type DrawAnimationEffectKind,
+  type GhostTrailEffect,
+  type MovePreviewEffect,
+  type PlayerTapFeedbackEffect,
+} from "./interactionEffects";
+import { renderWhiteboardDrawing as renderWhiteboardDrawingToGraphics } from "./renderWhiteboardDrawing";
+import {
+  type WhiteboardDrawingObject,
+  type WhiteboardDrawingType,
+  type WhiteboardLinearGeometry,
+  type WhiteboardPenGeometry,
+  type WhiteboardDrawingGeometry,
+} from "./whiteboardDrawingTypes";
 
 type TacticalPlayer = {
   id: string;
@@ -33,6 +53,8 @@ type TacticalPlayer = {
 
 export type WhiteboardDrawTool = "move" | "pen" | "line" | "arrow" | "dashed";
 export type WhiteboardTokenColor = PremiumPlayerTokenColor;
+export type PlayerMovementBehavior = "free-drag" | "straight-preview" | "curved-preview";
+export type MovePreviewSpeed = "slow" | "normal" | "fast";
 export type FlowItemType = "cone" | "pole" | "ladder" | "tackleBag" | "football" | "sliotar";
 export type ItemMode = "edit" | "locked";
 export type TacticalItem = {
@@ -61,6 +83,8 @@ export type TacticalPadLiteSurface = {
     counts: { blue: number; red: number };
     colors: { blue: WhiteboardTokenColor; red: WhiteboardTokenColor };
   }) => void;
+  setPlayerMovementBehavior: (behavior: PlayerMovementBehavior) => void;
+  setMovePreviewSpeed: (speed: MovePreviewSpeed) => void;
   setWhiteboardDrawTool: (tool: WhiteboardDrawTool) => void;
   setWhiteboardDrawColor: (color: number) => void;
   eraseWhiteboardPenStroke: () => void;
@@ -95,35 +119,8 @@ type PhaseSnapshot = {
   players: NormalizedPoint[];
   football: PhaseBallSnapshot[];
 };
-type WhiteboardPoint = { x: number; y: number };
-type WhiteboardDrawingType = "pen" | "line" | "arrow" | "dashedArrow";
-type WhiteboardPenGeometry = {
-  points: WhiteboardPoint[];
-};
-type WhiteboardLinearGeometry = {
-  start: WhiteboardPoint;
-  end: WhiteboardPoint;
-  controlPoint: WhiteboardPoint | null;
-};
-type WhiteboardDrawingGeometry = WhiteboardPenGeometry | WhiteboardLinearGeometry;
-type WhiteboardDrawingObject = {
-  id: string;
-  type: WhiteboardDrawingType;
-  color: number;
-  geometry: WhiteboardDrawingGeometry;
-  createdAt: number;
-};
-
-function isWhiteboardPenGeometry(
-  geometry: WhiteboardDrawingGeometry,
-): geometry is WhiteboardPenGeometry {
+function isWhiteboardPenGeometry(geometry: WhiteboardDrawingGeometry): geometry is WhiteboardPenGeometry {
   return "points" in geometry;
-}
-
-function isWhiteboardLinearGeometry(
-  geometry: WhiteboardDrawingGeometry,
-): geometry is WhiteboardLinearGeometry {
-  return "start" in geometry && "end" in geometry;
 }
 
 const WORLD_SIZE = { width: 160, height: 100 } as const;
@@ -136,6 +133,17 @@ const WHITEBOARD_DEFAULT_STROKE_COLOR = 0x111111;
 const WHITEBOARD_STROKE_WIDTH = 1.1;
 const WHITEBOARD_BLUE_START_X = 30;
 const WHITEBOARD_RED_START_X = 70;
+const GHOST_TRAIL_MIN_PIXEL_DISTANCE = 3;
+const GHOST_TRAIL_MIN_NORMALIZED_DISTANCE = 1.2;
+const MOVE_PREVIEW_DURATION_BY_SPEED: Record<MovePreviewSpeed, number> = {
+  slow: 800,
+  normal: 450,
+  fast: 250,
+};
+const CURVED_PREVIEW_MIN_DISTANCE = 5;
+const CURVED_PREVIEW_OFFSET_RATIO = 0.2;
+const CURVED_PREVIEW_OFFSET_MIN = 1;
+const CURVED_PREVIEW_OFFSET_MAX = 10;
 
 type PlayerSeed = {
   id: string;
@@ -165,6 +173,8 @@ type ActiveDragState =
   | ({
       type: "player";
       playerId: string;
+      dragStartNormalized: NormalizedPoint;
+      dragStartWorld: { x: number; y: number };
     } & DragPointerState)
   | null;
 
@@ -289,96 +299,6 @@ function getStagePointFromEvent(
 function getPointerIdFromEvent(event: unknown): number | null {
   const pointerId = (event as { pointerId?: unknown }).pointerId;
   return typeof pointerId === "number" ? pointerId : null;
-}
-
-function drawSolidSegment(
-  g: Graphics,
-  from: { x: number; y: number },
-  to: { x: number; y: number },
-  color: number,
-): void {
-  g.moveTo(from.x, from.y).lineTo(to.x, to.y).stroke({
-    color,
-    width: WHITEBOARD_STROKE_WIDTH,
-    cap: "round",
-    join: "round",
-    alignment: 0.5,
-  });
-}
-
-function drawDashedSegment(
-  g: Graphics,
-  from: { x: number; y: number },
-  to: { x: number; y: number },
-  color: number,
-): void {
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  const length = Math.hypot(dx, dy);
-  if (length < 1e-4) return;
-  const ux = dx / length;
-  const uy = dy / length;
-  const dash = 2.2;
-  const gap = 1.35;
-  let offset = 0;
-  while (offset < length) {
-    const segStart = offset;
-    const segEnd = Math.min(length, segStart + dash);
-    drawSolidSegment(
-      g,
-      { x: from.x + ux * segStart, y: from.y + uy * segStart },
-      { x: from.x + ux * segEnd, y: from.y + uy * segEnd },
-      color,
-    );
-    offset += dash + gap;
-  }
-}
-
-function drawArrowSegment(
-  g: Graphics,
-  from: { x: number; y: number },
-  to: { x: number; y: number },
-  color: number,
-): void {
-  drawSolidSegment(g, from, to, color);
-  drawArrowHead(g, from, to, color);
-}
-
-function drawArrowHead(
-  g: Graphics,
-  from: { x: number; y: number },
-  to: { x: number; y: number },
-  color: number,
-): void {
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  const length = Math.hypot(dx, dy);
-  if (length < 1e-4) return;
-  const ux = dx / length;
-  const uy = dy / length;
-  const headLength = 2.6;
-  const sideX = -uy;
-  const sideY = ux;
-  const left = {
-    x: to.x - ux * headLength + sideX * 1.05,
-    y: to.y - uy * headLength + sideY * 1.05,
-  };
-  const right = {
-    x: to.x - ux * headLength - sideX * 1.05,
-    y: to.y - uy * headLength - sideY * 1.05,
-  };
-  drawSolidSegment(g, to, left, color);
-  drawSolidSegment(g, to, right, color);
-}
-
-function drawDashedArrowSegment(
-  g: Graphics,
-  from: { x: number; y: number },
-  to: { x: number; y: number },
-  color: number,
-): void {
-  drawDashedSegment(g, from, to, color);
-  drawArrowHead(g, from, to, color);
 }
 
 export async function createTacticalPadLiteSurface(
@@ -516,12 +436,34 @@ export async function createTacticalPadLiteSurface(
   const whiteboardPreviewGraphic = new Graphics();
   whiteboardPreviewGraphic.eventMode = "none";
   whiteboardPreviewLayer.addChild(whiteboardPreviewGraphic);
+  const ghostTrailEffectsLayer = new Container();
+  ghostTrailEffectsLayer.eventMode = "none";
+  world.addChild(ghostTrailEffectsLayer);
+  const ghostTrailEffectsGraphic = new Graphics();
+  ghostTrailEffectsGraphic.eventMode = "none";
+  ghostTrailEffectsLayer.addChild(ghostTrailEffectsGraphic);
   const itemSelectionLayer = new Container();
   itemSelectionLayer.eventMode = "none";
   world.addChild(itemSelectionLayer);
+  const playerFeedbackEffectsLayer = new Container();
+  playerFeedbackEffectsLayer.eventMode = "none";
+  world.addChild(playerFeedbackEffectsLayer);
+  const playerFeedbackEffectsGraphic = new Graphics();
+  playerFeedbackEffectsGraphic.eventMode = "none";
+  playerFeedbackEffectsLayer.addChild(playerFeedbackEffectsGraphic);
   const completedWhiteboardDrawingObjects: WhiteboardDrawingObject[] = [];
   let activeWhiteboardDrawing: WhiteboardDrawingObject | null = null;
   let whiteboardDrawingCounter = 0;
+  const drawAnimationEffects: DrawAnimationEffect[] = [];
+  const playerTapFeedbackEffects: PlayerTapFeedbackEffect[] = [];
+  const ghostTrailEffects: GhostTrailEffect[] = [];
+  const playerMovePreviewEffects: MovePreviewEffect[] = [];
+  let playerMovementBehavior: PlayerMovementBehavior = "free-drag";
+  let movePreviewSpeed: MovePreviewSpeed = "normal";
+  let curvedPreviewDirectionSign: 1 | -1 = 1;
+  let transientEffectIdCounter = 0;
+  world.setChildIndex(ghostTrailEffectsLayer, world.getChildIndex(playersLayer));
+  world.setChildIndex(playerFeedbackEffectsLayer, world.children.length - 1);
 
   function emitPlaybackStateChange(): void {
     syncWhiteboardTokenInputMode();
@@ -887,6 +829,263 @@ export async function createTacticalPadLiteSurface(
     options.onItemMove?.(item.id, normalized.x, normalized.y);
   }
 
+  function nextTransientId(prefix: "draw" | "tap" | "ghost" | "move-preview"): string {
+    transientEffectIdCounter += 1;
+    return `${prefix}-${transientEffectIdCounter}`;
+  }
+
+  function drawAnimationKindForDrawing(type: WhiteboardDrawingType): DrawAnimationEffectKind {
+    if (type === "pen") return "freehand";
+    if (type === "line") return "line";
+    if (type === "arrow") return "arrow";
+    return "dashedLine";
+  }
+
+  function queueDrawAnimationEffect(targetDrawingId: string, kind: DrawAnimationEffectKind): void {
+    drawAnimationEffects.push({
+      id: nextTransientId("draw"),
+      targetDrawingId,
+      kind,
+      startedAt: performance.now(),
+      durationMs: DRAW_ANIMATION_DURATION_MS[kind],
+    });
+  }
+
+  function queuePlayerTapFeedback(playerId: string): void {
+    playerTapFeedbackEffects.push({
+      id: nextTransientId("tap"),
+      playerId,
+      startedAt: performance.now(),
+      durationMs: PLAYER_TAP_FEEDBACK_DURATION_MS,
+    });
+  }
+
+  function queueGhostTrailEffect(playerId: string, from: NormalizedPoint, to: NormalizedPoint): void {
+    ghostTrailEffects.push({
+      id: nextTransientId("ghost"),
+      playerId,
+      from: { x: from.x, y: from.y },
+      to: { x: to.x, y: to.y },
+      startedAt: performance.now(),
+      durationMs: GHOST_TRAIL_DURATION_MS,
+    });
+  }
+
+  function queuePlayerMovePreviewEffect(effectToQueue: MovePreviewEffect): void {
+    for (let index = playerMovePreviewEffects.length - 1; index >= 0; index -= 1) {
+      const effect = playerMovePreviewEffects[index];
+      if (!effect) continue;
+      if (effect.playerId === effectToQueue.playerId) {
+        playerMovePreviewEffects.splice(index, 1);
+      }
+    }
+    playerMovePreviewEffects.push(effectToQueue);
+  }
+
+  function easeOutCubic(t: number): number {
+    const clamped = Math.max(0, Math.min(1, t));
+    return 1 - (1 - clamped) ** 3;
+  }
+
+  function quadraticBezierPosition(
+    from: NormalizedPoint,
+    control: NormalizedPoint,
+    to: NormalizedPoint,
+    t: number,
+  ): NormalizedPoint {
+    const u = 1 - t;
+    return {
+      x: u * u * from.x + 2 * u * t * control.x + t * t * to.x,
+      y: u * u * from.y + 2 * u * t * control.y + t * t * to.y,
+    };
+  }
+
+  function createAutoCurvedControlPoint(from: NormalizedPoint, to: NormalizedPoint): NormalizedPoint | null {
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const distance = Math.hypot(dx, dy);
+    if (distance < CURVED_PREVIEW_MIN_DISTANCE) {
+      return null;
+    }
+
+    const midpoint = {
+      x: (from.x + to.x) * 0.5,
+      y: (from.y + to.y) * 0.5,
+    };
+    const unitPerpendicular = {
+      x: dy / distance,
+      y: -dx / distance,
+    };
+    const rawOffset = distance * CURVED_PREVIEW_OFFSET_RATIO;
+    const offset = Math.max(CURVED_PREVIEW_OFFSET_MIN, Math.min(CURVED_PREVIEW_OFFSET_MAX, rawOffset));
+    const sign = curvedPreviewDirectionSign;
+    curvedPreviewDirectionSign = sign === 1 ? -1 : 1;
+
+    const control = {
+      x: clampNormalizedValue(midpoint.x + unitPerpendicular.x * offset * sign),
+      y: clampNormalizedValue(midpoint.y + unitPerpendicular.y * offset * sign),
+    };
+    return control;
+  }
+
+  function queueStraightMovePreviewEffect(playerId: string, from: NormalizedPoint, to: NormalizedPoint): void {
+    queuePlayerMovePreviewEffect({
+      id: nextTransientId("move-preview"),
+      playerId,
+      pathKind: "straight",
+      from: { x: from.x, y: from.y },
+      to: { x: to.x, y: to.y },
+      startedAt: performance.now(),
+      durationMs: MOVE_PREVIEW_DURATION_BY_SPEED[movePreviewSpeed],
+    });
+  }
+
+  function queueCurvedMovePreviewEffect(
+    playerId: string,
+    from: NormalizedPoint,
+    to: NormalizedPoint,
+    control: NormalizedPoint,
+  ): void {
+    queuePlayerMovePreviewEffect({
+      id: nextTransientId("move-preview"),
+      playerId,
+      pathKind: "curved",
+      from: { x: from.x, y: from.y },
+      control: { x: control.x, y: control.y },
+      to: { x: to.x, y: to.y },
+      startedAt: performance.now(),
+      durationMs: MOVE_PREVIEW_DURATION_BY_SPEED[movePreviewSpeed],
+    });
+  }
+
+  function getPlayerMovePreviewPosition(
+    playerId: string,
+    now: number,
+  ): { x: number; y: number } | null {
+    const effect = playerMovePreviewEffects.find((entry) => entry.playerId === playerId);
+    if (!effect) return null;
+    const progress = getEffectProgress(now, effect.startedAt, effect.durationMs);
+    if (progress >= 1) return null;
+    const eased = easeOutCubic(progress);
+    if (effect.pathKind === "curved") {
+      return quadraticBezierPosition(effect.from, effect.control, effect.to, eased);
+    }
+    return {
+      x: effect.from.x + (effect.to.x - effect.from.x) * eased,
+      y: effect.from.y + (effect.to.y - effect.from.y) * eased,
+    };
+  }
+
+  function syncPlayerTokensToCommittedPosition(): void {
+    for (const player of players) {
+      setTokenWorldPositionForPoint(player, player.current, mapper);
+    }
+  }
+
+  function clearPlayerMovePreviewEffects(): void {
+    if (playerMovePreviewEffects.length === 0) return;
+    playerMovePreviewEffects.length = 0;
+    syncPlayerTokensToCommittedPosition();
+  }
+
+  function renderTransientEffects(now: number): void {
+    ghostTrailEffectsGraphic.clear();
+    for (const effect of ghostTrailEffects) {
+      const progress = getEffectProgress(now, effect.startedAt, effect.durationMs);
+      const alpha = (1 - progress) * 0.38;
+      if (alpha <= 0.005) continue;
+      const fromWorld = mapper.normalizedToWorld(effect.from);
+      const toWorld = mapper.normalizedToWorld(effect.to);
+      // Subtle under-stroke improves visibility on light whiteboard backgrounds.
+      ghostTrailEffectsGraphic
+        .moveTo(fromWorld.x, fromWorld.y)
+        .lineTo(toWorld.x, toWorld.y)
+        .stroke({
+          color: 0x0f172a,
+          width: 1.4,
+          alpha: alpha * 0.12,
+          cap: "round",
+          join: "round",
+          alignment: 0.5,
+        });
+      // Keep the main tint soft while adding slight glow presence.
+      ghostTrailEffectsGraphic
+        .moveTo(fromWorld.x, fromWorld.y)
+        .lineTo(toWorld.x, toWorld.y)
+        .stroke({
+          color: 0x7dd3fc,
+          width: 0.8,
+          alpha,
+          cap: "round",
+          join: "round",
+          alignment: 0.5,
+        });
+      ghostTrailEffectsGraphic.circle(toWorld.x, toWorld.y, 0.5).fill({
+        color: 0x7dd3fc,
+        alpha: alpha * 0.46,
+      });
+      ghostTrailEffectsGraphic.circle(toWorld.x, toWorld.y, 0.95).fill({
+        color: 0x7dd3fc,
+        alpha: alpha * 0.11,
+      });
+    }
+
+    playerFeedbackEffectsGraphic.clear();
+    for (const effect of playerTapFeedbackEffects) {
+      const player = players.find((entry) => entry.id === effect.playerId);
+      if (!player) continue;
+      const progress = getEffectProgress(now, effect.startedAt, effect.durationMs);
+      const world = mapper.normalizedToWorld(player.current);
+      const radius = PLAYER_RADIUS * (0.86 + progress * 0.52);
+      const strokeAlpha = (1 - progress) * 0.34;
+      if (strokeAlpha <= 0) continue;
+      playerFeedbackEffectsGraphic.circle(world.x, world.y, radius).stroke({
+        color: 0x7dd3fc,
+        width: 0.5,
+        alpha: strokeAlpha,
+        alignment: 0.5,
+      });
+      playerFeedbackEffectsGraphic.circle(world.x, world.y, radius * 0.72).fill({
+        color: 0x7dd3fc,
+        alpha: strokeAlpha * 0.14,
+      });
+    }
+  }
+
+  function pruneTransientEffects(now: number): void {
+    if (drawAnimationEffects.length > 0) {
+      const drawingIds = new Set(completedWhiteboardDrawingObjects.map((drawing) => drawing.id));
+      for (let index = drawAnimationEffects.length - 1; index >= 0; index -= 1) {
+        const effect = drawAnimationEffects[index];
+        if (!effect) continue;
+        if (!drawingIds.has(effect.targetDrawingId) || !isEffectActive(now, effect.startedAt, effect.durationMs)) {
+          drawAnimationEffects.splice(index, 1);
+        }
+      }
+    }
+    for (let index = playerTapFeedbackEffects.length - 1; index >= 0; index -= 1) {
+      const effect = playerTapFeedbackEffects[index];
+      if (!effect) continue;
+      if (!isEffectActive(now, effect.startedAt, effect.durationMs)) {
+        playerTapFeedbackEffects.splice(index, 1);
+      }
+    }
+    for (let index = ghostTrailEffects.length - 1; index >= 0; index -= 1) {
+      const effect = ghostTrailEffects[index];
+      if (!effect) continue;
+      if (!isEffectActive(now, effect.startedAt, effect.durationMs)) {
+        ghostTrailEffects.splice(index, 1);
+      }
+    }
+    for (let index = playerMovePreviewEffects.length - 1; index >= 0; index -= 1) {
+      const effect = playerMovePreviewEffects[index];
+      if (!effect) continue;
+      if (!isEffectActive(now, effect.startedAt, effect.durationMs)) {
+        playerMovePreviewEffects.splice(index, 1);
+      }
+    }
+  }
+
   function releaseActiveDrag(): void {
     if (!activeDrag) return;
     if (activeDrag.type === "player") {
@@ -894,30 +1093,45 @@ export async function createTacticalPadLiteSurface(
       const playerId = activeState.playerId;
       const player = players.find((entry) => entry.id === playerId);
       if (player) {
+        const dragFrom = activeState.dragStartNormalized;
+        const dragTo = { ...player.current };
+        const normalizedDistance = Math.hypot(dragTo.x - dragFrom.x, dragTo.y - dragFrom.y);
+        const dragEndStagePoint = mapper.normalizedToViewport(dragTo);
+        const stageDistance = activeState.startStagePoint
+          ? Math.hypot(
+              dragEndStagePoint.x - activeState.startStagePoint.x,
+              dragEndStagePoint.y - activeState.startStagePoint.y,
+            )
+          : 0;
+        const hasIntentionalMovement =
+          stageDistance >= GHOST_TRAIL_MIN_PIXEL_DISTANCE || normalizedDistance >= GHOST_TRAIL_MIN_NORMALIZED_DISTANCE;
+        if (hasIntentionalMovement) {
+          if (playerMovementBehavior === "straight-preview") {
+            queueStraightMovePreviewEffect(player.id, dragFrom, dragTo);
+            // Render once at drag start point so preview visibly starts at A, then ticker advances.
+            const startWorld = mapper.normalizedToWorld(dragFrom);
+            player.token.position.set(startWorld.x, startWorld.y);
+          } else if (playerMovementBehavior === "curved-preview") {
+            const control = createAutoCurvedControlPoint(dragFrom, dragTo);
+            if (control) {
+              queueCurvedMovePreviewEffect(player.id, dragFrom, dragTo, control);
+            } else {
+              queueStraightMovePreviewEffect(player.id, dragFrom, dragTo);
+            }
+            // Render once at drag start point so preview visibly starts at A, then ticker advances.
+            const startWorld = mapper.normalizedToWorld(dragFrom);
+            player.token.position.set(startWorld.x, startWorld.y);
+          }
+          queueGhostTrailEffect(player.id, dragFrom, dragTo);
+        } else {
+          queuePlayerTapFeedback(player.id);
+        }
         setPlayerDragVisualTarget(player, false);
         player.token.cursor = "grab";
       }
     }
     activeDrag = null;
     syncWhiteboardTokenInputMode();
-  }
-
-  function drawLineWithTool(
-    tool: WhiteboardDrawingType,
-    graphics: Graphics,
-    from: { x: number; y: number },
-    to: { x: number; y: number },
-    color: number,
-  ): void {
-    if (tool === "dashedArrow") {
-      drawDashedArrowSegment(graphics, from, to, color);
-      return;
-    }
-    if (tool === "arrow") {
-      drawArrowSegment(graphics, from, to, color);
-      return;
-    }
-    drawSolidSegment(graphics, from, to, color);
   }
 
   function createDrawingId(): string {
@@ -947,35 +1161,32 @@ export async function createTacticalPadLiteSurface(
     };
   }
 
-  function renderWhiteboardDrawing(graphics: Graphics, drawing: WhiteboardDrawingObject): void {
-    const geometry = drawing.geometry;
-    if (drawing.type === "pen") {
-      if (!isWhiteboardPenGeometry(geometry)) return;
-      if (geometry.points.length < 2) return;
-      for (let index = 1; index < geometry.points.length; index += 1) {
-        const from = geometry.points[index - 1];
-        const to = geometry.points[index];
-        if (!from || !to) continue;
-        drawSolidSegment(graphics, from, to, drawing.color);
-      }
-      return;
-    }
-    if (!isWhiteboardLinearGeometry(geometry)) return;
-    const from = geometry.start;
-    const to = geometry.end;
-    drawLineWithTool(drawing.type, graphics, from, to, drawing.color);
+  function renderWhiteboardDrawing(graphics: Graphics, drawing: WhiteboardDrawingObject, revealProgress = 1): void {
+    renderWhiteboardDrawingToGraphics(graphics, drawing, {
+      revealProgress,
+      strokeWidth: WHITEBOARD_STROKE_WIDTH,
+    });
   }
 
-  function renderAllWhiteboardDrawings(): void {
+  function renderAllWhiteboardDrawings(now = performance.now()): void {
     if (!isDrawingEnabledSurface) return;
     const existingChildren = whiteboardDrawingsLayer.removeChildren();
     for (const child of existingChildren) {
       child.destroy({ children: true });
     }
+    const drawEffectsByDrawingId = new Map<string, DrawAnimationEffect>();
+    for (const effect of drawAnimationEffects) {
+      if (!isEffectActive(now, effect.startedAt, effect.durationMs)) continue;
+      drawEffectsByDrawingId.set(effect.targetDrawingId, effect);
+    }
     for (const drawing of completedWhiteboardDrawingObjects) {
       const strokeGraphic = new Graphics();
       strokeGraphic.eventMode = "none";
-      renderWhiteboardDrawing(strokeGraphic, drawing);
+      const drawEffect = drawEffectsByDrawingId.get(drawing.id);
+      const revealProgress = drawEffect
+        ? getEffectProgress(now, drawEffect.startedAt, drawEffect.durationMs)
+        : 1;
+      renderWhiteboardDrawing(strokeGraphic, drawing, revealProgress);
       whiteboardDrawingsLayer.addChild(strokeGraphic);
     }
   }
@@ -1057,7 +1268,9 @@ export async function createTacticalPadLiteSurface(
       return;
     }
 
-    completedWhiteboardDrawingObjects.push(cloneWhiteboardDrawingObject(activeWhiteboardDrawing));
+    const committedDrawing = cloneWhiteboardDrawingObject(activeWhiteboardDrawing);
+    completedWhiteboardDrawingObjects.push(committedDrawing);
+    queueDrawAnimationEffect(committedDrawing.id, drawAnimationKindForDrawing(committedDrawing.type));
     renderAllWhiteboardDrawings();
     resetActiveWhiteboardDrawing();
   }
@@ -1111,6 +1324,7 @@ export async function createTacticalPadLiteSurface(
   }
 
   function applySnapshotToSurface(snapshot: PhaseSnapshot): void {
+    clearPlayerMovePreviewEffects();
     for (const player of players) {
       const point = snapshot.players[players.indexOf(player)];
       if (!point) continue;
@@ -1245,9 +1459,13 @@ export async function createTacticalPadLiteSurface(
       const useDragThreshold = surfaceVariant === "tactical";
       const pointerId = getPointerIdFromEvent(event);
       const startStagePoint = getStagePointFromEvent(event, app.stage);
+      const dragStartWorld = mapper.normalizedToWorld(player.current);
+      clearPlayerMovePreviewEffects();
       activeDrag = {
         type: "player",
         playerId: player.id,
+        dragStartNormalized: { ...player.current },
+        dragStartWorld: { x: dragStartWorld.x, y: dragStartWorld.y },
         pointerId,
         startStagePoint,
         hasCrossedThreshold: !useDragThreshold,
@@ -1383,6 +1601,26 @@ export async function createTacticalPadLiteSurface(
   app.ticker.add(() => {
     stepPlayback(app.ticker.deltaMS);
     animatePlayerDragVisuals(app.ticker.deltaMS);
+    const now = performance.now();
+    const hadDrawEffects = drawAnimationEffects.length > 0;
+    const hadGhostOrTapEffects = ghostTrailEffects.length > 0 || playerTapFeedbackEffects.length > 0;
+    const hadMovePreviewEffects = playerMovePreviewEffects.length > 0;
+    pruneTransientEffects(now);
+    if (hadDrawEffects || drawAnimationEffects.length > 0) {
+      renderAllWhiteboardDrawings(now);
+    }
+    if (hadGhostOrTapEffects || ghostTrailEffects.length > 0 || playerTapFeedbackEffects.length > 0) {
+      renderTransientEffects(now);
+    }
+    if (playerMovePreviewEffects.length > 0) {
+      for (const player of players) {
+        const previewPosition = getPlayerMovePreviewPosition(player.id, now);
+        if (!previewPosition) continue;
+        setTokenWorldPositionForPoint(player, previewPosition, mapper);
+      }
+    } else if (hadMovePreviewEffects) {
+      syncPlayerTokensToCommittedPosition();
+    }
   });
 
   syncWhiteboardTokenInputMode();
@@ -1464,6 +1702,15 @@ export async function createTacticalPadLiteSurface(
       if (!isWhiteboardSurface) return;
       rebuildWhiteboardPlayers(config.counts, config.colors);
     },
+    setPlayerMovementBehavior: (behavior) => {
+      playerMovementBehavior = behavior;
+      if (behavior === "free-drag") {
+        clearPlayerMovePreviewEffects();
+      }
+    },
+    setMovePreviewSpeed: (speed) => {
+      movePreviewSpeed = speed;
+    },
     setWhiteboardDrawTool: (tool) => {
       if (!isDrawingEnabledSurface) return;
       if (tool !== "move") {
@@ -1511,6 +1758,12 @@ export async function createTacticalPadLiteSurface(
 
       const resolveHtmlCanvas = (candidate: unknown): HTMLCanvasElement | null =>
         typeof HTMLCanvasElement !== "undefined" && candidate instanceof HTMLCanvasElement ? candidate : null;
+      const previousGhostVisibility = ghostTrailEffectsLayer.visible;
+      const previousPlayerFeedbackVisibility = playerFeedbackEffectsLayer.visible;
+      ghostTrailEffectsLayer.visible = false;
+      playerFeedbackEffectsLayer.visible = false;
+      renderAllWhiteboardDrawings(Number.POSITIVE_INFINITY);
+      syncPlayerTokensToCommittedPosition();
 
       try {
         const extractedFromStage = resolveHtmlCanvas(extractCanvas(app.stage));
@@ -1527,6 +1780,20 @@ export async function createTacticalPadLiteSurface(
       } catch {
         return null;
       } finally {
+        ghostTrailEffectsLayer.visible = previousGhostVisibility;
+        playerFeedbackEffectsLayer.visible = previousPlayerFeedbackVisibility;
+        const now = performance.now();
+        renderAllWhiteboardDrawings(now);
+        renderTransientEffects(now);
+        if (playerMovePreviewEffects.length > 0) {
+          for (const player of players) {
+            const previewPosition = getPlayerMovePreviewPosition(player.id, now);
+            if (!previewPosition) continue;
+            setTokenWorldPositionForPoint(player, previewPosition, mapper);
+          }
+        } else {
+          syncPlayerTokensToCommittedPosition();
+        }
         generatedTexture.destroy(true);
       }
     },
