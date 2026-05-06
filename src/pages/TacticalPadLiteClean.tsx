@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as R
 
 import {
   createTacticalPadLiteSurface,
+  type WhiteboardCurveDirection,
   type WhiteboardCurveStrength,
   type ItemMode,
   type TacticalPadLiteSurface,
@@ -1098,6 +1099,13 @@ const WHITEBOARD_CURVE_STRENGTH_OPTIONS: ReadonlyArray<{
   { label: "M", value: "medium" },
   { label: "Big", value: "big" },
 ];
+const WHITEBOARD_CURVE_DIRECTION_OPTIONS: ReadonlyArray<{
+  label: string;
+  value: WhiteboardCurveDirection;
+}> = [
+  { label: "Left", value: "left" },
+  { label: "Right", value: "right" },
+];
 
 const WHITEBOARD_TOKEN_COLOR_OPTION_STYLE: CSSProperties = {
   width: "28px",
@@ -1223,6 +1231,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const [whiteboardMovementMode, setWhiteboardMovementMode] = useState<WhiteboardMovementMode>("free");
   const [whiteboardMovementSpeed, setWhiteboardMovementSpeed] = useState<WhiteboardMovementSpeed>("normal");
   const [whiteboardCurveStrength, setWhiteboardCurveStrength] = useState<WhiteboardCurveStrength>("medium");
+  const [whiteboardCurveDirection, setWhiteboardCurveDirection] = useState<WhiteboardCurveDirection>("right");
   const [tacticalPenColor, setTacticalPenColor] = useState<number>(WHITEBOARD_DRAW_COLOR);
   const whiteboardCountsRef = useRef({ blue: 1, red: 1 });
   const whiteboardTeamColorsRef = useRef<{ blue: WhiteboardTokenColor; red: WhiteboardTokenColor }>({
@@ -1412,6 +1421,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
           mode: whiteboardMovementMode,
           speed: whiteboardMovementSpeed,
           curveStrength: whiteboardCurveStrength,
+          curveDirection: whiteboardCurveDirection,
         });
       }
       if (!isWhiteboardMode) {
@@ -1454,6 +1464,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
       mode: whiteboardMovementMode,
       speed: whiteboardMovementSpeed,
       curveStrength: whiteboardCurveStrength,
+      curveDirection: whiteboardCurveDirection,
     });
   }, [
     isStatsMode,
@@ -1461,6 +1472,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     whiteboardMovementMode,
     whiteboardMovementSpeed,
     whiteboardCurveStrength,
+    whiteboardCurveDirection,
   ]);
 
   useEffect(() => {
@@ -2098,22 +2110,40 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                     </div>
                   )}
                   {whiteboardMovementMode === "curve" ? (
-                    <div style={WHITEBOARD_MOVEMENT_ROW_STYLE}>
-                      {WHITEBOARD_CURVE_STRENGTH_OPTIONS.map((option) => (
-                        <button
-                          key={`whiteboard-curve-strength-${option.value}`}
-                          type="button"
-                          style={
-                            whiteboardCurveStrength === option.value
-                              ? WHITEBOARD_MOVEMENT_BUTTON_ACTIVE_STYLE
-                              : WHITEBOARD_MOVEMENT_BUTTON_STYLE
-                          }
-                          onClick={() => setWhiteboardCurveStrength(option.value)}
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
+                    <>
+                      <div style={WHITEBOARD_MOVEMENT_ROW_STYLE}>
+                        {WHITEBOARD_CURVE_STRENGTH_OPTIONS.map((option) => (
+                          <button
+                            key={`whiteboard-curve-strength-${option.value}`}
+                            type="button"
+                            style={
+                              whiteboardCurveStrength === option.value
+                                ? WHITEBOARD_MOVEMENT_BUTTON_ACTIVE_STYLE
+                                : WHITEBOARD_MOVEMENT_BUTTON_STYLE
+                            }
+                            onClick={() => setWhiteboardCurveStrength(option.value)}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                      <div style={WHITEBOARD_MOVEMENT_ROW_STYLE}>
+                        {WHITEBOARD_CURVE_DIRECTION_OPTIONS.map((option) => (
+                          <button
+                            key={`whiteboard-curve-direction-${option.value}`}
+                            type="button"
+                            style={
+                              whiteboardCurveDirection === option.value
+                                ? WHITEBOARD_MOVEMENT_BUTTON_ACTIVE_STYLE
+                                : WHITEBOARD_MOVEMENT_BUTTON_STYLE
+                            }
+                            onClick={() => setWhiteboardCurveDirection(option.value)}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    </>
                   ) : null}
                 </div>
                 <div style={WHITEBOARD_PANEL_SECTION_STYLE}>

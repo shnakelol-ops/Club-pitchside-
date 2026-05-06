@@ -36,10 +36,12 @@ export type WhiteboardTokenColor = PremiumPlayerTokenColor;
 export type WhiteboardMovementMode = "free" | "straight" | "curve";
 export type WhiteboardMovementSpeed = "slow" | "normal" | "fast";
 export type WhiteboardCurveStrength = "subtle" | "medium" | "big";
+export type WhiteboardCurveDirection = "left" | "right";
 export type WhiteboardMovementConfig = {
   mode: WhiteboardMovementMode;
   speed: WhiteboardMovementSpeed;
   curveStrength: WhiteboardCurveStrength;
+  curveDirection: WhiteboardCurveDirection;
 };
 export type FlowItemType = "cone" | "pole" | "ladder" | "tackleBag" | "football" | "sliotar";
 export type ItemMode = "edit" | "locked";
@@ -554,6 +556,7 @@ export async function createTacticalPadLiteSurface(
     mode: options.whiteboardMovementConfig?.mode ?? "free",
     speed: options.whiteboardMovementConfig?.speed ?? "normal",
     curveStrength: options.whiteboardMovementConfig?.curveStrength ?? "medium",
+    curveDirection: options.whiteboardMovementConfig?.curveDirection ?? "right",
   };
   const tacticalItems: TacticalSurfaceItem[] = [];
   const whiteboardDrawingsLayer = new Container();
@@ -654,6 +657,7 @@ export async function createTacticalPadLiteSurface(
     from: NormalizedPoint,
     to: NormalizedPoint,
     strength: WhiteboardCurveStrength,
+    direction: WhiteboardCurveDirection,
   ): NormalizedPoint {
     const dx = to.x - from.x;
     const dy = to.y - from.y;
@@ -666,11 +670,12 @@ export async function createTacticalPadLiteSurface(
       return clampNormalizedPoint(midpoint);
     }
     const offset = distance * WHITEBOARD_CURVE_STRENGTH_MULTIPLIER[strength];
+    const directionSign = direction === "left" ? -1 : 1;
     const nx = -dy / distance;
     const ny = dx / distance;
     return clampNormalizedPoint({
-      x: midpoint.x + nx * offset,
-      y: midpoint.y + ny * offset,
+      x: midpoint.x + nx * offset * directionSign,
+      y: midpoint.y + ny * offset * directionSign,
     });
   }
 
@@ -711,6 +716,7 @@ export async function createTacticalPadLiteSurface(
           committedStart,
           committedEnd,
           activeWhiteboardMovementConfig.curveStrength,
+          activeWhiteboardMovementConfig.curveDirection,
         ),
       };
     }
@@ -1712,6 +1718,7 @@ export async function createTacticalPadLiteSurface(
         mode: config.mode ?? activeWhiteboardMovementConfig.mode,
         speed: config.speed ?? activeWhiteboardMovementConfig.speed,
         curveStrength: config.curveStrength ?? activeWhiteboardMovementConfig.curveStrength,
+        curveDirection: config.curveDirection ?? activeWhiteboardMovementConfig.curveDirection,
       };
     },
     eraseWhiteboardPenStroke: () => {
