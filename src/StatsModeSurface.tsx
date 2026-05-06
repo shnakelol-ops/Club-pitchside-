@@ -67,6 +67,12 @@ type SavedMatch = {
   eventCount: number;
   scorelineSnapshot: string;
 };
+type ModeScoringEventKind =
+  | "GOAL"
+  | "POINT"
+  | "FREE_SCORED"
+  | "TWO_POINTER"
+  | "FORTY_FIVE_TWO_POINT";
 type LiveMatchCounts = {
   goals: number;
   points: number;
@@ -733,6 +739,13 @@ function getEffectiveAttackingDirection(
   half: 1 | 2,
 ): AttackingDirection {
   return half === 2 ? oppositeAttackingDirection(firstHalfAttackingDirection) : firstHalfAttackingDirection;
+}
+
+function modeHasScoringEvent(
+  scoringEvents: readonly ModeScoringEventKind[],
+  kind: ModeScoringEventKind,
+): boolean {
+  return scoringEvents.includes(kind);
 }
 
 function getViewportRect(): ViewportRect {
@@ -3676,7 +3689,8 @@ export default function StatsModeSurface() {
     return counts;
   }, [loggedEvents]);
   const showTwoPointerCount =
-    mode.scoringEvents.includes("TWO_POINTER") || mode.scoringEvents.includes("FORTY_FIVE_TWO_POINT");
+    modeHasScoringEvent(mode.scoringEvents, "TWO_POINTER") ||
+    modeHasScoringEvent(mode.scoringEvents, "FORTY_FIVE_TWO_POINT");
 
   const homeScore = useMemo(() => computeTeamScore(loggedEvents, "HOME"), [loggedEvents]);
   const awayScore = useMemo(() => computeTeamScore(loggedEvents, "AWAY"), [loggedEvents]);
