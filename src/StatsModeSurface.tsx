@@ -748,6 +748,18 @@ function modeHasScoringEvent(
   return scoringEvents.includes(kind);
 }
 
+function getReadableEventButtonLabel(label: string): string {
+  if (label === "T+") return "TURNOVER +";
+  if (label === "T-" || label === "T−") return "TURNOVER -";
+  if (label === "K+") return "KICKOUT +";
+  if (label === "K-" || label === "K−") return "KICKOUT -";
+  if (label === "F+") return "FREE +";
+  if (label === "F-" || label === "F−") return "FREE -";
+  if (label === "FS") return "FREE SCORED";
+  if (label === "FM") return "FREE MISSED";
+  return label;
+}
+
 function getViewportRect(): ViewportRect {
   if (typeof window === "undefined") {
     return { left: 0, top: 0, width: 0, height: 0 };
@@ -944,14 +956,15 @@ const PANEL_CSS = `
 .event-btn {
   border-radius: 8px;
   color: #e2e8f0;
-  font-size: 9.5px;
+  font-size: 8.8px;
   line-height: 1.1;
   padding: 5px 4px;
   min-height: 27px;
   cursor: pointer;
   text-align: center;
   white-space: nowrap;
-  letter-spacing: 0.32px;
+  letter-spacing: 0.18px;
+  font-weight: 700;
   text-transform: uppercase;
   transition: box-shadow 140ms ease, transform 120ms ease;
 }
@@ -1577,13 +1590,13 @@ const PANEL_CSS = `
   border: 1px solid rgba(148, 163, 184, 0.4);
   background: rgba(15, 23, 42, 0.86);
   color: #e2e8f0;
-  font-size: 10px;
-  font-weight: 600;
+  font-size: 9px;
+  font-weight: 700;
   line-height: 1;
   padding: 0 8px;
   cursor: pointer;
   white-space: nowrap;
-  letter-spacing: 0.22px;
+  letter-spacing: 0.16px;
   text-transform: uppercase;
 }
 
@@ -4893,11 +4906,12 @@ export default function StatsModeSurface() {
                 {EVENT_BUTTONS.map((item, idx) => {
                   const isActive = item.kind === selectedEventKind;
                   const isScoring = idx <= 4;
+                  const buttonLabel = getReadableEventButtonLabel(item.label);
                   const isDisabledForAway =
                     activeTeam === "AWAY" && !AWAY_INSTANT_SCORING_KINDS.has(item.kind);
                   return (
                     <button
-                      key={item.label}
+                      key={item.kind}
                       type="button"
                       className="event-btn"
                       disabled={isDisabledForAway}
@@ -4915,11 +4929,11 @@ export default function StatsModeSurface() {
                           : isScoring
                             ? "rgba(21, 39, 62, 0.84)"
                             : "rgba(14, 24, 40, 0.72)",
-                        fontWeight: isActive ? 700 : 600,
+                        fontWeight: isActive ? 800 : 700,
                         opacity: isDisabledForAway ? 0.46 : 1,
                       }}
                     >
-                      {item.label}
+                      {buttonLabel}
                     </button>
                   );
                 })}
@@ -5004,11 +5018,12 @@ export default function StatsModeSurface() {
               <div className="landscape-toolbar-row">
                 {EVENT_BUTTONS.slice(0, 5).map((item) => {
                   const isActive = item.kind === selectedEventKind;
+                  const buttonLabel = getReadableEventButtonLabel(item.label);
                   const isDisabledForAway =
                     activeTeam === "AWAY" && !AWAY_INSTANT_SCORING_KINDS.has(item.kind);
                   return (
                     <button
-                      key={item.label}
+                      key={item.kind}
                       type="button"
                       className="landscape-toolbar-btn"
                       disabled={isDisabledForAway}
@@ -5029,7 +5044,7 @@ export default function StatsModeSurface() {
                           : undefined
                       }
                     >
-                      {item.label}
+                      {buttonLabel}
                     </button>
                   );
                 })}
@@ -5037,11 +5052,12 @@ export default function StatsModeSurface() {
               <div className="landscape-toolbar-row">
                 {EVENT_BUTTONS.slice(5).map((item) => {
                   const isActive = item.kind === selectedEventKind;
+                  const buttonLabel = getReadableEventButtonLabel(item.label);
                   const isDisabledForAway =
                     activeTeam === "AWAY" && !AWAY_INSTANT_SCORING_KINDS.has(item.kind);
                   return (
                     <button
-                      key={item.label}
+                      key={item.kind}
                       type="button"
                       className="landscape-toolbar-btn"
                       disabled={isDisabledForAway}
@@ -5062,7 +5078,7 @@ export default function StatsModeSurface() {
                           : undefined
                       }
                     >
-                      {item.label}
+                      {buttonLabel}
                     </button>
                   );
                 })}
