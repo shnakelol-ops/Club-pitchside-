@@ -33,6 +33,14 @@ type TacticalPlayer = {
 
 export type WhiteboardDrawTool = "move" | "pen" | "line" | "arrow" | "dashed";
 export type WhiteboardTokenColor = PremiumPlayerTokenColor;
+export type WhiteboardMovementMode = "free" | "straight" | "curve";
+export type WhiteboardMovementSpeed = "slow" | "normal" | "fast";
+export type WhiteboardCurveStrength = "subtle" | "medium" | "big";
+export type WhiteboardMovementConfig = {
+  mode: WhiteboardMovementMode;
+  speed: WhiteboardMovementSpeed;
+  curveStrength: WhiteboardCurveStrength;
+};
 export type FlowItemType = "cone" | "pole" | "ladder" | "tackleBag" | "football" | "sliotar";
 export type ItemMode = "edit" | "locked";
 export type TacticalItem = {
@@ -63,6 +71,7 @@ export type TacticalPadLiteSurface = {
   }) => void;
   setWhiteboardDrawTool: (tool: WhiteboardDrawTool) => void;
   setWhiteboardDrawColor: (color: number) => void;
+  setWhiteboardMovementConfig: (config: Partial<WhiteboardMovementConfig>) => void;
   eraseWhiteboardPenStroke: () => void;
   undoWhiteboardStroke: () => void;
   clearWhiteboardStrokes: () => void;
@@ -83,6 +92,7 @@ type TacticalPadLiteSurfaceOptions = {
     red: WhiteboardTokenColor;
   };
   whiteboardDrawColor?: number;
+  whiteboardMovementConfig?: Partial<WhiteboardMovementConfig>;
   onItemMove?: (id: string, x: number, y: number) => void;
 };
 
@@ -136,6 +146,18 @@ const WHITEBOARD_DEFAULT_STROKE_COLOR = 0x111111;
 const WHITEBOARD_STROKE_WIDTH = 1.1;
 const WHITEBOARD_BLUE_START_X = 30;
 const WHITEBOARD_RED_START_X = 70;
+const WHITEBOARD_MOVEMENT_SPEED_MS: Record<WhiteboardMovementSpeed, number> = {
+  slow: 800,
+  normal: 450,
+  fast: 250,
+};
+const WHITEBOARD_CURVE_STRENGTH_MULTIPLIER: Record<WhiteboardCurveStrength, number> = {
+  subtle: 0.2,
+  medium: 0.4,
+  big: 0.7,
+};
+const WHITEBOARD_MOVEMENT_TINY_DISTANCE = 0.45;
+const WHITEBOARD_CURVE_MIN_DISTANCE = 1.2;
 
 type PlayerSeed = {
   id: string;
@@ -148,6 +170,27 @@ type PlayerSeed = {
 type TacticalSurfaceItem = TacticalItem & {
   graphic: Graphics;
   selectionGraphic: Graphics;
+};
+
+type MovementPreviewPath =
+  | {
+      type: "straight";
+      from: NormalizedPoint;
+      to: NormalizedPoint;
+    }
+  | {
+      type: "curve";
+      from: NormalizedPoint;
+      to: NormalizedPoint;
+      control: NormalizedPoint;
+    };
+
+type MovementPreviewState = {
+  playerId: string;
+  durationMs: number;
+  elapsedMs: number;
+  currentPoint: NormalizedPoint;
+  path: MovementPreviewPath;
 };
 
 type DragPointerState = {
@@ -165,6 +208,7 @@ type ActiveDragState =
   | ({
       type: "player";
       playerId: string;
+      committedStart: NormalizedPoint;
     } & DragPointerState)
   | null;
 
@@ -506,6 +550,11 @@ export async function createTacticalPadLiteSurface(
   const isDrawingEnabledSurface = surfaceVariant === "whiteboard" || surfaceVariant === "tactical";
   let activeWhiteboardTool: WhiteboardDrawTool = "move";
   let activeWhiteboardColor = options.whiteboardDrawColor ?? WHITEBOARD_DEFAULT_STROKE_COLOR;
+  let activeWhiteboardMovementConfig: WhiteboardMovementConfig = {
+    mode: options.whiteboardMovementConfig?.mode ?? "free",
+    speed: options.whiteboardMovementConfig?.speed ?? "normal",
+    curveStrength: options.whiteboardMovementConfig?.curveStrength ?? "medium",
+  };
   const tacticalItems: TacticalSurfaceItem[] = [];
   const whiteboardDrawingsLayer = new Container();
   whiteboardDrawingsLayer.eventMode = "none";
@@ -522,6 +571,7 @@ export async function createTacticalPadLiteSurface(
   const completedWhiteboardDrawingObjects: WhiteboardDrawingObject[] = [];
   let activeWhiteboardDrawing: WhiteboardDrawingObject | null = null;
   let whiteboardDrawingCounter = 0;
+  const movementPreviewByPlayerId = new Map<string, MovementPreviewState>();
 
   function emitPlaybackStateChange(): void {
     syncWhiteboardTokenInputMode();
@@ -539,6 +589,165 @@ export async function createTacticalPadLiteSurface(
     return pointerId === activeDrag.pointerId;
   }
 
+  function getPlayerById(playerId: string): TacticalPlayer | null {
+    return players.find((player) => player.id === playerId) ?? null;
+  }
+
+  function getMovementPreviewPoint(playerId: string): NormalizedPoint | null {
+    return movementPreviewByPlayerId.get(playerId)?.currentPoint ?? null;
+  }
+
+  function getRenderablePlayerPoint(player: TacticalPlayer): NormalizedPoint {
+    return getMovementPreviewPoint(player.id) ?? player.current;
+  }
+
+  function clearMovementPreviewForPlayer(playerId: string): void {
+    const preview = movementPreviewByPlayerId.get(playerId);
+    if (!preview) return;
+    movementPreviewByPlayerId.delete(playerId);
+    const player = getPlayerById(playerId);
+    if (!player) return;
+    setTokenWorldPositionForPoint(player, player.current, mapper);
+  }
+
+  function clearAllMovementPreviews(): void {
+    if (movementPreviewByPlayerId.size === 0) return;
+    const playerIds = [...movementPreviewByPlayerId.keys()];
+    for (const playerId of playerIds) {
+      clearMovementPreviewForPlayer(playerId);
+    }
+  }
+
+  function getDistanceBetweenPoints(a: NormalizedPoint, b: NormalizedPoint): number {
+    return Math.hypot(b.x - a.x, b.y - a.y);
+  }
+
+  function interpolatePoint(a: NormalizedPoint, b: NormalizedPoint, progress: number): NormalizedPoint {
+    return {
+      x: a.x + (b.x - a.x) * progress,
+      y: a.y + (b.y - a.y) * progress,
+    };
+  }
+
+  function clampNormalizedPoint(point: NormalizedPoint): NormalizedPoint {
+    return {
+      x: clampNormalizedValue(point.x),
+      y: clampNormalizedValue(point.y),
+    };
+  }
+
+  function sampleQuadraticBezier(
+    from: NormalizedPoint,
+    control: NormalizedPoint,
+    to: NormalizedPoint,
+    progress: number,
+  ): NormalizedPoint {
+    const t = Math.max(0, Math.min(1, progress));
+    const inv = 1 - t;
+    return clampNormalizedPoint({
+      x: inv * inv * from.x + 2 * inv * t * control.x + t * t * to.x,
+      y: inv * inv * from.y + 2 * inv * t * control.y + t * t * to.y,
+    });
+  }
+
+  function createCurveControlPoint(
+    from: NormalizedPoint,
+    to: NormalizedPoint,
+    strength: WhiteboardCurveStrength,
+  ): NormalizedPoint {
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const distance = Math.hypot(dx, dy);
+    const midpoint = {
+      x: (from.x + to.x) * 0.5,
+      y: (from.y + to.y) * 0.5,
+    };
+    if (distance < 1e-4) {
+      return clampNormalizedPoint(midpoint);
+    }
+    const offset = distance * WHITEBOARD_CURVE_STRENGTH_MULTIPLIER[strength];
+    const nx = -dy / distance;
+    const ny = dx / distance;
+    return clampNormalizedPoint({
+      x: midpoint.x + nx * offset,
+      y: midpoint.y + ny * offset,
+    });
+  }
+
+  function sampleMovementPreviewPath(path: MovementPreviewPath, progress: number): NormalizedPoint {
+    if (path.type === "curve") {
+      return sampleQuadraticBezier(path.from, path.control, path.to, progress);
+    }
+    return clampNormalizedPoint(interpolatePoint(path.from, path.to, progress));
+  }
+
+  function startMovementPreviewForPlayer(
+    player: TacticalPlayer,
+    committedStart: NormalizedPoint,
+    committedEnd: NormalizedPoint,
+  ): void {
+    clearMovementPreviewForPlayer(player.id);
+    if (!isWhiteboardSurface) return;
+    if (activeWhiteboardMovementConfig.mode === "free") return;
+    if (activeWhiteboardTool !== "move") return;
+
+    const movementDistance = getDistanceBetweenPoints(committedStart, committedEnd);
+    if (movementDistance < WHITEBOARD_MOVEMENT_TINY_DISTANCE) return;
+
+    let nextPath: MovementPreviewPath = {
+      type: "straight",
+      from: { ...committedStart },
+      to: { ...committedEnd },
+    };
+    if (
+      activeWhiteboardMovementConfig.mode === "curve" &&
+      movementDistance >= WHITEBOARD_CURVE_MIN_DISTANCE
+    ) {
+      nextPath = {
+        type: "curve",
+        from: { ...committedStart },
+        to: { ...committedEnd },
+        control: createCurveControlPoint(
+          committedStart,
+          committedEnd,
+          activeWhiteboardMovementConfig.curveStrength,
+        ),
+      };
+    }
+
+    const durationMs = WHITEBOARD_MOVEMENT_SPEED_MS[activeWhiteboardMovementConfig.speed];
+    movementPreviewByPlayerId.set(player.id, {
+      playerId: player.id,
+      durationMs,
+      elapsedMs: 0,
+      currentPoint: { ...committedStart },
+      path: nextPath,
+    });
+    setTokenWorldPositionForPoint(player, committedStart, mapper);
+  }
+
+  function stepMovementPreviews(deltaMs: number): void {
+    if (movementPreviewByPlayerId.size === 0) return;
+    const expired: string[] = [];
+    for (const [playerId, preview] of movementPreviewByPlayerId.entries()) {
+      const player = getPlayerById(playerId);
+      if (!player) {
+        expired.push(playerId);
+        continue;
+      }
+      preview.elapsedMs += Math.max(0, deltaMs);
+      const progress = Math.max(0, Math.min(1, preview.elapsedMs / preview.durationMs));
+      preview.currentPoint = sampleMovementPreviewPath(preview.path, progress);
+      setTokenWorldPositionForPoint(player, preview.currentPoint, mapper);
+      if (progress >= 1) {
+        expired.push(playerId);
+      }
+    }
+    for (const playerId of expired) {
+      clearMovementPreviewForPlayer(playerId);
+    }
+  }
+
   function fitToHost(): void {
     const width = host.clientWidth;
     const height = host.clientHeight;
@@ -553,7 +762,7 @@ export async function createTacticalPadLiteSurface(
 
     for (const player of players) {
       setPlayerTouchHitArea(player, mapper);
-      setTokenWorldPositionForPoint(player, player.current, mapper);
+      setTokenWorldPositionForPoint(player, getRenderablePlayerPoint(player), mapper);
     }
     for (const item of tacticalItems) {
       setItemTouchHitArea(item, mapper);
@@ -887,8 +1096,9 @@ export async function createTacticalPadLiteSurface(
     options.onItemMove?.(item.id, normalized.x, normalized.y);
   }
 
-  function releaseActiveDrag(): void {
+  function releaseActiveDrag(options?: { skipMovementPreview?: boolean }): void {
     if (!activeDrag) return;
+    const skipMovementPreview = options?.skipMovementPreview ?? false;
     if (activeDrag.type === "player") {
       const activeState = activeDrag;
       const playerId = activeState.playerId;
@@ -896,6 +1106,9 @@ export async function createTacticalPadLiteSurface(
       if (player) {
         setPlayerDragVisualTarget(player, false);
         player.token.cursor = "grab";
+        if (!skipMovementPreview && activeState.hasCrossedThreshold) {
+          startMovementPreviewForPlayer(player, activeState.committedStart, player.current);
+        }
       }
     }
     activeDrag = null;
@@ -1111,6 +1324,7 @@ export async function createTacticalPadLiteSurface(
   }
 
   function applySnapshotToSurface(snapshot: PhaseSnapshot): void {
+    clearAllMovementPreviews();
     for (const player of players) {
       const point = snapshot.players[players.indexOf(player)];
       if (!point) continue;
@@ -1242,12 +1456,14 @@ export async function createTacticalPadLiteSurface(
       if (activeWhiteboardTool !== "move") return;
       if (activeDrag) return;
       clearSelectedItem();
+      clearMovementPreviewForPlayer(player.id);
       const useDragThreshold = surfaceVariant === "tactical";
       const pointerId = getPointerIdFromEvent(event);
       const startStagePoint = getStagePointFromEvent(event, app.stage);
       activeDrag = {
         type: "player",
         playerId: player.id,
+        committedStart: { x: player.current.x, y: player.current.y },
         pointerId,
         startStagePoint,
         hasCrossedThreshold: !useDragThreshold,
@@ -1263,7 +1479,7 @@ export async function createTacticalPadLiteSurface(
   function syncPlayersToViewport(): void {
     for (const player of players) {
       setPlayerTouchHitArea(player, mapper);
-      setTokenWorldPositionForPoint(player, player.current, mapper);
+      setTokenWorldPositionForPoint(player, getRenderablePlayerPoint(player), mapper);
     }
   }
 
@@ -1272,7 +1488,8 @@ export async function createTacticalPadLiteSurface(
     colors: TacticalPadLiteSurfaceOptions["whiteboardTeamColors"],
   ): void {
     if (!isWhiteboardSurface) return;
-    releaseActiveDrag();
+    releaseActiveDrag({ skipMovementPreview: true });
+    clearAllMovementPreviews();
     // Preserve committed drawings; only clear in-progress preview state.
     resetActiveWhiteboardDrawing();
     for (const player of players) {
@@ -1331,7 +1548,7 @@ export async function createTacticalPadLiteSurface(
     if (surfaceVariant !== "tactical") return;
     const nextSeed = createNextTacticalPlayerSeed();
     if (!nextSeed) return;
-    releaseActiveDrag();
+    releaseActiveDrag({ skipMovementPreview: true });
     const nextPlayer = createSurfacePlayer(nextSeed);
     players.push(nextPlayer);
     bindPlayerPointerDown(nextPlayer);
@@ -1342,7 +1559,7 @@ export async function createTacticalPadLiteSurface(
   function removeLastTacticalPlayer(): void {
     if (surfaceVariant !== "tactical") return;
     if (players.length <= 0) return;
-    releaseActiveDrag();
+    releaseActiveDrag({ skipMovementPreview: true });
     const removedPlayer = players.pop();
     if (!removedPlayer) return;
     removedPlayer.token.removeAllListeners();
@@ -1382,6 +1599,7 @@ export async function createTacticalPadLiteSurface(
   });
   app.ticker.add(() => {
     stepPlayback(app.ticker.deltaMS);
+    stepMovementPreviews(app.ticker.deltaMS);
     animatePlayerDragVisuals(app.ticker.deltaMS);
   });
 
@@ -1397,7 +1615,8 @@ export async function createTacticalPadLiteSurface(
 
   return {
     setStart: () => {
-      releaseActiveDrag();
+      releaseActiveDrag({ skipMovementPreview: true });
+      clearAllMovementPreviews();
       clearSelectedItem();
       cancelPlaybackAnimation();
       startPositions = captureCurrentSnapshot();
@@ -1405,14 +1624,16 @@ export async function createTacticalPadLiteSurface(
       options.onPhaseCountChange?.(0);
     },
     addPhase: () => {
-      releaseActiveDrag();
+      releaseActiveDrag({ skipMovementPreview: true });
+      clearAllMovementPreviews();
       clearSelectedItem();
       cancelPlaybackAnimation();
       phases = [...phases, captureCurrentSnapshot()];
       options.onPhaseCountChange?.(phases.length);
     },
     undoPhase: () => {
-      releaseActiveDrag();
+      releaseActiveDrag({ skipMovementPreview: true });
+      clearAllMovementPreviews();
       clearSelectedItem();
       cancelPlaybackAnimation();
       if (phases.length <= 0) return;
@@ -1424,7 +1645,8 @@ export async function createTacticalPadLiteSurface(
     play: handlePlay,
     pausePlayback: () => {
       if (!isPlaying) return;
-      releaseActiveDrag();
+      releaseActiveDrag({ skipMovementPreview: true });
+      clearAllMovementPreviews();
       clearSelectedItem();
       resetActiveWhiteboardDrawing();
       isPlaying = false;
@@ -1446,14 +1668,16 @@ export async function createTacticalPadLiteSurface(
       if (surfaceVariant !== "tactical") return;
       itemMode = mode;
       if (itemMode === "locked") {
-        releaseActiveDrag();
+        releaseActiveDrag({ skipMovementPreview: true });
+        clearAllMovementPreviews();
         clearSelectedItem();
       }
       syncWhiteboardTokenInputMode();
       renderTacticalItems();
     },
     reset: () => {
-      releaseActiveDrag();
+      releaseActiveDrag({ skipMovementPreview: true });
+      clearAllMovementPreviews();
       cancelPlaybackAnimation();
       applySnapshotToSurface(startPositions);
     },
@@ -1467,7 +1691,8 @@ export async function createTacticalPadLiteSurface(
     setWhiteboardDrawTool: (tool) => {
       if (!isDrawingEnabledSurface) return;
       if (tool !== "move") {
-        releaseActiveDrag();
+        releaseActiveDrag({ skipMovementPreview: true });
+        clearAllMovementPreviews();
         clearSelectedItem();
       }
       activeWhiteboardTool = tool;
@@ -1480,6 +1705,14 @@ export async function createTacticalPadLiteSurface(
       activeWhiteboardColor = color;
       resetActiveWhiteboardDrawing();
       renderAllWhiteboardDrawings();
+    },
+    setWhiteboardMovementConfig: (config) => {
+      if (!isWhiteboardSurface) return;
+      activeWhiteboardMovementConfig = {
+        mode: config.mode ?? activeWhiteboardMovementConfig.mode,
+        speed: config.speed ?? activeWhiteboardMovementConfig.speed,
+        curveStrength: config.curveStrength ?? activeWhiteboardMovementConfig.curveStrength,
+      };
     },
     eraseWhiteboardPenStroke: () => {
       if (!isDrawingEnabledSurface) return;
@@ -1499,6 +1732,7 @@ export async function createTacticalPadLiteSurface(
       renderAllWhiteboardDrawings();
     },
     exportImageCanvas: () => {
+      clearAllMovementPreviews();
       const rendererWithExtract = app.renderer as typeof app.renderer & {
         extract?: {
           canvas?: (target: unknown) => unknown;

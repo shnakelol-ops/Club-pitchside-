@@ -2,9 +2,12 @@ import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as R
 
 import {
   createTacticalPadLiteSurface,
+  type WhiteboardCurveStrength,
   type ItemMode,
   type TacticalPadLiteSurface,
   type TacticalItem,
+  type WhiteboardMovementMode,
+  type WhiteboardMovementSpeed,
   type WhiteboardTokenColor,
 } from "../engine/pixi/createTacticalPadLiteSurface";
 import StatsModeSurface from "../StatsModeSurface";
@@ -873,6 +876,26 @@ const WHITEBOARD_TOOLS_BUTTON_ACTIVE_STYLE: CSSProperties = {
   color: "#f8fcff",
 };
 
+const WHITEBOARD_MOVEMENT_ROW_STYLE: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+  gap: "4px",
+};
+
+const WHITEBOARD_MOVEMENT_BUTTON_STYLE: CSSProperties = {
+  ...WHITEBOARD_TOOLS_BUTTON_STYLE,
+  height: "26px",
+  fontSize: "9.5px",
+  padding: "0 2px",
+};
+
+const WHITEBOARD_MOVEMENT_BUTTON_ACTIVE_STYLE: CSSProperties = {
+  ...WHITEBOARD_TOOLS_BUTTON_ACTIVE_STYLE,
+  height: "26px",
+  fontSize: "9.5px",
+  padding: "0 2px",
+};
+
 const PHASES_CHIP_STYLE: CSSProperties = {
   position: "fixed",
   left: "max(12px, calc(env(safe-area-inset-left, 0px) + 10px))",
@@ -1051,6 +1074,30 @@ const WHITEBOARD_COUNT_OPTION_ACTIVE_STYLE: CSSProperties = {
 };
 
 const WHITEBOARD_COUNT_OPTIONS = Array.from({ length: 15 }, (_, index) => index + 1);
+const WHITEBOARD_MOVEMENT_MODE_OPTIONS: ReadonlyArray<{
+  label: string;
+  value: WhiteboardMovementMode;
+}> = [
+  { label: "Free", value: "free" },
+  { label: "Straight", value: "straight" },
+  { label: "Curve", value: "curve" },
+];
+const WHITEBOARD_MOVEMENT_SPEED_OPTIONS: ReadonlyArray<{
+  label: string;
+  value: WhiteboardMovementSpeed;
+}> = [
+  { label: "Slow", value: "slow" },
+  { label: "Normal", value: "normal" },
+  { label: "Fast", value: "fast" },
+];
+const WHITEBOARD_CURVE_STRENGTH_OPTIONS: ReadonlyArray<{
+  label: string;
+  value: WhiteboardCurveStrength;
+}> = [
+  { label: "S", value: "subtle" },
+  { label: "M", value: "medium" },
+  { label: "Big", value: "big" },
+];
 
 const WHITEBOARD_TOKEN_COLOR_OPTION_STYLE: CSSProperties = {
   width: "28px",
@@ -1173,6 +1220,9 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const [whiteboardBlueColor, setWhiteboardBlueColor] = useState<WhiteboardTokenColor>("blue");
   const [whiteboardRedColor, setWhiteboardRedColor] = useState<WhiteboardTokenColor>("red");
   const [whiteboardPenColor, setWhiteboardPenColor] = useState<number>(WHITEBOARD_DRAW_COLOR);
+  const [whiteboardMovementMode, setWhiteboardMovementMode] = useState<WhiteboardMovementMode>("free");
+  const [whiteboardMovementSpeed, setWhiteboardMovementSpeed] = useState<WhiteboardMovementSpeed>("normal");
+  const [whiteboardCurveStrength, setWhiteboardCurveStrength] = useState<WhiteboardCurveStrength>("medium");
   const [tacticalPenColor, setTacticalPenColor] = useState<number>(WHITEBOARD_DRAW_COLOR);
   const whiteboardCountsRef = useRef({ blue: 1, red: 1 });
   const whiteboardTeamColorsRef = useRef<{ blue: WhiteboardTokenColor; red: WhiteboardTokenColor }>({
@@ -1357,6 +1407,13 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
       const initialDrawColor = isWhiteboardMode ? whiteboardPenColor : tacticalPenColor;
       surface.setWhiteboardDrawTool(initialDrawTool);
       surface.setWhiteboardDrawColor(initialDrawColor);
+      if (isWhiteboardMode) {
+        surface.setWhiteboardMovementConfig({
+          mode: whiteboardMovementMode,
+          speed: whiteboardMovementSpeed,
+          curveStrength: whiteboardCurveStrength,
+        });
+      }
       if (!isWhiteboardMode) {
         surface.setItems(items);
         const initialSurfaceItemMode: ItemMode =
@@ -1388,6 +1445,23 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     surface.setWhiteboardDrawTool(activeDrawTool);
     surface.setWhiteboardDrawColor(activeDrawColor);
   }, [isStatsMode, isWhiteboardMode, whiteboardTool, whiteboardPenColor, tacticalTool, tacticalPenColor]);
+
+  useEffect(() => {
+    if (isStatsMode || !isWhiteboardMode) return;
+    const surface = surfaceRef.current;
+    if (!surface) return;
+    surface.setWhiteboardMovementConfig({
+      mode: whiteboardMovementMode,
+      speed: whiteboardMovementSpeed,
+      curveStrength: whiteboardCurveStrength,
+    });
+  }, [
+    isStatsMode,
+    isWhiteboardMode,
+    whiteboardMovementMode,
+    whiteboardMovementSpeed,
+    whiteboardCurveStrength,
+  ]);
 
   useEffect(() => {
     if (!isWhiteboardMode) return;
@@ -1986,6 +2060,61 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                       Clear
                     </button>
                   </div>
+                </div>
+                <div style={WHITEBOARD_PANEL_SECTION_STYLE}>
+                  <p style={WHITEBOARD_SUBSECTION_TITLE_STYLE}>MOVEMENT</p>
+                  <div style={WHITEBOARD_MOVEMENT_ROW_STYLE}>
+                    {WHITEBOARD_MOVEMENT_MODE_OPTIONS.map((option) => (
+                      <button
+                        key={`whiteboard-movement-mode-${option.value}`}
+                        type="button"
+                        style={
+                          whiteboardMovementMode === option.value
+                            ? WHITEBOARD_MOVEMENT_BUTTON_ACTIVE_STYLE
+                            : WHITEBOARD_MOVEMENT_BUTTON_STYLE
+                        }
+                        onClick={() => setWhiteboardMovementMode(option.value)}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                  {whiteboardMovementMode === "free" ? null : (
+                    <div style={WHITEBOARD_MOVEMENT_ROW_STYLE}>
+                      {WHITEBOARD_MOVEMENT_SPEED_OPTIONS.map((option) => (
+                        <button
+                          key={`whiteboard-movement-speed-${option.value}`}
+                          type="button"
+                          style={
+                            whiteboardMovementSpeed === option.value
+                              ? WHITEBOARD_MOVEMENT_BUTTON_ACTIVE_STYLE
+                              : WHITEBOARD_MOVEMENT_BUTTON_STYLE
+                          }
+                          onClick={() => setWhiteboardMovementSpeed(option.value)}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {whiteboardMovementMode === "curve" ? (
+                    <div style={WHITEBOARD_MOVEMENT_ROW_STYLE}>
+                      {WHITEBOARD_CURVE_STRENGTH_OPTIONS.map((option) => (
+                        <button
+                          key={`whiteboard-curve-strength-${option.value}`}
+                          type="button"
+                          style={
+                            whiteboardCurveStrength === option.value
+                              ? WHITEBOARD_MOVEMENT_BUTTON_ACTIVE_STYLE
+                              : WHITEBOARD_MOVEMENT_BUTTON_STYLE
+                          }
+                          onClick={() => setWhiteboardCurveStrength(option.value)}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
                 <div style={WHITEBOARD_PANEL_SECTION_STYLE}>
                   <p style={WHITEBOARD_SUBSECTION_TITLE_STYLE}>COLOUR</p>
