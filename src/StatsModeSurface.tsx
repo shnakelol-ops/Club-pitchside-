@@ -9,6 +9,7 @@ import {
   startFirstHalf,
   startSecondHalf,
   tickMatchClock,
+  type MatchEngineState,
   type MatchState,
 } from "./core/match/match-state-store";
 import { createPixiPitchSurface } from "./core/pitch/create-pixi-pitch-surface";
@@ -65,6 +66,19 @@ type SavedMatch = {
   events: readonly LoggedMatchEvent[];
   eventCount: number;
   scorelineSnapshot: string;
+};
+type LiveMatchCounts = {
+  goals: number;
+  points: number;
+  twoPointers: number;
+  shots: number;
+  wides: number;
+  turnoverWon: number;
+  turnoverLost: number;
+  kickoutWon: number;
+  kickoutLost: number;
+  freeWon: number;
+  freeConceded: number;
 };
 
 type ViewportRect = { left: number; top: number; width: number; height: number };
@@ -2157,6 +2171,9 @@ export default function StatsModeSurface() {
   const [currentHalf, setCurrentHalf] = useState<1 | 2>(1);
   const [matchTimeSeconds, setMatchTimeSeconds] = useState(0);
   const [isPitchReady, setIsPitchReady] = useState(false);
+  const [isCountsOverlayOpen, setIsCountsOverlayOpen] = useState(false);
+  const [isFullTimeActionsOpen, setIsFullTimeActionsOpen] = useState(false);
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [currentMatchId, setCurrentMatchId] = useState<string>(() => newMatchSessionId("live"));
   const [keyboardInset, setKeyboardInset] = useState(0);
   const [utilityBubblePosition, setUtilityBubblePosition] = useState<{ left: number; top: number } | null>(null);
@@ -2185,6 +2202,7 @@ export default function StatsModeSurface() {
   const awayNameInputRef = useRef<HTMLInputElement>(null);
   const venueInputRef = useRef<HTMLInputElement>(null);
   const matchEngineStateRef = useRef(createInitialMatchEngineState());
+  const fullTimeResumeStateRef = useRef<MatchEngineState | null>(null);
   const currentMatchIdRef = useRef(currentMatchId);
   const wakeLockRef = useRef<WakeLockSentinelLike>(null);
   const secondHalfSwitchBaselineEventCountRef = useRef<number | null>(null);
@@ -2813,6 +2831,51 @@ export default function StatsModeSurface() {
     };
   }, []);
 
+  useEffect(() => {
+    const viewportMeta = document.querySelector('meta[name="viewport"]');
+    const previousViewportContent = viewportMeta?.getAttribute("content") ?? null;
+    const nextViewportContent =
+      "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover";
+    if (viewportMeta) {
+      viewportMeta.setAttribute("content", nextViewportContent);
+    }
+
+    const preventGestureZoom = (event: Event) => {
+      event.preventDefault();
+    };
+    const preventMultiTouchZoom = (event: TouchEvent) => {
+      if (event.touches.length > 1) {
+        event.preventDefault();
+      }
+    };
+    const preventCtrlWheelZoom = (event: WheelEvent) => {
+      if (event.ctrlKey) {
+        event.preventDefault();
+      }
+    };
+
+    document.addEventListener("gesturestart", preventGestureZoom as EventListener, { passive: false });
+    document.addEventListener("gesturechange", preventGestureZoom as EventListener, { passive: false });
+    document.addEventListener("gestureend", preventGestureZoom as EventListener, { passive: false });
+    document.addEventListener("touchmove", preventMultiTouchZoom, { passive: false });
+    window.addEventListener("wheel", preventCtrlWheelZoom, { passive: false });
+
+    return () => {
+      document.removeEventListener("gesturestart", preventGestureZoom as EventListener);
+      document.removeEventListener("gesturechange", preventGestureZoom as EventListener);
+      document.removeEventListener("gestureend", preventGestureZoom as EventListener);
+      document.removeEventListener("touchmove", preventMultiTouchZoom);
+      window.removeEventListener("wheel", preventCtrlWheelZoom);
+      if (viewportMeta) {
+        if (previousViewportContent == null) {
+          viewportMeta.removeAttribute("content");
+        } else {
+          viewportMeta.setAttribute("content", previousViewportContent);
+        }
+      }
+    };
+  }, []);
+
   const startFirstHalfAction = () => {
     const next = startFirstHalf(matchEngineStateRef.current, Date.now());
     matchEngineStateRef.current = next;
@@ -2856,11 +2919,73 @@ export default function StatsModeSurface() {
   };
 
   const endMatchAction = () => {
-    const next = endMatch(matchEngineStateRef.current, Date.now());
+    const current = matchEngineStateRef.current;
+    fullTimeResumeStateRef.current = isLoggingActive(current.matchState) ? current : null;
+    const next = endMatch(current, Date.now());
     matchEngineStateRef.current = next;
     setMatchState(next.matchState);
     setCurrentHalf(next.currentHalf);
     setMatchTimeSeconds(next.matchTimeSeconds);
+    setIsCountsOverlayOpen(false);
+    setIsFullTimeActionsOpen(true);
+    setIsResetConfirmOpen(false);
+    setIsUtilityOpen(false);
+    setIsPickerOpen(false);
+  };
+
+  const toggleCountsOverlay = () => {
+    if (matchState === "FULL_TIME") return;
+    setIsCountsOverlayOpen((prev) => {
+      const next = !prev;
+      if (next) {
+        setIsFullTimeActionsOpen(false);
+        setIsResetConfirmOpen(false);
+        setIsUtilityOpen(false);
+        setIsPickerOpen(false);
+      }
+      return next;
+    });
+  };
+
+  const toggleFullTimeActionsPanel = () => {
+    setIsFullTimeActionsOpen((prev) => {
+      const next = !prev;
+      if (next) {
+        setIsCountsOverlayOpen(false);
+        setIsResetConfirmOpen(false);
+      }
+      return next;
+    });
+  };
+
+  const resumeMatchFromFullTime = () => {
+    if (matchState !== "FULL_TIME") return;
+    const resumeState = fullTimeResumeStateRef.current;
+    if (!resumeState) return;
+    const resumedMatchState: MatchState =
+      resumeState.matchState === "FIRST_HALF" || resumeState.matchState === "SECOND_HALF"
+        ? resumeState.matchState
+        : "SECOND_HALF";
+    const frozenSeconds = Math.max(0, Math.floor(matchEngineStateRef.current.matchTimeSeconds));
+    const resumed: MatchEngineState = {
+      matchState: resumedMatchState,
+      currentHalf: resumeState.currentHalf,
+      matchTimeSeconds: frozenSeconds,
+      isRunning: true,
+      phaseStartTimeMs: Date.now(),
+      accumulatedElapsedSeconds: frozenSeconds,
+    };
+    matchEngineStateRef.current = resumed;
+    setMatchState(resumed.matchState);
+    setCurrentHalf(resumed.currentHalf);
+    setMatchTimeSeconds(resumed.matchTimeSeconds);
+    setIsFullTimeActionsOpen(false);
+    setIsResetConfirmOpen(false);
+    handleRef.current?.setEventContext({
+      half: resumed.currentHalf,
+      timestamp: resumed.matchTimeSeconds,
+      canLog: isLoggingActive(resumed.matchState) && activeTeamRef.current === "HOME",
+    });
   };
 
   const openPlayersPanel = () => {
@@ -2929,6 +3054,75 @@ export default function StatsModeSurface() {
     }
   };
 
+  const shareOrExportMatch = async () => {
+    const homeTeamName = teamNames.HOME.trim() || "Team A";
+    const awayTeamName = teamNames.AWAY.trim() || "Team B";
+    const venueLabel = venueName.trim() || "Unknown venue";
+    const summaryText = [
+      `${homeTeamName} ${formatGaelicScore(homeScore)} (${homeScore.total}) v ${awayTeamName} ${formatGaelicScore(awayScore)} (${awayScore.total})`,
+      `Venue: ${venueLabel}`,
+      `State: ${matchState === "FULL_TIME" ? "Full Time" : matchStateToken}`,
+      `Clock: ${formatMatchClock(matchTimeSeconds)}`,
+      `Events: ${loggedEvents.length}`,
+      `Goals: ${liveCounts.goals}`,
+      `Points: ${liveCounts.points}`,
+      `Shots: ${liveCounts.shots}`,
+      `Wides: ${liveCounts.wides}`,
+      `Turnover Won/Lost: ${liveCounts.turnoverWon}/${liveCounts.turnoverLost}`,
+      `Kickout Won/Lost: ${liveCounts.kickoutWon}/${liveCounts.kickoutLost}`,
+      `Free Won/Conceded: ${liveCounts.freeWon}/${liveCounts.freeConceded}`,
+    ].join("\n");
+
+    const shareData: ShareData = {
+      title: `${homeTeamName} v ${awayTeamName}`,
+      text: summaryText,
+    };
+    const navWithShare = navigator as Navigator & {
+      share?: (data: ShareData) => Promise<void>;
+      canShare?: (data: ShareData) => boolean;
+    };
+
+    if (typeof navWithShare.share === "function") {
+      const canShare = typeof navWithShare.canShare === "function" ? navWithShare.canShare(shareData) : true;
+      if (canShare) {
+        try {
+          await navWithShare.share(shareData);
+          setSaveFeedback("Match shared");
+          return;
+        } catch {
+          // Fall through to export/copy fallback.
+        }
+      }
+    }
+
+    let copied = false;
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(summaryText);
+        copied = true;
+      } catch {
+        copied = false;
+      }
+    }
+
+    const fileSafeLabel = `${homeTeamName}-${awayTeamName}`
+      .toLowerCase()
+      .replace(/[^a-z0-9-]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+    const exportFileName = `${fileSafeLabel || "match"}-summary.txt`;
+    const blob = new Blob([summaryText], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = exportFileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+
+    setSaveFeedback(copied ? "Summary copied + exported" : "Summary exported");
+  };
+
   const loadSavedMatchRecord = (record: SavedMatch) => {
     const parsedRecord = parseStoredSavedMatch(record);
     if (!parsedRecord || parsedRecord.events.length === 0) {
@@ -2994,7 +3188,7 @@ export default function StatsModeSurface() {
     setPlayerDraft("");
   };
 
-  const resetMatch = () => {
+  const resetMatchNow = () => {
     const nextMatchId = newMatchSessionId("live");
     setCurrentMatchId(nextMatchId);
     currentMatchIdRef.current = nextMatchId;
@@ -3016,6 +3210,7 @@ export default function StatsModeSurface() {
     setCurrentHalf(1);
     setMatchTimeSeconds(0);
     matchEngineStateRef.current = createInitialMatchEngineState();
+    fullTimeResumeStateRef.current = null;
     handleRef.current?.setEvents([]);
     handleRef.current?.setEventContext({
       half: 1,
@@ -3023,7 +3218,46 @@ export default function StatsModeSurface() {
       canLog: false,
     });
     setIsUtilityOpen(false);
+    setIsPickerOpen(false);
+    setIsCountsOverlayOpen(false);
+    setIsFullTimeActionsOpen(false);
+    setIsResetConfirmOpen(false);
   };
+
+  const requestResetMatch = () => {
+    setIsResetConfirmOpen(true);
+    setIsCountsOverlayOpen(false);
+    setIsFullTimeActionsOpen(false);
+    setIsUtilityOpen(false);
+    setIsPickerOpen(false);
+  };
+
+  const cancelResetMatch = () => {
+    setIsResetConfirmOpen(false);
+  };
+
+  const confirmResetMatch = () => {
+    resetMatchNow();
+  };
+
+  useEffect(() => {
+    if (matchState !== "FULL_TIME") return;
+    setIsCountsOverlayOpen(false);
+    setIsFullTimeActionsOpen(true);
+    setIsPickerOpen(false);
+    setIsUtilityOpen(false);
+  }, [matchState]);
+
+  useEffect(() => {
+    if (!isCountsOverlayOpen || !isFullTimeActionsOpen) return;
+    setIsCountsOverlayOpen(false);
+  }, [isCountsOverlayOpen, isFullTimeActionsOpen]);
+
+  useEffect(() => {
+    if (!isResetConfirmOpen) return;
+    setIsCountsOverlayOpen(false);
+    setIsFullTimeActionsOpen(false);
+  }, [isResetConfirmOpen]);
 
   useEffect(() => {
     handleRef.current?.setEventContext({
@@ -3307,7 +3541,9 @@ export default function StatsModeSurface() {
           ? { label: "2H", onClick: startSecondHalfAction }
           : matchState === "SECOND_HALF"
             ? { label: "FT", onClick: endMatchAction }
-            : null;
+            : matchState === "FULL_TIME"
+              ? { label: isFullTimeActionsOpen ? "CLOSE" : "ACTIONS", onClick: toggleFullTimeActionsPanel }
+              : null;
 
   const effectiveAttackingDirection = getEffectiveAttackingDirection(
     firstHalfAttackingDirection,
@@ -3366,6 +3602,81 @@ export default function StatsModeSurface() {
     () => deriveMyTeamReport(loggedEvents, matchState, teamNames, currentMode),
     [loggedEvents, matchState, teamNames, currentMode],
   );
+
+  const liveCounts = useMemo<LiveMatchCounts>(() => {
+    const counts: LiveMatchCounts = {
+      goals: 0,
+      points: 0,
+      twoPointers: 0,
+      shots: 0,
+      wides: 0,
+      turnoverWon: 0,
+      turnoverLost: 0,
+      kickoutWon: 0,
+      kickoutLost: 0,
+      freeWon: 0,
+      freeConceded: 0,
+    };
+    for (const event of loggedEvents) {
+      const isHomeEvent = event.team === "HOME" || event.id.startsWith("team-home-");
+      if (!isHomeEvent) continue;
+      if (event.kind === "GOAL") {
+        counts.goals += 1;
+        counts.shots += 1;
+        continue;
+      }
+      if (event.kind === "POINT") {
+        counts.points += 1;
+        counts.shots += 1;
+        continue;
+      }
+      if (event.kind === "TWO_POINTER" || event.kind === "FORTY_FIVE_TWO_POINT") {
+        counts.twoPointers += 1;
+        counts.shots += 1;
+        continue;
+      }
+      if (event.kind === "FREE_SCORED") {
+        counts.points += 1;
+        counts.shots += 1;
+        continue;
+      }
+      if (event.kind === "SHOT") {
+        counts.shots += 1;
+        continue;
+      }
+      if (event.kind === "WIDE") {
+        counts.wides += 1;
+        counts.shots += 1;
+        continue;
+      }
+      if (event.kind === "TURNOVER_WON") {
+        counts.turnoverWon += 1;
+        continue;
+      }
+      if (event.kind === "TURNOVER_LOST") {
+        counts.turnoverLost += 1;
+        continue;
+      }
+      if (event.kind === "KICKOUT_WON") {
+        counts.kickoutWon += 1;
+        continue;
+      }
+      if (event.kind === "KICKOUT_CONCEDED") {
+        counts.kickoutLost += 1;
+        continue;
+      }
+      if (event.kind === "FREE_WON") {
+        counts.freeWon += 1;
+        continue;
+      }
+      if (event.kind === "FREE_CONCEDED") {
+        counts.freeConceded += 1;
+      }
+    }
+    return counts;
+  }, [loggedEvents]);
+  const showTwoPointerCount =
+    mode.scoringEvents.includes("TWO_POINTER") || mode.scoringEvents.includes("FORTY_FIVE_TWO_POINT");
 
   const homeScore = useMemo(() => computeTeamScore(loggedEvents, "HOME"), [loggedEvents]);
   const awayScore = useMemo(() => computeTeamScore(loggedEvents, "AWAY"), [loggedEvents]);
@@ -3785,6 +4096,46 @@ export default function StatsModeSurface() {
           left: "14px",
           bottom: "max(142px, calc(env(safe-area-inset-bottom) + 120px))",
         };
+  const compactOverlayBaseStyle: CSSProperties = {
+    position: "fixed",
+    zIndex: 10003,
+    display: "flex",
+    flexDirection: "column",
+    gap: "6px",
+    width: "min(240px, calc(100vw - 20px))",
+    padding: "8px",
+    borderRadius: "10px",
+    border: "1px solid rgba(148, 163, 184, 0.34)",
+    background: "rgba(10, 20, 35, 0.82)",
+    backdropFilter: "blur(8px)",
+    WebkitBackdropFilter: "blur(8px)",
+    boxShadow: "0 12px 24px rgba(4, 12, 24, 0.28)",
+    pointerEvents: "auto",
+  };
+  const countsOverlayStyle: CSSProperties = {
+    ...compactOverlayBaseStyle,
+    right: "max(10px, calc(env(safe-area-inset-right, 0px) + 8px))",
+    bottom: isLandscape
+      ? "max(80px, calc(env(safe-area-inset-bottom, 0px) + 74px))"
+      : "max(146px, calc(env(safe-area-inset-bottom, 0px) + 132px))",
+  };
+  const fullTimeOverlayStyle: CSSProperties = {
+    ...compactOverlayBaseStyle,
+    right: "max(10px, calc(env(safe-area-inset-right, 0px) + 8px))",
+    top: isLandscape
+      ? "max(50px, calc(env(safe-area-inset-top, 0px) + 46px))"
+      : "max(102px, calc(env(safe-area-inset-top, 0px) + 96px))",
+    width: "min(260px, calc(100vw - 18px))",
+  };
+  const resetConfirmStyle: CSSProperties = {
+    ...compactOverlayBaseStyle,
+    right: "max(10px, calc(env(safe-area-inset-right, 0px) + 8px))",
+    top: isLandscape
+      ? "max(168px, calc(env(safe-area-inset-top, 0px) + 160px))"
+      : "max(230px, calc(env(safe-area-inset-top, 0px) + 220px))",
+    width: "min(250px, calc(100vw - 18px))",
+    border: "1px solid rgba(248, 113, 113, 0.42)",
+  };
   const stadiumLightDots = Array.from({ length: 12 }, (_, index) => index);
 
   return (
@@ -3807,6 +4158,102 @@ export default function StatsModeSurface() {
           </div>
         </div>
         {scoreboard}
+        {isCountsOverlayOpen && matchState !== "FULL_TIME" ? (
+          <div style={countsOverlayStyle} role="dialog" aria-label="Live event counts">
+            <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.92 }}>
+              COUNTS
+            </div>
+            <div className="utility-panel-title" style={{ fontSize: "8px", opacity: 0.84 }}>
+              SCORING
+            </div>
+            <div className="utility-panel-title" style={{ fontSize: "9px", textTransform: "none", opacity: 0.94 }}>
+              Goals {liveCounts.goals} · Points {liveCounts.points}
+            </div>
+            {showTwoPointerCount ? (
+              <div className="utility-panel-title" style={{ fontSize: "9px", textTransform: "none", opacity: 0.9 }}>
+                Two pointers {liveCounts.twoPointers}
+              </div>
+            ) : null}
+            <div className="utility-panel-title" style={{ fontSize: "9px", textTransform: "none", opacity: 0.9 }}>
+              Shots {liveCounts.shots} · Wides {liveCounts.wides}
+            </div>
+            <div className="utility-panel-title" style={{ fontSize: "8px", opacity: 0.84, marginTop: "2px" }}>
+              POSSESSION
+            </div>
+            <div className="utility-panel-title" style={{ fontSize: "9px", textTransform: "none", opacity: 0.9 }}>
+              Turnover Won {liveCounts.turnoverWon} · Lost {liveCounts.turnoverLost}
+            </div>
+            <div className="utility-panel-title" style={{ fontSize: "9px", textTransform: "none", opacity: 0.9 }}>
+              Kickout Won {liveCounts.kickoutWon} · Lost {liveCounts.kickoutLost}
+            </div>
+            <div className="utility-panel-title" style={{ fontSize: "9px", textTransform: "none", opacity: 0.9 }}>
+              Free Won {liveCounts.freeWon} · Conceded {liveCounts.freeConceded}
+            </div>
+            <button type="button" className="utility-panel-close" onClick={() => setIsCountsOverlayOpen(false)}>
+              Close
+            </button>
+          </div>
+        ) : null}
+        {matchState === "FULL_TIME" && isFullTimeActionsOpen ? (
+          <div style={fullTimeOverlayStyle} role="dialog" aria-label="Full Time actions">
+            <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.94 }}>
+              FULL TIME
+            </div>
+            <button
+              type="button"
+              className="utility-review-btn"
+              onClick={() => {
+                saveCurrentMatchSnapshot();
+              }}
+            >
+              Save Match
+            </button>
+            <button
+              type="button"
+              className="utility-review-btn"
+              onClick={() => {
+                void shareOrExportMatch();
+              }}
+            >
+              Export / Share Match
+            </button>
+            <button type="button" className="utility-review-btn" onClick={resumeMatchFromFullTime}>
+              Resume Match
+            </button>
+            <button
+              type="button"
+              className="utility-review-btn"
+              style={{ border: "1px solid rgba(248,113,113,0.62)", background: "rgba(127,29,29,0.34)" }}
+              onClick={requestResetMatch}
+            >
+              Reset Match
+            </button>
+            <button type="button" className="utility-panel-close" onClick={() => setIsFullTimeActionsOpen(false)}>
+              Close
+            </button>
+          </div>
+        ) : null}
+        {isResetConfirmOpen ? (
+          <div style={resetConfirmStyle} role="dialog" aria-label="Confirm reset match">
+            <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.92 }}>
+              Confirm Reset
+            </div>
+            <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.9, textTransform: "none" }}>
+              This is the only action that clears match events.
+            </div>
+            <button type="button" className="utility-review-btn" onClick={cancelResetMatch}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="utility-review-btn"
+              style={{ border: "1px solid rgba(248,113,113,0.72)", background: "rgba(127,29,29,0.4)" }}
+              onClick={confirmResetMatch}
+            >
+              Confirm Reset
+            </button>
+          </div>
+        ) : null}
       {utilityPanel === "PLAYERS" ? (
         <div
           className={utilityPanelClass}
@@ -4688,6 +5135,25 @@ export default function StatsModeSurface() {
           >
             👤
           </button>
+          {matchState !== "FULL_TIME" ? (
+            <button
+              type="button"
+              className="bubble-btn"
+              aria-label="Toggle live counts"
+              aria-expanded={isCountsOverlayOpen}
+              onClick={toggleCountsOverlay}
+              style={{
+                border: isCountsOverlayOpen
+                  ? "1px solid rgba(125,211,252,0.84)"
+                  : "1px solid rgba(148,163,184,0.45)",
+                boxShadow: isCountsOverlayOpen
+                  ? "0 0 0 1px rgba(125,211,252,0.24), 0 0 12px rgba(125,211,252,0.22)"
+                  : "0 0 0 1px rgba(148,163,184,0.16), 0 0 8px rgba(148,163,184,0.16)",
+              }}
+            >
+              Cts
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() => {
@@ -4814,7 +5280,7 @@ export default function StatsModeSurface() {
                   {saveLoadBlockedReason}
                 </div>
               ) : null}
-              <button type="button" className="utility-menu-btn" onClick={resetMatch}>
+              <button type="button" className="utility-menu-btn" onClick={requestResetMatch}>
                 Restart Match
               </button>
             </div>
