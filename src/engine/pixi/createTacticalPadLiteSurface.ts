@@ -305,6 +305,11 @@ function clampNormalizedValue(value: number): number {
   return Math.max(NORMALIZED_MIN, Math.min(NORMALIZED_MAX, value));
 }
 
+function getCurveDirectionSign(direction: WhiteboardCurveDirection): number {
+  // Keep this mapping globally stable so curve direction does not depend on drag vector.
+  return direction === "left" ? -1 : 1;
+}
+
 function normalizeTacticalItem(item: TacticalItem): TacticalItem {
   const normalizedRotation = Number.isFinite(item.rotation) ? Number(item.rotation) : undefined;
   const normalizedScale = Number.isFinite(item.scale) ? Math.max(0.5, Math.min(2, Number(item.scale))) : undefined;
@@ -670,9 +675,13 @@ export async function createTacticalPadLiteSurface(
       return clampNormalizedPoint(midpoint);
     }
     const offset = distance * WHITEBOARD_CURVE_STRENGTH_MULTIPLIER[strength];
-    const directionSign = direction === "left" ? -1 : 1;
-    const nx = -dy / distance;
-    const ny = dx / distance;
+    const directionSign = getCurveDirectionSign(direction);
+    // Canonicalize tangent orientation so reversing drag endpoints does not flip bend direction.
+    const shouldFlipTangent = dx < 0 || (Math.abs(dx) < 1e-6 && dy < 0);
+    const tangentX = shouldFlipTangent ? -dx : dx;
+    const tangentY = shouldFlipTangent ? -dy : dy;
+    const nx = -tangentY / distance;
+    const ny = tangentX / distance;
     return clampNormalizedPoint({
       x: midpoint.x + nx * offset * directionSign,
       y: midpoint.y + ny * offset * directionSign,
