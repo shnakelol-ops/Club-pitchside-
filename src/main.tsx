@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import PitchFlowCoachShell from "./pages/PitchFlowCoachShell";
+import QuickBoardPage from "./quick-board/pages/QuickBoardPage";
 import TacticalPadLiteClean from "./pages/TacticalPadLiteClean";
 import TacticalPadLitePage from "./pages/TacticalPadLitePage";
 
@@ -27,6 +28,9 @@ function pickRootComponent() {
   }
   if (normalizedPath === "/flowlab") {
     return TacticalPadLiteClean;
+  }
+  if (normalizedPath === "/quick-board") {
+    return QuickBoardPage;
   }
   if (normalizedPath === "/flowstats") {
     return () => <TacticalPadLiteClean initialMode="stats" />;
