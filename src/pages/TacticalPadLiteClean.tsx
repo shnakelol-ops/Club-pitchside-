@@ -3,9 +3,14 @@ import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as R
 import {
   createTacticalPadLiteSurface,
   type ItemMode,
+  type TacticalLabelMode,
+  type TacticalKitPattern,
+  type TacticalPlayerKitPatch,
+  type TacticalPlayerKitSnapshot,
   type TacticalPadLiteSurface,
   type TacticalItem,
   type WhiteboardTokenColor,
+  sanitizeInitials,
 } from "../engine/pixi/createTacticalPadLiteSurface";
 import StatsModeSurface from "../StatsModeSurface";
 import OrientationGate from "../components/OrientationGate";
@@ -46,6 +51,26 @@ type WhiteboardToolControl = "move" | "pen" | "line" | "arrow" | "dashed";
 type WhiteboardToolAction = WhiteboardToolControl | "eraser";
 const WHITEBOARD_BUBBLE_SIZE = 36;
 const WHITEBOARD_BUBBLE_MARGIN = 12;
+const KIT_EDITOR_MARGIN = 10;
+const KIT_EDITOR_ESTIMATED_WIDTH = 236;
+const KIT_EDITOR_ESTIMATED_HEIGHT = 232;
+const KIT_COLOR_CHOICES = ["blue", "red", "yellow", "white", "black"] as const;
+const KIT_COLOR_CSS: Record<(typeof KIT_COLOR_CHOICES)[number], string> = {
+  blue: "#2563eb",
+  red: "#dc2626",
+  yellow: "#facc15",
+  white: "#ffffff",
+  black: "#111827",
+};
+const KIT_PATTERN_CHOICES: TacticalKitPattern[] = ["plain", "hoops", "stripes", "slash"];
+const LABEL_MODE_CHOICES: TacticalLabelMode[] = ["number", "initials"];
+
+type KitEditorState = {
+  playerId: string;
+  anchorLeft: number;
+  anchorTop: number;
+  revision: number;
+};
 
 type ViewportRect = { left: number; top: number; width: number; height: number };
 
@@ -89,6 +114,17 @@ function getDefaultWhiteboardBubblePosition(viewport: ViewportRect): { left: num
     },
     viewport,
   );
+}
+
+function clampKitEditorPosition(anchor: { left: number; top: number }, viewport: ViewportRect): { left: number; top: number } {
+  const minLeft = viewport.left + KIT_EDITOR_MARGIN;
+  const maxLeft = viewport.left + viewport.width - KIT_EDITOR_MARGIN - KIT_EDITOR_ESTIMATED_WIDTH;
+  const minTop = viewport.top + KIT_EDITOR_MARGIN;
+  const maxTop = viewport.top + viewport.height - KIT_EDITOR_MARGIN - KIT_EDITOR_ESTIMATED_HEIGHT;
+  return {
+    left: Math.min(Math.max(anchor.left, minLeft), Math.max(minLeft, maxLeft)),
+    top: Math.min(Math.max(anchor.top, minTop), Math.max(minTop, maxTop)),
+  };
 }
 
 const ROOT_STYLE: CSSProperties = {
@@ -442,6 +478,121 @@ const POPOUT_BASE_STYLE: CSSProperties = {
   WebkitBackdropFilter: "blur(10px)",
   boxShadow: "0 10px 24px rgba(0, 0, 0, 0.2)",
   zIndex: 19,
+};
+
+const KIT_EDITOR_STYLE: CSSProperties = {
+  position: "fixed",
+  width: "min(236px, calc(100vw - 20px))",
+  display: "grid",
+  gap: "7px",
+  padding: "8px",
+  borderRadius: "10px",
+  border: "1px solid rgba(191, 214, 235, 0.26)",
+  background: "rgba(9, 18, 26, 0.9)",
+  backdropFilter: "blur(10px)",
+  WebkitBackdropFilter: "blur(10px)",
+  boxShadow: "0 12px 22px rgba(2, 8, 15, 0.42)",
+  zIndex: 30,
+};
+
+const KIT_EDITOR_HEADER_STYLE: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: "8px",
+};
+
+const KIT_EDITOR_TITLE_STYLE: CSSProperties = {
+  margin: 0,
+  color: "#eaf3fd",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "10.5px",
+  fontWeight: 700,
+  letterSpacing: "0.14px",
+};
+
+const KIT_EDITOR_CLOSE_STYLE: CSSProperties = {
+  width: "22px",
+  height: "22px",
+  borderRadius: "999px",
+  border: "1px solid rgba(198, 218, 236, 0.3)",
+  background: "rgba(15, 28, 40, 0.8)",
+  color: "#e8f2fd",
+  cursor: "pointer",
+  fontSize: "12px",
+  lineHeight: 1,
+  padding: 0,
+};
+
+const KIT_EDITOR_SECTION_TITLE_STYLE: CSSProperties = {
+  margin: 0,
+  color: "rgba(207, 224, 239, 0.92)",
+  fontSize: "9px",
+  fontWeight: 700,
+  letterSpacing: "0.16px",
+  textTransform: "uppercase",
+  fontFamily: "Inter, system-ui, sans-serif",
+};
+
+const KIT_EDITOR_COLOR_GRID_STYLE: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+  gap: "4px",
+};
+
+const KIT_EDITOR_COLOR_BUTTON_STYLE: CSSProperties = {
+  height: "28px",
+  borderRadius: "999px",
+  border: "1px solid rgba(130, 150, 170, 0.4)",
+  background: "rgba(15, 23, 42, 0.52)",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  cursor: "pointer",
+  padding: 0,
+  width: "100%",
+};
+
+const KIT_EDITOR_MODE_ROW_STYLE: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  gap: "4px",
+};
+
+const KIT_EDITOR_OPTION_BUTTON_STYLE: CSSProperties = {
+  height: "28px",
+  borderRadius: "8px",
+  border: "1px solid rgba(148, 163, 184, 0.36)",
+  background: "rgba(15, 23, 42, 0.82)",
+  color: "#dbe7f5",
+  fontSize: "10px",
+  fontWeight: 650,
+  letterSpacing: "0.2px",
+  cursor: "pointer",
+  fontFamily: "Inter, system-ui, sans-serif",
+  minWidth: 0,
+};
+
+const KIT_EDITOR_OPTION_BUTTON_ACTIVE_STYLE: CSSProperties = {
+  ...KIT_EDITOR_OPTION_BUTTON_STYLE,
+  border: "1px solid rgba(125, 211, 252, 0.66)",
+  background: "rgba(38, 72, 102, 0.72)",
+  color: "#f8fcff",
+  minWidth: 0,
+};
+
+const KIT_EDITOR_INPUT_STYLE: CSSProperties = {
+  height: "28px",
+  borderRadius: "8px",
+  border: "1px solid rgba(148, 163, 184, 0.38)",
+  background: "rgba(15, 23, 42, 0.86)",
+  color: "#e2e8f0",
+  fontSize: "11px",
+  fontWeight: 700,
+  letterSpacing: "0.2px",
+  fontFamily: "Inter, system-ui, sans-serif",
+  padding: "0 8px",
+  textTransform: "uppercase",
 };
 
 const CONTROLS_POPOUT_STYLE: CSSProperties = {
@@ -1195,10 +1346,17 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const [controlsOpen, setControlsOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [phasesOpen, setPhasesOpen] = useState(false);
+  const [kitEditorState, setKitEditorState] = useState<KitEditorState | null>(null);
 
   const isStatsMode = mode === "stats";
   const isWhiteboardMode = mode === "whiteboard";
   const wakeLockRef = useRef<{ release: () => Promise<void> } | null>(null);
+
+  useEffect(() => {
+    if (isWhiteboardMode || isStatsMode) {
+      setKitEditorState(null);
+    }
+  }, [isWhiteboardMode, isStatsMode]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1345,6 +1503,17 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
               : item,
           ),
         );
+      },
+      onTacticalPlayerDoubleTap: ({ playerId, clientX, clientY }) => {
+        if (disposed || isWhiteboardMode) return;
+        const player = surfaceRef.current?.getTacticalPlayer(playerId);
+        if (!player) return;
+        setKitEditorState({
+          playerId: player.id,
+          anchorLeft: clientX,
+          anchorTop: clientY,
+          revision: 0,
+        });
       },
     }).then((surface) => {
       if (disposed) {
@@ -1755,10 +1924,12 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
 
   const addTacticalPlayer = (team: "BLUE" | "RED") => {
     surfaceRef.current?.addTacticalPlayer(team);
+    setKitEditorState(null);
   };
 
   const removeTacticalPlayer = (team: "BLUE" | "RED") => {
     surfaceRef.current?.removeTacticalPlayer(team);
+    setKitEditorState(null);
   };
 
   const addItem = (type: TacticalItem["type"]) => {
@@ -1838,6 +2009,39 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     setWhiteboardBubbleOpen((open) => !open);
   };
 
+  const activeKitPlayer: TacticalPlayerKitSnapshot | null =
+    kitEditorState == null ? null : surfaceRef.current?.getTacticalPlayer(kitEditorState.playerId) ?? null;
+  const kitEditorPosition =
+    kitEditorState == null
+      ? null
+      : clampKitEditorPosition(
+          {
+            left: kitEditorState.anchorLeft + 8,
+            top: kitEditorState.anchorTop + 8,
+          },
+          getViewportRect(),
+        );
+
+  const applyPlayerKitPatch = (patch: TacticalPlayerKitPatch) => {
+    const editor = kitEditorState;
+    const surface = surfaceRef.current;
+    if (!editor || !surface) return;
+    surface.patchTacticalPlayer(editor.playerId, patch);
+    setKitEditorState((previous) =>
+      previous == null
+        ? previous
+        : {
+            ...previous,
+            revision: previous.revision + 1,
+          },
+    );
+  };
+
+  const handleKitInitialsChange = (rawValue: string) => {
+    const sanitized = sanitizeInitials(rawValue) ?? "";
+    applyPlayerKitPatch({ initials: sanitized });
+  };
+
   const whiteboardBubbleStyle =
     whiteboardBubblePosition == null
       ? undefined
@@ -1895,6 +2099,118 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         <div style={isWhiteboardMode ? WHITEBOARD_CONTENT_STYLE : CONTENT_STYLE}>
           <div ref={hostRef} style={isWhiteboardMode ? PITCH_WHITEBOARD_STYLE : PITCH_STYLE} />
         </div>
+        {!isWhiteboardMode && kitEditorState && activeKitPlayer && kitEditorPosition ? (
+          <div
+            style={{
+              ...KIT_EDITOR_STYLE,
+              left: `${kitEditorPosition.left}px`,
+              top: `${kitEditorPosition.top}px`,
+            }}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="false"
+            aria-label="Player kit editor"
+          >
+            <div style={KIT_EDITOR_HEADER_STYLE}>
+              <p style={KIT_EDITOR_TITLE_STYLE}>Player {Number.isFinite(activeKitPlayer.number) ? activeKitPlayer.number : 0}</p>
+              <button type="button" style={KIT_EDITOR_CLOSE_STYLE} onClick={() => setKitEditorState(null)} aria-label="Close kit editor">
+                ×
+              </button>
+            </div>
+            <div style={WHITEBOARD_PANEL_SECTION_STYLE}>
+              <p style={KIT_EDITOR_SECTION_TITLE_STYLE}>Base colour</p>
+              <div style={KIT_EDITOR_COLOR_GRID_STYLE}>
+                {KIT_COLOR_CHOICES.map((color) => {
+                  const isActive = activeKitPlayer.kitBaseColor === color;
+                  return (
+                    <button
+                      key={`kit-base-${activeKitPlayer.id}-${color}`}
+                      type="button"
+                      style={{
+                        ...KIT_EDITOR_COLOR_BUTTON_STYLE,
+                        ...(isActive ? { boxShadow: "0 0 0 2px rgba(125, 211, 252, 0.9)" } : null),
+                      }}
+                      aria-label={`Set base colour ${color}`}
+                      onClick={() => applyPlayerKitPatch({ kitBaseColor: color })}
+                    >
+                      <span style={{ ...WHITEBOARD_TOKEN_COLOR_SWATCH_STYLE, background: KIT_COLOR_CSS[color] }} />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div style={WHITEBOARD_PANEL_SECTION_STYLE}>
+              <p style={KIT_EDITOR_SECTION_TITLE_STYLE}>Pattern</p>
+              <div style={{ ...KIT_EDITOR_MODE_ROW_STYLE, gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
+                {KIT_PATTERN_CHOICES.map((pattern) => {
+                  const effectivePattern = activeKitPlayer.kitPattern ?? "plain";
+                  const isActive = effectivePattern === pattern;
+                  return (
+                    <button
+                      key={`kit-pattern-${activeKitPlayer.id}-${pattern}`}
+                      type="button"
+                      style={isActive ? KIT_EDITOR_OPTION_BUTTON_ACTIVE_STYLE : KIT_EDITOR_OPTION_BUTTON_STYLE}
+                      onClick={() => applyPlayerKitPatch({ kitPattern: pattern })}
+                    >
+                      {pattern}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div style={WHITEBOARD_PANEL_SECTION_STYLE}>
+              <p style={KIT_EDITOR_SECTION_TITLE_STYLE}>Pattern colour</p>
+              <div style={KIT_EDITOR_COLOR_GRID_STYLE}>
+                {KIT_COLOR_CHOICES.map((color) => {
+                  const isActive = activeKitPlayer.kitPatternColor === color;
+                  return (
+                    <button
+                      key={`kit-pattern-color-${activeKitPlayer.id}-${color}`}
+                      type="button"
+                      style={{
+                        ...KIT_EDITOR_COLOR_BUTTON_STYLE,
+                        ...(isActive ? { boxShadow: "0 0 0 2px rgba(125, 211, 252, 0.9)" } : null),
+                      }}
+                      aria-label={`Set pattern colour ${color}`}
+                      onClick={() => applyPlayerKitPatch({ kitPatternColor: color })}
+                    >
+                      <span style={{ ...WHITEBOARD_TOKEN_COLOR_SWATCH_STYLE, background: KIT_COLOR_CSS[color] }} />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div style={WHITEBOARD_PANEL_SECTION_STYLE}>
+              <p style={KIT_EDITOR_SECTION_TITLE_STYLE}>Label</p>
+              <div style={KIT_EDITOR_MODE_ROW_STYLE}>
+                {LABEL_MODE_CHOICES.map((modeValue) => {
+                  const effectiveLabelMode = activeKitPlayer.labelMode ?? "number";
+                  const isActive = effectiveLabelMode === modeValue;
+                  return (
+                    <button
+                      key={`kit-label-mode-${activeKitPlayer.id}-${modeValue}`}
+                      type="button"
+                      style={isActive ? KIT_EDITOR_OPTION_BUTTON_ACTIVE_STYLE : KIT_EDITOR_OPTION_BUTTON_STYLE}
+                      onClick={() => applyPlayerKitPatch({ labelMode: modeValue })}
+                    >
+                      {modeValue}
+                    </button>
+                  );
+                })}
+              </div>
+              <input
+                type="text"
+                maxLength={3}
+                value={sanitizeInitials(activeKitPlayer.initials) ?? ""}
+                onChange={(event) => handleKitInitialsChange(event.target.value)}
+                style={KIT_EDITOR_INPUT_STYLE}
+                placeholder="ABC"
+                aria-label="Player initials"
+              />
+            </div>
+          </div>
+        ) : null}
         {isWhiteboardMode ? (
           <>
             <button
