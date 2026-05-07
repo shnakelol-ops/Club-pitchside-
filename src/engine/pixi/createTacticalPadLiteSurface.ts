@@ -879,7 +879,7 @@ export async function createTacticalPadLiteSurface(
     };
   }
 
-  const players: TacticalPlayer[] = playerSeeds.map(createSurfacePlayer);
+  const players: TacticalPlayer[] = playerSeeds.map((seed) => createSurfacePlayer(seed));
 
   const PLAY_DURATION_MS = 1200;
   let isPlaying = false;
