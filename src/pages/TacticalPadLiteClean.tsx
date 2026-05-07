@@ -333,22 +333,21 @@ const STADIUM_FLOODLIGHT_CSS = `
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
 }
 
 .tool-bubble-mark-svg {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   display: block;
 }
 
 .tool-bubble-mark-image {
-  width: 22px;
-  height: 22px;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
-  filter: hue-rotate(60deg) saturate(1.35) brightness(1.04);
-  opacity: 0.96;
+  opacity: 1;
 }
 
 .control-button {
