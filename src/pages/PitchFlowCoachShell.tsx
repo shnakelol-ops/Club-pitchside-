@@ -23,7 +23,7 @@ type PitchFlowCoachShellProps = {
 };
 
 type BottomNavItem = {
-  id: "home" | "flowlab" | "flowstats" | "library";
+  id: "home" | "flowlab" | "flowstats" | "whiteboard" | "library";
   label: string;
   short: string;
   path: string;
@@ -34,8 +34,9 @@ type QuickBrowseId = "systems" | "sessions" | "eight-week-plans" | "season-plans
 
 const BOTTOM_NAV_ITEMS: ReadonlyArray<BottomNavItem> = [
   { id: "home", label: "Home", short: "H", path: "/board" },
-  { id: "flowlab", label: "Quick Board", short: "Q", path: "/tacticalpad-lite-clean" },
+  { id: "flowlab", label: "FlowLab", short: "F", path: "/tacticalpad-lite-clean" },
   { id: "flowstats", label: "FlowStats", short: "S", path: "/flowstats" },
+  { id: "whiteboard", label: "Whiteboard", short: "W", path: "/whiteboard" },
   { id: "library", label: "Library", short: "L", path: "/library" },
 ];
 
@@ -792,8 +793,12 @@ function BoardPage() {
       <div className="pf-card">
         <div className="pf-home-secondary-grid">
           <button type="button" className="pf-home-secondary-btn" onClick={() => navigateTo("/tacticalpad-lite-clean")}>
-            <span>Quick Board</span>
-            <small>Open Quick Board</small>
+            <span>New Board</span>
+            <small>Open FlowLab</small>
+          </button>
+          <button type="button" className="pf-home-secondary-btn" onClick={() => navigateTo("/whiteboard")}>
+            <span>Quick Whiteboard</span>
+            <small>Open Whiteboard</small>
           </button>
           <button type="button" className="pf-home-secondary-btn" onClick={() => navigateTo("/library")}>
             <span>Open Library</span>

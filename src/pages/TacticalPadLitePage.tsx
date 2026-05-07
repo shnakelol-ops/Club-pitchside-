@@ -181,7 +181,7 @@ export default function TacticalPadLitePage() {
   }, []);
 
   return (
-    <OrientationGate modeLabel="Quick Board">
+    <OrientationGate modeLabel="FlowLab Tactics">
       <div style={ROOT_STYLE}>
         <button type="button" style={HOME_BUTTON_STYLE} aria-label="Go to home" onClick={() => window.location.assign("/board")}>
           {"\u2302"}

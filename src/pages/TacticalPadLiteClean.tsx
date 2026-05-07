@@ -1880,7 +1880,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   }
 
   return (
-    <OrientationGate modeLabel={isWhiteboardMode ? "Whiteboard Mode" : "Quick Board"}>
+    <OrientationGate modeLabel={isWhiteboardMode ? "Whiteboard Mode" : "FlowLab Tactics"}>
       <div
         style={isWhiteboardMode ? ROOT_WHITEBOARD_STYLE : ROOT_STYLE}
         className={isWhiteboardMode ? undefined : "simulator-container"}
