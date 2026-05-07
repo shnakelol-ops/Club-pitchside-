@@ -1316,7 +1316,8 @@ export async function createTacticalPadLiteSurface(
     if (player.team !== team) return Number.NaN;
     const serialMatch = new RegExp(`^${teamPrefix(team)}(\\d+)$`).exec(player.id);
     const parsed = serialMatch?.[1] ? Number(serialMatch[1]) : Number.NaN;
-    return Number.isFinite(parsed) ? parsed : player.number;
+    if (Number.isFinite(parsed)) return parsed;
+    return Number.isFinite(player.number) ? player.number : 0;
   }
 
   function createNextTacticalPlayerSeed(team: "BLUE" | "RED"): PlayerSeed | null {
@@ -1324,7 +1325,7 @@ export async function createTacticalPadLiteSurface(
     const teamPlayers = players.filter((player) => player.team === team);
     if (teamPlayers.length >= 15) return null;
 
-    const maxSerial = players.reduce<number>(
+    const maxSerial = teamPlayers.reduce<number>(
       (maxValue, player) => Math.max(maxValue, getTacticalPlayerSerial(player, team)),
       0,
     );
@@ -1360,10 +1361,14 @@ export async function createTacticalPadLiteSurface(
     if (surfaceVariant !== "tactical") return;
     const removablePlayers = players
       .map((player, index) => ({ index, serial: getTacticalPlayerSerial(player, team) }))
-      .filter((entry) => Number.isFinite(entry.serial));
+      .filter((entry) => players[entry.index]?.team === team);
     if (removablePlayers.length <= 0) return;
     releaseActiveDrag();
-    const removalTarget = removablePlayers.reduce((current, next) => (next.serial > current.serial ? next : current));
+    const removalTarget = removablePlayers.reduce((current, next) => {
+      if (next.serial > current.serial) return next;
+      if (next.serial === current.serial && next.index > current.index) return next;
+      return current;
+    });
     const [removedPlayer] = players.splice(removalTarget.index, 1);
     if (!removedPlayer) return;
     removedPlayer.token.removeAllListeners();
