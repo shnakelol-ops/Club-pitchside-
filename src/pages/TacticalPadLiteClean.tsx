@@ -54,12 +54,38 @@ const WHITEBOARD_BUBBLE_MARGIN = 12;
 const KIT_EDITOR_MARGIN = 10;
 const KIT_EDITOR_MAX_WIDTH = 280;
 const KIT_EDITOR_MAX_HEIGHT_RATIO = 0.68;
-const KIT_COLOR_CHOICES = ["blue", "red", "yellow", "white", "black"] as const;
+const KIT_COLOR_CHOICES = [
+  "navy",
+  "blue",
+  "sky",
+  "cyan",
+  "green",
+  "lime",
+  "yellow",
+  "orange",
+  "red",
+  "maroon",
+  "purple",
+  "pink",
+  "white",
+  "grey",
+  "black",
+] as const;
 const KIT_COLOR_CSS: Record<(typeof KIT_COLOR_CHOICES)[number], string> = {
+  navy: "#1e3a8a",
   blue: "#2563eb",
+  sky: "#0ea5e9",
+  cyan: "#06b6d4",
+  green: "#16a34a",
+  lime: "#84cc16",
+  orange: "#f97316",
   red: "#dc2626",
+  maroon: "#7f1d1d",
+  purple: "#7c3aed",
+  pink: "#ec4899",
   yellow: "#facc15",
   white: "#ffffff",
+  grey: "#6b7280",
   black: "#111827",
 };
 const KIT_PATTERN_CHOICES: TacticalKitPattern[] = ["plain", "hoops", "stripes", "slash"];
@@ -547,20 +573,21 @@ const KIT_EDITOR_SECTION_TITLE_STYLE: CSSProperties = {
 const KIT_EDITOR_COLOR_GRID_STYLE: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
-  gap: "4px",
+  gap: "5px",
+  justifyItems: "center",
 };
 
 const KIT_EDITOR_COLOR_BUTTON_STYLE: CSSProperties = {
-  height: "28px",
+  width: "26px",
+  height: "26px",
   borderRadius: "999px",
-  border: "1px solid rgba(130, 150, 170, 0.4)",
-  background: "rgba(15, 23, 42, 0.52)",
+  border: "1px solid rgba(150, 170, 190, 0.46)",
+  background: "transparent",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
   cursor: "pointer",
   padding: 0,
-  width: "100%",
 };
 
 const KIT_EDITOR_MODE_ROW_STYLE: CSSProperties = {

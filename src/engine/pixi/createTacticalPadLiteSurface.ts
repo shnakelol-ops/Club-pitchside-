@@ -157,12 +157,38 @@ const WHITEBOARD_STROKE_WIDTH = 1.1;
 const WHITEBOARD_BLUE_START_X = 30;
 const WHITEBOARD_RED_START_X = 70;
 const DOUBLE_TAP_WINDOW_MS = 300;
-const KIT_COLOR_NAMES = ["blue", "red", "yellow", "white", "black"] as const;
+const KIT_COLOR_NAMES = [
+  "navy",
+  "blue",
+  "sky",
+  "cyan",
+  "green",
+  "lime",
+  "yellow",
+  "orange",
+  "red",
+  "maroon",
+  "purple",
+  "pink",
+  "white",
+  "grey",
+  "black",
+] as const;
 const KIT_COLOR_NUMERIC: Record<(typeof KIT_COLOR_NAMES)[number], number> = {
+  navy: 0x1e3a8a,
   blue: 0x2563eb,
+  sky: 0x0ea5e9,
+  cyan: 0x06b6d4,
+  green: 0x16a34a,
+  lime: 0x84cc16,
   red: 0xdc2626,
+  orange: 0xf97316,
+  maroon: 0x7f1d1d,
+  purple: 0x7c3aed,
+  pink: 0xec4899,
   yellow: 0xfacc15,
   white: 0xffffff,
+  grey: 0x6b7280,
   black: 0x111827,
 };
 type TacticalKitColor = (typeof KIT_COLOR_NAMES)[number];
