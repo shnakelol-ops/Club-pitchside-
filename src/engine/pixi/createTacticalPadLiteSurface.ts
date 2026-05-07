@@ -218,6 +218,9 @@ type PlayerSeed = {
   team: "BLUE" | "RED";
   color: WhiteboardTokenColor;
   position: NormalizedPoint;
+  kitBaseColor?: TacticalKitColor;
+  kitPattern?: TacticalKitPattern;
+  kitPatternColor?: TacticalKitColor;
 };
 
 type TacticalSurfaceItem = TacticalItem & {
@@ -985,12 +988,22 @@ export async function createTacticalPadLiteSurface(
   function createSurfacePlayer(base: PlayerSeed, kitFields?: TacticalPlayerKitFields): TacticalPlayer {
     const tokenColor: PremiumPlayerTokenColor = base.color;
     const canonicalTeamKit = surfaceVariant === "tactical" ? getTeamKitForTeam(base.team) : null;
+    const seedKitFields: TacticalPlayerKitFields = {
+      kitBaseColor: sanitizeKitColor(base.kitBaseColor),
+      kitPattern: sanitizeKitPattern(base.kitPattern),
+      kitPatternColor: sanitizeKitColor(base.kitPatternColor),
+    };
+    const fallbackTeamKitFields = canonicalTeamKit == null ? {} : teamKitToPlayerKitFields(canonicalTeamKit);
     const nextKitFields: TacticalPlayerKitFields =
       canonicalTeamKit == null
-        ? { ...(kitFields ?? {}) }
-        : {
+        ? {
+            ...seedKitFields,
             ...(kitFields ?? {}),
-            ...teamKitToPlayerKitFields(canonicalTeamKit),
+          }
+        : {
+            ...fallbackTeamKitFields,
+            ...seedKitFields,
+            ...(kitFields ?? {}),
           };
     const tokenPack = createTokenPackForPlayer({
       number: base.number,
@@ -2243,15 +2256,19 @@ export async function createTacticalPadLiteSurface(
     const nextIndex = teamPlayers.length + 1;
     const nextY = (nextIndex * WORLD_SIZE.height) / (teamPlayers.length + 2);
 
+    const teamKit = getTeamKitForTeam(team);
     return {
       id: `${teamPrefix(team)}${nextSerial}`,
       number: nextSerial,
       team,
-      color: teamColor(team, tacticalTeamColors),
+      color: team === "RED" ? "red" : "blue",
       position: {
         x: Math.max(NORMALIZED_MIN, Math.min(NORMALIZED_MAX, teamLaneX(team))),
         y: Math.max(NORMALIZED_MIN, Math.min(NORMALIZED_MAX, nextY)),
       },
+      kitBaseColor: teamKit.primaryColor,
+      kitPattern: teamKit.pattern,
+      kitPatternColor: teamKit.secondaryColor,
     };
   }
 
