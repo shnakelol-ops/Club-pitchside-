@@ -10,6 +10,7 @@ export type MicroAthleteStyle = {
 };
 
 type MicroAthleteTeamColor = "blue" | "red" | "green" | "yellow" | "black" | "white";
+export type MicroAthleteKitPattern = "plain" | "hoops" | "slash" | "stripes";
 
 const DEFAULT_STYLE_BY_TEAM: Record<MicroAthleteTeamColor, MicroAthleteStyle> = {
   blue: {
@@ -79,16 +80,75 @@ function colorToHexString(color: number): string {
   return `#${color.toString(16).padStart(6, "0")}`;
 }
 
+function relativeLuminance(color: number): number {
+  const srgb = [(color >> 16) & 0xff, (color >> 8) & 0xff, color & 0xff].map((channel) => {
+    const normalized = channel / 255;
+    if (normalized <= 0.03928) return normalized / 12.92;
+    return ((normalized + 0.055) / 1.055) ** 2.4;
+  });
+  const [r = 0, g = 0, b = 0] = srgb;
+  return r * 0.2126 + g * 0.7152 + b * 0.0722;
+}
+
+function getReadableTextColors(backgroundColor: number): { fill: number; stroke: number } {
+  if (relativeLuminance(backgroundColor) >= 0.6) {
+    return { fill: 0x0f172a, stroke: 0xffffff };
+  }
+  return { fill: 0xffffff, stroke: 0x0b1220 };
+}
+
+function drawJerseyPattern(body: Graphics, pattern: MicroAthleteKitPattern, color: number): void {
+  if (pattern === "plain") return;
+  const left = -1.28;
+  const right = 1.28;
+  const top = -6.02;
+  const bottom = -0.66;
+  const width = right - left;
+  const height = bottom - top;
+  const alpha = 0.34;
+
+  if (pattern === "hoops") {
+    const bandHeight = 0.78;
+    for (let y = top + 0.34; y < bottom; y += 1.3) {
+      body.roundRect(left, y, width, bandHeight, 0.18).fill({ color, alpha });
+    }
+    return;
+  }
+  if (pattern === "stripes") {
+    const stripeWidth = 0.56;
+    for (let x = left + 0.15; x < right; x += 0.92) {
+      body.roundRect(x, top, stripeWidth, height, 0.16).fill({ color, alpha });
+    }
+    return;
+  }
+  body
+    .poly([
+      left - 0.1,
+      top + 0.95,
+      left + 0.55,
+      top + 0.35,
+      right + 0.12,
+      bottom - 1.48,
+      right - 0.54,
+      bottom - 0.86,
+    ])
+    .fill({ color, alpha: alpha + 0.02 });
+}
+
 export function createMicroAthleteToken({
   label,
   teamColor,
   style,
   scale,
+  kitPattern = "plain",
+  kitPatternColor,
 }: {
   label: string;
   teamColor: MicroAthleteTeamColor;
   style?: Partial<MicroAthleteStyle>;
   scale?: number;
+  kitPattern?: MicroAthleteKitPattern;
+  kitPatternColor?: number;
 }): { token: Container; shadow: Graphics } {
   const defaults = DEFAULT_STYLE_BY_TEAM[teamColor];
   const resolved: MicroAthleteStyle = {
@@ -152,6 +212,13 @@ export function createMicroAthleteToken({
     .lineTo(-0.94, -0.45)
     .closePath()
     .fill(torsoGradient);
+  drawJerseyPattern(
+    body,
+    kitPattern,
+    Number.isFinite(kitPatternColor)
+      ? Number(kitPatternColor)
+      : mixColor(jerseyFill, jerseyFill === 0xffffff ? 0x111827 : 0xffffff, 0.56),
+  );
 
   // Internal polish without thick cartoon outlines.
   body
@@ -192,6 +259,7 @@ export function createMicroAthleteToken({
   const badgeTopColor = mixColor(badgeBaseColor, 0xffffff, 0.38);
   const badgeMidColor = mixColor(badgeBaseColor, resolved.primaryColor, 0.24);
   const badgeBottomColor = mixColor(badgeBaseColor, 0x000000, 0.38);
+  const labelColors = getReadableTextColors(badgeBaseColor);
   const tokenOuterGlow = new Graphics();
   tokenOuterGlow
     .circle(0, 0, badgeRadius * 1.2)
@@ -231,14 +299,14 @@ export function createMicroAthleteToken({
   const labelText = new Text({
     text: label,
     style: {
-      fill: resolved.textColor,
+      fill: labelColors.fill,
       fontSize: 3.78,
       fontWeight: "900",
       fontFamily: "Inter, system-ui, sans-serif",
       align: "center",
       letterSpacing: 0.12,
       stroke: {
-        color: resolved.outlineColor,
+        color: labelColors.stroke,
         width: 0.34,
         join: "round",
       },
