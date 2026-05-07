@@ -69,9 +69,15 @@ export function loadBoard(boardId: string): SavedQuickBoard | null {
   return readBoardsFromStorage().find((board) => board.id === normalizedId) ?? null;
 }
 
+export function hasReachedQuickBoardSaveLimit(): boolean {
+  return readBoardsFromStorage().length >= MAX_QUICKBOARD_SAVES;
+}
+
 export function saveBoard(input: SaveBoardInput): SavedQuickBoard | null {
   const boardState = sanitizeQuickBoardState(input.boardState);
   if (!boardState) return null;
+  const existingBoards = readBoardsFromStorage();
+  if (existingBoards.length >= MAX_QUICKBOARD_SAVES) return null;
   const now = Date.now();
   const nextBoard: SavedQuickBoard = {
     id: createBoardId(),
@@ -81,7 +87,7 @@ export function saveBoard(input: SaveBoardInput): SavedQuickBoard | null {
     version: 1,
     boardState: cloneQuickBoardState(boardState),
   };
-  const boards = [nextBoard, ...readBoardsFromStorage()].slice(0, MAX_QUICKBOARD_SAVES);
+  const boards = [nextBoard, ...existingBoards].slice(0, MAX_QUICKBOARD_SAVES);
   if (!writeBoardsToStorage(boards)) return null;
   return nextBoard;
 }
@@ -108,6 +114,8 @@ export function renameBoard(boardId: string, nextName: string): SavedQuickBoard 
 export function duplicateBoard(boardId: string): SavedQuickBoard | null {
   const source = loadBoard(boardId);
   if (!source) return null;
+  const existingBoards = readBoardsFromStorage();
+  if (existingBoards.length >= MAX_QUICKBOARD_SAVES) return null;
   const now = Date.now();
   const duplicate: SavedQuickBoard = {
     ...source,
@@ -117,7 +125,7 @@ export function duplicateBoard(boardId: string): SavedQuickBoard | null {
     updatedAt: now,
     boardState: cloneQuickBoardState(source.boardState),
   };
-  const boards = [duplicate, ...readBoardsFromStorage()].slice(0, MAX_QUICKBOARD_SAVES);
+  const boards = [duplicate, ...existingBoards].slice(0, MAX_QUICKBOARD_SAVES);
   if (!writeBoardsToStorage(boards)) return null;
   return duplicate;
 }

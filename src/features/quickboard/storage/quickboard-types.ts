@@ -1,6 +1,6 @@
 export const QUICKBOARD_STORAGE_KEY = "pitchflow_quickboard_boards_v1";
 const MAX_BOARD_NAME_LENGTH = 48;
-export const MAX_QUICKBOARD_SAVES = 60;
+export const MAX_QUICKBOARD_SAVES = 100;
 
 export type QuickBoardBoardState = {
   players: unknown[];
