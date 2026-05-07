@@ -198,6 +198,84 @@ function drawJerseyPattern(body: Graphics, pattern: MicroAthleteKitPattern, colo
     .fill({ color: mixColor(color, 0xffffff, 0.3), alpha: 0.16 });
 }
 
+function drawBadgePattern(
+  target: Graphics,
+  pattern: MicroAthleteKitPattern,
+  color: number,
+  radius: number,
+): void {
+  if (pattern === "plain") return;
+  const alpha = 0.36;
+
+  if (pattern === "hoops") {
+    const bandHeight = 0.74;
+    for (let y = -radius + 0.36; y < radius - 0.2; y += 1.2) {
+      const nextY = Math.min(y + bandHeight, radius - 0.08);
+      const topHalfWidth = Math.sqrt(Math.max(0, radius * radius - y * y));
+      const bottomHalfWidth = Math.sqrt(Math.max(0, radius * radius - nextY * nextY));
+      target
+        .poly([
+          -topHalfWidth,
+          y,
+          topHalfWidth,
+          y,
+          bottomHalfWidth,
+          nextY,
+          -bottomHalfWidth,
+          nextY,
+        ])
+        .fill({ color, alpha });
+    }
+    return;
+  }
+
+  if (pattern === "stripes") {
+    const stripeWidth = 0.76;
+    for (let x = -radius + 0.22; x < radius - 0.12; x += 1.18) {
+      const nextX = Math.min(x + stripeWidth, radius - 0.06);
+      const leftHalfHeight = Math.sqrt(Math.max(0, radius * radius - x * x));
+      const rightHalfHeight = Math.sqrt(Math.max(0, radius * radius - nextX * nextX));
+      target
+        .poly([
+          x,
+          -leftHalfHeight,
+          nextX,
+          -rightHalfHeight,
+          nextX,
+          rightHalfHeight,
+          x,
+          leftHalfHeight,
+        ])
+        .fill({ color, alpha });
+    }
+    return;
+  }
+
+  target
+    .poly([
+      -radius * 0.78,
+      -radius * 0.3,
+      -radius * 0.42,
+      -radius * 0.78,
+      radius * 0.74,
+      radius * 0.38,
+      radius * 0.38,
+      radius * 0.82,
+    ])
+    .fill({ color, alpha: alpha + 0.06 })
+    .poly([
+      -radius * 0.56,
+      -radius * 0.24,
+      -radius * 0.36,
+      -radius * 0.46,
+      radius * 0.52,
+      radius * 0.5,
+      radius * 0.3,
+      radius * 0.7,
+    ])
+    .fill({ color: mixColor(color, 0xffffff, 0.28), alpha: 0.18 });
+}
+
 export function createMicroAthleteToken({
   label,
   teamColor,
@@ -260,6 +338,9 @@ export function createMicroAthleteToken({
   });
 
   const body = new Graphics();
+  const resolvedKitPatternColor = Number.isFinite(kitPatternColor)
+    ? Number(kitPatternColor)
+    : mixColor(jerseyFill, jerseyFill === 0xffffff ? 0x111827 : 0xffffff, 0.56);
   // Subtle arms (kept slim for small-scale readability)
   body
     .roundRect(-2.26, -5.2, 0.54, 3.34, 0.26)
@@ -273,9 +354,7 @@ export function createMicroAthleteToken({
   drawJerseyPattern(
     body,
     kitPattern,
-    Number.isFinite(kitPatternColor)
-      ? Number(kitPatternColor)
-      : mixColor(jerseyFill, jerseyFill === 0xffffff ? 0x111827 : 0xffffff, 0.56),
+    resolvedKitPatternColor,
   );
 
   // Internal polish without thick cartoon outlines.
@@ -313,17 +392,17 @@ export function createMicroAthleteToken({
     .fill({ color: 0xffffff, alpha: 0.12 });
   athlete.addChild(body);
 
-  const badgeBaseColor = resolved.badgeColor;
+  const badgeBaseColor = jerseyFill;
   const badgeTopColor = mixColor(badgeBaseColor, 0xffffff, 0.38);
-  const badgeMidColor = mixColor(badgeBaseColor, resolved.primaryColor, 0.24);
+  const badgeMidColor = mixColor(badgeBaseColor, 0x000000, 0.08);
   const badgeBottomColor = mixColor(badgeBaseColor, 0x000000, 0.38);
   const labelColors = getReadableTextColors(badgeBaseColor);
   const tokenOuterGlow = new Graphics();
   tokenOuterGlow
     .circle(0, 0, badgeRadius * 1.2)
-    .fill({ color: mixColor(resolved.primaryColor, 0xffffff, 0.14), alpha: 0.05 })
+    .fill({ color: mixColor(badgeBaseColor, 0xffffff, 0.14), alpha: 0.05 })
     .circle(0, 0, badgeRadius * 1.06)
-    .fill({ color: mixColor(resolved.primaryColor, 0xffffff, 0.1), alpha: 0.06 });
+    .fill({ color: mixColor(badgeBaseColor, 0xffffff, 0.1), alpha: 0.06 });
   token.addChild(tokenOuterGlow);
 
   const badgeGradient = new FillGradient({
@@ -343,7 +422,9 @@ export function createMicroAthleteToken({
   const badge = new Graphics();
   badge
     .circle(0, 0, badgeRadius)
-    .fill(badgeGradient)
+    .fill(badgeGradient);
+  drawBadgePattern(badge, kitPattern, resolvedKitPatternColor, badgeRadius * 0.96);
+  badge
     .ellipse(0.08, badgeRadius * 0.5, badgeRadius * 0.92, badgeRadius * 0.42)
     .fill({ color: 0x020617, alpha: 0.16 })
     .ellipse(-badgeRadius * 0.42, -badgeRadius * 0.58, badgeRadius * 0.24, badgeRadius * 0.15)
