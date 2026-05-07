@@ -1871,10 +1871,13 @@ export async function createTacticalPadLiteSurface(
       "kitPatternColor" in sanitizedPatch;
     if (surfaceVariant === "tactical" && hasTeamKitPatch) {
       const currentTeamKit = getTeamKitForTeam(player.team);
+      const nextPrimaryColor = sanitizeKitColor(sanitizedPatch.kitBaseColor) ?? currentTeamKit.primaryColor;
+      const nextPattern = sanitizeKitPattern(sanitizedPatch.kitPattern) ?? currentTeamKit.pattern;
+      const nextSecondaryColor = sanitizeKitColor(sanitizedPatch.kitPatternColor) ?? currentTeamKit.secondaryColor;
       const nextTeamKit: TacticalTeamKitState = {
-        primaryColor: sanitizedPatch.kitBaseColor ?? currentTeamKit.primaryColor,
-        pattern: sanitizedPatch.kitPattern ?? currentTeamKit.pattern,
-        secondaryColor: sanitizedPatch.kitPatternColor ?? currentTeamKit.secondaryColor,
+        primaryColor: nextPrimaryColor,
+        pattern: nextPattern,
+        secondaryColor: nextSecondaryColor,
       };
       const didTeamKitChange =
         nextTeamKit.primaryColor !== currentTeamKit.primaryColor ||
