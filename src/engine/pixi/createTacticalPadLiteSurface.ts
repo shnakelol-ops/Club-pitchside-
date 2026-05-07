@@ -1574,7 +1574,7 @@ export async function createTacticalPadLiteSurface(
     for (const seed of nextSeeds) {
       const nextPlayer = createSurfacePlayer(seed);
       players.push(nextPlayer);
-      bindPlayerPointerDown(nextPlayer);
+      bindPlayerTokenInteraction(nextPlayer);
     }
     syncPlayersToViewport();
     syncWhiteboardTokenInputMode();
