@@ -61,6 +61,22 @@ export type TacticalItem = {
   scale?: number;
 };
 
+export type TacticalBoardState = {
+  version: number;
+  players: unknown[];
+  items: unknown[];
+  drawings: unknown[];
+  phases: unknown[];
+  movementPaths: unknown[];
+  kits?: unknown;
+  teamState?: unknown;
+  viewport?: unknown;
+  startSnapshot?: unknown;
+  drawTool?: unknown;
+  drawColor?: unknown;
+  itemMode?: unknown;
+};
+
 export type TacticalPadLiteSurface = {
   setStart: () => void;
   addPhase: () => void;
@@ -85,6 +101,8 @@ export type TacticalPadLiteSurface = {
   eraseWhiteboardPenStroke: () => void;
   undoWhiteboardStroke: () => void;
   clearWhiteboardStrokes: () => void;
+  exportBoardState: () => TacticalBoardState;
+  importBoardState: (state: TacticalBoardState) => boolean;
   exportImageCanvas: () => HTMLCanvasElement | null;
   destroy: () => void;
 };
@@ -224,6 +242,42 @@ type ActiveDragState =
     } & DragPointerState)
   | null;
 
+type TacticalBoardPlayerState = TacticalPlayerKitFields & {
+  id: string;
+  number: number;
+  team: "BLUE" | "RED";
+  teamColor: WhiteboardTokenColor;
+  x: number;
+  y: number;
+};
+
+type TacticalBoardDrawingSnapshot = {
+  id: string;
+  type: WhiteboardDrawingType;
+  color: number;
+  createdAt: number;
+  geometry:
+    | {
+        points: Array<{ x: number; y: number }>;
+      }
+    | {
+        start: { x: number; y: number };
+        end: { x: number; y: number };
+        controlPoint: { x: number; y: number } | null;
+      };
+};
+
+type TacticalBoardTeamState = {
+  colors: {
+    blue: WhiteboardTokenColor;
+    red: WhiteboardTokenColor;
+  };
+  counts: {
+    blue: number;
+    red: number;
+  };
+};
+
 const TACTICAL_INITIAL_TEAM_COUNTS = {
   blue: 1,
   red: 1,
@@ -265,6 +319,172 @@ export function sanitizeInitials(value: string | undefined): string | undefined 
   if (typeof value !== "string") return undefined;
   const sanitized = value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3);
   return sanitized.length > 0 ? sanitized : undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value != null && typeof value === "object" && !Array.isArray(value);
+}
+
+function sanitizeWhiteboardTokenColor(value: unknown): WhiteboardTokenColor | null {
+  if (value === "blue" || value === "red" || value === "yellow" || value === "black") {
+    return value;
+  }
+  return null;
+}
+
+function sanitizeTeam(value: unknown): "BLUE" | "RED" | null {
+  if (value === "BLUE" || value === "RED") return value;
+  return null;
+}
+
+function sanitizeWorldPoint(point: unknown): { x: number; y: number } | null {
+  if (!isRecord(point)) return null;
+  const x = typeof point.x === "number" && Number.isFinite(point.x) ? clampWorld(point.x, WORLD_SIZE.width) : null;
+  const y = typeof point.y === "number" && Number.isFinite(point.y) ? clampWorld(point.y, WORLD_SIZE.height) : null;
+  if (x == null || y == null) return null;
+  return { x, y };
+}
+
+function sanitizeNormalizedPoint(point: unknown): NormalizedPoint | null {
+  if (!isRecord(point)) return null;
+  const x = typeof point.x === "number" && Number.isFinite(point.x) ? clampNormalizedValue(point.x) : null;
+  const y = typeof point.y === "number" && Number.isFinite(point.y) ? clampNormalizedValue(point.y) : null;
+  if (x == null || y == null) return null;
+  return { x, y };
+}
+
+function sanitizeSnapshotFootball(input: unknown): PhaseBallSnapshot[] {
+  if (!Array.isArray(input)) return [];
+  return input
+    .map((entry) => {
+      if (!isRecord(entry)) return null;
+      const id = typeof entry.id === "string" ? entry.id.trim() : "";
+      if (!id) return null;
+      const x = typeof entry.x === "number" && Number.isFinite(entry.x) ? clampNormalizedValue(entry.x) : null;
+      const y = typeof entry.y === "number" && Number.isFinite(entry.y) ? clampNormalizedValue(entry.y) : null;
+      if (x == null || y == null) return null;
+      return { id, x, y };
+    })
+    .filter((entry): entry is PhaseBallSnapshot => entry != null);
+}
+
+function sanitizePhaseSnapshot(input: unknown): PhaseSnapshot | null {
+  if (!isRecord(input)) return null;
+  const players = Array.isArray(input.players)
+    ? input.players
+        .map((entry) => sanitizeNormalizedPoint(entry))
+        .filter((entry): entry is NormalizedPoint => entry != null)
+    : [];
+  const football = sanitizeSnapshotFootball(input.football);
+  return {
+    players,
+    football,
+  };
+}
+
+function sanitizeBoardDrawingSnapshot(input: unknown): TacticalBoardDrawingSnapshot | null {
+  if (!isRecord(input)) return null;
+  const id = typeof input.id === "string" ? input.id.trim() : "";
+  const type = input.type;
+  if (id.length <= 0) return null;
+  if (type !== "pen" && type !== "line" && type !== "arrow" && type !== "dashedArrow") return null;
+  const color = typeof input.color === "number" && Number.isFinite(input.color) ? Math.max(0, Math.floor(input.color)) : null;
+  if (color == null) return null;
+  const createdAt =
+    typeof input.createdAt === "number" && Number.isFinite(input.createdAt)
+      ? Math.max(0, Math.floor(input.createdAt))
+      : Date.now();
+  const geometry = input.geometry;
+  if (!isRecord(geometry)) return null;
+  if (type === "pen") {
+    const points = Array.isArray(geometry.points)
+      ? geometry.points
+          .map((point) => sanitizeWorldPoint(point))
+          .filter((point): point is { x: number; y: number } => point != null)
+      : [];
+    if (points.length < 2) return null;
+    return {
+      id,
+      type,
+      color,
+      createdAt,
+      geometry: { points },
+    };
+  }
+  const start = sanitizeWorldPoint(geometry.start);
+  const end = sanitizeWorldPoint(geometry.end);
+  const controlPoint =
+    geometry.controlPoint == null
+      ? null
+      : sanitizeWorldPoint(geometry.controlPoint);
+  if (!start || !end) return null;
+  return {
+    id,
+    type,
+    color,
+    createdAt,
+    geometry: {
+      start,
+      end,
+      controlPoint,
+    },
+  };
+}
+
+function sanitizeBoardPlayerState(input: unknown): TacticalBoardPlayerState | null {
+  if (!isRecord(input)) return null;
+  const id = typeof input.id === "string" ? input.id.trim() : "";
+  if (id.length <= 0) return null;
+  const team = sanitizeTeam(input.team);
+  const teamColor = sanitizeWhiteboardTokenColor(input.teamColor);
+  if (!team || !teamColor) return null;
+  const number =
+    typeof input.number === "number" && Number.isFinite(input.number)
+      ? Math.max(1, Math.floor(input.number))
+      : 1;
+  const normalizedPoint = sanitizeNormalizedPoint({ x: input.x, y: input.y });
+  if (!normalizedPoint) return null;
+  return {
+    id,
+    number,
+    team,
+    teamColor,
+    x: normalizedPoint.x,
+    y: normalizedPoint.y,
+    kitBaseColor: sanitizeKitColor(typeof input.kitBaseColor === "string" ? input.kitBaseColor : undefined),
+    kitPattern: sanitizeKitPattern((input.kitPattern as TacticalKitPattern | undefined) ?? undefined),
+    kitPatternColor: sanitizeKitColor(typeof input.kitPatternColor === "string" ? input.kitPatternColor : undefined),
+    labelMode: sanitizeLabelMode((input.labelMode as TacticalLabelMode | undefined) ?? undefined),
+    initials: sanitizeInitials(typeof input.initials === "string" ? input.initials : undefined),
+  };
+}
+
+function sanitizeTacticalItemCandidate(input: unknown): TacticalItem | null {
+  if (!isRecord(input)) return null;
+  const id = typeof input.id === "string" ? input.id.trim() : "";
+  if (id.length <= 0) return null;
+  const type = input.type;
+  if (
+    type !== "cone" &&
+    type !== "pole" &&
+    type !== "ladder" &&
+    type !== "tackleBag" &&
+    type !== "football" &&
+    type !== "sliotar"
+  ) {
+    return null;
+  }
+  const x = typeof input.x === "number" && Number.isFinite(input.x) ? input.x : null;
+  const y = typeof input.y === "number" && Number.isFinite(input.y) ? input.y : null;
+  if (x == null || y == null) return null;
+  return normalizeTacticalItem({
+    id,
+    type,
+    x,
+    y,
+    rotation: typeof input.rotation === "number" ? input.rotation : undefined,
+    scale: typeof input.scale === "number" ? input.scale : undefined,
+  });
 }
 
 function sanitizePlayerKitPatch(patch: TacticalPlayerKitPatch): TacticalPlayerKitFields {
@@ -632,11 +852,12 @@ export async function createTacticalPadLiteSurface(
     });
   }
 
-  function createSurfacePlayer(base: PlayerSeed): TacticalPlayer {
+  function createSurfacePlayer(base: PlayerSeed, kitFields?: TacticalPlayerKitFields): TacticalPlayer {
     const tokenColor: PremiumPlayerTokenColor = base.color;
     const tokenPack = createTokenPackForPlayer({
       number: base.number,
       teamColor: tokenColor,
+      ...kitFields,
     });
     const { token, shadow } = tokenPack;
     playersLayer.addChild(token);
@@ -650,6 +871,11 @@ export async function createTacticalPadLiteSurface(
       tokenShadow: shadow,
       dragScaleTarget: PREMIUM_TOKEN_IDLE_SCALE,
       dragShadowAlphaTarget: PREMIUM_TOKEN_IDLE_SHADOW_ALPHA,
+      kitBaseColor: sanitizeKitColor(kitFields?.kitBaseColor),
+      kitPattern: sanitizeKitPattern(kitFields?.kitPattern),
+      kitPatternColor: sanitizeKitColor(kitFields?.kitPatternColor),
+      labelMode: sanitizeLabelMode(kitFields?.labelMode),
+      initials: sanitizeInitials(kitFields?.initials),
     };
   }
 
@@ -1285,6 +1511,33 @@ export async function createTacticalPadLiteSurface(
     };
   }
 
+  function normalizePhaseForPlayerCount(snapshot: PhaseSnapshot, playerCount: number): PhaseSnapshot {
+    const normalizedPlayers = Array.from({ length: playerCount }, (_, index) => {
+      const existing = snapshot.players[index];
+      if (existing) {
+        return {
+          x: clampNormalizedValue(existing.x),
+          y: clampNormalizedValue(existing.y),
+        };
+      }
+      const fallback = players[index]?.current;
+      if (fallback) {
+        return { x: clampNormalizedValue(fallback.x), y: clampNormalizedValue(fallback.y) };
+      }
+      return { x: 50, y: 50 };
+    });
+    return {
+      players: normalizedPlayers,
+      football: snapshot.football
+        .map((ball) => ({
+          id: ball.id,
+          x: clampNormalizedValue(ball.x),
+          y: clampNormalizedValue(ball.y),
+        }))
+        .filter((ball) => ball.id.trim().length > 0),
+    };
+  }
+
   function captureCurrentSnapshot(): PhaseSnapshot {
     return {
       players: players.map((player) => ({ x: player.current.x, y: player.current.y })),
@@ -1607,6 +1860,169 @@ export async function createTacticalPadLiteSurface(
     renderAllWhiteboardDrawings();
   }
 
+  function captureBoardState(): TacticalBoardState {
+    const playerStates: TacticalBoardPlayerState[] = players.map((player) => ({
+      id: player.id,
+      number: Number.isFinite(player.number) ? Math.max(1, Math.floor(player.number)) : 1,
+      team: player.team,
+      teamColor: player.teamColor,
+      x: clampNormalizedValue(player.current.x),
+      y: clampNormalizedValue(player.current.y),
+      kitBaseColor: sanitizeKitColor(player.kitBaseColor),
+      kitPattern: sanitizeKitPattern(player.kitPattern),
+      kitPatternColor: sanitizeKitColor(player.kitPatternColor),
+      labelMode: sanitizeLabelMode(player.labelMode),
+      initials: sanitizeInitials(player.initials),
+    }));
+    const kitsByPlayer = playerStates.reduce<Record<string, TacticalPlayerKitFields>>((acc, playerState) => {
+      acc[playerState.id] = {
+        kitBaseColor: playerState.kitBaseColor,
+        kitPattern: playerState.kitPattern,
+        kitPatternColor: playerState.kitPatternColor,
+        labelMode: playerState.labelMode,
+        initials: playerState.initials,
+      };
+      return acc;
+    }, {});
+    const itemStates: TacticalItem[] = tacticalItems.map((item) => ({
+      id: item.id,
+      type: item.type,
+      x: clampNormalizedValue(item.x),
+      y: clampNormalizedValue(item.y),
+      ...(Number.isFinite(item.rotation) ? { rotation: Number(item.rotation) } : {}),
+      ...(Number.isFinite(item.scale) ? { scale: Number(item.scale) } : {}),
+    }));
+    const drawingStates: TacticalBoardDrawingSnapshot[] = completedWhiteboardDrawingObjects.map((drawing) =>
+      cloneWhiteboardDrawingObject(drawing),
+    );
+    const phaseStates = phases.map((phase) => cloneSnapshot(phase));
+    const currentTeamState: TacticalBoardTeamState = {
+      colors: {
+        blue: tacticalTeamColors.blue ?? "blue",
+        red: tacticalTeamColors.red ?? "red",
+      },
+      counts: {
+        blue: playerStates.filter((player) => player.team === "BLUE").length,
+        red: playerStates.filter((player) => player.team === "RED").length,
+      },
+    };
+    return {
+      version: 1,
+      players: playerStates,
+      items: itemStates,
+      drawings: drawingStates,
+      phases: phaseStates,
+      movementPaths: phaseStates.map((phase) => cloneSnapshot(phase)),
+      kits: kitsByPlayer,
+      teamState: currentTeamState,
+      viewport: {
+        width: host.clientWidth,
+        height: host.clientHeight,
+      },
+      startSnapshot: cloneSnapshot(startPositions),
+      drawTool: activeWhiteboardTool,
+      drawColor: activeWhiteboardColor,
+      itemMode,
+    };
+  }
+
+  function importBoardState(state: TacticalBoardState): boolean {
+    if (surfaceVariant !== "tactical") return false;
+    if (!isRecord(state)) return false;
+
+    const parsedPlayers = Array.isArray(state.players)
+      ? state.players.map((entry) => sanitizeBoardPlayerState(entry)).filter((entry): entry is TacticalBoardPlayerState => entry != null)
+      : [];
+    const parsedItems = Array.isArray(state.items)
+      ? state.items
+          .map((entry) => sanitizeTacticalItemCandidate(entry))
+          .filter((entry): entry is TacticalItem => entry != null)
+      : [];
+    const parsedDrawings = Array.isArray(state.drawings)
+      ? state.drawings
+          .map((entry) => sanitizeBoardDrawingSnapshot(entry))
+          .filter((entry): entry is TacticalBoardDrawingSnapshot => entry != null)
+      : [];
+    const parsedPhases = Array.isArray(state.phases)
+      ? state.phases
+          .map((entry) => sanitizePhaseSnapshot(entry))
+          .filter((entry): entry is PhaseSnapshot => entry != null)
+      : [];
+    const parsedStart = sanitizePhaseSnapshot(state.startSnapshot);
+    const parsedTeamState = isRecord(state.teamState) ? state.teamState : null;
+    const nextBlueColor = sanitizeWhiteboardTokenColor(parsedTeamState?.colors && isRecord(parsedTeamState.colors) ? parsedTeamState.colors.blue : undefined);
+    const nextRedColor = sanitizeWhiteboardTokenColor(parsedTeamState?.colors && isRecord(parsedTeamState.colors) ? parsedTeamState.colors.red : undefined);
+    tacticalTeamColors = {
+      blue: nextBlueColor ?? tacticalTeamColors.blue ?? "blue",
+      red: nextRedColor ?? tacticalTeamColors.red ?? "red",
+    };
+
+    releaseActiveDrag();
+    clearSelectedItem();
+    cancelPlaybackAnimation();
+    resetActiveWhiteboardDrawing();
+    lastTappedPlayer = null;
+
+    for (const player of players) {
+      player.token.removeAllListeners();
+      player.token.destroy({ children: true });
+    }
+    players.length = 0;
+
+    const playerSeeds: PlayerSeed[] = parsedPlayers.length > 0
+      ? parsedPlayers.map((player) => ({
+          id: player.id,
+          number: player.number,
+          team: player.team,
+          color: player.teamColor,
+          position: { x: player.x, y: player.y },
+        }))
+      : createWhiteboardPlayerSeeds(TACTICAL_INITIAL_TEAM_COUNTS, tacticalTeamColors);
+
+    for (let index = 0; index < playerSeeds.length; index += 1) {
+      const seed = playerSeeds[index];
+      if (!seed) continue;
+      const source = parsedPlayers[index];
+      const nextPlayer = createSurfacePlayer(seed, source ?? undefined);
+      players.push(nextPlayer);
+      bindPlayerTokenInteraction(nextPlayer);
+    }
+
+    upsertTacticalItems(parsedItems);
+
+    completedWhiteboardDrawingObjects.length = 0;
+    for (const drawing of parsedDrawings) {
+      completedWhiteboardDrawingObjects.push(cloneWhiteboardDrawingObject(drawing));
+    }
+    renderAllWhiteboardDrawings();
+
+    const nextStartSnapshot = normalizePhaseForPlayerCount(
+      parsedStart ?? captureCurrentSnapshot(),
+      players.length,
+    );
+    startPositions = nextStartSnapshot;
+    phases = parsedPhases.map((phase) => normalizePhaseForPlayerCount(phase, players.length));
+    options.onPhaseCountChange?.(phases.length);
+
+    if (state.drawTool === "move" || state.drawTool === "pen" || state.drawTool === "line" || state.drawTool === "arrow" || state.drawTool === "dashed") {
+      activeWhiteboardTool = state.drawTool;
+    }
+    if (typeof state.drawColor === "number" && Number.isFinite(state.drawColor)) {
+      activeWhiteboardColor = Math.max(0, Math.floor(state.drawColor));
+    }
+    if (state.itemMode === "edit" || state.itemMode === "locked") {
+      itemMode = state.itemMode;
+    }
+
+    syncPlayersToViewport();
+    if (itemMode === "locked") {
+      clearSelectedItem();
+    }
+    syncWhiteboardTokenInputMode();
+    renderTacticalItems();
+    return true;
+  }
+
   function getTacticalPlayerSerial(player: TacticalPlayer, team: "BLUE" | "RED"): number {
     if (player.team !== team) return Number.NaN;
     const serialMatch = new RegExp(`^${teamPrefix(team)}(\\d+)$`).exec(player.id);
@@ -1832,6 +2248,8 @@ export async function createTacticalPadLiteSurface(
       completedWhiteboardDrawingObjects.length = 0;
       renderAllWhiteboardDrawings();
     },
+    exportBoardState: () => captureBoardState(),
+    importBoardState: (state) => importBoardState(state),
     exportImageCanvas: () => {
       const rendererWithExtract = app.renderer as typeof app.renderer & {
         extract?: {

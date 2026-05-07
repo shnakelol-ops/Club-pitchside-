@@ -14,6 +14,19 @@ import {
 } from "../engine/pixi/createTacticalPadLiteSurface";
 import StatsModeSurface from "../StatsModeSurface";
 import OrientationGate from "../components/OrientationGate";
+import { captureQuickBoardSnapshot, restoreQuickBoardSnapshot } from "../features/quickboard/storage/quickboard-snapshot";
+import { generateQuickBoardThumbnail } from "../features/quickboard/storage/quickboard-thumbnail";
+import {
+  deleteBoard,
+  duplicateBoard,
+  formatBoardUpdatedAt,
+  loadAllBoards,
+  loadBoard,
+  renameBoard,
+  saveBoard,
+  setBoardThumbnail,
+} from "../features/quickboard/storage/quickboard-storage";
+import { sanitizeBoardName, type SavedQuickBoard } from "../features/quickboard/storage/quickboard-types";
 
 type PadMode = "tactical" | "stats" | "whiteboard";
 type TacticalPadLiteCleanProps = {
@@ -854,6 +867,109 @@ const QUICK_SHARE_ONBOARDING_BUTTON_STYLE: CSSProperties = {
 
 const QUICK_SHARE_ONBOARDING_STORAGE_KEY = "flowlabs_quick_share_onboarding_seen";
 
+const MY_BOARDS_POPOUT_STYLE: CSSProperties = {
+  ...POPOUT_BASE_STYLE,
+  left: "max(194px, calc(env(safe-area-inset-left, 0px) + 192px))",
+  top: "50%",
+  transform: "translateY(-50%)",
+  flexDirection: "column",
+  width: "min(240px, calc(100vw - 24px))",
+  maxHeight: "min(66vh, 430px)",
+  padding: "8px",
+  gap: "6px",
+  overflowY: "auto",
+  overflowX: "hidden",
+  background: "rgba(20, 28, 36, 0.86)",
+  border: "1px solid rgba(212, 228, 244, 0.24)",
+  boxShadow: "0 12px 26px rgba(0, 0, 0, 0.34)",
+  zIndex: 22,
+};
+
+const MY_BOARDS_HEADER_STYLE: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: "6px",
+};
+
+const MY_BOARDS_TITLE_STYLE: CSSProperties = {
+  margin: 0,
+  color: "#eef7ff",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "11.5px",
+  fontWeight: 700,
+  letterSpacing: "0.14px",
+};
+
+const MY_BOARDS_SAVE_BUTTON_STYLE: CSSProperties = {
+  ...ACTIONS_MENU_BUTTON_STYLE,
+  width: "fit-content",
+  height: "28px",
+  padding: "0 8px",
+  textAlign: "center",
+  fontSize: "9.5px",
+  lineHeight: 1,
+};
+
+const MY_BOARDS_CARD_STYLE: CSSProperties = {
+  borderRadius: "10px",
+  border: "1px solid rgba(183, 207, 230, 0.2)",
+  background: "rgba(13, 22, 30, 0.72)",
+  padding: "7px",
+  display: "grid",
+  gap: "5px",
+};
+
+const MY_BOARDS_THUMBNAIL_STYLE: CSSProperties = {
+  width: "100%",
+  height: "80px",
+  borderRadius: "8px",
+  objectFit: "cover",
+  border: "1px solid rgba(176, 203, 228, 0.22)",
+  background: "rgba(17, 32, 42, 0.86)",
+};
+
+const MY_BOARDS_META_STYLE: CSSProperties = {
+  margin: 0,
+  color: "rgba(214, 230, 244, 0.94)",
+  fontSize: "10px",
+  fontWeight: 620,
+  fontFamily: "Inter, system-ui, sans-serif",
+};
+
+const MY_BOARDS_TIMESTAMP_STYLE: CSSProperties = {
+  margin: 0,
+  color: "rgba(184, 206, 224, 0.86)",
+  fontSize: "9px",
+  fontFamily: "Inter, system-ui, sans-serif",
+};
+
+const MY_BOARDS_ACTION_ROW_STYLE: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+  gap: "4px",
+};
+
+const MY_BOARDS_ACTION_BUTTON_STYLE: CSSProperties = {
+  ...ACTIONS_MENU_BUTTON_STYLE,
+  height: "26px",
+  minWidth: 0,
+  fontSize: "9px",
+  textAlign: "center",
+  justifyContent: "center",
+  padding: "0 2px",
+};
+
+const MY_BOARDS_EMPTY_STYLE: CSSProperties = {
+  margin: 0,
+  color: "rgba(188, 210, 228, 0.86)",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "9.5px",
+  lineHeight: 1.35,
+  textAlign: "center",
+  padding: "8px 4px",
+};
+
 const COACH_HUB_PANEL_STYLE: CSSProperties = {
   ...POPOUT_BASE_STYLE,
   display: "flex",
@@ -1377,7 +1493,9 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const actionsMenuRef = useRef<HTMLDivElement | null>(null);
   const quickSharePopoverRef = useRef<HTMLDivElement | null>(null);
   const quickShareOnboardingCardRef = useRef<HTMLDivElement | null>(null);
+  const myBoardsPopoverRef = useRef<HTMLDivElement | null>(null);
   const shareTipTimerRef = useRef<number | null>(null);
+  const quickBoardFeedbackTimerRef = useRef<number | null>(null);
   const whiteboardBubbleButtonRef = useRef<HTMLButtonElement | null>(null);
   const whiteboardBubbleMenuRef = useRef<HTMLDivElement | null>(null);
   const whiteboardHomeButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -1423,10 +1541,13 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const [isPaused, setIsPaused] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [quickShareOpen, setQuickShareOpen] = useState(false);
+  const [myBoardsOpen, setMyBoardsOpen] = useState(false);
+  const [savedBoards, setSavedBoards] = useState<SavedQuickBoard[]>([]);
   const [quickShareOnboardingOpen, setQuickShareOnboardingOpen] = useState(false);
   const [quickShareOnboardingSeen, setQuickShareOnboardingSeen] = useState(false);
   const [quickShareOnboardingEntered, setQuickShareOnboardingEntered] = useState(false);
   const [shareTipMessage, setShareTipMessage] = useState<string | null>(null);
+  const [quickBoardFeedback, setQuickBoardFeedback] = useState<string | null>(null);
   const [controlsOpen, setControlsOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [activeToolsSection, setActiveToolsSection] = useState<"draw" | "teams" | "items" | "board">("draw");
@@ -1442,6 +1563,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     if (isWhiteboardMode || isStatsMode) {
       setKitEditorState(null);
       setKitEditorTab("base");
+      setMyBoardsOpen(false);
     }
   }, [isWhiteboardMode, isStatsMode]);
 
@@ -1455,6 +1577,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     if (typeof window === "undefined") return;
     const seen = window.localStorage.getItem(QUICK_SHARE_ONBOARDING_STORAGE_KEY) === "true";
     setQuickShareOnboardingSeen(seen);
+    setSavedBoards(loadAllBoards());
   }, []);
 
   useEffect(() => {
@@ -1758,6 +1881,31 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   }, [isWhiteboardMode, quickShareOpen]);
 
   useEffect(() => {
+    if (isWhiteboardMode || !myBoardsOpen) return;
+
+    const handlePointerDownOutside = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (actionsBubbleButtonRef.current?.contains(target)) return;
+      if (actionsMenuRef.current?.contains(target)) return;
+      if (myBoardsPopoverRef.current?.contains(target)) return;
+      setMyBoardsOpen(false);
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      setMyBoardsOpen(false);
+    };
+
+    document.addEventListener("pointerdown", handlePointerDownOutside);
+    window.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDownOutside);
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [isWhiteboardMode, myBoardsOpen]);
+
+  useEffect(() => {
     if (isWhiteboardMode || !quickShareOnboardingOpen) return;
 
     const handlePointerDownOutside = (event: PointerEvent) => {
@@ -1802,14 +1950,17 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
       if (actionsBubbleButtonRef.current?.contains(target)) return;
       if (actionsMenuRef.current?.contains(target)) return;
       if (quickSharePopoverRef.current?.contains(target)) return;
+      if (myBoardsPopoverRef.current?.contains(target)) return;
       setActionsOpen(false);
       setQuickShareOpen(false);
+      setMyBoardsOpen(false);
     };
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       event.preventDefault();
       setActionsOpen(false);
       setQuickShareOpen(false);
+      setMyBoardsOpen(false);
     };
 
     document.addEventListener("pointerdown", handlePointerDownOutside);
@@ -1855,10 +2006,25 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const phaseItems = Array.from({ length: phaseCount }, (_, index) => index + 1);
   const floodlightDots = Array.from({ length: 12 }, (_, index) => index);
   const activeTacticalPenColor = tacticalPenColor;
+  const refreshSavedBoards = () => {
+    setSavedBoards(loadAllBoards());
+  };
+  const showQuickBoardNotice = (message: string) => {
+    if (quickBoardFeedbackTimerRef.current !== null) {
+      window.clearTimeout(quickBoardFeedbackTimerRef.current);
+    }
+    setQuickBoardFeedback(message);
+    quickBoardFeedbackTimerRef.current = window.setTimeout(() => {
+      setQuickBoardFeedback(null);
+      quickBoardFeedbackTimerRef.current = null;
+    }, 2600);
+  };
   const closeActionsMenu = () => {
     setActionsOpen(false);
     setQuickShareOpen(false);
+    setMyBoardsOpen(false);
   };
+  const closeMyBoardsMenu = () => setMyBoardsOpen(false);
   const closeControlsMenu = () => setControlsOpen(false);
   const goHome = () => {
     closeActionsMenu();
@@ -1885,6 +2051,129 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     closeQuickShareMenu();
     showShareTip("Take a screenshot to share this setup 📸\nFastest way to send it to WhatsApp");
   };
+  const openMyBoardsEntry = () => {
+    setQuickShareOpen(false);
+    setActionsOpen(false);
+    refreshSavedBoards();
+    setMyBoardsOpen(true);
+  };
+  const handleSaveCurrentBoard = () => {
+    const surface = surfaceRef.current;
+    if (!surface || isWhiteboardMode || isStatsMode) {
+      showQuickBoardNotice("Quick Board not ready");
+      return;
+    }
+    const snapshot = captureQuickBoardSnapshot(surface);
+    if (!snapshot) {
+      showQuickBoardNotice("Could not capture board");
+      return;
+    }
+    const now = new Date();
+    const fallbackName = `Board ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    const saved = saveBoard({ name: fallbackName, boardState: snapshot });
+    if (!saved) {
+      showQuickBoardNotice("Save failed");
+      return;
+    }
+    refreshSavedBoards();
+    showQuickBoardNotice("Board saved");
+    void generateQuickBoardThumbnail(surface).then((thumbnail) => {
+      if (!thumbnail) return;
+      const updated = setBoardThumbnail(saved.id, thumbnail);
+      if (!updated) return;
+      refreshSavedBoards();
+    });
+  };
+  const handleOpenSavedBoard = (boardId: string) => {
+    const surface = surfaceRef.current;
+    if (!surface) {
+      showQuickBoardNotice("Board unavailable");
+      return;
+    }
+    const saved = loadBoard(boardId);
+    if (!saved) {
+      showQuickBoardNotice("Board not found");
+      refreshSavedBoards();
+      return;
+    }
+    const restored = restoreQuickBoardSnapshot(surface, saved.boardState);
+    if (!restored) {
+      showQuickBoardNotice("Load failed");
+      return;
+    }
+    const restoredItems: TacticalItem[] = Array.isArray(saved.boardState.items)
+      ? saved.boardState.items
+          .map((entry) => {
+            if (!entry || typeof entry !== "object") return null;
+            const item = entry as Record<string, unknown>;
+            const id = typeof item.id === "string" ? item.id.trim() : "";
+            const type = item.type;
+            const x = typeof item.x === "number" && Number.isFinite(item.x) ? Math.max(0, Math.min(100, item.x)) : null;
+            const y = typeof item.y === "number" && Number.isFinite(item.y) ? Math.max(0, Math.min(100, item.y)) : null;
+            if (
+              id.length <= 0 ||
+              x == null ||
+              y == null ||
+              (type !== "cone" &&
+                type !== "pole" &&
+                type !== "ladder" &&
+                type !== "tackleBag" &&
+                type !== "football" &&
+                type !== "sliotar")
+            ) {
+              return null;
+            }
+            return {
+              id,
+              type,
+              x,
+              y,
+              ...(typeof item.rotation === "number" && Number.isFinite(item.rotation) ? { rotation: item.rotation } : {}),
+              ...(typeof item.scale === "number" && Number.isFinite(item.scale) ? { scale: item.scale } : {}),
+            } satisfies TacticalItem;
+          })
+          .filter((entry): entry is TacticalItem => entry != null)
+      : [];
+    setItems(restoredItems);
+    setPhaseCount(Array.isArray(saved.boardState.phases) ? saved.boardState.phases.length : 0);
+    setIsPlaying(false);
+    setIsPaused(false);
+    setMyBoardsOpen(false);
+    setActionsOpen(false);
+    setQuickShareOpen(false);
+    showQuickBoardNotice("Board loaded");
+  };
+  const handleRenameBoard = (boardId: string, currentName: string) => {
+    const drafted = window.prompt("Rename board", currentName);
+    if (drafted == null) return;
+    const renamed = renameBoard(boardId, sanitizeBoardName(drafted));
+    if (!renamed) {
+      showQuickBoardNotice("Rename failed");
+      return;
+    }
+    refreshSavedBoards();
+    showQuickBoardNotice("Board renamed");
+  };
+  const handleDuplicateBoard = (boardId: string) => {
+    const duplicated = duplicateBoard(boardId);
+    if (!duplicated) {
+      showQuickBoardNotice("Duplicate failed");
+      return;
+    }
+    refreshSavedBoards();
+    showQuickBoardNotice("Board duplicated");
+  };
+  const handleDeleteBoard = (boardId: string, name: string) => {
+    const confirmed = window.confirm(`Delete "${name}"?`);
+    if (!confirmed) return;
+    const deleted = deleteBoard(boardId);
+    if (!deleted) {
+      showQuickBoardNotice("Delete failed");
+      return;
+    }
+    refreshSavedBoards();
+    showQuickBoardNotice("Board deleted");
+  };
   const dismissQuickShareOnboarding = (openQuickShareAfter = false) => {
     setQuickShareOnboardingOpen(false);
     setQuickShareOnboardingSeen(true);
@@ -1909,6 +2198,9 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     return () => {
       if (shareTipTimerRef.current !== null) {
         window.clearTimeout(shareTipTimerRef.current);
+      }
+      if (quickBoardFeedbackTimerRef.current !== null) {
+        window.clearTimeout(quickBoardFeedbackTimerRef.current);
       }
     };
   }, []);
@@ -2029,6 +2321,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
       if (next) {
         setControlsOpen(false);
         setQuickShareOpen(false);
+        setMyBoardsOpen(false);
       }
       return next;
     });
@@ -2906,8 +3199,70 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             <button type="button" className="control-button" style={ACTIONS_MENU_BUTTON_STYLE} onClick={openQuickShareEntry}>
               Quick Share
             </button>
+            <button type="button" className="control-button" style={ACTIONS_MENU_BUTTON_STYLE} onClick={openMyBoardsEntry}>
+              My Boards
+            </button>
             <button type="button" className="control-button" style={ACTIONS_MENU_BUTTON_STYLE} onClick={goHome}>
               Home
+            </button>
+          </div>
+        ) : null}
+        {!isWhiteboardMode && myBoardsOpen ? (
+          <div ref={myBoardsPopoverRef} style={MY_BOARDS_POPOUT_STYLE} role="dialog" aria-modal="false" aria-label="My Boards">
+            <div style={MY_BOARDS_HEADER_STYLE}>
+              <p style={MY_BOARDS_TITLE_STYLE}>My Boards</p>
+              <button type="button" className="control-button" style={MY_BOARDS_SAVE_BUTTON_STYLE} onClick={handleSaveCurrentBoard}>
+                Save Current
+              </button>
+            </div>
+            {savedBoards.length <= 0 ? (
+              <p style={MY_BOARDS_EMPTY_STYLE}>No saved boards yet. Save your current setup to build your board roll.</p>
+            ) : (
+              savedBoards.map((board) => (
+                <div key={board.id} style={MY_BOARDS_CARD_STYLE}>
+                  {board.thumbnail ? (
+                    <img src={board.thumbnail} alt={`${board.name} preview`} style={MY_BOARDS_THUMBNAIL_STYLE} loading="lazy" />
+                  ) : (
+                    <div style={{ ...MY_BOARDS_THUMBNAIL_STYLE, display: "grid", placeItems: "center", color: "#93afc4", fontSize: "9px" }}>
+                      No Preview
+                    </div>
+                  )}
+                  <p style={MY_BOARDS_META_STYLE}>{board.name}</p>
+                  <p style={MY_BOARDS_TIMESTAMP_STYLE}>Updated {formatBoardUpdatedAt(board.updatedAt)}</p>
+                  <div style={MY_BOARDS_ACTION_ROW_STYLE}>
+                    <button type="button" className="control-button" style={MY_BOARDS_ACTION_BUTTON_STYLE} onClick={() => handleOpenSavedBoard(board.id)}>
+                      Open
+                    </button>
+                    <button
+                      type="button"
+                      className="control-button"
+                      style={MY_BOARDS_ACTION_BUTTON_STYLE}
+                      onClick={() => handleRenameBoard(board.id, board.name)}
+                    >
+                      Rename
+                    </button>
+                    <button
+                      type="button"
+                      className="control-button"
+                      style={MY_BOARDS_ACTION_BUTTON_STYLE}
+                      onClick={() => handleDuplicateBoard(board.id)}
+                    >
+                      Copy
+                    </button>
+                    <button
+                      type="button"
+                      className="control-button"
+                      style={MY_BOARDS_ACTION_BUTTON_STYLE}
+                      onClick={() => handleDeleteBoard(board.id, board.name)}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+            <button type="button" className="control-button" style={MY_BOARDS_ACTION_BUTTON_STYLE} onClick={closeMyBoardsMenu}>
+              Close
             </button>
           </div>
         ) : null}
@@ -2924,6 +3279,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                 if (next) {
                   setControlsOpen(false);
                   setQuickShareOpen(false);
+                  setMyBoardsOpen(false);
                 }
                 return next;
               })
@@ -2944,6 +3300,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                 if (next) {
                   setActionsOpen(false);
                   setQuickShareOpen(false);
+                  setMyBoardsOpen(false);
                 }
                 return next;
               })
@@ -2965,6 +3322,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                   setActiveToolsSection("draw");
                   setActionsOpen(false);
                   setQuickShareOpen(false);
+                  setMyBoardsOpen(false);
                   setControlsOpen(false);
                 }
                 return next;
@@ -3036,6 +3394,11 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         {!isWhiteboardMode && shareTipMessage ? (
           <div style={SHARE_TIP_TOAST_STYLE} role="status" aria-live="polite">
             <p style={SHARE_TIP_TEXT_STYLE}>{shareTipMessage}</p>
+          </div>
+        ) : null}
+        {!isWhiteboardMode && quickBoardFeedback ? (
+          <div style={{ ...SHARE_TIP_TOAST_STYLE, top: "max(18px, calc(env(safe-area-inset-top, 0px) + 14px))" }} role="status" aria-live="polite">
+            <p style={SHARE_TIP_TEXT_STYLE}>{quickBoardFeedback}</p>
           </div>
         ) : null}
         {isWhiteboardMode ? (
