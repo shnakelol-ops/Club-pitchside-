@@ -47,6 +47,7 @@ export type TacticalItem = {
 export type TacticalPadLiteSurface = {
   setStart: () => void;
   addPhase: () => void;
+  jumpToPhase: (phaseIndex: number) => void;
   undoPhase: () => void;
   play: () => void;
   pausePlayback: () => void;
@@ -72,6 +73,7 @@ export type TacticalPadLiteSurface = {
 
 type TacticalPadLiteSurfaceOptions = {
   onPhaseCountChange?: (count: number) => void;
+  onSelectedPhaseChange?: (phaseIndex: number) => void;
   onPlaybackStateChange?: (state: { isPlaying: boolean; isPaused: boolean }) => void;
   surfaceVariant?: "tactical" | "whiteboard";
   whiteboardTeamCounts?: {
@@ -493,6 +495,7 @@ export async function createTacticalPadLiteSurface(
   let playbackPath: PhaseSnapshot[] = [];
   let activeSegmentIndex = 0;
   let loggedSegmentIndex = -1;
+  let selectedPhaseIndex = 0;
   let startPositions: PhaseSnapshot = {
     players: players.map((player) => ({ ...player.current })),
     football: [],
@@ -1101,6 +1104,11 @@ export async function createTacticalPadLiteSurface(
     };
   }
 
+  function setSelectedPhase(nextPhaseIndex: number): void {
+    selectedPhaseIndex = nextPhaseIndex;
+    options.onSelectedPhaseChange?.(selectedPhaseIndex);
+  }
+
   function captureCurrentSnapshot(): PhaseSnapshot {
     return {
       players: players.map((player) => ({ x: player.current.x, y: player.current.y })),
@@ -1157,6 +1165,18 @@ export async function createTacticalPadLiteSurface(
     const sequence = [cloneSnapshot(startPositions), ...phases.map((phase) => cloneSnapshot(phase))];
     console.debug("PLAYING_PHASE_SEQUENCE");
     startPlayback(sequence);
+  }
+
+  function jumpToPhase(phaseIndex: number): void {
+    if (!Number.isInteger(phaseIndex)) return;
+    if (phaseIndex < 0 || phaseIndex > phases.length) return;
+    releaseActiveDrag();
+    clearSelectedItem();
+    cancelPlaybackAnimation();
+    const snapshot = phaseIndex === 0 ? startPositions : phases[phaseIndex - 1];
+    if (!snapshot) return;
+    applySnapshotToSurface(snapshot);
+    setSelectedPhase(phaseIndex);
   }
 
   function handlePlay(): void {
@@ -1393,6 +1413,7 @@ export async function createTacticalPadLiteSurface(
   resizeObserver.observe(host);
   fitToHost();
   options.onPhaseCountChange?.(0);
+  options.onSelectedPhaseChange?.(0);
   emitPlaybackStateChange();
 
   return {
@@ -1403,6 +1424,7 @@ export async function createTacticalPadLiteSurface(
       startPositions = captureCurrentSnapshot();
       phases = [];
       options.onPhaseCountChange?.(0);
+      setSelectedPhase(0);
     },
     addPhase: () => {
       releaseActiveDrag();
@@ -1410,7 +1432,9 @@ export async function createTacticalPadLiteSurface(
       cancelPlaybackAnimation();
       phases = [...phases, captureCurrentSnapshot()];
       options.onPhaseCountChange?.(phases.length);
+      setSelectedPhase(phases.length);
     },
+    jumpToPhase,
     undoPhase: () => {
       releaseActiveDrag();
       clearSelectedItem();
@@ -1420,6 +1444,7 @@ export async function createTacticalPadLiteSurface(
       const previousSnapshot = phases[phases.length - 1] ?? startPositions;
       applySnapshotToSurface(previousSnapshot);
       options.onPhaseCountChange?.(phases.length);
+      setSelectedPhase(phases.length);
     },
     play: handlePlay,
     pausePlayback: () => {
@@ -1456,6 +1481,7 @@ export async function createTacticalPadLiteSurface(
       releaseActiveDrag();
       cancelPlaybackAnimation();
       applySnapshotToSurface(startPositions);
+      setSelectedPhase(0);
     },
     reflow: () => {
       fitToHost();

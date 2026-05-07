@@ -925,6 +925,12 @@ const PHASE_ITEM_STYLE: CSSProperties = {
   justifyContent: "center",
 };
 
+const PHASE_ITEM_BUTTON_STYLE: CSSProperties = {
+  ...PHASE_ITEM_STYLE,
+  width: "100%",
+  cursor: "pointer",
+};
+
 const PHASES_EMPTY_STYLE: CSSProperties = {
   ...PHASE_ITEM_STYLE,
   opacity: 0.75,
@@ -1184,6 +1190,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const [items, setItems] = useState<TacticalItem[]>([]);
   const [itemMode, setItemMode] = useState<ItemMode>("locked");
   const [phaseCount, setPhaseCount] = useState(0);
+  const [selectedPhaseIndex, setSelectedPhaseIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
@@ -1323,6 +1330,11 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
       onPhaseCountChange: (count) => {
         if (!disposed) {
           setPhaseCount(count);
+        }
+      },
+      onSelectedPhaseChange: (index) => {
+        if (!disposed) {
+          setSelectedPhaseIndex(index);
         }
       },
       onPlaybackStateChange: (state) => {
@@ -1589,7 +1601,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     setControlsOpen(false);
   };
 
-  const phaseItems = Array.from({ length: phaseCount }, (_, index) => index + 1);
+  const phaseIndices = Array.from({ length: phaseCount + 1 }, (_, index) => index);
   const floodlightDots = Array.from({ length: 12 }, (_, index) => index);
   const activeTacticalPenColor = tacticalPenColor;
   const closeActionsMenu = () => {
@@ -2128,12 +2140,25 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         ) : null}
         {!isWhiteboardMode && phasesOpen ? (
           <div style={PHASES_TRAY_STYLE}>
-            {phaseItems.length > 0 ? (
-              phaseItems.map((phase) => (
-                <div key={phase} style={PHASE_ITEM_STYLE}>
-                  Phase {phase}
-                </div>
-              ))
+            {phaseIndices.length > 0 ? (
+              phaseIndices.map((phaseIndex) => {
+                const isSelected = selectedPhaseIndex === phaseIndex;
+                return (
+                  <button
+                    key={phaseIndex}
+                    type="button"
+                    style={{
+                      ...PHASE_ITEM_BUTTON_STYLE,
+                      border: isSelected ? "1px solid rgba(111, 189, 255, 0.95)" : PHASE_ITEM_BUTTON_STYLE.border,
+                      background: isSelected ? "rgba(47, 128, 237, 0.42)" : PHASE_ITEM_BUTTON_STYLE.background,
+                    }}
+                    aria-pressed={isSelected}
+                    onClick={() => surfaceRef.current?.jumpToPhase(phaseIndex)}
+                  >
+                    {phaseIndex === 0 ? "Start" : `Phase ${phaseIndex}`}
+                  </button>
+                );
+              })
             ) : (
               <div style={PHASES_EMPTY_STYLE}>No phases</div>
             )}
