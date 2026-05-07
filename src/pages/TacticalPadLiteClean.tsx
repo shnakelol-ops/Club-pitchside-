@@ -14,6 +14,7 @@ import {
 } from "../engine/pixi/createTacticalPadLiteSurface";
 import StatsModeSurface from "../StatsModeSurface";
 import OrientationGate from "../components/OrientationGate";
+import pitchsidePMark from "../assets/pitchside-p-mark.svg";
 import { captureQuickBoardSnapshot, restoreQuickBoardSnapshot } from "../features/quickboard/storage/quickboard-snapshot";
 import { generateQuickBoardThumbnail } from "../features/quickboard/storage/quickboard-thumbnail";
 import {
@@ -332,14 +333,21 @@ const STADIUM_FLOODLIGHT_CSS = `
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
 }
 
 .tool-bubble-mark-svg {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   display: block;
+}
+
+.tool-bubble-mark-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 1;
 }
 
 .control-button {
@@ -491,32 +499,9 @@ const RIGHT_BUBBLE_STYLE: CSSProperties = {
 const TOOL_BUBBLE_STYLE: CSSProperties = {
   ...RIGHT_BUBBLE_STYLE,
   background: "rgba(5, 8, 10, 0.92)",
-  border: "2px solid rgba(255, 255, 255, 0.18)",
-  boxShadow: "0 8px 24px rgba(0, 0, 0, 0.55), inset 0 1px 2px rgba(255, 255, 255, 0.18)",
-};
-
-const TOOL_BUBBLE_MONOGRAM_WRAP_STYLE: CSSProperties = {
-  display: "inline-flex",
-  flexDirection: "column",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: "2px",
-};
-
-const TOOL_BUBBLE_MONOGRAM_STYLE: CSSProperties = {
-  fontFamily: "\"Arial Narrow\", \"Roboto Condensed\", Inter, system-ui, sans-serif",
-  fontWeight: 800,
-  fontSize: "14px",
-  letterSpacing: "0.18px",
-  color: "rgba(248, 251, 250, 0.98)",
-  lineHeight: 1,
-};
-
-const TOOL_BUBBLE_MONOGRAM_ACCENT_STYLE: CSSProperties = {
-  width: "12px",
-  height: "2px",
-  borderRadius: "999px",
-  background: "#F2C94C",
+  border: "2px solid rgba(167, 243, 114, 0.42)",
+  boxShadow:
+    "0 8px 24px rgba(0, 0, 0, 0.55), inset 0 1px 2px rgba(255, 255, 255, 0.2), 0 0 0 1px rgba(244, 247, 245, 0.14)",
 };
 
 const POPOUT_BASE_STYLE: CSSProperties = {
@@ -3287,10 +3272,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             }
           >
             <span className="tool-bubble-icon" aria-hidden="true">
-              <span style={TOOL_BUBBLE_MONOGRAM_WRAP_STYLE}>
-                <span style={TOOL_BUBBLE_MONOGRAM_STYLE}>P</span>
-                <span style={TOOL_BUBBLE_MONOGRAM_ACCENT_STYLE} />
-              </span>
+              <img src={pitchsidePMark} className="tool-bubble-mark-svg tool-bubble-mark-image" alt="" />
             </span>
           </button>
         ) : null}
