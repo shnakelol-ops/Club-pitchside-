@@ -51,8 +51,8 @@ export type TacticalPadLiteSurface = {
   play: () => void;
   pausePlayback: () => void;
   resumePlayback: () => void;
-  addTacticalPlayer: () => void;
-  removeTacticalPlayer: () => void;
+  addTacticalPlayer: (team?: "BLUE" | "RED") => void;
+  removeTacticalPlayer: (team?: "BLUE" | "RED") => void;
   setItems: (items: TacticalItem[]) => void;
   setItemMode: (mode: ItemMode) => void;
   reset: () => void;
@@ -168,11 +168,10 @@ type ActiveDragState =
     } & DragPointerState)
   | null;
 
-const TACTICAL_INITIAL_PLAYERS: PlayerSeed[] = [
-  { id: "P1", number: 1, team: "BLUE", color: "blue", position: { x: 30, y: 50 } },
-  { id: "P2", number: 2, team: "BLUE", color: "blue", position: { x: 50, y: 50 } },
-  { id: "P3", number: 3, team: "BLUE", color: "blue", position: { x: 70, y: 50 } },
-];
+const TACTICAL_INITIAL_TEAM_COUNTS = {
+  blue: 1,
+  red: 1,
+} as const;
 
 function clampWorld(value: number, max: number): number {
   if (!Number.isFinite(value)) return 0;
@@ -218,6 +217,24 @@ function createWhiteboardPlayerSeeds(
   }));
 
   return [...bluePlayers, ...redPlayers];
+}
+
+function teamPrefix(team: "BLUE" | "RED"): "B" | "R" {
+  return team === "RED" ? "R" : "B";
+}
+
+function teamLaneX(team: "BLUE" | "RED"): number {
+  return team === "RED" ? WHITEBOARD_RED_START_X : WHITEBOARD_BLUE_START_X;
+}
+
+function teamColor(
+  team: "BLUE" | "RED",
+  colors: TacticalPadLiteSurfaceOptions["whiteboardTeamColors"],
+): WhiteboardTokenColor {
+  if (team === "RED") {
+    return colors?.red ?? "red";
+  }
+  return colors?.blue ?? "blue";
 }
 
 function setPlayerTouchHitArea(
@@ -450,14 +467,18 @@ export async function createTacticalPadLiteSurface(
     { width: host.clientWidth || 800, height: host.clientHeight || 520 },
   );
 
+  let tacticalTeamColors: TacticalPadLiteSurfaceOptions["whiteboardTeamColors"] = {
+    blue: options.whiteboardTeamColors?.blue ?? "blue",
+    red: options.whiteboardTeamColors?.red ?? "red",
+  };
+
   const playerSeeds =
     surfaceVariant === "whiteboard"
       ? createWhiteboardPlayerSeeds(options.whiteboardTeamCounts, options.whiteboardTeamColors)
-      : TACTICAL_INITIAL_PLAYERS;
+      : createWhiteboardPlayerSeeds(TACTICAL_INITIAL_TEAM_COUNTS, tacticalTeamColors);
 
   function createSurfacePlayer(base: PlayerSeed): TacticalPlayer {
-    const tokenColor: PremiumPlayerTokenColor =
-      surfaceVariant === "whiteboard" ? base.color : base.team === "RED" ? "red" : "blue";
+    const tokenColor: PremiumPlayerTokenColor = base.color;
     const tokenPack =
       surfaceVariant === "tactical"
         ? createMicroAthleteToken({
@@ -1291,45 +1312,42 @@ export async function createTacticalPadLiteSurface(
     renderAllWhiteboardDrawings();
   }
 
-  function getTacticalPlayerSerial(player: TacticalPlayer): number {
-    const serialMatch = /^P(\d+)$/.exec(player.id);
+  function getTacticalPlayerSerial(player: TacticalPlayer, team: "BLUE" | "RED"): number {
+    if (player.team !== team) return Number.NaN;
+    const serialMatch = new RegExp(`^${teamPrefix(team)}(\\d+)$`).exec(player.id);
     const parsed = serialMatch?.[1] ? Number(serialMatch[1]) : Number.NaN;
-    return Number.isFinite(parsed) ? parsed : player.number;
+    if (Number.isFinite(parsed)) return parsed;
+    return Number.isFinite(player.number) ? player.number : 0;
   }
 
-  function createNextTacticalPlayerSeed(): PlayerSeed | null {
+  function createNextTacticalPlayerSeed(team: "BLUE" | "RED"): PlayerSeed | null {
     if (surfaceVariant !== "tactical") return null;
-    if (players.length >= 15) return null;
+    const teamPlayers = players.filter((player) => player.team === team);
+    if (teamPlayers.length >= 15) return null;
 
-    const maxSerial = players.reduce<number>(
-      (maxValue, player) => Math.max(maxValue, getTacticalPlayerSerial(player)),
+    const maxSerial = teamPlayers.reduce<number>(
+      (maxValue, player) => Math.max(maxValue, getTacticalPlayerSerial(player, team)),
       0,
     );
     const nextSerial = Math.max(1, maxSerial + 1);
-    const lastPlayer = players[players.length - 1];
-    const basePoint = lastPlayer ? lastPlayer.current : { x: 50, y: 50 };
-    let nextX = basePoint.x + (lastPlayer ? 5 : 0);
-    let nextY = basePoint.y;
-    if (nextX > NORMALIZED_MAX - 4) {
-      nextX = 30;
-      nextY += 6;
-    }
+    const nextIndex = teamPlayers.length + 1;
+    const nextY = (nextIndex * WORLD_SIZE.height) / (teamPlayers.length + 2);
 
     return {
-      id: `P${nextSerial}`,
+      id: `${teamPrefix(team)}${nextSerial}`,
       number: nextSerial,
-      team: "BLUE",
-      color: "blue",
+      team,
+      color: teamColor(team, tacticalTeamColors),
       position: {
-        x: Math.max(NORMALIZED_MIN, Math.min(NORMALIZED_MAX, nextX)),
+        x: Math.max(NORMALIZED_MIN, Math.min(NORMALIZED_MAX, teamLaneX(team))),
         y: Math.max(NORMALIZED_MIN, Math.min(NORMALIZED_MAX, nextY)),
       },
     };
   }
 
-  function addTacticalPlayer(): void {
+  function addTacticalPlayer(team: "BLUE" | "RED" = "BLUE"): void {
     if (surfaceVariant !== "tactical") return;
-    const nextSeed = createNextTacticalPlayerSeed();
+    const nextSeed = createNextTacticalPlayerSeed(team);
     if (!nextSeed) return;
     releaseActiveDrag();
     const nextPlayer = createSurfacePlayer(nextSeed);
@@ -1339,11 +1357,19 @@ export async function createTacticalPadLiteSurface(
     syncWhiteboardTokenInputMode();
   }
 
-  function removeLastTacticalPlayer(): void {
+  function removeLastTacticalPlayer(team: "BLUE" | "RED" = "BLUE"): void {
     if (surfaceVariant !== "tactical") return;
-    if (players.length <= 0) return;
+    const removablePlayers = players
+      .map((player, index) => ({ index, serial: getTacticalPlayerSerial(player, team) }))
+      .filter((entry) => players[entry.index]?.team === team);
+    if (removablePlayers.length <= 0) return;
     releaseActiveDrag();
-    const removedPlayer = players.pop();
+    const removalTarget = removablePlayers.reduce((current, next) => {
+      if (next.serial > current.serial) return next;
+      if (next.serial === current.serial && next.index > current.index) return next;
+      return current;
+    });
+    const [removedPlayer] = players.splice(removalTarget.index, 1);
     if (!removedPlayer) return;
     removedPlayer.token.removeAllListeners();
     removedPlayer.token.destroy({ children: true });
@@ -1461,8 +1487,15 @@ export async function createTacticalPadLiteSurface(
       fitToHost();
     },
     setWhiteboardTeamConfig: (config) => {
-      if (!isWhiteboardSurface) return;
-      rebuildWhiteboardPlayers(config.counts, config.colors);
+      if (isWhiteboardSurface) {
+        rebuildWhiteboardPlayers(config.counts, config.colors);
+        return;
+      }
+      if (surfaceVariant !== "tactical") return;
+      tacticalTeamColors = {
+        blue: config.colors.blue,
+        red: config.colors.red,
+      };
     },
     setWhiteboardDrawTool: (tool) => {
       if (!isDrawingEnabledSurface) return;
