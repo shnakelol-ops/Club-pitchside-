@@ -52,8 +52,8 @@ type WhiteboardToolAction = WhiteboardToolControl | "eraser";
 const WHITEBOARD_BUBBLE_SIZE = 36;
 const WHITEBOARD_BUBBLE_MARGIN = 12;
 const KIT_EDITOR_MARGIN = 10;
-const KIT_EDITOR_MAX_WIDTH = 280;
-const KIT_EDITOR_MAX_HEIGHT_RATIO = 0.68;
+const KIT_EDITOR_MAX_WIDTH = 260;
+const KIT_EDITOR_MAX_HEIGHT_RATIO = 0.56;
 const KIT_COLOR_CHOICES = [
   "navy",
   "blue",
@@ -89,7 +89,19 @@ const KIT_COLOR_CSS: Record<(typeof KIT_COLOR_CHOICES)[number], string> = {
   black: "#111827",
 };
 const KIT_PATTERN_CHOICES: TacticalKitPattern[] = ["plain", "hoops", "stripes", "slash"];
+const KIT_PATTERN_LABEL: Record<TacticalKitPattern, string> = {
+  plain: "Plain",
+  hoops: "Hoops",
+  stripes: "Stripes",
+  slash: "Slash",
+};
 const LABEL_MODE_CHOICES: TacticalLabelMode[] = ["number", "initials"];
+type KitEditorTab = "base" | "pattern" | "label";
+const KIT_EDITOR_TABS: ReadonlyArray<{ id: KitEditorTab; label: string }> = [
+  { id: "base", label: "Base" },
+  { id: "pattern", label: "Pattern" },
+  { id: "label", label: "Label" },
+];
 
 type KitEditorState = {
   playerId: string;
@@ -512,18 +524,18 @@ const KIT_EDITOR_STYLE: CSSProperties = {
   position: "fixed",
   width: `min(${KIT_EDITOR_MAX_WIDTH}px, calc(100vw - 20px))`,
   maxWidth: `${KIT_EDITOR_MAX_WIDTH}px`,
-  maxHeight: "68vh",
+  maxHeight: "56vh",
   overflowY: "auto",
   overscrollBehavior: "contain",
   display: "grid",
-  gap: "7px",
-  padding: "8px",
-  borderRadius: "10px",
-  border: "1px solid rgba(191, 214, 235, 0.26)",
-  background: "rgba(9, 18, 26, 0.9)",
+  gap: "6px",
+  padding: "6px",
+  borderRadius: "12px",
+  border: "1px solid rgba(191, 214, 235, 0.24)",
+  background: "rgba(10, 20, 25, 0.9)",
   backdropFilter: "blur(10px)",
   WebkitBackdropFilter: "blur(10px)",
-  boxShadow: "0 12px 22px rgba(2, 8, 15, 0.42)",
+  boxShadow: "0 10px 22px rgba(2, 8, 15, 0.4)",
   zIndex: 30,
 };
 
@@ -531,57 +543,72 @@ const KIT_EDITOR_HEADER_STYLE: CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: "8px",
+  gap: "6px",
   position: "sticky",
   top: 0,
   zIndex: 1,
-  background: "rgba(9, 18, 26, 0.94)",
+  background: "rgba(10, 20, 25, 0.96)",
+  paddingBottom: "2px",
 };
 
-const KIT_EDITOR_TITLE_STYLE: CSSProperties = {
-  margin: 0,
-  color: "#eaf3fd",
-  fontFamily: "Inter, system-ui, sans-serif",
-  fontSize: "10.5px",
-  fontWeight: 700,
-  letterSpacing: "0.14px",
+const KIT_EDITOR_TAB_ROW_STYLE: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+  gap: "4px",
+  flex: 1,
 };
 
 const KIT_EDITOR_CLOSE_STYLE: CSSProperties = {
-  width: "22px",
-  height: "22px",
+  width: "24px",
+  height: "24px",
   borderRadius: "999px",
   border: "1px solid rgba(198, 218, 236, 0.3)",
   background: "rgba(15, 28, 40, 0.8)",
   color: "#e8f2fd",
   cursor: "pointer",
-  fontSize: "12px",
+  fontSize: "13px",
   lineHeight: 1,
   padding: 0,
 };
 
-const KIT_EDITOR_SECTION_TITLE_STYLE: CSSProperties = {
-  margin: 0,
-  color: "rgba(207, 224, 239, 0.92)",
-  fontSize: "9px",
-  fontWeight: 700,
-  letterSpacing: "0.16px",
-  textTransform: "uppercase",
+const KIT_EDITOR_TAB_BUTTON_STYLE: CSSProperties = {
+  height: "24px",
+  borderRadius: "999px",
+  border: "1px solid rgba(148, 163, 184, 0.34)",
+  background: "rgba(15, 23, 42, 0.72)",
+  color: "#dbe7f5",
+  fontSize: "10px",
+  fontWeight: 650,
+  cursor: "pointer",
+  minWidth: 0,
   fontFamily: "Inter, system-ui, sans-serif",
+};
+
+const KIT_EDITOR_TAB_BUTTON_ACTIVE_STYLE: CSSProperties = {
+  ...KIT_EDITOR_TAB_BUTTON_STYLE,
+  border: "1px solid rgba(125, 211, 252, 0.8)",
+  boxShadow: "0 0 0 1px rgba(125, 211, 252, 0.35) inset",
+  background: "rgba(38, 72, 102, 0.78)",
+  color: "#f8fcff",
+};
+
+const KIT_EDITOR_SECTION_STYLE: CSSProperties = {
+  display: "grid",
+  gap: "6px",
 };
 
 const KIT_EDITOR_COLOR_GRID_STYLE: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
-  gap: "5px",
+  gap: "4px",
   justifyItems: "center",
 };
 
 const KIT_EDITOR_COLOR_BUTTON_STYLE: CSSProperties = {
-  width: "26px",
-  height: "26px",
+  width: "24px",
+  height: "24px",
   borderRadius: "999px",
-  border: "1px solid rgba(150, 170, 190, 0.46)",
+  border: "1px solid rgba(150, 170, 190, 0.52)",
   background: "transparent",
   display: "inline-flex",
   alignItems: "center",
@@ -597,12 +624,12 @@ const KIT_EDITOR_MODE_ROW_STYLE: CSSProperties = {
 };
 
 const KIT_EDITOR_OPTION_BUTTON_STYLE: CSSProperties = {
-  height: "28px",
+  height: "26px",
   borderRadius: "8px",
   border: "1px solid rgba(148, 163, 184, 0.36)",
   background: "rgba(15, 23, 42, 0.82)",
   color: "#dbe7f5",
-  fontSize: "10px",
+  fontSize: "9.5px",
   fontWeight: 650,
   letterSpacing: "0.2px",
   cursor: "pointer",
@@ -619,7 +646,7 @@ const KIT_EDITOR_OPTION_BUTTON_ACTIVE_STYLE: CSSProperties = {
 };
 
 const KIT_EDITOR_INPUT_STYLE: CSSProperties = {
-  height: "28px",
+  height: "26px",
   borderRadius: "8px",
   border: "1px solid rgba(148, 163, 184, 0.38)",
   background: "rgba(15, 23, 42, 0.86)",
@@ -1405,6 +1432,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const [activeToolsSection, setActiveToolsSection] = useState<"draw" | "teams" | "items" | "board">("draw");
   const [phasesOpen, setPhasesOpen] = useState(false);
   const [kitEditorState, setKitEditorState] = useState<KitEditorState | null>(null);
+  const [kitEditorTab, setKitEditorTab] = useState<KitEditorTab>("base");
 
   const isStatsMode = mode === "stats";
   const isWhiteboardMode = mode === "whiteboard";
@@ -1413,8 +1441,15 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   useEffect(() => {
     if (isWhiteboardMode || isStatsMode) {
       setKitEditorState(null);
+      setKitEditorTab("base");
     }
   }, [isWhiteboardMode, isStatsMode]);
+
+  useEffect(() => {
+    if (kitEditorState == null) {
+      setKitEditorTab("base");
+    }
+  }, [kitEditorState]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1566,6 +1601,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         if (disposed || isWhiteboardMode) return;
         const player = surfaceRef.current?.getTacticalPlayer(playerId);
         if (!player) return;
+        setKitEditorTab("base");
         setKitEditorState({
           playerId: player.id,
           anchorLeft: clientX,
@@ -2189,102 +2225,119 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             aria-label="Player kit editor"
           >
             <div style={KIT_EDITOR_HEADER_STYLE}>
-              <p style={KIT_EDITOR_TITLE_STYLE}>Player {Number.isFinite(activeKitPlayer.number) ? activeKitPlayer.number : 0}</p>
+              <div style={KIT_EDITOR_TAB_ROW_STYLE}>
+                {KIT_EDITOR_TABS.map((tab) => (
+                  <button
+                    key={`kit-editor-tab-${tab.id}`}
+                    type="button"
+                    style={kitEditorTab === tab.id ? KIT_EDITOR_TAB_BUTTON_ACTIVE_STYLE : KIT_EDITOR_TAB_BUTTON_STYLE}
+                    onClick={() => setKitEditorTab(tab.id)}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
               <button type="button" style={KIT_EDITOR_CLOSE_STYLE} onClick={() => setKitEditorState(null)} aria-label="Close kit editor">
                 ×
               </button>
             </div>
-            <div style={WHITEBOARD_PANEL_SECTION_STYLE}>
-              <p style={KIT_EDITOR_SECTION_TITLE_STYLE}>Base colour</p>
-              <div style={KIT_EDITOR_COLOR_GRID_STYLE}>
-                {KIT_COLOR_CHOICES.map((color) => {
-                  const isActive = activeKitPlayer.kitBaseColor === color;
-                  return (
-                    <button
-                      key={`kit-base-${activeKitPlayer.id}-${color}`}
-                      type="button"
-                      style={{
-                        ...KIT_EDITOR_COLOR_BUTTON_STYLE,
-                        ...(isActive ? { boxShadow: "0 0 0 2px rgba(125, 211, 252, 0.9)" } : null),
-                      }}
-                      aria-label={`Set base colour ${color}`}
-                      onClick={() => applyPlayerKitPatch({ kitBaseColor: color })}
-                    >
-                      <span style={{ ...WHITEBOARD_TOKEN_COLOR_SWATCH_STYLE, background: KIT_COLOR_CSS[color] }} />
-                    </button>
-                  );
-                })}
+            {kitEditorTab === "base" ? (
+              <div style={KIT_EDITOR_SECTION_STYLE}>
+                <div style={KIT_EDITOR_COLOR_GRID_STYLE}>
+                  {KIT_COLOR_CHOICES.map((color) => {
+                    const effectiveBaseColor = activeKitPlayer.kitBaseColor ?? (activeKitPlayer.team === "RED" ? "red" : "blue");
+                    const isActive = effectiveBaseColor === color;
+                    return (
+                      <button
+                        key={`kit-base-${activeKitPlayer.id}-${color}`}
+                        type="button"
+                        style={{
+                          ...KIT_EDITOR_COLOR_BUTTON_STYLE,
+                          ...(isActive ? { boxShadow: "0 0 0 2px rgba(125, 211, 252, 0.95)" } : null),
+                        }}
+                        aria-label={`Set base colour ${color}`}
+                        onClick={() => applyPlayerKitPatch({ kitBaseColor: color })}
+                      >
+                        <span style={{ ...WHITEBOARD_TOKEN_COLOR_SWATCH_STYLE, background: KIT_COLOR_CSS[color] }} />
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-            <div style={WHITEBOARD_PANEL_SECTION_STYLE}>
-              <p style={KIT_EDITOR_SECTION_TITLE_STYLE}>Pattern</p>
-              <div style={{ ...KIT_EDITOR_MODE_ROW_STYLE, gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
-                {KIT_PATTERN_CHOICES.map((pattern) => {
-                  const effectivePattern = activeKitPlayer.kitPattern ?? "plain";
-                  const isActive = effectivePattern === pattern;
-                  return (
-                    <button
-                      key={`kit-pattern-${activeKitPlayer.id}-${pattern}`}
-                      type="button"
-                      style={isActive ? KIT_EDITOR_OPTION_BUTTON_ACTIVE_STYLE : KIT_EDITOR_OPTION_BUTTON_STYLE}
-                      onClick={() => applyPlayerKitPatch({ kitPattern: pattern })}
-                    >
-                      {pattern}
-                    </button>
-                  );
-                })}
+            ) : null}
+            {kitEditorTab === "pattern" ? (
+              <div style={KIT_EDITOR_SECTION_STYLE}>
+                <div style={KIT_EDITOR_MODE_ROW_STYLE}>
+                  {KIT_PATTERN_CHOICES.map((pattern) => {
+                    const effectivePattern = activeKitPlayer.kitPattern ?? "plain";
+                    const isActive = effectivePattern === pattern;
+                    return (
+                      <button
+                        key={`kit-pattern-${activeKitPlayer.id}-${pattern}`}
+                        type="button"
+                        style={isActive ? KIT_EDITOR_OPTION_BUTTON_ACTIVE_STYLE : KIT_EDITOR_OPTION_BUTTON_STYLE}
+                        onClick={() => applyPlayerKitPatch({ kitPattern: pattern })}
+                      >
+                        {KIT_PATTERN_LABEL[pattern]}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div style={KIT_EDITOR_COLOR_GRID_STYLE}>
+                  {KIT_COLOR_CHOICES.map((color) => {
+                    const effectiveBaseColor = activeKitPlayer.kitBaseColor ?? (activeKitPlayer.team === "RED" ? "red" : "blue");
+                    const effectivePatternColor = activeKitPlayer.kitPatternColor ?? (effectiveBaseColor === "white" ? "black" : "white");
+                    const isActive = effectivePatternColor === color;
+                    return (
+                      <button
+                        key={`kit-pattern-color-${activeKitPlayer.id}-${color}`}
+                        type="button"
+                        style={{
+                          ...KIT_EDITOR_COLOR_BUTTON_STYLE,
+                          ...(isActive ? { boxShadow: "0 0 0 2px rgba(125, 211, 252, 0.95)" } : null),
+                        }}
+                        aria-label={`Set pattern colour ${color}`}
+                        onClick={() => applyPlayerKitPatch({ kitPatternColor: color })}
+                      >
+                        <span style={{ ...WHITEBOARD_TOKEN_COLOR_SWATCH_STYLE, background: KIT_COLOR_CSS[color] }} />
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-            <div style={WHITEBOARD_PANEL_SECTION_STYLE}>
-              <p style={KIT_EDITOR_SECTION_TITLE_STYLE}>Pattern colour</p>
-              <div style={KIT_EDITOR_COLOR_GRID_STYLE}>
-                {KIT_COLOR_CHOICES.map((color) => {
-                  const isActive = activeKitPlayer.kitPatternColor === color;
-                  return (
-                    <button
-                      key={`kit-pattern-color-${activeKitPlayer.id}-${color}`}
-                      type="button"
-                      style={{
-                        ...KIT_EDITOR_COLOR_BUTTON_STYLE,
-                        ...(isActive ? { boxShadow: "0 0 0 2px rgba(125, 211, 252, 0.9)" } : null),
-                      }}
-                      aria-label={`Set pattern colour ${color}`}
-                      onClick={() => applyPlayerKitPatch({ kitPatternColor: color })}
-                    >
-                      <span style={{ ...WHITEBOARD_TOKEN_COLOR_SWATCH_STYLE, background: KIT_COLOR_CSS[color] }} />
-                    </button>
-                  );
-                })}
+            ) : null}
+            {kitEditorTab === "label" ? (
+              <div style={KIT_EDITOR_SECTION_STYLE}>
+                <div style={KIT_EDITOR_MODE_ROW_STYLE}>
+                  {LABEL_MODE_CHOICES.map((modeValue) => {
+                    const effectiveLabelMode = activeKitPlayer.labelMode ?? "number";
+                    const isActive = effectiveLabelMode === modeValue;
+                    return (
+                      <button
+                        key={`kit-label-mode-${activeKitPlayer.id}-${modeValue}`}
+                        type="button"
+                        style={isActive ? KIT_EDITOR_OPTION_BUTTON_ACTIVE_STYLE : KIT_EDITOR_OPTION_BUTTON_STYLE}
+                        onClick={() => applyPlayerKitPatch({ labelMode: modeValue })}
+                      >
+                        {modeValue === "number" ? "Number" : "Initials"}
+                      </button>
+                    );
+                  })}
+                </div>
+                <input
+                  type="text"
+                  maxLength={3}
+                  value={sanitizeInitials(activeKitPlayer.initials) ?? ""}
+                  onChange={(event) => handleKitInitialsChange(event.target.value)}
+                  style={{
+                    ...KIT_EDITOR_INPUT_STYLE,
+                    ...(activeKitPlayer.labelMode === "initials" ? null : { opacity: 0.72 }),
+                  }}
+                  placeholder="ABC"
+                  aria-label="Player initials"
+                />
               </div>
-            </div>
-            <div style={WHITEBOARD_PANEL_SECTION_STYLE}>
-              <p style={KIT_EDITOR_SECTION_TITLE_STYLE}>Label</p>
-              <div style={KIT_EDITOR_MODE_ROW_STYLE}>
-                {LABEL_MODE_CHOICES.map((modeValue) => {
-                  const effectiveLabelMode = activeKitPlayer.labelMode ?? "number";
-                  const isActive = effectiveLabelMode === modeValue;
-                  return (
-                    <button
-                      key={`kit-label-mode-${activeKitPlayer.id}-${modeValue}`}
-                      type="button"
-                      style={isActive ? KIT_EDITOR_OPTION_BUTTON_ACTIVE_STYLE : KIT_EDITOR_OPTION_BUTTON_STYLE}
-                      onClick={() => applyPlayerKitPatch({ labelMode: modeValue })}
-                    >
-                      {modeValue}
-                    </button>
-                  );
-                })}
-              </div>
-              <input
-                type="text"
-                maxLength={3}
-                value={sanitizeInitials(activeKitPlayer.initials) ?? ""}
-                onChange={(event) => handleKitInitialsChange(event.target.value)}
-                style={KIT_EDITOR_INPUT_STYLE}
-                placeholder="ABC"
-                aria-label="Player initials"
-              />
-            </div>
+            ) : null}
           </div>
         ) : null}
         {isWhiteboardMode ? (
