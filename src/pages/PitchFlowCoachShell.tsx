@@ -34,7 +34,7 @@ type QuickBrowseId = "systems" | "sessions" | "eight-week-plans" | "season-plans
 
 const BOTTOM_NAV_ITEMS: ReadonlyArray<BottomNavItem> = [
   { id: "home", label: "Home", short: "H", path: "/board" },
-  { id: "flowlab", label: "Quick Board", short: "Q", path: "/tacticalpad-lite-clean" },
+  { id: "flowlab", label: "Quick Board", short: "Q", path: "/quickboard" },
   { id: "flowstats", label: "FlowStats", short: "S", path: "/flowstats" },
   { id: "library", label: "Library", short: "L", path: "/library" },
 ];
@@ -791,7 +791,7 @@ function BoardPage() {
       <p className="pf-section-title pf-home-section-title-actions">Quick Actions</p>
       <div className="pf-card">
         <div className="pf-home-secondary-grid">
-          <button type="button" className="pf-home-secondary-btn" onClick={() => navigateTo("/tacticalpad-lite-clean")}>
+          <button type="button" className="pf-home-secondary-btn" onClick={() => navigateTo("/quickboard")}>
             <span>Quick Board</span>
             <small>Open Quick Board</small>
           </button>
@@ -810,7 +810,7 @@ function BoardPage() {
               key={item}
               type="button"
               className="pf-list-item pf-list-item-soft"
-              onClick={() => navigateTo("/tacticalpad-lite-clean")}
+              onClick={() => navigateTo("/quickboard")}
             >
               {item}
             </button>
@@ -1154,7 +1154,7 @@ function SessionsPage() {
         type="button"
         className="pf-btn"
         style={{ justifySelf: "start" }}
-        onClick={() => navigateTo("/tacticalpad-lite-clean")}
+        onClick={() => navigateTo("/quickboard")}
       >
         + Create Session
       </button>
