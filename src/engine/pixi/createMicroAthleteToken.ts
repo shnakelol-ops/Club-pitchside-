@@ -97,42 +97,105 @@ function getReadableTextColors(backgroundColor: number): { fill: number; stroke:
   return { fill: 0xffffff, stroke: 0x0b1220 };
 }
 
+const TORSO_TOP_Y = -6.26;
+const TORSO_BOTTOM_Y = -0.45;
+const TORSO_TOP_LEFT_X = -1.58;
+const TORSO_TOP_RIGHT_X = 1.58;
+const TORSO_BOTTOM_LEFT_X = -0.94;
+const TORSO_BOTTOM_RIGHT_X = 0.94;
+
+function torsoEdgeX(y: number, topX: number, bottomX: number): number {
+  const t = (y - TORSO_TOP_Y) / (TORSO_BOTTOM_Y - TORSO_TOP_Y);
+  const clampedT = Math.max(0, Math.min(1, t));
+  return topX + (bottomX - topX) * clampedT;
+}
+
+function torsoLeftX(y: number): number {
+  return torsoEdgeX(y, TORSO_TOP_LEFT_X, TORSO_BOTTOM_LEFT_X);
+}
+
+function torsoRightX(y: number): number {
+  return torsoEdgeX(y, TORSO_TOP_RIGHT_X, TORSO_BOTTOM_RIGHT_X);
+}
+
+function drawTorsoPath(target: Graphics): void {
+  target
+    .moveTo(TORSO_TOP_LEFT_X, TORSO_TOP_Y)
+    .lineTo(TORSO_TOP_RIGHT_X, TORSO_TOP_Y)
+    .lineTo(TORSO_BOTTOM_RIGHT_X, TORSO_BOTTOM_Y)
+    .lineTo(TORSO_BOTTOM_LEFT_X, TORSO_BOTTOM_Y)
+    .closePath();
+}
+
 function drawJerseyPattern(body: Graphics, pattern: MicroAthleteKitPattern, color: number): void {
   if (pattern === "plain") return;
-  const left = -1.28;
-  const right = 1.28;
-  const top = -6.02;
-  const bottom = -0.66;
-  const width = right - left;
-  const height = bottom - top;
-  const alpha = 0.34;
+  const alpha = 0.46;
+  const top = TORSO_TOP_Y + 0.22;
+  const bottom = TORSO_BOTTOM_Y - 0.12;
 
   if (pattern === "hoops") {
-    const bandHeight = 0.78;
-    for (let y = top + 0.34; y < bottom; y += 1.3) {
-      body.roundRect(left, y, width, bandHeight, 0.18).fill({ color, alpha });
+    const bandHeight = 0.72;
+    for (let y = top; y < bottom; y += 1.18) {
+      const nextY = Math.min(y + bandHeight, bottom);
+      const lt = torsoLeftX(y) + 0.06;
+      const rt = torsoRightX(y) - 0.06;
+      const lb = torsoLeftX(nextY) + 0.06;
+      const rb = torsoRightX(nextY) - 0.06;
+      body
+        .poly([lt, y, rt, y, rb, nextY, lb, nextY])
+        .fill({ color, alpha });
     }
     return;
   }
   if (pattern === "stripes") {
-    const stripeWidth = 0.56;
-    for (let x = left + 0.15; x < right; x += 0.92) {
-      body.roundRect(x, top, stripeWidth, height, 0.16).fill({ color, alpha });
+    const stripeCount = 4;
+    const topWidth = TORSO_TOP_RIGHT_X - TORSO_TOP_LEFT_X;
+    const bottomWidth = TORSO_BOTTOM_RIGHT_X - TORSO_BOTTOM_LEFT_X;
+    for (let idx = 0; idx < stripeCount; idx += 1) {
+      const t0 = 0.06 + idx * 0.24;
+      const t1 = Math.min(0.96, t0 + 0.14);
+      const xt0 = TORSO_TOP_LEFT_X + topWidth * t0;
+      const xt1 = TORSO_TOP_LEFT_X + topWidth * t1;
+      const xb0 = TORSO_BOTTOM_LEFT_X + bottomWidth * t0;
+      const xb1 = TORSO_BOTTOM_LEFT_X + bottomWidth * t1;
+      body
+        .poly([
+          xt0,
+          top,
+          xt1,
+          top,
+          xb1,
+          bottom,
+          xb0,
+          bottom,
+        ])
+        .fill({ color, alpha });
     }
     return;
   }
   body
     .poly([
-      left - 0.1,
-      top + 0.95,
-      left + 0.55,
-      top + 0.35,
-      right + 0.12,
-      bottom - 1.48,
-      right - 0.54,
-      bottom - 0.86,
+      TORSO_TOP_LEFT_X + 0.26,
+      TORSO_TOP_Y + 0.72,
+      TORSO_TOP_LEFT_X + 1.06,
+      TORSO_TOP_Y + 0.3,
+      TORSO_BOTTOM_RIGHT_X - 0.06,
+      TORSO_BOTTOM_Y - 1.24,
+      TORSO_BOTTOM_RIGHT_X - 0.68,
+      TORSO_BOTTOM_Y - 0.8,
     ])
-    .fill({ color, alpha: alpha + 0.02 });
+    .fill({ color, alpha: alpha + 0.06 })
+    .poly([
+      TORSO_TOP_LEFT_X + 0.46,
+      TORSO_TOP_Y + 0.84,
+      TORSO_TOP_LEFT_X + 0.82,
+      TORSO_TOP_Y + 0.65,
+      TORSO_BOTTOM_RIGHT_X - 0.32,
+      TORSO_BOTTOM_Y - 1.1,
+      TORSO_BOTTOM_RIGHT_X - 0.6,
+      TORSO_BOTTOM_Y - 0.88,
+    ])
+    .fill({ color: mixColor(color, 0xffffff, 0.3), alpha: 0.16 });
 }
 
 export function createMicroAthleteToken({
@@ -205,13 +268,8 @@ export function createMicroAthleteToken({
     .fill({ color: mixColor(jerseyFill, 0x000000, 0.15), alpha: 0.94 });
 
   // Torso / jersey (lean upright silhouette with gentle taper)
-  body
-    .moveTo(-1.58, -6.26)
-    .lineTo(1.58, -6.26)
-    .lineTo(0.94, -0.45)
-    .lineTo(-0.94, -0.45)
-    .closePath()
-    .fill(torsoGradient);
+  drawTorsoPath(body);
+  body.fill(torsoGradient);
   drawJerseyPattern(
     body,
     kitPattern,
