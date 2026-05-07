@@ -25,6 +25,14 @@
       "destination": "/index.html"
     },
     {
+      "source": "/quickboard",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/quickboard/(.*)",
+      "destination": "/index.html"
+    },
+    {
       "source": "/library",
       "destination": "/index.html"
     },
