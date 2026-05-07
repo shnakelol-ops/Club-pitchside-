@@ -205,7 +205,7 @@ function drawBadgePattern(
   radius: number,
 ): void {
   if (pattern === "plain") return;
-  const alpha = 0.36;
+  const alpha = 0.54;
 
   if (pattern === "hoops") {
     const bandHeight = 0.74;
@@ -262,7 +262,7 @@ function drawBadgePattern(
       radius * 0.38,
       radius * 0.82,
     ])
-    .fill({ color, alpha: alpha + 0.06 })
+    .fill({ color, alpha: alpha + 0.08 })
     .poly([
       -radius * 0.56,
       -radius * 0.24,
@@ -273,7 +273,7 @@ function drawBadgePattern(
       radius * 0.3,
       radius * 0.7,
     ])
-    .fill({ color: mixColor(color, 0xffffff, 0.28), alpha: 0.18 });
+    .fill({ color: mixColor(color, 0xffffff, 0.22), alpha: 0.12 });
 }
 
 export function createMicroAthleteToken({
@@ -340,7 +340,7 @@ export function createMicroAthleteToken({
   const body = new Graphics();
   const resolvedKitPatternColor = Number.isFinite(kitPatternColor)
     ? Number(kitPatternColor)
-    : mixColor(jerseyFill, jerseyFill === 0xffffff ? 0x111827 : 0xffffff, 0.56);
+    : mixColor(jerseyFill, jerseyFill === 0xffffff ? 0x111827 : 0xffffff, 0.72);
   // Subtle arms (kept slim for small-scale readability)
   body
     .roundRect(-2.26, -5.2, 0.54, 3.34, 0.26)
@@ -393,46 +393,29 @@ export function createMicroAthleteToken({
   athlete.addChild(body);
 
   const badgeBaseColor = jerseyFill;
-  const badgeTopColor = mixColor(badgeBaseColor, 0xffffff, 0.38);
-  const badgeMidColor = mixColor(badgeBaseColor, 0x000000, 0.08);
-  const badgeBottomColor = mixColor(badgeBaseColor, 0x000000, 0.38);
   const labelColors = getReadableTextColors(badgeBaseColor);
   const tokenOuterGlow = new Graphics();
   tokenOuterGlow
     .circle(0, 0, badgeRadius * 1.2)
-    .fill({ color: mixColor(badgeBaseColor, 0xffffff, 0.14), alpha: 0.05 })
+    .fill({ color: mixColor(badgeBaseColor, 0xffffff, 0.12), alpha: 0.03 })
     .circle(0, 0, badgeRadius * 1.06)
-    .fill({ color: mixColor(badgeBaseColor, 0xffffff, 0.1), alpha: 0.06 });
+    .fill({ color: mixColor(badgeBaseColor, 0xffffff, 0.08), alpha: 0.04 });
   token.addChild(tokenOuterGlow);
 
-  const badgeGradient = new FillGradient({
-    type: "radial",
-    center: { x: 0.28, y: 0.2 },
-    innerRadius: 0,
-    outerRadius: 1,
-    outerCenter: { x: 0.62, y: 0.7 },
-    textureSpace: "local",
-    colorStops: [
-      { offset: 0, color: colorToHexString(badgeTopColor) },
-      { offset: 0.5, color: colorToHexString(badgeMidColor) },
-      { offset: 1, color: colorToHexString(badgeBottomColor) },
-    ],
-  });
-
   const badge = new Graphics();
+  const badgeFillColor = mixColor(badgeBaseColor, 0xffffff, 0.06);
+  const badgeRimColor = mixColor(badgeBaseColor, 0x000000, 0.32);
   badge
     .circle(0, 0, badgeRadius)
-    .fill(badgeGradient);
+    .fill({ color: badgeFillColor })
+    .circle(0, 0, badgeRadius)
+    .stroke({ color: badgeRimColor, width: 0.22, alpha: 0.42 });
   drawBadgePattern(badge, kitPattern, resolvedKitPatternColor, badgeRadius * 0.96);
   badge
-    .ellipse(0.08, badgeRadius * 0.5, badgeRadius * 0.92, badgeRadius * 0.42)
-    .fill({ color: 0x020617, alpha: 0.16 })
-    .ellipse(-badgeRadius * 0.42, -badgeRadius * 0.58, badgeRadius * 0.24, badgeRadius * 0.15)
-    .fill({ color: 0xffffff, alpha: 0.32 })
-    .ellipse(-badgeRadius * 0.04, -badgeRadius * 0.72, badgeRadius * 0.68, badgeRadius * 0.1)
-    .fill({ color: 0xffffff, alpha: 0.2 })
-    .ellipse(0, badgeRadius * 0.56, badgeRadius * 0.84, badgeRadius * 0.3)
-    .fill({ color: 0x020617, alpha: 0.09 });
+    .ellipse(0.06, badgeRadius * 0.56, badgeRadius * 0.9, badgeRadius * 0.4)
+    .fill({ color: 0x020617, alpha: 0.14 })
+    .ellipse(-badgeRadius * 0.18, -badgeRadius * 0.56, badgeRadius * 0.52, badgeRadius * 0.15)
+    .fill({ color: 0xffffff, alpha: 0.09 });
   token.addChild(badge);
 
   const labelText = new Text({
