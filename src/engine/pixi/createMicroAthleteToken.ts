@@ -90,11 +90,26 @@ function relativeLuminance(color: number): number {
   return r * 0.2126 + g * 0.7152 + b * 0.0722;
 }
 
-function getReadableTextColors(backgroundColor: number): { fill: number; stroke: number } {
+function getReadableTextColors(backgroundColor: number): {
+  fill: number;
+  innerStroke: number;
+  outerStroke: number;
+  shadowColor: number;
+} {
   if (relativeLuminance(backgroundColor) >= 0.6) {
-    return { fill: 0x0f172a, stroke: 0xffffff };
+    return {
+      fill: 0x0f172a,
+      innerStroke: 0xffffff,
+      outerStroke: 0x020617,
+      shadowColor: 0xffffff,
+    };
   }
-  return { fill: 0xffffff, stroke: 0x0b1220 };
+  return {
+    fill: 0xffffff,
+    innerStroke: 0x0b1220,
+    outerStroke: 0xffffff,
+    shadowColor: 0x020617,
+  };
 }
 
 const TORSO_TOP_Y = -6.26;
@@ -129,13 +144,13 @@ function drawTorsoPath(target: Graphics): void {
 
 function drawJerseyPattern(body: Graphics, pattern: MicroAthleteKitPattern, color: number): void {
   if (pattern === "plain") return;
-  const alpha = 0.46;
+  const alpha = 0.54;
   const top = TORSO_TOP_Y + 0.22;
   const bottom = TORSO_BOTTOM_Y - 0.12;
 
   if (pattern === "hoops") {
-    const bandHeight = 0.72;
-    for (let y = top; y < bottom; y += 1.18) {
+    const bandHeight = 0.82;
+    for (let y = top; y < bottom; y += 1.14) {
       const nextY = Math.min(y + bandHeight, bottom);
       const lt = torsoLeftX(y) + 0.06;
       const rt = torsoRightX(y) - 0.06;
@@ -148,12 +163,12 @@ function drawJerseyPattern(body: Graphics, pattern: MicroAthleteKitPattern, colo
     return;
   }
   if (pattern === "stripes") {
-    const stripeCount = 4;
+    const stripeCount = 3;
     const topWidth = TORSO_TOP_RIGHT_X - TORSO_TOP_LEFT_X;
     const bottomWidth = TORSO_BOTTOM_RIGHT_X - TORSO_BOTTOM_LEFT_X;
     for (let idx = 0; idx < stripeCount; idx += 1) {
-      const t0 = 0.06 + idx * 0.24;
-      const t1 = Math.min(0.96, t0 + 0.14);
+      const t0 = 0.08 + idx * 0.29;
+      const t1 = Math.min(0.96, t0 + 0.2);
       const xt0 = TORSO_TOP_LEFT_X + topWidth * t0;
       const xt1 = TORSO_TOP_LEFT_X + topWidth * t1;
       const xb0 = TORSO_BOTTOM_LEFT_X + bottomWidth * t0;
@@ -205,11 +220,11 @@ function drawBadgePattern(
   radius: number,
 ): void {
   if (pattern === "plain") return;
-  const alpha = 0.54;
+  const alpha = 0.62;
 
   if (pattern === "hoops") {
-    const bandHeight = 0.74;
-    for (let y = -radius + 0.36; y < radius - 0.2; y += 1.2) {
+    const bandHeight = 0.84;
+    for (let y = -radius + 0.34; y < radius - 0.2; y += 1.12) {
       const nextY = Math.min(y + bandHeight, radius - 0.08);
       const topHalfWidth = Math.sqrt(Math.max(0, radius * radius - y * y));
       const bottomHalfWidth = Math.sqrt(Math.max(0, radius * radius - nextY * nextY));
@@ -230,7 +245,7 @@ function drawBadgePattern(
   }
 
   if (pattern === "stripes") {
-    const stripeWidth = 0.76;
+    const stripeWidth = 0.88;
     for (let x = -radius + 0.22; x < radius - 0.12; x += 1.18) {
       const nextX = Math.min(x + stripeWidth, radius - 0.06);
       const leftHalfHeight = Math.sqrt(Math.max(0, radius * radius - x * x));
@@ -273,7 +288,7 @@ function drawBadgePattern(
       radius * 0.3,
       radius * 0.7,
     ])
-    .fill({ color: mixColor(color, 0xffffff, 0.22), alpha: 0.12 });
+    .fill({ color: mixColor(color, 0xffffff, 0.22), alpha: 0.1 });
 }
 
 export function createMicroAthleteToken({
@@ -418,6 +433,27 @@ export function createMicroAthleteToken({
     .fill({ color: 0xffffff, alpha: 0.09 });
   token.addChild(badge);
 
+  const labelOutlineText = new Text({
+    text: label,
+    style: {
+      fill: labelColors.fill,
+      fontSize: 3.78,
+      fontWeight: "900",
+      fontFamily: "Inter, system-ui, sans-serif",
+      align: "center",
+      letterSpacing: 0.12,
+      stroke: {
+        color: labelColors.outerStroke,
+        width: 0.64,
+        join: "round",
+      },
+    },
+  });
+  labelOutlineText.anchor.set(0.5, 0.53);
+  labelOutlineText.position.y = 0.06;
+  labelOutlineText.alpha = 0.84;
+  token.addChild(labelOutlineText);
+
   const labelText = new Text({
     text: label,
     style: {
@@ -428,13 +464,13 @@ export function createMicroAthleteToken({
       align: "center",
       letterSpacing: 0.12,
       stroke: {
-        color: labelColors.stroke,
+        color: labelColors.innerStroke,
         width: 0.34,
         join: "round",
       },
       dropShadow: {
-        color: 0x020617,
-        alpha: 0.34,
+        color: labelColors.shadowColor,
+        alpha: 0.28,
         blur: 1,
         distance: 0.18,
         angle: Math.PI / 2,
