@@ -1318,7 +1318,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     void createTacticalPadLiteSurface(host, {
       surfaceVariant: isWhiteboardMode ? "whiteboard" : "tactical",
       whiteboardTeamCounts: isWhiteboardMode ? whiteboardCountsRef.current : undefined,
-      whiteboardTeamColors: isWhiteboardMode ? whiteboardTeamColorsRef.current : undefined,
+      whiteboardTeamColors: whiteboardTeamColorsRef.current,
       whiteboardDrawColor: isWhiteboardMode ? whiteboardPenColor : tacticalPenColor,
       onPhaseCountChange: (count) => {
         if (!disposed) {
@@ -1390,14 +1390,14 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   }, [isStatsMode, isWhiteboardMode, whiteboardTool, whiteboardPenColor, tacticalTool, tacticalPenColor]);
 
   useEffect(() => {
-    if (!isWhiteboardMode) return;
+    if (isStatsMode) return;
     const surface = surfaceRef.current;
     if (!surface) return;
     surface.setWhiteboardTeamConfig({
       counts: whiteboardCountsRef.current,
       colors: whiteboardTeamColorsRef.current,
     });
-  }, [isWhiteboardMode, whiteboardBlueCount, whiteboardRedCount, whiteboardBlueColor, whiteboardRedColor]);
+  }, [isStatsMode, whiteboardBlueCount, whiteboardRedCount, whiteboardBlueColor, whiteboardRedColor]);
 
   useEffect(() => {
     if (isStatsMode || isWhiteboardMode) return;
@@ -1753,12 +1753,12 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     surfaceRef.current?.clearWhiteboardStrokes();
   };
 
-  const addTacticalPlayer = () => {
-    surfaceRef.current?.addTacticalPlayer();
+  const addTacticalPlayer = (team: "BLUE" | "RED") => {
+    surfaceRef.current?.addTacticalPlayer(team);
   };
 
-  const removeTacticalPlayer = () => {
-    surfaceRef.current?.removeTacticalPlayer();
+  const removeTacticalPlayer = (team: "BLUE" | "RED") => {
+    surfaceRef.current?.removeTacticalPlayer(team);
   };
 
   const addItem = (type: TacticalItem["type"]) => {
@@ -2282,20 +2282,90 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             <div style={COACH_HUB_SECTION_STYLE}>
               <p style={COACH_HUB_SECTION_TITLE_STYLE}>Players</p>
               <div style={COACH_HUB_ACTION_GRID_STYLE}>
-                <button type="button" style={COACH_HUB_ACTION_BUTTON_STYLE} disabled={isPlaybackLocked} onClick={addTacticalPlayer}>
-                  + Player
+                <button
+                  type="button"
+                  style={COACH_HUB_ACTION_BUTTON_STYLE}
+                  disabled={isPlaybackLocked}
+                  onClick={() => addTacticalPlayer("BLUE")}
+                >
+                  + Team A
                 </button>
                 <button
                   type="button"
                   style={COACH_HUB_ACTION_BUTTON_STYLE}
                   disabled={isPlaybackLocked}
-                  onClick={removeTacticalPlayer}
+                  onClick={() => removeTacticalPlayer("BLUE")}
                 >
-                  - Player
+                  - Team A
                 </button>
-                <button type="button" style={{ ...COACH_HUB_ACTION_BUTTON_STYLE, gridColumn: "1 / -1" }} onClick={() => {}}>
-                  Clear Players
+                <button
+                  type="button"
+                  style={COACH_HUB_ACTION_BUTTON_STYLE}
+                  disabled={isPlaybackLocked}
+                  onClick={() => addTacticalPlayer("RED")}
+                >
+                  + Team B
                 </button>
+                <button
+                  type="button"
+                  style={COACH_HUB_ACTION_BUTTON_STYLE}
+                  disabled={isPlaybackLocked}
+                  onClick={() => removeTacticalPlayer("RED")}
+                >
+                  - Team B
+                </button>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "44px 1fr", gap: "6px", alignItems: "center", marginTop: "8px" }}>
+                <span style={{ color: "#dbe7f5", fontSize: "10px", fontWeight: 600, fontFamily: "Inter, system-ui, sans-serif" }}>
+                  Team A
+                </span>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "4px" }}>
+                  {WHITEBOARD_PLAYER_COLOR_CHOICES.map((choice) => {
+                    const isActive = whiteboardBlueColor === choice.value;
+                    return (
+                      <button
+                        key={`tactical-blue-color-${choice.value}`}
+                        type="button"
+                        aria-label="Set Team A player colour"
+                        style={{
+                          ...WHITEBOARD_TOKEN_COLOR_OPTION_STYLE,
+                          ...(isActive
+                            ? { boxShadow: "0 0 0 2px rgba(125, 211, 252, 0.9)", border: "1px solid rgba(125, 211, 252, 0.75)" }
+                            : null),
+                        }}
+                        onClick={() => setWhiteboardBlueColor(choice.value)}
+                      >
+                        <span style={{ ...WHITEBOARD_TOKEN_COLOR_SWATCH_STYLE, background: choice.css }} />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "44px 1fr", gap: "6px", alignItems: "center", marginTop: "6px" }}>
+                <span style={{ color: "#dbe7f5", fontSize: "10px", fontWeight: 600, fontFamily: "Inter, system-ui, sans-serif" }}>
+                  Team B
+                </span>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "4px" }}>
+                  {WHITEBOARD_PLAYER_COLOR_CHOICES.map((choice) => {
+                    const isActive = whiteboardRedColor === choice.value;
+                    return (
+                      <button
+                        key={`tactical-red-color-${choice.value}`}
+                        type="button"
+                        aria-label="Set Team B player colour"
+                        style={{
+                          ...WHITEBOARD_TOKEN_COLOR_OPTION_STYLE,
+                          ...(isActive
+                            ? { boxShadow: "0 0 0 2px rgba(125, 211, 252, 0.9)", border: "1px solid rgba(125, 211, 252, 0.75)" }
+                            : null),
+                        }}
+                        onClick={() => setWhiteboardRedColor(choice.value)}
+                      >
+                        <span style={{ ...WHITEBOARD_TOKEN_COLOR_SWATCH_STYLE, background: choice.css }} />
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
             <div style={COACH_HUB_SECTION_STYLE}>
