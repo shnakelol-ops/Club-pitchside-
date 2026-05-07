@@ -69,6 +69,7 @@ export type TacticalBoardState = {
   phases: unknown[];
   movementPaths: unknown[];
   kits?: unknown;
+  teamKits?: unknown;
   teamState?: unknown;
   viewport?: unknown;
   startSnapshot?: unknown;
@@ -217,6 +218,9 @@ type PlayerSeed = {
   team: "BLUE" | "RED";
   color: WhiteboardTokenColor;
   position: NormalizedPoint;
+  kitBaseColor?: TacticalKitColor;
+  kitPattern?: TacticalKitPattern;
+  kitPatternColor?: TacticalKitColor;
 };
 
 type TacticalSurfaceItem = TacticalItem & {
@@ -276,6 +280,17 @@ type TacticalBoardTeamState = {
     blue: number;
     red: number;
   };
+};
+
+type TacticalTeamKitState = {
+  primaryColor: TacticalKitColor;
+  secondaryColor: TacticalKitColor;
+  pattern: TacticalKitPattern;
+};
+
+type TacticalBoardTeamKitsState = {
+  A: TacticalTeamKitState;
+  B: TacticalTeamKitState;
 };
 
 const TACTICAL_INITIAL_TEAM_COUNTS = {
@@ -499,6 +514,73 @@ function sanitizePlayerKitPatch(patch: TacticalPlayerKitPatch): TacticalPlayerKi
     ...(patch.kitPatternColor !== undefined ? { kitPatternColor: nextPatternColor } : {}),
     ...(patch.labelMode !== undefined ? { labelMode: nextLabelMode } : {}),
     ...(patch.initials !== undefined ? { initials: nextInitials } : {}),
+  };
+}
+
+function defaultKitPatternColor(baseColor: TacticalKitColor): TacticalKitColor {
+  return baseColor === "white" ? "black" : "white";
+}
+
+function createTeamKitState(primaryColor: TacticalKitColor, pattern: TacticalKitPattern = "plain"): TacticalTeamKitState {
+  return {
+    primaryColor,
+    secondaryColor: defaultKitPatternColor(primaryColor),
+    pattern,
+  };
+}
+
+function createDefaultTacticalTeamKits(
+  colors: TacticalPadLiteSurfaceOptions["whiteboardTeamColors"],
+): TacticalBoardTeamKitsState {
+  const bluePrimary = sanitizeKitColor(colors?.blue) ?? "blue";
+  const redPrimary = sanitizeKitColor(colors?.red) ?? "red";
+  return {
+    A: createTeamKitState(bluePrimary, "plain"),
+    B: createTeamKitState(redPrimary, "plain"),
+  };
+}
+
+function sanitizeTeamKitState(input: unknown): TacticalTeamKitState | null {
+  if (!isRecord(input)) return null;
+  const primaryColor = sanitizeKitColor(typeof input.primaryColor === "string" ? input.primaryColor : undefined);
+  if (!primaryColor) return null;
+  const pattern = sanitizeKitPattern((input.pattern as TacticalKitPattern | undefined) ?? undefined) ?? "plain";
+  const secondaryColor = sanitizeKitColor(typeof input.secondaryColor === "string" ? input.secondaryColor : undefined)
+    ?? defaultKitPatternColor(primaryColor);
+  return {
+    primaryColor,
+    secondaryColor,
+    pattern,
+  };
+}
+
+function sanitizeBoardTeamKitsState(input: unknown): TacticalBoardTeamKitsState | null {
+  if (!isRecord(input)) return null;
+  const teamA = sanitizeTeamKitState(input.A);
+  const teamB = sanitizeTeamKitState(input.B);
+  if (!teamA || !teamB) return null;
+  return {
+    A: teamA,
+    B: teamB,
+  };
+}
+
+function buildTeamKitFromPlayerStates(
+  team: "BLUE" | "RED",
+  players: TacticalBoardPlayerState[],
+  fallback: TacticalTeamKitState,
+): TacticalTeamKitState {
+  const firstTeamPlayer = players.find((player) => player.team === team);
+  if (!firstTeamPlayer) {
+    return { ...fallback };
+  }
+  const primaryColor = sanitizeKitColor(firstTeamPlayer.kitBaseColor) ?? fallback.primaryColor;
+  const pattern = sanitizeKitPattern(firstTeamPlayer.kitPattern) ?? fallback.pattern;
+  const secondaryColor = sanitizeKitColor(firstTeamPlayer.kitPatternColor) ?? fallback.secondaryColor;
+  return {
+    primaryColor,
+    secondaryColor,
+    pattern,
   };
 }
 
@@ -793,25 +875,76 @@ export async function createTacticalPadLiteSurface(
     blue: options.whiteboardTeamColors?.blue ?? "blue",
     red: options.whiteboardTeamColors?.red ?? "red",
   };
+  let tacticalTeamKits: TacticalBoardTeamKitsState = createDefaultTacticalTeamKits(tacticalTeamColors);
 
   const playerSeeds =
     surfaceVariant === "whiteboard"
       ? createWhiteboardPlayerSeeds(options.whiteboardTeamCounts, options.whiteboardTeamColors)
       : createWhiteboardPlayerSeeds(TACTICAL_INITIAL_TEAM_COUNTS, tacticalTeamColors);
 
-  function getEffectiveKitBaseColor(player: Pick<TacticalPlayer, "teamColor" | "kitBaseColor">): TacticalKitColor {
-    return sanitizeKitColor(player.kitBaseColor) ?? player.teamColor;
+  function getTeamKitForTeam(team: "BLUE" | "RED"): TacticalTeamKitState {
+    return team === "BLUE" ? tacticalTeamKits.A : tacticalTeamKits.B;
   }
 
-  function getEffectiveKitPattern(player: Pick<TacticalPlayer, "kitPattern">): TacticalKitPattern {
-    return sanitizeKitPattern(player.kitPattern) ?? "plain";
+  function setTeamKitForTeam(team: "BLUE" | "RED", nextTeamKit: TacticalTeamKitState): void {
+    if (team === "BLUE") {
+      tacticalTeamKits = {
+        ...tacticalTeamKits,
+        A: nextTeamKit,
+      };
+      return;
+    }
+    tacticalTeamKits = {
+      ...tacticalTeamKits,
+      B: nextTeamKit,
+    };
+  }
+
+  function teamKitToPlayerKitFields(teamKit: TacticalTeamKitState): TacticalPlayerKitFields {
+    return {
+      kitBaseColor: teamKit.primaryColor,
+      kitPattern: teamKit.pattern,
+      kitPatternColor: teamKit.secondaryColor,
+    };
+  }
+
+  function syncPlayerKitFromTeamKit(player: TacticalPlayer): void {
+    if (surfaceVariant !== "tactical") return;
+    const teamKit = getTeamKitForTeam(player.team);
+    const kitFields = teamKitToPlayerKitFields(teamKit);
+    player.kitBaseColor = kitFields.kitBaseColor;
+    player.kitPattern = kitFields.kitPattern;
+    player.kitPatternColor = kitFields.kitPatternColor;
+  }
+
+  function rerenderAllTacticalPlayersOnTeam(team: "BLUE" | "RED"): void {
+    if (surfaceVariant !== "tactical") return;
+    for (const teammate of players) {
+      if (teammate.team !== team) continue;
+      syncPlayerKitFromTeamKit(teammate);
+      rerenderTacticalPlayerToken(teammate);
+    }
+  }
+
+  function getEffectiveKitBaseColor(player: Pick<TacticalPlayer, "team" | "teamColor" | "kitBaseColor">): TacticalKitColor {
+    const fallbackColor =
+      surfaceVariant === "tactical" ? getTeamKitForTeam(player.team).primaryColor : player.teamColor;
+    return sanitizeKitColor(player.kitBaseColor) ?? fallbackColor;
+  }
+
+  function getEffectiveKitPattern(player: Pick<TacticalPlayer, "team" | "kitPattern">): TacticalKitPattern {
+    const fallbackPattern = surfaceVariant === "tactical" ? getTeamKitForTeam(player.team).pattern : "plain";
+    return sanitizeKitPattern(player.kitPattern) ?? fallbackPattern;
   }
 
   function getEffectiveKitPatternColor(
-    player: Pick<TacticalPlayer, "kitPatternColor" | "kitBaseColor" | "teamColor">,
+    player: Pick<TacticalPlayer, "team" | "kitPatternColor" | "kitBaseColor" | "teamColor">,
   ): TacticalKitColor {
     const baseColor = getEffectiveKitBaseColor(player);
-    return sanitizeKitColor(player.kitPatternColor) ?? (baseColor === "white" ? "black" : "white");
+    if (surfaceVariant === "tactical") {
+      return sanitizeKitColor(player.kitPatternColor) ?? getTeamKitForTeam(player.team).secondaryColor;
+    }
+    return sanitizeKitColor(player.kitPatternColor) ?? defaultKitPatternColor(baseColor);
   }
 
   function resolvePlayerLabel(player: Pick<TacticalPlayer, "number" | "labelMode" | "initials">): string {
@@ -823,7 +956,7 @@ export async function createTacticalPadLiteSurface(
     return safePlayerNumberLabel(player.number);
   }
 
-  function createTokenPackForPlayer(player: Pick<TacticalPlayer, "number" | "teamColor" | "kitBaseColor" | "kitPattern" | "kitPatternColor" | "labelMode" | "initials">): {
+  function createTokenPackForPlayer(player: Pick<TacticalPlayer, "number" | "team" | "teamColor" | "kitBaseColor" | "kitPattern" | "kitPatternColor" | "labelMode" | "initials">): {
     token: Container;
     shadow: Graphics;
   } {
@@ -854,10 +987,29 @@ export async function createTacticalPadLiteSurface(
 
   function createSurfacePlayer(base: PlayerSeed, kitFields?: TacticalPlayerKitFields): TacticalPlayer {
     const tokenColor: PremiumPlayerTokenColor = base.color;
+    const canonicalTeamKit = surfaceVariant === "tactical" ? getTeamKitForTeam(base.team) : null;
+    const seedKitFields: TacticalPlayerKitFields = {
+      kitBaseColor: sanitizeKitColor(base.kitBaseColor),
+      kitPattern: sanitizeKitPattern(base.kitPattern),
+      kitPatternColor: sanitizeKitColor(base.kitPatternColor),
+    };
+    const fallbackTeamKitFields = canonicalTeamKit == null ? {} : teamKitToPlayerKitFields(canonicalTeamKit);
+    const nextKitFields: TacticalPlayerKitFields =
+      canonicalTeamKit == null
+        ? {
+            ...seedKitFields,
+            ...(kitFields ?? {}),
+          }
+        : {
+            ...fallbackTeamKitFields,
+            ...seedKitFields,
+            ...(kitFields ?? {}),
+          };
     const tokenPack = createTokenPackForPlayer({
       number: base.number,
+      team: base.team,
       teamColor: tokenColor,
-      ...kitFields,
+      ...nextKitFields,
     });
     const { token, shadow } = tokenPack;
     playersLayer.addChild(token);
@@ -871,11 +1023,11 @@ export async function createTacticalPadLiteSurface(
       tokenShadow: shadow,
       dragScaleTarget: PREMIUM_TOKEN_IDLE_SCALE,
       dragShadowAlphaTarget: PREMIUM_TOKEN_IDLE_SHADOW_ALPHA,
-      kitBaseColor: sanitizeKitColor(kitFields?.kitBaseColor),
-      kitPattern: sanitizeKitPattern(kitFields?.kitPattern),
-      kitPatternColor: sanitizeKitColor(kitFields?.kitPatternColor),
-      labelMode: sanitizeLabelMode(kitFields?.labelMode),
-      initials: sanitizeInitials(kitFields?.initials),
+      kitBaseColor: sanitizeKitColor(nextKitFields.kitBaseColor),
+      kitPattern: sanitizeKitPattern(nextKitFields.kitPattern),
+      kitPatternColor: sanitizeKitColor(nextKitFields.kitPatternColor),
+      labelMode: sanitizeLabelMode(nextKitFields.labelMode),
+      initials: sanitizeInitials(nextKitFields.initials),
     };
   }
 
@@ -1720,6 +1872,36 @@ export async function createTacticalPadLiteSurface(
     if (!player) return;
     const sanitizedPatch = sanitizePlayerKitPatch(patch);
     if (Object.keys(sanitizedPatch).length <= 0) return;
+    if ("labelMode" in sanitizedPatch) {
+      player.labelMode = sanitizedPatch.labelMode;
+    }
+    if ("initials" in sanitizedPatch) {
+      player.initials = sanitizedPatch.initials;
+    }
+    const hasTeamKitPatch =
+      "kitBaseColor" in sanitizedPatch ||
+      "kitPattern" in sanitizedPatch ||
+      "kitPatternColor" in sanitizedPatch;
+    if (surfaceVariant === "tactical" && hasTeamKitPatch) {
+      const currentTeamKit = getTeamKitForTeam(player.team);
+      const nextPrimaryColor = sanitizeKitColor(sanitizedPatch.kitBaseColor) ?? currentTeamKit.primaryColor;
+      const nextPattern = sanitizeKitPattern(sanitizedPatch.kitPattern) ?? currentTeamKit.pattern;
+      const nextSecondaryColor = sanitizeKitColor(sanitizedPatch.kitPatternColor) ?? currentTeamKit.secondaryColor;
+      const nextTeamKit: TacticalTeamKitState = {
+        primaryColor: nextPrimaryColor,
+        pattern: nextPattern,
+        secondaryColor: nextSecondaryColor,
+      };
+      const didTeamKitChange =
+        nextTeamKit.primaryColor !== currentTeamKit.primaryColor ||
+        nextTeamKit.pattern !== currentTeamKit.pattern ||
+        nextTeamKit.secondaryColor !== currentTeamKit.secondaryColor;
+      if (didTeamKitChange) {
+        setTeamKitForTeam(player.team, nextTeamKit);
+      }
+      rerenderAllTacticalPlayersOnTeam(player.team);
+      return;
+    }
     if ("kitBaseColor" in sanitizedPatch) {
       player.kitBaseColor = sanitizedPatch.kitBaseColor;
     }
@@ -1728,12 +1910,6 @@ export async function createTacticalPadLiteSurface(
     }
     if ("kitPatternColor" in sanitizedPatch) {
       player.kitPatternColor = sanitizedPatch.kitPatternColor;
-    }
-    if ("labelMode" in sanitizedPatch) {
-      player.labelMode = sanitizedPatch.labelMode;
-    }
-    if ("initials" in sanitizedPatch) {
-      player.initials = sanitizedPatch.initials;
     }
     rerenderTacticalPlayerToken(player);
   }
@@ -1838,6 +2014,15 @@ export async function createTacticalPadLiteSurface(
   function rebuildTacticalPlayersWithColors(): void {
     if (surfaceVariant !== "tactical") return;
     releaseActiveDrag();
+    const labelsByPlayerId = new Map(
+      players.map((player) => [
+        player.id,
+        {
+          labelMode: player.labelMode,
+          initials: player.initials,
+        } as TacticalPlayerKitFields,
+      ]),
+    );
     const nextSeeds: PlayerSeed[] = players.map((player) => ({
       id: player.id,
       number: Number.isFinite(player.number) ? player.number : 1,
@@ -1851,7 +2036,7 @@ export async function createTacticalPadLiteSurface(
     }
     players.length = 0;
     for (const seed of nextSeeds) {
-      const nextPlayer = createSurfacePlayer(seed);
+      const nextPlayer = createSurfacePlayer(seed, labelsByPlayerId.get(seed.id));
       players.push(nextPlayer);
       bindPlayerTokenInteraction(nextPlayer);
     }
@@ -1906,14 +2091,27 @@ export async function createTacticalPadLiteSurface(
         red: playerStates.filter((player) => player.team === "RED").length,
       },
     };
+    const currentTeamKits: TacticalBoardTeamKitsState = {
+      A: {
+        primaryColor: tacticalTeamKits.A.primaryColor,
+        secondaryColor: tacticalTeamKits.A.secondaryColor,
+        pattern: tacticalTeamKits.A.pattern,
+      },
+      B: {
+        primaryColor: tacticalTeamKits.B.primaryColor,
+        secondaryColor: tacticalTeamKits.B.secondaryColor,
+        pattern: tacticalTeamKits.B.pattern,
+      },
+    };
     return {
-      version: 1,
+      version: 2,
       players: playerStates,
       items: itemStates,
       drawings: drawingStates,
       phases: phaseStates,
       movementPaths: phaseStates.map((phase) => cloneSnapshot(phase)),
       kits: kitsByPlayer,
+      teamKits: currentTeamKits,
       teamState: currentTeamState,
       viewport: {
         width: host.clientWidth,
@@ -1956,6 +2154,12 @@ export async function createTacticalPadLiteSurface(
       blue: nextBlueColor ?? tacticalTeamColors.blue ?? "blue",
       red: nextRedColor ?? tacticalTeamColors.red ?? "red",
     };
+    const defaultTeamKits = createDefaultTacticalTeamKits(tacticalTeamColors);
+    const parsedTeamKits = sanitizeBoardTeamKitsState(state.teamKits);
+    tacticalTeamKits = parsedTeamKits ?? {
+      A: buildTeamKitFromPlayerStates("BLUE", parsedPlayers, defaultTeamKits.A),
+      B: buildTeamKitFromPlayerStates("RED", parsedPlayers, defaultTeamKits.B),
+    };
 
     releaseActiveDrag();
     clearSelectedItem();
@@ -1983,7 +2187,15 @@ export async function createTacticalPadLiteSurface(
       const seed = playerSeeds[index];
       if (!seed) continue;
       const source = parsedPlayers[index];
-      const nextPlayer = createSurfacePlayer(seed, source ?? undefined);
+      const nextPlayer = createSurfacePlayer(
+        seed,
+        source
+          ? {
+              labelMode: source.labelMode,
+              initials: source.initials,
+            }
+          : undefined,
+      );
       players.push(nextPlayer);
       bindPlayerTokenInteraction(nextPlayer);
     }
@@ -2044,15 +2256,19 @@ export async function createTacticalPadLiteSurface(
     const nextIndex = teamPlayers.length + 1;
     const nextY = (nextIndex * WORLD_SIZE.height) / (teamPlayers.length + 2);
 
+    const teamKit = getTeamKitForTeam(team);
     return {
       id: `${teamPrefix(team)}${nextSerial}`,
       number: nextSerial,
       team,
-      color: teamColor(team, tacticalTeamColors),
+      color: team === "RED" ? "red" : "blue",
       position: {
         x: Math.max(NORMALIZED_MIN, Math.min(NORMALIZED_MAX, teamLaneX(team))),
         y: Math.max(NORMALIZED_MIN, Math.min(NORMALIZED_MAX, nextY)),
       },
+      kitBaseColor: teamKit.primaryColor,
+      kitPattern: teamKit.pattern,
+      kitPatternColor: teamKit.secondaryColor,
     };
   }
 
