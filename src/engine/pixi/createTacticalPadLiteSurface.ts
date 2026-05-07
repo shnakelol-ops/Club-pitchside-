@@ -9,7 +9,7 @@ import {
   PREMIUM_TOKEN_IDLE_SHADOW_ALPHA,
   type PremiumPlayerTokenColor,
 } from "./createPremiumPlayerToken";
-import { createMicroAthleteToken } from "./createMicroAthleteToken";
+import { createMicroAthleteToken, type MicroAthleteKitPattern } from "./createMicroAthleteToken";
 import {
   createTacticalPitchVisualRoot,
   type TacticalPitchTheme,
@@ -20,10 +20,27 @@ import {
   type NormalizedPoint,
 } from "../shared/normalization";
 
-type TacticalPlayer = {
+export type TacticalKitPattern = MicroAthleteKitPattern;
+export type TacticalLabelMode = "number" | "initials";
+export type TacticalPlayerKitFields = {
+  kitBaseColor?: string;
+  kitPattern?: TacticalKitPattern;
+  kitPatternColor?: string;
+  labelMode?: TacticalLabelMode;
+  initials?: string;
+};
+export type TacticalPlayerKitPatch = Partial<TacticalPlayerKitFields>;
+export type TacticalPlayerKitSnapshot = TacticalPlayerKitFields & {
   id: string;
   number: number;
   team: "BLUE" | "RED";
+};
+
+type TacticalPlayer = TacticalPlayerKitFields & {
+  id: string;
+  number: number;
+  team: "BLUE" | "RED";
+  teamColor: WhiteboardTokenColor;
   current: NormalizedPoint;
   token: Container;
   tokenShadow: Graphics;
@@ -53,6 +70,8 @@ export type TacticalPadLiteSurface = {
   resumePlayback: () => void;
   addTacticalPlayer: (team?: "BLUE" | "RED") => void;
   removeTacticalPlayer: (team?: "BLUE" | "RED") => void;
+  getTacticalPlayer: (playerId: string) => TacticalPlayerKitSnapshot | null;
+  patchTacticalPlayer: (playerId: string, patch: TacticalPlayerKitPatch) => void;
   setItems: (items: TacticalItem[]) => void;
   setItemMode: (mode: ItemMode) => void;
   reset: () => void;
@@ -84,6 +103,7 @@ type TacticalPadLiteSurfaceOptions = {
   };
   whiteboardDrawColor?: number;
   onItemMove?: (id: string, x: number, y: number) => void;
+  onTacticalPlayerDoubleTap?: (payload: { playerId: string; clientX: number; clientY: number }) => void;
 };
 
 type PhaseBallSnapshot = {
@@ -136,6 +156,42 @@ const WHITEBOARD_DEFAULT_STROKE_COLOR = 0x111111;
 const WHITEBOARD_STROKE_WIDTH = 1.1;
 const WHITEBOARD_BLUE_START_X = 30;
 const WHITEBOARD_RED_START_X = 70;
+const DOUBLE_TAP_WINDOW_MS = 300;
+const KIT_COLOR_NAMES = [
+  "navy",
+  "blue",
+  "sky",
+  "cyan",
+  "green",
+  "lime",
+  "yellow",
+  "orange",
+  "red",
+  "maroon",
+  "purple",
+  "pink",
+  "white",
+  "grey",
+  "black",
+] as const;
+const KIT_COLOR_NUMERIC: Record<(typeof KIT_COLOR_NAMES)[number], number> = {
+  navy: 0x1e3a8a,
+  blue: 0x2563eb,
+  sky: 0x0ea5e9,
+  cyan: 0x06b6d4,
+  green: 0x16a34a,
+  lime: 0x84cc16,
+  red: 0xdc2626,
+  orange: 0xf97316,
+  maroon: 0x7f1d1d,
+  purple: 0x7c3aed,
+  pink: 0xec4899,
+  yellow: 0xfacc15,
+  white: 0xffffff,
+  grey: 0x6b7280,
+  black: 0x111827,
+};
+type TacticalKitColor = (typeof KIT_COLOR_NAMES)[number];
 
 type PlayerSeed = {
   id: string;
@@ -183,6 +239,52 @@ function clampWorld(value: number, max: number): number {
 function clampTeamCount(value: number | undefined): number {
   const parsed = Number.isFinite(value) ? Math.floor(value as number) : 1;
   return Math.max(1, Math.min(15, parsed));
+}
+
+function sanitizeKitColor(value: string | undefined): TacticalKitColor | undefined {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim().toLowerCase();
+  if ((KIT_COLOR_NAMES as readonly string[]).includes(normalized)) {
+    return normalized as TacticalKitColor;
+  }
+  return undefined;
+}
+
+function sanitizeKitPattern(value: TacticalKitPattern | undefined): TacticalKitPattern | undefined {
+  if (!value) return undefined;
+  if (value === "plain" || value === "hoops" || value === "slash" || value === "stripes") return value;
+  return undefined;
+}
+
+function sanitizeLabelMode(value: TacticalLabelMode | undefined): TacticalLabelMode | undefined {
+  if (value === "number" || value === "initials") return value;
+  return undefined;
+}
+
+export function sanitizeInitials(value: string | undefined): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const sanitized = value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3);
+  return sanitized.length > 0 ? sanitized : undefined;
+}
+
+function sanitizePlayerKitPatch(patch: TacticalPlayerKitPatch): TacticalPlayerKitFields {
+  const nextBaseColor = sanitizeKitColor(patch.kitBaseColor);
+  const nextPattern = sanitizeKitPattern(patch.kitPattern);
+  const nextPatternColor = sanitizeKitColor(patch.kitPatternColor);
+  const nextLabelMode = sanitizeLabelMode(patch.labelMode);
+  const nextInitials = sanitizeInitials(patch.initials);
+  return {
+    ...(patch.kitBaseColor !== undefined ? { kitBaseColor: nextBaseColor } : {}),
+    ...(patch.kitPattern !== undefined ? { kitPattern: nextPattern } : {}),
+    ...(patch.kitPatternColor !== undefined ? { kitPatternColor: nextPatternColor } : {}),
+    ...(patch.labelMode !== undefined ? { labelMode: nextLabelMode } : {}),
+    ...(patch.initials !== undefined ? { initials: nextInitials } : {}),
+  };
+}
+
+function safePlayerNumberLabel(value: number): string {
+  if (!Number.isFinite(value)) return "0";
+  return String(Math.max(0, Math.floor(value)));
 }
 
 function createWhiteboardPlayerSeeds(
@@ -477,26 +579,72 @@ export async function createTacticalPadLiteSurface(
       ? createWhiteboardPlayerSeeds(options.whiteboardTeamCounts, options.whiteboardTeamColors)
       : createWhiteboardPlayerSeeds(TACTICAL_INITIAL_TEAM_COUNTS, tacticalTeamColors);
 
+  function getEffectiveKitBaseColor(player: Pick<TacticalPlayer, "teamColor" | "kitBaseColor">): TacticalKitColor {
+    return sanitizeKitColor(player.kitBaseColor) ?? player.teamColor;
+  }
+
+  function getEffectiveKitPattern(player: Pick<TacticalPlayer, "kitPattern">): TacticalKitPattern {
+    return sanitizeKitPattern(player.kitPattern) ?? "plain";
+  }
+
+  function getEffectiveKitPatternColor(
+    player: Pick<TacticalPlayer, "kitPatternColor" | "kitBaseColor" | "teamColor">,
+  ): TacticalKitColor {
+    const baseColor = getEffectiveKitBaseColor(player);
+    return sanitizeKitColor(player.kitPatternColor) ?? (baseColor === "white" ? "black" : "white");
+  }
+
+  function resolvePlayerLabel(player: Pick<TacticalPlayer, "number" | "labelMode" | "initials">): string {
+    const labelMode = sanitizeLabelMode(player.labelMode) ?? "number";
+    const initials = sanitizeInitials(player.initials);
+    if (labelMode === "initials" && initials) {
+      return initials;
+    }
+    return safePlayerNumberLabel(player.number);
+  }
+
+  function createTokenPackForPlayer(player: Pick<TacticalPlayer, "number" | "teamColor" | "kitBaseColor" | "kitPattern" | "kitPatternColor" | "labelMode" | "initials">): {
+    token: Container;
+    shadow: Graphics;
+  } {
+    if (surfaceVariant !== "tactical") {
+      return createPremiumPlayerToken({
+        color: player.teamColor,
+        number: player.number,
+        radius: PLAYER_RADIUS,
+      });
+    }
+    const baseColor = getEffectiveKitBaseColor(player);
+    const pattern = getEffectiveKitPattern(player);
+    const patternColor = getEffectiveKitPatternColor(player);
+    const label = resolvePlayerLabel(player);
+    return createMicroAthleteToken({
+      label,
+      teamColor: player.teamColor,
+      scale: PLAYER_RADIUS / 4.1,
+      style: {
+        primaryColor: KIT_COLOR_NUMERIC[baseColor],
+        secondaryColor: KIT_COLOR_NUMERIC[baseColor],
+        badgeColor: KIT_COLOR_NUMERIC[baseColor],
+      },
+      kitPattern: pattern,
+      kitPatternColor: KIT_COLOR_NUMERIC[patternColor],
+    });
+  }
+
   function createSurfacePlayer(base: PlayerSeed): TacticalPlayer {
     const tokenColor: PremiumPlayerTokenColor = base.color;
-    const tokenPack =
-      surfaceVariant === "tactical"
-        ? createMicroAthleteToken({
-            label: String(base.number),
-            teamColor: tokenColor,
-            scale: PLAYER_RADIUS / 4.1,
-          })
-        : createPremiumPlayerToken({
-            color: tokenColor,
-            number: base.number,
-            radius: PLAYER_RADIUS,
-          });
+    const tokenPack = createTokenPackForPlayer({
+      number: base.number,
+      teamColor: tokenColor,
+    });
     const { token, shadow } = tokenPack;
     playersLayer.addChild(token);
     return {
       id: base.id,
       number: base.number,
       team: base.team,
+      teamColor: tokenColor,
       current: { ...base.position },
       token,
       tokenShadow: shadow,
@@ -543,6 +691,7 @@ export async function createTacticalPadLiteSurface(
   const completedWhiteboardDrawingObjects: WhiteboardDrawingObject[] = [];
   let activeWhiteboardDrawing: WhiteboardDrawingObject | null = null;
   let whiteboardDrawingCounter = 0;
+  let lastTappedPlayer: { playerId: string; atMs: number } | null = null;
 
   function emitPlaybackStateChange(): void {
     syncWhiteboardTokenInputMode();
@@ -558,6 +707,20 @@ export async function createTacticalPadLiteSurface(
     const pointerId = getPointerIdFromEvent(event);
     if (pointerId == null) return true;
     return pointerId === activeDrag.pointerId;
+  }
+
+  function getClientPointFromEvent(event: unknown): { x: number; y: number } | null {
+    const nativeEvent = (event as { nativeEvent?: { clientX?: unknown; clientY?: unknown } }).nativeEvent;
+    if (nativeEvent && typeof nativeEvent.clientX === "number" && typeof nativeEvent.clientY === "number") {
+      return { x: nativeEvent.clientX, y: nativeEvent.clientY };
+    }
+    const stagePoint = getStagePointFromEvent(event, app.stage);
+    if (!stagePoint) return null;
+    const bounds = (app.canvas as HTMLCanvasElement).getBoundingClientRect();
+    return {
+      x: bounds.left + stagePoint.x,
+      y: bounds.top + stagePoint.y,
+    };
   }
 
   function fitToHost(): void {
@@ -1257,7 +1420,102 @@ export async function createTacticalPadLiteSurface(
     }
   }
 
-  function bindPlayerPointerDown(player: TacticalPlayer): void {
+  function findTacticalPlayer(playerId: string): TacticalPlayer | null {
+    if (surfaceVariant !== "tactical") return null;
+    return players.find((player) => player.id === playerId) ?? null;
+  }
+
+  function getTacticalPlayerSnapshot(playerId: string): TacticalPlayerKitSnapshot | null {
+    const player = findTacticalPlayer(playerId);
+    if (!player) return null;
+    return {
+      id: player.id,
+      number: Number.isFinite(player.number) ? Math.max(0, Math.floor(player.number)) : 0,
+      team: player.team,
+      kitBaseColor: sanitizeKitColor(player.kitBaseColor),
+      kitPattern: sanitizeKitPattern(player.kitPattern),
+      kitPatternColor: sanitizeKitColor(player.kitPatternColor),
+      labelMode: sanitizeLabelMode(player.labelMode),
+      initials: sanitizeInitials(player.initials),
+    };
+  }
+
+  function rerenderTacticalPlayerToken(player: TacticalPlayer): void {
+    if (surfaceVariant !== "tactical") return;
+    const previousToken = player.token;
+    const previousPositionX = previousToken.position.x;
+    const previousPositionY = previousToken.position.y;
+    const previousScaleX = previousToken.scale.x;
+    const previousScaleY = previousToken.scale.y;
+    const previousIndex = playersLayer.getChildIndex(previousToken);
+    const nextPack = createTokenPackForPlayer(player);
+    player.token = nextPack.token;
+    player.tokenShadow = nextPack.shadow;
+    player.token.position.set(previousPositionX, previousPositionY);
+    player.token.scale.set(previousScaleX, previousScaleY);
+    playersLayer.removeChild(previousToken);
+    playersLayer.addChildAt(player.token, previousIndex);
+    previousToken.removeAllListeners();
+    previousToken.destroy({ children: true });
+    bindPlayerTokenInteraction(player);
+    setPlayerTouchHitArea(player, mapper);
+    syncWhiteboardTokenInputMode();
+  }
+
+  function patchTacticalPlayer(playerId: string, patch: TacticalPlayerKitPatch): void {
+    const player = findTacticalPlayer(playerId);
+    if (!player) return;
+    const sanitizedPatch = sanitizePlayerKitPatch(patch);
+    if (Object.keys(sanitizedPatch).length <= 0) return;
+    if ("kitBaseColor" in sanitizedPatch) {
+      player.kitBaseColor = sanitizedPatch.kitBaseColor;
+    }
+    if ("kitPattern" in sanitizedPatch) {
+      player.kitPattern = sanitizedPatch.kitPattern;
+    }
+    if ("kitPatternColor" in sanitizedPatch) {
+      player.kitPatternColor = sanitizedPatch.kitPatternColor;
+    }
+    if ("labelMode" in sanitizedPatch) {
+      player.labelMode = sanitizedPatch.labelMode;
+    }
+    if ("initials" in sanitizedPatch) {
+      player.initials = sanitizedPatch.initials;
+    }
+    rerenderTacticalPlayerToken(player);
+  }
+
+  function emitPlayerDoubleTap(player: TacticalPlayer, event: unknown): void {
+    if (surfaceVariant !== "tactical") return;
+    const now = Date.now();
+    const lastTap = lastTappedPlayer;
+    if (lastTap && lastTap.playerId === player.id && now - lastTap.atMs <= DOUBLE_TAP_WINDOW_MS) {
+      lastTappedPlayer = null;
+      const eventPoint = getClientPointFromEvent(event);
+      if (eventPoint) {
+        options.onTacticalPlayerDoubleTap?.({
+          playerId: player.id,
+          clientX: eventPoint.x,
+          clientY: eventPoint.y,
+        });
+        return;
+      }
+      const fallbackViewportPoint = mapper.normalizedToViewport(player.current);
+      const bounds = (app.canvas as HTMLCanvasElement).getBoundingClientRect();
+      options.onTacticalPlayerDoubleTap?.({
+        playerId: player.id,
+        clientX: bounds.left + fallbackViewportPoint.x,
+        clientY: bounds.top + fallbackViewportPoint.y,
+      });
+      return;
+    }
+    lastTappedPlayer = {
+      playerId: player.id,
+      atMs: now,
+    };
+  }
+
+  function bindPlayerTokenInteraction(player: TacticalPlayer): void {
     player.token.on("pointerdown", (event) => {
       if (isPlaybackInputLocked()) return;
       if (activeWhiteboardTool !== "move") return;
@@ -1279,6 +1537,17 @@ export async function createTacticalPadLiteSurface(
       }
       syncWhiteboardTokenInputMode();
     });
+    player.token.on("pointerup", (event) => {
+      if (surfaceVariant !== "tactical") return;
+      if (isPlaybackInputLocked()) return;
+      if (activeWhiteboardTool !== "move") return;
+      if (!activeDrag || activeDrag.type !== "player" || activeDrag.playerId !== player.id) return;
+      if (activeDrag.hasCrossedThreshold) {
+        lastTappedPlayer = null;
+        return;
+      }
+      emitPlayerDoubleTap(player, event);
+    });
   }
 
   function syncPlayersToViewport(): void {
@@ -1294,6 +1563,7 @@ export async function createTacticalPadLiteSurface(
   ): void {
     if (!isWhiteboardSurface) return;
     releaseActiveDrag();
+    lastTappedPlayer = null;
     // Preserve committed drawings; only clear in-progress preview state.
     resetActiveWhiteboardDrawing();
     for (const player of players) {
@@ -1305,7 +1575,7 @@ export async function createTacticalPadLiteSurface(
     for (const seed of nextSeeds) {
       const nextPlayer = createSurfacePlayer(seed);
       players.push(nextPlayer);
-      bindPlayerPointerDown(nextPlayer);
+      bindPlayerTokenInteraction(nextPlayer);
     }
     syncPlayersToViewport();
     syncWhiteboardTokenInputMode();
@@ -1330,7 +1600,7 @@ export async function createTacticalPadLiteSurface(
     for (const seed of nextSeeds) {
       const nextPlayer = createSurfacePlayer(seed);
       players.push(nextPlayer);
-      bindPlayerPointerDown(nextPlayer);
+      bindPlayerTokenInteraction(nextPlayer);
     }
     syncPlayersToViewport();
     syncWhiteboardTokenInputMode();
@@ -1377,7 +1647,7 @@ export async function createTacticalPadLiteSurface(
     releaseActiveDrag();
     const nextPlayer = createSurfacePlayer(nextSeed);
     players.push(nextPlayer);
-    bindPlayerPointerDown(nextPlayer);
+    bindPlayerTokenInteraction(nextPlayer);
     syncPlayersToViewport();
     syncWhiteboardTokenInputMode();
   }
@@ -1396,6 +1666,9 @@ export async function createTacticalPadLiteSurface(
     });
     const [removedPlayer] = players.splice(removalTarget.index, 1);
     if (!removedPlayer) return;
+    if (lastTappedPlayer?.playerId === removedPlayer.id) {
+      lastTappedPlayer = null;
+    }
     removedPlayer.token.removeAllListeners();
     removedPlayer.token.destroy({ children: true });
     syncPlayersToViewport();
@@ -1403,7 +1676,7 @@ export async function createTacticalPadLiteSurface(
   }
 
   for (const player of players) {
-    bindPlayerPointerDown(player);
+    bindPlayerTokenInteraction(player);
   }
   syncPlayersToViewport();
 
@@ -1490,6 +1763,8 @@ export async function createTacticalPadLiteSurface(
     },
     addTacticalPlayer,
     removeTacticalPlayer: removeLastTacticalPlayer,
+    getTacticalPlayer: getTacticalPlayerSnapshot,
+    patchTacticalPlayer,
     setItems: (items) => {
       upsertTacticalItems(items);
     },

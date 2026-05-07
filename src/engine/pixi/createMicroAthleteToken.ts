@@ -10,6 +10,7 @@ export type MicroAthleteStyle = {
 };
 
 type MicroAthleteTeamColor = "blue" | "red" | "green" | "yellow" | "black" | "white";
+export type MicroAthleteKitPattern = "plain" | "hoops" | "slash" | "stripes";
 
 const DEFAULT_STYLE_BY_TEAM: Record<MicroAthleteTeamColor, MicroAthleteStyle> = {
   blue: {
@@ -79,16 +80,231 @@ function colorToHexString(color: number): string {
   return `#${color.toString(16).padStart(6, "0")}`;
 }
 
+function relativeLuminance(color: number): number {
+  const srgb = [(color >> 16) & 0xff, (color >> 8) & 0xff, color & 0xff].map((channel) => {
+    const normalized = channel / 255;
+    if (normalized <= 0.03928) return normalized / 12.92;
+    return ((normalized + 0.055) / 1.055) ** 2.4;
+  });
+  const [r = 0, g = 0, b = 0] = srgb;
+  return r * 0.2126 + g * 0.7152 + b * 0.0722;
+}
+
+function getReadableTextColors(backgroundColor: number): {
+  fill: number;
+  innerStroke: number;
+  outerStroke: number;
+  shadowColor: number;
+} {
+  if (relativeLuminance(backgroundColor) >= 0.6) {
+    return {
+      fill: 0x0f172a,
+      innerStroke: 0xffffff,
+      outerStroke: 0x020617,
+      shadowColor: 0xffffff,
+    };
+  }
+  return {
+    fill: 0xffffff,
+    innerStroke: 0x0b1220,
+    outerStroke: 0xffffff,
+    shadowColor: 0x020617,
+  };
+}
+
+const TORSO_TOP_Y = -6.26;
+const TORSO_BOTTOM_Y = -0.45;
+const TORSO_TOP_LEFT_X = -1.58;
+const TORSO_TOP_RIGHT_X = 1.58;
+const TORSO_BOTTOM_LEFT_X = -0.94;
+const TORSO_BOTTOM_RIGHT_X = 0.94;
+
+function torsoEdgeX(y: number, topX: number, bottomX: number): number {
+  const t = (y - TORSO_TOP_Y) / (TORSO_BOTTOM_Y - TORSO_TOP_Y);
+  const clampedT = Math.max(0, Math.min(1, t));
+  return topX + (bottomX - topX) * clampedT;
+}
+
+function torsoLeftX(y: number): number {
+  return torsoEdgeX(y, TORSO_TOP_LEFT_X, TORSO_BOTTOM_LEFT_X);
+}
+
+function torsoRightX(y: number): number {
+  return torsoEdgeX(y, TORSO_TOP_RIGHT_X, TORSO_BOTTOM_RIGHT_X);
+}
+
+function drawTorsoPath(target: Graphics): void {
+  target
+    .moveTo(TORSO_TOP_LEFT_X, TORSO_TOP_Y)
+    .lineTo(TORSO_TOP_RIGHT_X, TORSO_TOP_Y)
+    .lineTo(TORSO_BOTTOM_RIGHT_X, TORSO_BOTTOM_Y)
+    .lineTo(TORSO_BOTTOM_LEFT_X, TORSO_BOTTOM_Y)
+    .closePath();
+}
+
+function drawJerseyPattern(body: Graphics, pattern: MicroAthleteKitPattern, color: number): void {
+  if (pattern === "plain") return;
+  const alpha = 0.54;
+  const top = TORSO_TOP_Y + 0.22;
+  const bottom = TORSO_BOTTOM_Y - 0.12;
+
+  if (pattern === "hoops") {
+    const bandHeight = 0.82;
+    for (let y = top; y < bottom; y += 1.14) {
+      const nextY = Math.min(y + bandHeight, bottom);
+      const lt = torsoLeftX(y) + 0.06;
+      const rt = torsoRightX(y) - 0.06;
+      const lb = torsoLeftX(nextY) + 0.06;
+      const rb = torsoRightX(nextY) - 0.06;
+      body
+        .poly([lt, y, rt, y, rb, nextY, lb, nextY])
+        .fill({ color, alpha });
+    }
+    return;
+  }
+  if (pattern === "stripes") {
+    const stripeCount = 3;
+    const topWidth = TORSO_TOP_RIGHT_X - TORSO_TOP_LEFT_X;
+    const bottomWidth = TORSO_BOTTOM_RIGHT_X - TORSO_BOTTOM_LEFT_X;
+    for (let idx = 0; idx < stripeCount; idx += 1) {
+      const t0 = 0.08 + idx * 0.29;
+      const t1 = Math.min(0.96, t0 + 0.2);
+      const xt0 = TORSO_TOP_LEFT_X + topWidth * t0;
+      const xt1 = TORSO_TOP_LEFT_X + topWidth * t1;
+      const xb0 = TORSO_BOTTOM_LEFT_X + bottomWidth * t0;
+      const xb1 = TORSO_BOTTOM_LEFT_X + bottomWidth * t1;
+      body
+        .poly([
+          xt0,
+          top,
+          xt1,
+          top,
+          xb1,
+          bottom,
+          xb0,
+          bottom,
+        ])
+        .fill({ color, alpha });
+    }
+    return;
+  }
+  body
+    .poly([
+      TORSO_TOP_LEFT_X + 0.26,
+      TORSO_TOP_Y + 0.72,
+      TORSO_TOP_LEFT_X + 1.06,
+      TORSO_TOP_Y + 0.3,
+      TORSO_BOTTOM_RIGHT_X - 0.06,
+      TORSO_BOTTOM_Y - 1.24,
+      TORSO_BOTTOM_RIGHT_X - 0.68,
+      TORSO_BOTTOM_Y - 0.8,
+    ])
+    .fill({ color, alpha: alpha + 0.06 })
+    .poly([
+      TORSO_TOP_LEFT_X + 0.46,
+      TORSO_TOP_Y + 0.84,
+      TORSO_TOP_LEFT_X + 0.82,
+      TORSO_TOP_Y + 0.65,
+      TORSO_BOTTOM_RIGHT_X - 0.32,
+      TORSO_BOTTOM_Y - 1.1,
+      TORSO_BOTTOM_RIGHT_X - 0.6,
+      TORSO_BOTTOM_Y - 0.88,
+    ])
+    .fill({ color: mixColor(color, 0xffffff, 0.3), alpha: 0.16 });
+}
+
+function drawBadgePattern(
+  target: Graphics,
+  pattern: MicroAthleteKitPattern,
+  color: number,
+  radius: number,
+): void {
+  if (pattern === "plain") return;
+  const alpha = 0.62;
+
+  if (pattern === "hoops") {
+    const bandHeight = 0.84;
+    for (let y = -radius + 0.34; y < radius - 0.2; y += 1.12) {
+      const nextY = Math.min(y + bandHeight, radius - 0.08);
+      const topHalfWidth = Math.sqrt(Math.max(0, radius * radius - y * y));
+      const bottomHalfWidth = Math.sqrt(Math.max(0, radius * radius - nextY * nextY));
+      target
+        .poly([
+          -topHalfWidth,
+          y,
+          topHalfWidth,
+          y,
+          bottomHalfWidth,
+          nextY,
+          -bottomHalfWidth,
+          nextY,
+        ])
+        .fill({ color, alpha });
+    }
+    return;
+  }
+
+  if (pattern === "stripes") {
+    const stripeWidth = 0.88;
+    for (let x = -radius + 0.22; x < radius - 0.12; x += 1.18) {
+      const nextX = Math.min(x + stripeWidth, radius - 0.06);
+      const leftHalfHeight = Math.sqrt(Math.max(0, radius * radius - x * x));
+      const rightHalfHeight = Math.sqrt(Math.max(0, radius * radius - nextX * nextX));
+      target
+        .poly([
+          x,
+          -leftHalfHeight,
+          nextX,
+          -rightHalfHeight,
+          nextX,
+          rightHalfHeight,
+          x,
+          leftHalfHeight,
+        ])
+        .fill({ color, alpha });
+    }
+    return;
+  }
+
+  target
+    .poly([
+      -radius * 0.78,
+      -radius * 0.3,
+      -radius * 0.42,
+      -radius * 0.78,
+      radius * 0.74,
+      radius * 0.38,
+      radius * 0.38,
+      radius * 0.82,
+    ])
+    .fill({ color, alpha: alpha + 0.08 })
+    .poly([
+      -radius * 0.56,
+      -radius * 0.24,
+      -radius * 0.36,
+      -radius * 0.46,
+      radius * 0.52,
+      radius * 0.5,
+      radius * 0.3,
+      radius * 0.7,
+    ])
+    .fill({ color: mixColor(color, 0xffffff, 0.22), alpha: 0.1 });
+}
+
 export function createMicroAthleteToken({
   label,
   teamColor,
   style,
   scale,
+  kitPattern = "plain",
+  kitPatternColor,
 }: {
   label: string;
   teamColor: MicroAthleteTeamColor;
   style?: Partial<MicroAthleteStyle>;
   scale?: number;
+  kitPattern?: MicroAthleteKitPattern;
+  kitPatternColor?: number;
 }): { token: Container; shadow: Graphics } {
   const defaults = DEFAULT_STYLE_BY_TEAM[teamColor];
   const resolved: MicroAthleteStyle = {
@@ -137,6 +353,9 @@ export function createMicroAthleteToken({
   });
 
   const body = new Graphics();
+  const resolvedKitPatternColor = Number.isFinite(kitPatternColor)
+    ? Number(kitPatternColor)
+    : mixColor(jerseyFill, jerseyFill === 0xffffff ? 0x111827 : 0xffffff, 0.72);
   // Subtle arms (kept slim for small-scale readability)
   body
     .roundRect(-2.26, -5.2, 0.54, 3.34, 0.26)
@@ -145,13 +364,13 @@ export function createMicroAthleteToken({
     .fill({ color: mixColor(jerseyFill, 0x000000, 0.15), alpha: 0.94 });
 
   // Torso / jersey (lean upright silhouette with gentle taper)
-  body
-    .moveTo(-1.58, -6.26)
-    .lineTo(1.58, -6.26)
-    .lineTo(0.94, -0.45)
-    .lineTo(-0.94, -0.45)
-    .closePath()
-    .fill(torsoGradient);
+  drawTorsoPath(body);
+  body.fill(torsoGradient);
+  drawJerseyPattern(
+    body,
+    kitPattern,
+    resolvedKitPatternColor,
+  );
 
   // Internal polish without thick cartoon outlines.
   body
@@ -188,63 +407,70 @@ export function createMicroAthleteToken({
     .fill({ color: 0xffffff, alpha: 0.12 });
   athlete.addChild(body);
 
-  const badgeBaseColor = resolved.badgeColor;
-  const badgeTopColor = mixColor(badgeBaseColor, 0xffffff, 0.38);
-  const badgeMidColor = mixColor(badgeBaseColor, resolved.primaryColor, 0.24);
-  const badgeBottomColor = mixColor(badgeBaseColor, 0x000000, 0.38);
+  const badgeBaseColor = jerseyFill;
+  const labelColors = getReadableTextColors(badgeBaseColor);
   const tokenOuterGlow = new Graphics();
   tokenOuterGlow
     .circle(0, 0, badgeRadius * 1.2)
-    .fill({ color: mixColor(resolved.primaryColor, 0xffffff, 0.14), alpha: 0.05 })
+    .fill({ color: mixColor(badgeBaseColor, 0xffffff, 0.12), alpha: 0.03 })
     .circle(0, 0, badgeRadius * 1.06)
-    .fill({ color: mixColor(resolved.primaryColor, 0xffffff, 0.1), alpha: 0.06 });
+    .fill({ color: mixColor(badgeBaseColor, 0xffffff, 0.08), alpha: 0.04 });
   token.addChild(tokenOuterGlow);
 
-  const badgeGradient = new FillGradient({
-    type: "radial",
-    center: { x: 0.28, y: 0.2 },
-    innerRadius: 0,
-    outerRadius: 1,
-    outerCenter: { x: 0.62, y: 0.7 },
-    textureSpace: "local",
-    colorStops: [
-      { offset: 0, color: colorToHexString(badgeTopColor) },
-      { offset: 0.5, color: colorToHexString(badgeMidColor) },
-      { offset: 1, color: colorToHexString(badgeBottomColor) },
-    ],
-  });
-
   const badge = new Graphics();
+  const badgeFillColor = mixColor(badgeBaseColor, 0xffffff, 0.06);
+  const badgeRimColor = mixColor(badgeBaseColor, 0x000000, 0.32);
   badge
     .circle(0, 0, badgeRadius)
-    .fill(badgeGradient)
-    .ellipse(0.08, badgeRadius * 0.5, badgeRadius * 0.92, badgeRadius * 0.42)
-    .fill({ color: 0x020617, alpha: 0.16 })
-    .ellipse(-badgeRadius * 0.42, -badgeRadius * 0.58, badgeRadius * 0.24, badgeRadius * 0.15)
-    .fill({ color: 0xffffff, alpha: 0.32 })
-    .ellipse(-badgeRadius * 0.04, -badgeRadius * 0.72, badgeRadius * 0.68, badgeRadius * 0.1)
-    .fill({ color: 0xffffff, alpha: 0.2 })
-    .ellipse(0, badgeRadius * 0.56, badgeRadius * 0.84, badgeRadius * 0.3)
-    .fill({ color: 0x020617, alpha: 0.09 });
+    .fill({ color: badgeFillColor })
+    .circle(0, 0, badgeRadius)
+    .stroke({ color: badgeRimColor, width: 0.22, alpha: 0.42 });
+  drawBadgePattern(badge, kitPattern, resolvedKitPatternColor, badgeRadius * 0.96);
+  badge
+    .ellipse(0.06, badgeRadius * 0.56, badgeRadius * 0.9, badgeRadius * 0.4)
+    .fill({ color: 0x020617, alpha: 0.14 })
+    .ellipse(-badgeRadius * 0.18, -badgeRadius * 0.56, badgeRadius * 0.52, badgeRadius * 0.15)
+    .fill({ color: 0xffffff, alpha: 0.09 });
   token.addChild(badge);
 
-  const labelText = new Text({
+  const labelOutlineText = new Text({
     text: label,
     style: {
-      fill: resolved.textColor,
+      fill: labelColors.fill,
       fontSize: 3.78,
       fontWeight: "900",
       fontFamily: "Inter, system-ui, sans-serif",
       align: "center",
       letterSpacing: 0.12,
       stroke: {
-        color: resolved.outlineColor,
+        color: labelColors.outerStroke,
+        width: 0.64,
+        join: "round",
+      },
+    },
+  });
+  labelOutlineText.anchor.set(0.5, 0.53);
+  labelOutlineText.position.y = 0.06;
+  labelOutlineText.alpha = 0.84;
+  token.addChild(labelOutlineText);
+
+  const labelText = new Text({
+    text: label,
+    style: {
+      fill: labelColors.fill,
+      fontSize: 3.78,
+      fontWeight: "900",
+      fontFamily: "Inter, system-ui, sans-serif",
+      align: "center",
+      letterSpacing: 0.12,
+      stroke: {
+        color: labelColors.innerStroke,
         width: 0.34,
         join: "round",
       },
       dropShadow: {
-        color: 0x020617,
-        alpha: 0.34,
+        color: labelColors.shadowColor,
+        alpha: 0.28,
         blur: 1,
         distance: 0.18,
         angle: Math.PI / 2,
