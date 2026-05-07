@@ -20,13 +20,14 @@ import {
   deleteBoard,
   duplicateBoard,
   formatBoardUpdatedAt,
+  hasReachedQuickBoardSaveLimit,
   loadAllBoards,
   loadBoard,
   renameBoard,
   saveBoard,
   setBoardThumbnail,
 } from "../features/quickboard/storage/quickboard-storage";
-import { sanitizeBoardName, type SavedQuickBoard } from "../features/quickboard/storage/quickboard-types";
+import { MAX_QUICKBOARD_SAVES, sanitizeBoardName, type SavedQuickBoard } from "../features/quickboard/storage/quickboard-types";
 
 type PadMode = "tactical" | "stats" | "whiteboard";
 type TacticalPadLiteCleanProps = {
@@ -2063,6 +2064,12 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
       showQuickBoardNotice("Quick Board not ready");
       return;
     }
+    if (hasReachedQuickBoardSaveLimit()) {
+      showQuickBoardNotice(
+        `Board limit reached (${MAX_QUICKBOARD_SAVES}).\nDelete old boards or export/share important ones.`,
+      );
+      return;
+    }
     const snapshot = captureQuickBoardSnapshot(surface);
     if (!snapshot) {
       showQuickBoardNotice("Could not capture board");
@@ -3398,7 +3405,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         ) : null}
         {!isWhiteboardMode && quickBoardFeedback ? (
           <div style={{ ...SHARE_TIP_TOAST_STYLE, top: "max(18px, calc(env(safe-area-inset-top, 0px) + 14px))" }} role="status" aria-live="polite">
-            <p style={SHARE_TIP_TEXT_STYLE}>{quickBoardFeedback}</p>
+            <p style={{ ...SHARE_TIP_TEXT_STYLE, whiteSpace: "pre-line" }}>{quickBoardFeedback}</p>
           </div>
         ) : null}
         {isWhiteboardMode ? (
