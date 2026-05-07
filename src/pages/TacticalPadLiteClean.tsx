@@ -3092,56 +3092,6 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                     - Team B
                   </button>
                 </div>
-                <p style={{ ...COACH_HUB_SECTION_TITLE_STYLE, marginTop: "4px" }}>Team A Colour</p>
-                <div style={COACH_HUB_COLOR_GRID_STYLE}>
-                  {WHITEBOARD_PLAYER_COLOR_CHOICES.map((choice) => {
-                    const isActive = whiteboardBlueColor === choice.value;
-                    return (
-                      <button
-                        key={`tactical-team-a-color-${choice.value}`}
-                        type="button"
-                        aria-label="Set Team A player colour"
-                        style={{
-                          ...COACH_HUB_COLOR_BUTTON_STYLE,
-                          ...(isActive
-                            ? {
-                                boxShadow: "0 0 0 2px rgba(125, 211, 252, 0.88)",
-                                border: "1px solid rgba(125, 211, 252, 0.8)",
-                              }
-                            : null),
-                        }}
-                        onClick={() => setWhiteboardBlueColor(choice.value)}
-                      >
-                        <span style={{ ...COACH_HUB_COLOR_SWATCH_STYLE, background: choice.css }} />
-                      </button>
-                    );
-                  })}
-                </div>
-                <p style={{ ...COACH_HUB_SECTION_TITLE_STYLE, marginTop: "4px" }}>Team B Colour</p>
-                <div style={COACH_HUB_COLOR_GRID_STYLE}>
-                  {WHITEBOARD_PLAYER_COLOR_CHOICES.map((choice) => {
-                    const isActive = whiteboardRedColor === choice.value;
-                    return (
-                      <button
-                        key={`tactical-team-b-color-${choice.value}`}
-                        type="button"
-                        aria-label="Set Team B player colour"
-                        style={{
-                          ...COACH_HUB_COLOR_BUTTON_STYLE,
-                          ...(isActive
-                            ? {
-                                boxShadow: "0 0 0 2px rgba(125, 211, 252, 0.88)",
-                                border: "1px solid rgba(125, 211, 252, 0.8)",
-                              }
-                            : null),
-                        }}
-                        onClick={() => setWhiteboardRedColor(choice.value)}
-                      >
-                        <span style={{ ...COACH_HUB_COLOR_SWATCH_STYLE, background: choice.css }} />
-                      </button>
-                    );
-                  })}
-                </div>
               </div>
             ) : null}
 
