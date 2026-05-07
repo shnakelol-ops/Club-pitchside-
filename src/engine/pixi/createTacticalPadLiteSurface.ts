@@ -1312,6 +1312,31 @@ export async function createTacticalPadLiteSurface(
     renderAllWhiteboardDrawings();
   }
 
+  function rebuildTacticalPlayersWithColors(): void {
+    if (surfaceVariant !== "tactical") return;
+    releaseActiveDrag();
+    const nextSeeds: PlayerSeed[] = players.map((player) => ({
+      id: player.id,
+      number: Number.isFinite(player.number) ? player.number : 1,
+      team: player.team,
+      color: teamColor(player.team, tacticalTeamColors),
+      position: { x: player.current.x, y: player.current.y },
+    }));
+    for (const player of players) {
+      player.token.removeAllListeners();
+      player.token.destroy({ children: true });
+    }
+    players.length = 0;
+    for (const seed of nextSeeds) {
+      const nextPlayer = createSurfacePlayer(seed);
+      players.push(nextPlayer);
+      bindPlayerPointerDown(nextPlayer);
+    }
+    syncPlayersToViewport();
+    syncWhiteboardTokenInputMode();
+    renderAllWhiteboardDrawings();
+  }
+
   function getTacticalPlayerSerial(player: TacticalPlayer, team: "BLUE" | "RED"): number {
     if (player.team !== team) return Number.NaN;
     const serialMatch = new RegExp(`^${teamPrefix(team)}(\\d+)$`).exec(player.id);
@@ -1496,6 +1521,7 @@ export async function createTacticalPadLiteSurface(
         blue: config.colors.blue,
         red: config.colors.red,
       };
+      rebuildTacticalPlayersWithColors();
     },
     setWhiteboardDrawTool: (tool) => {
       if (!isDrawingEnabledSurface) return;
