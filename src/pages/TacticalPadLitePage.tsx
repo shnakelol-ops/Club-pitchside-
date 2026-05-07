@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 
 import {
   createTacticalPadLiteSurface,
@@ -57,28 +57,6 @@ const PHASE_COUNT_STYLE: CSSProperties = {
   padding: "8px 13px",
 };
 
-const PHASE_NAV_STYLE: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: "8px",
-  flexWrap: "wrap",
-  maxWidth: "320px",
-};
-
-const PHASE_DOT_BASE_STYLE: CSSProperties = {
-  width: "28px",
-  height: "28px",
-  borderRadius: "999px",
-  border: "1px solid rgba(225, 243, 235, 0.36)",
-  background: "rgba(10, 22, 18, 0.78)",
-  color: "#e7f6ee",
-  fontFamily: "Inter, system-ui, sans-serif",
-  fontSize: "12px",
-  fontWeight: 700,
-  cursor: "pointer",
-  lineHeight: 1,
-};
-
 const HOME_BUTTON_STYLE: CSSProperties = {
   position: "fixed",
   top: "max(12px, calc(env(safe-area-inset-top, 0px) + 10px))",
@@ -106,11 +84,6 @@ export default function TacticalPadLitePage() {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const surfaceRef = useRef<TacticalPadLiteSurface | null>(null);
   const [phaseCount, setPhaseCount] = useState(0);
-  const [selectedPhaseIndex, setSelectedPhaseIndex] = useState(0);
-  const phaseIndices = useMemo(
-    () => Array.from({ length: phaseCount + 1 }, (_, index) => index),
-    [phaseCount],
-  );
 
   useEffect(() => {
     const host = hostRef.current;
@@ -128,11 +101,6 @@ export default function TacticalPadLitePage() {
         onPhaseCountChange: (count) => {
           if (!disposed) {
             setPhaseCount(count);
-          }
-        },
-        onSelectedPhaseChange: (index) => {
-          if (!disposed) {
-            setSelectedPhaseIndex(index);
           }
         },
       }).then((surface) => {
@@ -201,25 +169,6 @@ export default function TacticalPadLitePage() {
             Reset
           </button>
           <div style={PHASE_COUNT_STYLE}>Phases: {phaseCount}</div>
-          <div style={PHASE_NAV_STYLE}>
-            {phaseIndices.map((phaseIndex) => {
-              const isSelected = selectedPhaseIndex === phaseIndex;
-              return (
-                <button
-                  key={phaseIndex}
-                  type="button"
-                  style={{
-                    ...PHASE_DOT_BASE_STYLE,
-                    background: isSelected ? "#2f80ed" : PHASE_DOT_BASE_STYLE.background,
-                    border: isSelected ? "1px solid rgba(111, 189, 255, 0.95)" : PHASE_DOT_BASE_STYLE.border,
-                  }}
-                  onClick={() => surfaceRef.current?.jumpToPhase(phaseIndex)}
-                >
-                  {phaseIndex}
-                </button>
-              );
-            })}
-          </div>
         </div>
       </div>
     </OrientationGate>
