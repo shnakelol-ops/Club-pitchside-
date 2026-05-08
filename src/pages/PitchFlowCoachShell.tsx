@@ -1,4 +1,4 @@
-import { useMemo, useState, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 
 import {
   AGE_FILTER_OPTIONS,
@@ -16,14 +16,14 @@ import {
   type SportFilter,
 } from "../data/libraryContent";
 
-export type PitchFlowTab = "home" | "library" | "sessions" | "plans";
+export type PitchFlowTab = "home" | "notes" | "library" | "sessions" | "plans";
 
 type PitchFlowCoachShellProps = {
   initialTab: PitchFlowTab;
 };
 
 type BottomNavItem = {
-  id: "home" | "flowlab" | "flowstats" | "library";
+  id: "home" | "flowlab" | "flowstats" | "notes";
   label: string;
   short: string;
   path: string;
@@ -36,7 +36,7 @@ const BOTTOM_NAV_ITEMS: ReadonlyArray<BottomNavItem> = [
   { id: "home", label: "Home", short: "H", path: "/board" },
   { id: "flowlab", label: "Quick Board", short: "Q", path: "/quickboard" },
   { id: "flowstats", label: "FlowStats", short: "S", path: "/flowstats" },
-  { id: "library", label: "Library", short: "L", path: "/library" },
+  { id: "notes", label: "Notes", short: "N", path: "/notes" },
 ];
 
 const BOARD_RECENT = ["Weekend Press Trigger", "Kickout Pressure 6v6", "Wide Attack Flow"];
@@ -89,6 +89,115 @@ const SPORT_FILTER_VIEW_LABELS: Record<SportFilter, string> = {
   hurling: "Hurling",
   camogie: "Camogie",
 };
+
+type WrittenNote = {
+  id: string;
+  title: string;
+  body: string;
+  createdAt: number;
+  updatedAt: number;
+  selectedDate?: string;
+};
+
+const WRITTEN_NOTES_STORAGE_KEY = "pitchflow_written_notes_v1";
+const MAX_WRITTEN_NOTES = 200;
+
+function newWrittenNoteId(): string {
+  const c = globalThis.crypto;
+  if (c && "randomUUID" in c && typeof c.randomUUID === "function") {
+    return c.randomUUID();
+  }
+  return `note-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+}
+
+function normalizeWrittenNoteDate(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return undefined;
+  return trimmed;
+}
+
+function sanitizeWrittenNotes(notes: readonly WrittenNote[]): WrittenNote[] {
+  const normalized = notes
+    .filter((note) => typeof note.id === "string" && note.id.trim().length > 0)
+    .map((note) => {
+      const title = note.title.trim().slice(0, 80);
+      const body = note.body.trim().slice(0, 2000);
+      const createdAt = Number.isFinite(note.createdAt) ? Math.max(0, Math.floor(note.createdAt)) : Date.now();
+      const updatedAt = Number.isFinite(note.updatedAt) ? Math.max(createdAt, Math.floor(note.updatedAt)) : createdAt;
+      return {
+        ...note,
+        id: note.id.trim(),
+        title,
+        body,
+        createdAt,
+        updatedAt,
+        ...(normalizeWrittenNoteDate(note.selectedDate) ? { selectedDate: normalizeWrittenNoteDate(note.selectedDate) } : {}),
+      };
+    })
+    .filter((note) => note.title.length > 0 || note.body.length > 0)
+    .sort((a, b) => b.updatedAt - a.updatedAt);
+
+  const seenIds = new Set<string>();
+  return normalized
+    .filter((note) => {
+      if (seenIds.has(note.id)) return false;
+      seenIds.add(note.id);
+      return true;
+    })
+    .slice(0, MAX_WRITTEN_NOTES);
+}
+
+function parseStoredWrittenNotes(input: string | null): WrittenNote[] {
+  if (!input) return [];
+  try {
+    const parsed = JSON.parse(input);
+    if (!Array.isArray(parsed)) return [];
+    const notes = parsed
+      .map((item) => {
+        if (!item || typeof item !== "object") return null;
+        const maybe = item as Record<string, unknown>;
+        if (
+          typeof maybe.id !== "string" ||
+          typeof maybe.title !== "string" ||
+          typeof maybe.body !== "string" ||
+          typeof maybe.createdAt !== "number" ||
+          typeof maybe.updatedAt !== "number"
+        ) {
+          return null;
+        }
+        const selectedDate = normalizeWrittenNoteDate(maybe.selectedDate);
+        return {
+          id: maybe.id,
+          title: maybe.title,
+          body: maybe.body,
+          createdAt: maybe.createdAt,
+          updatedAt: maybe.updatedAt,
+          ...(selectedDate ? { selectedDate } : {}),
+        } satisfies WrittenNote;
+      })
+      .filter((note): note is WrittenNote => note != null);
+    return sanitizeWrittenNotes(notes);
+  } catch {
+    return [];
+  }
+}
+
+function persistWrittenNotes(notes: readonly WrittenNote[]): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(WRITTEN_NOTES_STORAGE_KEY, JSON.stringify(sanitizeWrittenNotes(notes)));
+}
+
+function formatWrittenNoteTimestamp(timestamp: number): string {
+  if (!Number.isFinite(timestamp) || timestamp <= 0) return "Unknown";
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return "Unknown";
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const hour = String(date.getHours()).padStart(2, "0");
+  const minute = String(date.getMinutes()).padStart(2, "0");
+  return `${day}/${month} ${hour}:${minute}`;
+}
 
 const SHELL_CSS = `
 .pf-shell {
@@ -795,9 +904,9 @@ function BoardPage() {
             <span>Quick Board</span>
             <small>Open Quick Board</small>
           </button>
-          <button type="button" className="pf-home-secondary-btn" onClick={() => navigateTo("/library")}>
-            <span>Open Library</span>
-            <small>Sessions & plans</small>
+          <button type="button" className="pf-home-secondary-btn" onClick={() => navigateTo("/notes")}>
+            <span>Written Notes</span>
+            <small>Open Notes</small>
           </button>
         </div>
       </div>
@@ -816,6 +925,203 @@ function BoardPage() {
             </button>
           ))}
         </div>
+      </div>
+    </>
+  );
+}
+
+function NotesPage() {
+  const [notes, setNotes] = useState<WrittenNote[]>(() => {
+    if (typeof window === "undefined") return [];
+    return parseStoredWrittenNotes(window.localStorage.getItem(WRITTEN_NOTES_STORAGE_KEY));
+  });
+  const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
+  const [titleDraft, setTitleDraft] = useState("");
+  const [bodyDraft, setBodyDraft] = useState("");
+  const [dateDraft, setDateDraft] = useState("");
+  const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
+  const titleInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    persistWrittenNotes(notes);
+  }, [notes]);
+
+  useEffect(() => {
+    if (!saveFeedback) return;
+    const timer = window.setTimeout(() => {
+      setSaveFeedback(null);
+    }, 2000);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [saveFeedback]);
+
+  const startNewNote = () => {
+    setActiveNoteId(null);
+    setTitleDraft("");
+    setBodyDraft("");
+    setDateDraft("");
+    window.requestAnimationFrame(() => {
+      titleInputRef.current?.focus();
+    });
+  };
+
+  const openNote = (note: WrittenNote) => {
+    setActiveNoteId(note.id);
+    setTitleDraft(note.title);
+    setBodyDraft(note.body);
+    setDateDraft(note.selectedDate ?? "");
+    setSaveFeedback(null);
+  };
+
+  const saveNote = () => {
+    const nextTitle = titleDraft.trim().slice(0, 80);
+    const nextBody = bodyDraft.trim().slice(0, 2000);
+    const nextDate = normalizeWrittenNoteDate(dateDraft);
+    if (nextTitle.length === 0 && nextBody.length === 0) {
+      setSaveFeedback("Add a title or note before saving.");
+      return;
+    }
+    const now = Date.now();
+    setNotes((previous) => {
+      const existing = activeNoteId ? previous.find((note) => note.id === activeNoteId) : null;
+      const id = existing?.id ?? newWrittenNoteId();
+      const createdAt = existing?.createdAt ?? now;
+      const nextNote: WrittenNote = {
+        id,
+        title: nextTitle,
+        body: nextBody,
+        createdAt,
+        updatedAt: now,
+        ...(nextDate ? { selectedDate: nextDate } : {}),
+      };
+      setActiveNoteId(id);
+      return sanitizeWrittenNotes([nextNote, ...previous.filter((note) => note.id !== id)]);
+    });
+    setSaveFeedback("Note saved");
+  };
+
+  const deleteNote = () => {
+    if (!activeNoteId) return;
+    const selected = notes.find((note) => note.id === activeNoteId);
+    if (!selected) return;
+    const confirmed = window.confirm(`Delete "${selected.title || "Untitled note"}"?`);
+    if (!confirmed) return;
+    setNotes((previous) => previous.filter((note) => note.id !== activeNoteId));
+    startNewNote();
+    setSaveFeedback("Note deleted");
+  };
+
+  return (
+    <>
+      <div className="pf-header-card">
+        <h1 className="pf-title">Notes</h1>
+        <p className="pf-subtitle">Quick written notes from matches and training.</p>
+      </div>
+
+      <div className="pf-card pf-card-soft">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" }}>
+          <p className="pf-card-title" style={{ margin: 0 }}>Saved Notes</p>
+          <button type="button" className="pf-btn" onClick={startNewNote}>
+            + New Note
+          </button>
+        </div>
+        {notes.length === 0 ? (
+          <p className="pf-card-text" style={{ marginTop: "10px" }}>
+            No notes yet. Tap <strong>+ New Note</strong> to add your first coaching note.
+          </p>
+        ) : (
+          <div className="pf-list">
+            {notes.map((note) => {
+              const preview = note.body.replace(/\s+/g, " ").trim();
+              const dateLabel = note.selectedDate ? `📅 ${note.selectedDate}` : null;
+              return (
+                <button
+                  key={note.id}
+                  type="button"
+                  className="pf-list-item pf-list-item-soft"
+                  style={{
+                    textAlign: "left",
+                    display: "grid",
+                    gap: "4px",
+                    border: note.id === activeNoteId ? "1px solid rgba(124,255,114,0.58)" : undefined,
+                  }}
+                  onClick={() => openNote(note)}
+                >
+                  <strong style={{ fontSize: "13px" }}>{note.title || "Untitled note"}</strong>
+                  <span style={{ fontSize: "11px", color: "var(--pf-text-muted)" }}>
+                    {dateLabel ? `${dateLabel} · ` : ""}
+                    Created {formatWrittenNoteTimestamp(note.createdAt)}
+                  </span>
+                  <span style={{ fontSize: "11px", color: "var(--pf-text-dim)" }}>
+                    {preview.length > 0 ? `${preview.slice(0, 96)}${preview.length > 96 ? "…" : ""}` : "No body text"}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div
+        className="pf-card"
+        style={{
+          paddingBottom: "max(14px, calc(env(safe-area-inset-bottom, 0px) + 12px))",
+        }}
+      >
+        <p className="pf-card-title">{activeNoteId ? "Edit Note" : "New Note"}</p>
+        <input
+          ref={titleInputRef}
+          className="pf-search"
+          placeholder="Title"
+          value={titleDraft}
+          onChange={(event) => setTitleDraft(event.target.value)}
+          style={{ marginTop: "10px" }}
+        />
+        <label style={{ display: "grid", gap: "6px", marginTop: "10px", fontSize: "12px", color: "var(--pf-text-muted)" }}>
+          Optional date
+          <input
+            type="date"
+            className="pf-search"
+            value={dateDraft}
+            onChange={(event) => setDateDraft(event.target.value)}
+          />
+        </label>
+        <label style={{ display: "grid", gap: "6px", marginTop: "10px", fontSize: "12px", color: "var(--pf-text-muted)" }}>
+          Note
+          <textarea
+            value={bodyDraft}
+            onChange={(event) => setBodyDraft(event.target.value)}
+            placeholder="Write your match or training notes..."
+            rows={7}
+            style={{
+              width: "100%",
+              borderRadius: "12px",
+              border: "1px solid var(--pf-border)",
+              background: "rgba(16,41,27,0.9)",
+              color: "var(--pf-text)",
+              font: "inherit",
+              lineHeight: 1.4,
+              padding: "10px",
+              resize: "vertical",
+            }}
+          />
+        </label>
+        <div style={{ display: "flex", gap: "8px", marginTop: "12px", flexWrap: "wrap" }}>
+          <button type="button" className="pf-btn" onClick={saveNote}>
+            Save Note
+          </button>
+          {activeNoteId ? (
+            <button type="button" className="pf-btn" onClick={deleteNote}>
+              Delete Note
+            </button>
+          ) : null}
+        </div>
+        {saveFeedback ? (
+          <p className="pf-card-text" style={{ marginTop: "8px" }}>
+            {saveFeedback}
+          </p>
+        ) : null}
       </div>
     </>
   );
@@ -1160,9 +1466,9 @@ function SessionsPage() {
       </button>
       <div className="pf-card">
         <p className="pf-card-title">Share your session</p>
-        <p className="pf-card-text">Help another coach solve a problem today</p>
-        <button type="button" className="pf-btn" style={{ marginTop: "10px" }} onClick={() => navigateTo("/library")}>
-          Share Session
+        <p className="pf-card-text">Capture what worked and what to improve.</p>
+        <button type="button" className="pf-btn" style={{ marginTop: "10px" }} onClick={() => navigateTo("/notes")}>
+          Open Notes
         </button>
       </div>
       <div className="pf-card">
@@ -1201,6 +1507,7 @@ function PlansPage() {
 }
 
 function renderPage(activeTab: PitchFlowTab) {
+  if (activeTab === "notes") return <NotesPage />;
   if (activeTab === "library") return <LibraryPage />;
   if (activeTab === "sessions") return <SessionsPage />;
   if (activeTab === "plans") return <PlansPage />;
@@ -1209,7 +1516,9 @@ function renderPage(activeTab: PitchFlowTab) {
 
 export default function PitchFlowCoachShell({ initialTab }: PitchFlowCoachShellProps) {
   const activeNav: BottomNavItem["id"] =
-    initialTab === "library" || initialTab === "sessions" || initialTab === "plans" ? "library" : "home";
+    initialTab === "notes" || initialTab === "library" || initialTab === "sessions" || initialTab === "plans"
+      ? "notes"
+      : "home";
 
   return (
     <main className="pf-shell">
