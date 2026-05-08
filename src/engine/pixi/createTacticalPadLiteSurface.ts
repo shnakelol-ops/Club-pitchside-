@@ -168,8 +168,9 @@ function isWhiteboardLinearGeometry(
 const WORLD_SIZE = { width: 160, height: 100 } as const;
 const PLAYER_RADIUS = 4.1;
 const PLAYER_TOUCH_HIT_DIAMETER_PX = 48;
+const PLAYER_DRAG_THRESHOLD_PX = 3;
 const TACTICAL_ITEM_HALF_SIZE = 2.2;
-const TACTICAL_ITEM_DRAG_THRESHOLD_PX = 5;
+const TACTICAL_ITEM_DRAG_THRESHOLD_PX = 2;
 const TACTICAL_ITEM_TOUCH_HIT_DIAMETER_PX = 52;
 const TACTICAL_ITEM_PRIORITY_TOUCH_DIAMETER_PX = 54;
 const WHITEBOARD_DEFAULT_STROKE_COLOR = 0x111111;
@@ -906,6 +907,18 @@ export async function createTacticalPadLiteSurface(
   const playersLayer = new Container();
   world.addChild(playersLayer);
 
+  function setItemsLayerAbovePlayers(isAbovePlayers: boolean): void {
+    if (surfaceVariant !== "tactical") return;
+    const playerLayerIndex = world.getChildIndex(playersLayer);
+    const itemLayerIndex = world.getChildIndex(itemsLayer);
+    const targetIndex = isAbovePlayers
+      ? Math.min(world.children.length - 1, playerLayerIndex + 1)
+      : Math.max(0, playerLayerIndex - 1);
+    if (itemLayerIndex !== targetIndex) {
+      world.setChildIndex(itemsLayer, targetIndex);
+    }
+  }
+
   let mapper = createWorldViewport(
     WORLD_SIZE,
     { width: host.clientWidth || 800, height: host.clientHeight || 520 },
@@ -1282,6 +1295,19 @@ export async function createTacticalPadLiteSurface(
     return closestItem;
   }
 
+  function isClearlyOnPlayerAtEvent(event: unknown, player: TacticalPlayer): boolean {
+    const pointerWorld = getBoundedWorldPointFromEvent(event);
+    if (!pointerWorld) return false;
+    const playerWorld = mapper.normalizedToWorld(player.current);
+    const deltaX = pointerWorld.x - playerWorld.x;
+    const deltaY = pointerWorld.y - playerWorld.y;
+    const clearRadiusInWorld = Math.max(
+      PLAYER_RADIUS * 0.9,
+      (PLAYER_TOUCH_HIT_DIAMETER_PX * 0.22) / mapper.transform.scale,
+    );
+    return deltaX * deltaX + deltaY * deltaY <= clearRadiusInWorld * clearRadiusInWorld;
+  }
+
   function setItemWorldPosition(
     item: Pick<TacticalSurfaceItem, "x" | "y" | "rotation" | "scale" | "graphic" | "selectionGraphic">,
     itemMapper: ReturnType<typeof createWorldViewport>,
@@ -1390,13 +1416,22 @@ export async function createTacticalPadLiteSurface(
     const stagePoint = getStagePointFromEvent(event, app.stage);
     if (!stagePoint) return false;
     const distance = Math.hypot(stagePoint.x - startPoint.x, stagePoint.y - startPoint.y);
-    return distance >= TACTICAL_ITEM_DRAG_THRESHOLD_PX;
+    const thresholdPx =
+      dragState.type === "item" ? TACTICAL_ITEM_DRAG_THRESHOLD_PX : PLAYER_DRAG_THRESHOLD_PX;
+    return distance >= thresholdPx;
   }
 
   function beginItemDrag(item: TacticalSurfaceItem, event: unknown): void {
     if (!isItemInteractionEnabled()) return;
     if (activeDrag) return;
     selectedItemId = item.id;
+    if (itemsLayer.children.length > 1) {
+      itemsLayer.setChildIndex(item.graphic, itemsLayer.children.length - 1);
+    }
+    if (itemSelectionLayer.children.length > 1) {
+      itemSelectionLayer.setChildIndex(item.selectionGraphic, itemSelectionLayer.children.length - 1);
+    }
+    setItemsLayerAbovePlayers(true);
     const pointerId = getPointerIdFromEvent(event);
     const startStagePoint = getStagePointFromEvent(event, app.stage);
     const pointerNormalized = getBoundedNormalizedPointFromEvent(event);
@@ -1447,15 +1482,20 @@ export async function createTacticalPadLiteSurface(
       }
       if (activeDrag && activeDrag.type === "item" && activeDrag.itemId === item.id) {
         activeDrag = null;
+        setItemsLayerAbovePlayers(false);
       }
     }
 
     for (const nextItem of normalizedNextItems) {
       const existingItem = findTacticalItemById(nextItem.id);
       if (existingItem) {
+        const isCurrentDraggedItem =
+          activeDrag != null && activeDrag.type === "item" && activeDrag.itemId === existingItem.id;
         existingItem.type = nextItem.type;
-        existingItem.x = nextItem.x;
-        existingItem.y = nextItem.y;
+        if (!isCurrentDraggedItem) {
+          existingItem.x = nextItem.x;
+          existingItem.y = nextItem.y;
+        }
         continue;
       }
       const graphic = new Graphics();
@@ -1512,6 +1552,8 @@ export async function createTacticalPadLiteSurface(
         setPlayerDragVisualTarget(player, false);
         player.token.cursor = "grab";
       }
+    } else {
+      setItemsLayerAbovePlayers(false);
     }
     activeDrag = null;
     syncWhiteboardTokenInputMode();
@@ -2003,7 +2045,8 @@ export async function createTacticalPadLiteSurface(
       if (activeWhiteboardTool !== "move") return;
       if (activeDrag) return;
       const prioritizedItem = findNearestItemAtEvent(event);
-      if (prioritizedItem) {
+      const clearlyOnPlayer = isClearlyOnPlayerAtEvent(event, player);
+      if (prioritizedItem && !clearlyOnPlayer) {
         beginItemDrag(prioritizedItem, event);
         return;
       }
