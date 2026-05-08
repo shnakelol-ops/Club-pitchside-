@@ -242,7 +242,7 @@ function parseStoredSavedMatch(input: unknown): SavedMatch | null {
 }
 
 function sanitizeSavedMatches(matches: readonly SavedMatch[]): SavedMatch[] {
-  return [...matches]
+  const normalized = [...matches]
     .filter(
       (match) =>
         match.events.length > 0 &&
@@ -251,8 +251,13 @@ function sanitizeSavedMatches(matches: readonly SavedMatch[]): SavedMatch[] {
         match.awayTeamName.trim().length > 0 &&
         match.venue.trim().length > 0,
     )
-    .sort((a, b) => b.createdAt - a.createdAt)
-    .slice(0, MAX_SAVED_MATCHES);
+    .sort((a, b) => b.createdAt - a.createdAt);
+  const seenIds = new Set<string>();
+  return normalized.filter((match) => {
+    if (seenIds.has(match.id)) return false;
+    seenIds.add(match.id);
+    return true;
+  }).slice(0, MAX_SAVED_MATCHES);
 }
 
 function parseStoredSavedMatches(input: string | null): SavedMatch[] {
@@ -267,6 +272,11 @@ function parseStoredSavedMatches(input: string | null): SavedMatch[] {
   } catch {
     return [];
   }
+}
+
+function readSavedMatchesFromStorage(): SavedMatch[] {
+  if (typeof window === "undefined") return [];
+  return parseStoredSavedMatches(window.localStorage.getItem(SAVED_MATCHES_STORAGE_KEY));
 }
 
 function persistSavedMatches(matches: readonly SavedMatch[]) {
@@ -2190,10 +2200,7 @@ export default function StatsModeSurface() {
   const [showReviewStrip, setShowReviewStrip] = useState(false);
   const [selectedReviewEventId, setSelectedReviewEventId] = useState<string | null>(null);
   const [loggedEvents, setLoggedEvents] = useState<readonly LoggedMatchEvent[]>([]);
-  const [savedMatches, setSavedMatches] = useState<SavedMatch[]>(() => {
-    if (typeof window === "undefined") return [];
-    return parseStoredSavedMatches(window.localStorage.getItem(SAVED_MATCHES_STORAGE_KEY));
-  });
+  const [savedMatches, setSavedMatches] = useState<SavedMatch[]>(() => readSavedMatchesFromStorage());
   const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
   const [saveLoadBlockedReason, setSaveLoadBlockedReason] = useState<string | null>(null);
   const [visibilityMode, setVisibilityMode] = useState<VisibilityMode>("ALL");
@@ -2664,10 +2671,6 @@ export default function StatsModeSurface() {
   }, [savedSquads.length]);
 
   useEffect(() => {
-    persistSavedMatches(savedMatches);
-  }, [savedMatches]);
-
-  useEffect(() => {
     if (!saveFeedback) return;
     const timerId = window.setTimeout(() => {
       setSaveFeedback(null);
@@ -3040,6 +3043,7 @@ export default function StatsModeSurface() {
 
   const openSavedMatchesPanel = () => {
     setShowReviewStrip(false);
+    setSavedMatches(readSavedMatchesFromStorage());
     setUtilityPanel("SAVED_MATCHES");
     setIsUtilityOpen(false);
     setIsPickerOpen(false);
@@ -3076,7 +3080,9 @@ export default function StatsModeSurface() {
         eventCount: snapshotEvents.length,
         scorelineSnapshot: `${homeTeamName} ${formatGaelicScore(snapshotHomeScore)} (${snapshotHomeScore.total}) v ${awayTeamName} ${formatGaelicScore(snapshotAwayScore)} (${snapshotAwayScore.total})`,
       };
-      setSavedMatches((prev) => sanitizeSavedMatches([savedRecord, ...prev]));
+      const nextSavedMatches = sanitizeSavedMatches([savedRecord, ...readSavedMatchesFromStorage()]);
+      persistSavedMatches(nextSavedMatches);
+      setSavedMatches(nextSavedMatches);
       setSaveFeedback("Match saved");
       setSaveLoadBlockedReason(null);
     } catch {
