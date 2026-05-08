@@ -357,7 +357,7 @@ function resolveSavedMatchRestoreContext(record: SavedMatch): {
   fullTimeResumeState: MatchEngineState | null;
 } {
   const clampClock = (value: number): number => Math.max(0, Math.floor(value));
-  const normalizeMatchAndHalf = (matchState: MatchState, half: 1 | 2): { matchState: MatchState; half: 1 | 2 } => {
+  const normalizeMatchAndHalf = (matchState: MatchState): { matchState: MatchState; half: 1 | 2 } => {
     if (matchState === "FIRST_HALF" || matchState === "HALF_TIME") {
       return { matchState, half: 1 };
     }
@@ -410,9 +410,8 @@ function resolveSavedMatchRestoreContext(record: SavedMatch): {
   const inferred = deriveLegacySnapshot();
   const restoreContext = record.restoreContext;
   const rawMatchState = restoreContext?.matchState ?? inferred.matchState;
-  const rawHalf = restoreContext?.currentHalf ?? inferred.currentHalf;
   const rawClock = restoreContext?.matchTimeSeconds ?? inferred.matchTimeSeconds;
-  const normalized = normalizeMatchAndHalf(rawMatchState, rawHalf);
+  const normalized = normalizeMatchAndHalf(rawMatchState);
   const engineState = createPausedEngineState(normalized.matchState, normalized.half, rawClock);
 
   const fullTimeResumeSource = restoreContext?.fullTimeResumeState;
@@ -422,7 +421,7 @@ function resolveSavedMatchRestoreContext(record: SavedMatch): {
     fullTimeResumeSource &&
     (fullTimeResumeSource.matchState === "FIRST_HALF" || fullTimeResumeSource.matchState === "SECOND_HALF")
   ) {
-    const normalizedResume = normalizeMatchAndHalf(fullTimeResumeSource.matchState, fullTimeResumeSource.currentHalf);
+    const normalizedResume = normalizeMatchAndHalf(fullTimeResumeSource.matchState);
     if (normalizedResume.matchState === "FIRST_HALF" || normalizedResume.matchState === "SECOND_HALF") {
       fullTimeResumeState = createPausedEngineState(
         normalizedResume.matchState,
