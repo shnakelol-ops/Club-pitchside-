@@ -495,28 +495,39 @@ const TOOL_BUBBLE_STYLE: CSSProperties = {
   boxShadow: "0 8px 24px rgba(0, 0, 0, 0.55), inset 0 1px 2px rgba(255, 255, 255, 0.18)",
 };
 
-const TOOL_BUBBLE_MONOGRAM_WRAP_STYLE: CSSProperties = {
-  display: "inline-flex",
-  flexDirection: "column",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: "2px",
+const TOOL_BUBBLE_IMAGE_WRAP_STYLE: CSSProperties = {
+  position: "relative",
+  width: "100%",
+  height: "100%",
+  borderRadius: "inherit",
+  overflow: "hidden",
 };
 
-const TOOL_BUBBLE_MONOGRAM_STYLE: CSSProperties = {
-  fontFamily: "\"Arial Narrow\", \"Roboto Condensed\", Inter, system-ui, sans-serif",
-  fontWeight: 800,
-  fontSize: "14px",
-  letterSpacing: "0.18px",
-  color: "rgba(248, 251, 250, 0.98)",
-  lineHeight: 1,
+const TOOL_BUBBLE_IMAGE_STYLE: CSSProperties = {
+  width: "100%",
+  height: "100%",
+  display: "block",
+  objectFit: "cover",
+  objectPosition: "center",
+  filter: "saturate(0.92) brightness(0.86)",
 };
 
-const TOOL_BUBBLE_MONOGRAM_ACCENT_STYLE: CSSProperties = {
-  width: "12px",
-  height: "2px",
-  borderRadius: "999px",
-  background: "#F2C94C",
+const TOOL_BUBBLE_IMAGE_DARKEN_STYLE: CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  background:
+    "linear-gradient(180deg, rgba(4, 7, 10, 0.26) 0%, rgba(4, 7, 10, 0.08) 50%, rgba(4, 7, 10, 0.3) 100%)",
+  pointerEvents: "none",
+};
+
+const TOOL_BUBBLE_IMAGE_RIGHT_BLEND_STYLE: CSSProperties = {
+  position: "absolute",
+  top: 0,
+  right: 0,
+  bottom: 0,
+  width: "34%",
+  background: "linear-gradient(90deg, rgba(5, 8, 10, 0) 0%, rgba(5, 8, 10, 0.78) 100%)",
+  pointerEvents: "none",
 };
 
 const POPOUT_BASE_STYLE: CSSProperties = {
@@ -3287,9 +3298,14 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             }
           >
             <span className="tool-bubble-icon" aria-hidden="true">
-              <span style={TOOL_BUBBLE_MONOGRAM_WRAP_STYLE}>
-                <span style={TOOL_BUBBLE_MONOGRAM_STYLE}>P</span>
-                <span style={TOOL_BUBBLE_MONOGRAM_ACCENT_STYLE} />
+              <span style={TOOL_BUBBLE_IMAGE_WRAP_STYLE}>
+                <img
+                  src="/branding/Screenshot_20260508_091319_Gallery.jpg"
+                  alt=""
+                  style={TOOL_BUBBLE_IMAGE_STYLE}
+                />
+                <span style={TOOL_BUBBLE_IMAGE_DARKEN_STYLE} />
+                <span style={TOOL_BUBBLE_IMAGE_RIGHT_BLEND_STYLE} />
               </span>
             </span>
           </button>
