@@ -225,7 +225,6 @@ type ActiveDragState =
   | ({
       type: "player";
       playerId: string;
-      startPlayerPosition: NormalizedPoint;
     } & DragPointerState)
   | null;
 
@@ -1070,14 +1069,34 @@ export async function createTacticalPadLiteSurface(
     playerOriginGraphic.clear();
   }
 
+  function getCurrentPhaseStartSnapshot(): PhaseSnapshot {
+    const latestPhase = phases[phases.length - 1];
+    return latestPhase ?? startPositions;
+  }
+
+  function getPhaseStartPositionForPlayer(playerId: string): NormalizedPoint | null {
+    const playerIndex = players.findIndex((player) => player.id === playerId);
+    if (playerIndex < 0) return null;
+    const phaseStartSnapshot = getCurrentPhaseStartSnapshot();
+    const phaseStartPoint = phaseStartSnapshot.players[playerIndex];
+    if (!phaseStartPoint) return null;
+    return {
+      x: clampNormalizedValue(phaseStartPoint.x),
+      y: clampNormalizedValue(phaseStartPoint.y),
+    };
+  }
+
   function renderPlayerOriginGraphic(): void {
     clearPlayerOriginGraphic();
     const dragState = activeDrag;
     if (!dragState || dragState.type !== "player") return;
+    if (isPlaybackInputLocked()) return;
     if (!dragState.hasCrossedThreshold) return;
     const draggedPlayer = players.find((player) => player.id === dragState.playerId);
     if (!draggedPlayer) return;
-    const startWorld = mapper.normalizedToWorld(dragState.startPlayerPosition);
+    const phaseStartPoint = getPhaseStartPositionForPlayer(dragState.playerId);
+    if (!phaseStartPoint) return;
+    const startWorld = mapper.normalizedToWorld(phaseStartPoint);
     const currentWorld = mapper.normalizedToWorld(draggedPlayer.current);
     const travelDistance = Math.hypot(currentWorld.x - startWorld.x, currentWorld.y - startWorld.y);
     if (travelDistance < 0.24) return;
@@ -1759,7 +1778,6 @@ export async function createTacticalPadLiteSurface(
       activeDrag = {
         type: "player",
         playerId: player.id,
-        startPlayerPosition: { x: player.current.x, y: player.current.y },
         pointerId,
         startStagePoint,
         hasCrossedThreshold: !useDragThreshold,
