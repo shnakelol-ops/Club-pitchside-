@@ -693,6 +693,10 @@ function normalizeTacticalItem(item: TacticalItem): TacticalItem {
   };
 }
 
+function isBallItem(item: Pick<TacticalItem, "type">): boolean {
+  return item.type === "football" || item.type === "sliotar";
+}
+
 function getStagePointFromEvent(
   event: unknown,
   stage: Container,
@@ -1293,23 +1297,45 @@ export async function createTacticalPadLiteSurface(
       return;
     }
     if (item.type === "football") {
-      graphic.circle(0, 0, TACTICAL_ITEM_HALF_SIZE * 0.95).fill(0xffffff).stroke({
-        color: 0x334155,
-        width: 0.32,
+      const radius = TACTICAL_ITEM_HALF_SIZE * 0.9;
+      graphic.circle(0, radius * 0.24, radius * 0.86).fill({ color: 0x020617, alpha: 0.12 });
+      graphic.circle(0, 0, radius).fill(0xf8fafc).stroke({ color: 0x475569, width: 0.26 });
+      graphic.circle(-radius * 0.22, -radius * 0.3, radius * 0.29).fill({ color: 0xffffff, alpha: 0.42 });
+      graphic.arc(0, 0, radius * 0.58, Math.PI * 0.18, Math.PI * 0.82).stroke({
+        color: 0x475569,
+        width: 0.12,
+        alpha: 0.82,
+      });
+      graphic.arc(0, 0, radius * 0.58, Math.PI * 1.18, Math.PI * 1.82).stroke({
+        color: 0x475569,
+        width: 0.12,
+        alpha: 0.82,
       });
       graphic
-        .moveTo(-0.8, -0.62)
-        .lineTo(0.8, 0.62)
-        .moveTo(0.8, -0.62)
-        .lineTo(-0.8, 0.62)
-        .stroke({ color: 0x334155, width: 0.24 });
+        .moveTo(-radius * 0.56, 0)
+        .lineTo(-radius * 0.2, 0)
+        .moveTo(radius * 0.56, 0)
+        .lineTo(radius * 0.2, 0)
+        .stroke({ color: 0x64748b, width: 0.12, alpha: 0.74 });
       return;
     }
-    graphic
-      .circle(0, 0, TACTICAL_ITEM_HALF_SIZE * 0.75)
-      .fill(0xffffff)
-      .stroke({ color: 0x6b7280, width: 0.28 });
-    graphic.circle(0, 0, TACTICAL_ITEM_HALF_SIZE * 0.22).fill(0xdbeafe);
+    if (item.type === "sliotar") {
+      const radius = TACTICAL_ITEM_HALF_SIZE * 0.74;
+      graphic.circle(0, radius * 0.22, radius * 0.82).fill({ color: 0x111827, alpha: 0.1 });
+      graphic.circle(0, 0, radius).fill(0xfff3d6).stroke({ color: 0x6b7280, width: 0.24 });
+      graphic.circle(-radius * 0.22, -radius * 0.32, radius * 0.26).fill({ color: 0xffffff, alpha: 0.45 });
+      graphic.arc(0, 0, radius * 0.66, Math.PI * 0.32, Math.PI * 0.78).stroke({
+        color: 0x4b5563,
+        width: 0.15,
+        alpha: 0.82,
+      });
+      graphic.arc(0, 0, radius * 0.66, Math.PI * 1.32, Math.PI * 1.78).stroke({
+        color: 0x4b5563,
+        width: 0.15,
+        alpha: 0.82,
+      });
+      return;
+    }
   }
 
   function drawSelectedItemGraphic(graphic: Graphics, selected: boolean): void {
@@ -1694,7 +1720,7 @@ export async function createTacticalPadLiteSurface(
     return {
       players: players.map((player) => ({ x: player.current.x, y: player.current.y })),
       football: tacticalItems
-        .filter((item) => item.type === "football")
+        .filter((item) => isBallItem(item))
         .map((item) => ({ id: item.id, x: item.x, y: item.y })),
     };
   }
@@ -1708,7 +1734,7 @@ export async function createTacticalPadLiteSurface(
     }
     for (const ball of snapshot.football) {
       const item = findTacticalItemById(ball.id);
-      if (!item || item.type !== "football") continue;
+      if (!item || !isBallItem(item)) continue;
       item.x = clampNormalizedValue(ball.x);
       item.y = clampNormalizedValue(ball.y);
       setItemWorldPosition(item, mapper);
@@ -1802,7 +1828,7 @@ export async function createTacticalPadLiteSurface(
       for (const toBall of toSnapshot.football) {
         const fromBall = fromSnapshot.football.find((point) => point.id === toBall.id) ?? toBall;
         const item = findTacticalItemById(toBall.id);
-        if (!item || item.type !== "football") continue;
+        if (!item || !isBallItem(item)) continue;
         item.x = fromBall.x + (toBall.x - fromBall.x) * progress;
         item.y = fromBall.y + (toBall.y - fromBall.y) * progress;
         setItemWorldPosition(item, mapper);
