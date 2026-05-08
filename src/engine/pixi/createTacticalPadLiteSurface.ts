@@ -1072,11 +1072,12 @@ export async function createTacticalPadLiteSurface(
 
   function renderPlayerOriginGraphic(): void {
     clearPlayerOriginGraphic();
-    if (!activeDrag || activeDrag.type !== "player") return;
-    if (!activeDrag.hasCrossedThreshold) return;
-    const draggedPlayer = players.find((player) => player.id === activeDrag.playerId);
+    const dragState = activeDrag;
+    if (!dragState || dragState.type !== "player") return;
+    if (!dragState.hasCrossedThreshold) return;
+    const draggedPlayer = players.find((player) => player.id === dragState.playerId);
     if (!draggedPlayer) return;
-    const startWorld = mapper.normalizedToWorld(activeDrag.startPlayerPosition);
+    const startWorld = mapper.normalizedToWorld(dragState.startPlayerPosition);
     const currentWorld = mapper.normalizedToWorld(draggedPlayer.current);
     const travelDistance = Math.hypot(currentWorld.x - startWorld.x, currentWorld.y - startWorld.y);
     if (travelDistance < 0.24) return;
