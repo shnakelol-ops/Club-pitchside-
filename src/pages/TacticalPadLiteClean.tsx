@@ -519,6 +519,26 @@ const TOOL_BUBBLE_LABEL_STYLE: CSSProperties = {
   pointerEvents: "none",
 };
 
+const TOOL_BUBBLE_MONOGRAM_STACK_STYLE: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  gap: "2px",
+  transform: "translateY(-0.5px)",
+};
+
+const TOOL_BUBBLE_MONOGRAM_TEXT_STYLE: CSSProperties = {
+  lineHeight: 1,
+};
+
+const TOOL_BUBBLE_MONOGRAM_UNDERLINE_STYLE: CSSProperties = {
+  width: "12px",
+  height: "1.5px",
+  borderRadius: "99px",
+  // Keep gold tone aligned with OrientationGate wordmark accent.
+  background: "linear-gradient(90deg, rgba(242, 201, 76, 0.92), rgba(242, 201, 76, 0.58))",
+};
+
 const TOOL_BUBBLE_IMAGE_EDGE_MASK_STYLE: CSSProperties = {
   position: "absolute",
   inset: 0,
@@ -3340,7 +3360,12 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
           >
             <span className="tool-bubble-icon" aria-hidden="true">
               <span style={TOOL_BUBBLE_IMAGE_WRAP_STYLE}>
-                <span style={TOOL_BUBBLE_LABEL_STYLE}>PF</span>
+                <span style={TOOL_BUBBLE_LABEL_STYLE}>
+                  <span style={TOOL_BUBBLE_MONOGRAM_STACK_STYLE}>
+                    <span style={TOOL_BUBBLE_MONOGRAM_TEXT_STYLE}>PF</span>
+                    <span style={TOOL_BUBBLE_MONOGRAM_UNDERLINE_STYLE} />
+                  </span>
+                </span>
                 <span style={TOOL_BUBBLE_IMAGE_EDGE_MASK_STYLE} />
               </span>
             </span>
