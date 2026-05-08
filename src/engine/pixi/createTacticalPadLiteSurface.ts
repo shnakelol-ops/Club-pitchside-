@@ -19,6 +19,14 @@ import {
   NORMALIZED_MIN,
   type NormalizedPoint,
 } from "../shared/normalization";
+import { createTacticalDrawingController } from "../../features/quickboard/drawing/tacticalDrawingController";
+import {
+  drawingToolToWhiteboardTool,
+  sanitizeDrawingSnapshot,
+  sanitizeDrawingTool,
+  type TacticalDrawingSnapshot,
+  type WhiteboardDrawTool,
+} from "../../features/quickboard/drawing/tacticalDrawingTypes";
 
 export type TacticalKitPattern = MicroAthleteKitPattern;
 export type TacticalLabelMode = "number" | "initials";
@@ -48,7 +56,6 @@ type TacticalPlayer = TacticalPlayerKitFields & {
   dragShadowAlphaTarget: number;
 };
 
-export type WhiteboardDrawTool = "move" | "pen" | "line" | "arrow" | "dashed";
 export type WhiteboardTokenColor = PremiumPlayerTokenColor;
 export type FlowItemType = "cone" | "pole" | "ladder" | "tackleBag" | "football" | "sliotar";
 export type ItemMode = "edit" | "locked";
@@ -134,36 +141,6 @@ type PhaseSnapshot = {
   players: NormalizedPoint[];
   football: PhaseBallSnapshot[];
 };
-type WhiteboardPoint = { x: number; y: number };
-type WhiteboardDrawingType = "pen" | "line" | "arrow" | "dashedArrow";
-type WhiteboardPenGeometry = {
-  points: WhiteboardPoint[];
-};
-type WhiteboardLinearGeometry = {
-  start: WhiteboardPoint;
-  end: WhiteboardPoint;
-  controlPoint: WhiteboardPoint | null;
-};
-type WhiteboardDrawingGeometry = WhiteboardPenGeometry | WhiteboardLinearGeometry;
-type WhiteboardDrawingObject = {
-  id: string;
-  type: WhiteboardDrawingType;
-  color: number;
-  geometry: WhiteboardDrawingGeometry;
-  createdAt: number;
-};
-
-function isWhiteboardPenGeometry(
-  geometry: WhiteboardDrawingGeometry,
-): geometry is WhiteboardPenGeometry {
-  return "points" in geometry;
-}
-
-function isWhiteboardLinearGeometry(
-  geometry: WhiteboardDrawingGeometry,
-): geometry is WhiteboardLinearGeometry {
-  return "start" in geometry && "end" in geometry;
-}
 
 const WORLD_SIZE = { width: 160, height: 100 } as const;
 const PLAYER_RADIUS = 4.1;
@@ -172,7 +149,6 @@ const TACTICAL_ITEM_HALF_SIZE = 2.2;
 const TACTICAL_ITEM_DRAG_THRESHOLD_PX = 5;
 const TACTICAL_ITEM_TOUCH_HIT_DIAMETER_PX = 46;
 const WHITEBOARD_DEFAULT_STROKE_COLOR = 0x111111;
-const WHITEBOARD_STROKE_WIDTH = 1.1;
 const WHITEBOARD_BLUE_START_X = 30;
 const WHITEBOARD_RED_START_X = 70;
 const DOUBLE_TAP_WINDOW_MS = 300;
@@ -255,21 +231,7 @@ type TacticalBoardPlayerState = TacticalPlayerKitFields & {
   y: number;
 };
 
-type TacticalBoardDrawingSnapshot = {
-  id: string;
-  type: WhiteboardDrawingType;
-  color: number;
-  createdAt: number;
-  geometry:
-    | {
-        points: Array<{ x: number; y: number }>;
-      }
-    | {
-        start: { x: number; y: number };
-        end: { x: number; y: number };
-        controlPoint: { x: number; y: number } | null;
-      };
-};
+type TacticalBoardDrawingSnapshot = TacticalDrawingSnapshot;
 
 type TacticalBoardTeamState = {
   colors: {
@@ -352,14 +314,6 @@ function sanitizeTeam(value: unknown): "BLUE" | "RED" | null {
   return null;
 }
 
-function sanitizeWorldPoint(point: unknown): { x: number; y: number } | null {
-  if (!isRecord(point)) return null;
-  const x = typeof point.x === "number" && Number.isFinite(point.x) ? clampWorld(point.x, WORLD_SIZE.width) : null;
-  const y = typeof point.y === "number" && Number.isFinite(point.y) ? clampWorld(point.y, WORLD_SIZE.height) : null;
-  if (x == null || y == null) return null;
-  return { x, y };
-}
-
 function sanitizeNormalizedPoint(point: unknown): NormalizedPoint | null {
   if (!isRecord(point)) return null;
   const x = typeof point.x === "number" && Number.isFinite(point.x) ? clampNormalizedValue(point.x) : null;
@@ -397,53 +351,11 @@ function sanitizePhaseSnapshot(input: unknown): PhaseSnapshot | null {
   };
 }
 
-function sanitizeBoardDrawingSnapshot(input: unknown): TacticalBoardDrawingSnapshot | null {
-  if (!isRecord(input)) return null;
-  const id = typeof input.id === "string" ? input.id.trim() : "";
-  const type = input.type;
-  if (id.length <= 0) return null;
-  if (type !== "pen" && type !== "line" && type !== "arrow" && type !== "dashedArrow") return null;
-  const color = typeof input.color === "number" && Number.isFinite(input.color) ? Math.max(0, Math.floor(input.color)) : null;
-  if (color == null) return null;
-  const createdAt =
-    typeof input.createdAt === "number" && Number.isFinite(input.createdAt)
-      ? Math.max(0, Math.floor(input.createdAt))
-      : Date.now();
-  const geometry = input.geometry;
-  if (!isRecord(geometry)) return null;
-  if (type === "pen") {
-    const points = Array.isArray(geometry.points)
-      ? geometry.points
-          .map((point) => sanitizeWorldPoint(point))
-          .filter((point): point is { x: number; y: number } => point != null)
-      : [];
-    if (points.length < 2) return null;
-    return {
-      id,
-      type,
-      color,
-      createdAt,
-      geometry: { points },
-    };
-  }
-  const start = sanitizeWorldPoint(geometry.start);
-  const end = sanitizeWorldPoint(geometry.end);
-  const controlPoint =
-    geometry.controlPoint == null
-      ? null
-      : sanitizeWorldPoint(geometry.controlPoint);
-  if (!start || !end) return null;
-  return {
-    id,
-    type,
-    color,
-    createdAt,
-    geometry: {
-      start,
-      end,
-      controlPoint,
-    },
-  };
+function sanitizeBoardDrawingSnapshot(
+  input: unknown,
+  drawingMapper: Pick<ReturnType<typeof createWorldViewport>, "worldToNormalized">,
+): TacticalBoardDrawingSnapshot | null {
+  return sanitizeDrawingSnapshot(input, drawingMapper);
 }
 
 function sanitizeBoardPlayerState(input: unknown): TacticalBoardPlayerState | null {
@@ -716,96 +628,6 @@ function getPointerIdFromEvent(event: unknown): number | null {
   return typeof pointerId === "number" ? pointerId : null;
 }
 
-function drawSolidSegment(
-  g: Graphics,
-  from: { x: number; y: number },
-  to: { x: number; y: number },
-  color: number,
-): void {
-  g.moveTo(from.x, from.y).lineTo(to.x, to.y).stroke({
-    color,
-    width: WHITEBOARD_STROKE_WIDTH,
-    cap: "round",
-    join: "round",
-    alignment: 0.5,
-  });
-}
-
-function drawDashedSegment(
-  g: Graphics,
-  from: { x: number; y: number },
-  to: { x: number; y: number },
-  color: number,
-): void {
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  const length = Math.hypot(dx, dy);
-  if (length < 1e-4) return;
-  const ux = dx / length;
-  const uy = dy / length;
-  const dash = 2.2;
-  const gap = 1.35;
-  let offset = 0;
-  while (offset < length) {
-    const segStart = offset;
-    const segEnd = Math.min(length, segStart + dash);
-    drawSolidSegment(
-      g,
-      { x: from.x + ux * segStart, y: from.y + uy * segStart },
-      { x: from.x + ux * segEnd, y: from.y + uy * segEnd },
-      color,
-    );
-    offset += dash + gap;
-  }
-}
-
-function drawArrowSegment(
-  g: Graphics,
-  from: { x: number; y: number },
-  to: { x: number; y: number },
-  color: number,
-): void {
-  drawSolidSegment(g, from, to, color);
-  drawArrowHead(g, from, to, color);
-}
-
-function drawArrowHead(
-  g: Graphics,
-  from: { x: number; y: number },
-  to: { x: number; y: number },
-  color: number,
-): void {
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  const length = Math.hypot(dx, dy);
-  if (length < 1e-4) return;
-  const ux = dx / length;
-  const uy = dy / length;
-  const headLength = 2.6;
-  const sideX = -uy;
-  const sideY = ux;
-  const left = {
-    x: to.x - ux * headLength + sideX * 1.05,
-    y: to.y - uy * headLength + sideY * 1.05,
-  };
-  const right = {
-    x: to.x - ux * headLength - sideX * 1.05,
-    y: to.y - uy * headLength - sideY * 1.05,
-  };
-  drawSolidSegment(g, to, left, color);
-  drawSolidSegment(g, to, right, color);
-}
-
-function drawDashedArrowSegment(
-  g: Graphics,
-  from: { x: number; y: number },
-  to: { x: number; y: number },
-  color: number,
-): void {
-  drawDashedSegment(g, from, to, color);
-  drawArrowHead(g, from, to, color);
-}
-
 export async function createTacticalPadLiteSurface(
   host: HTMLElement,
   options: TacticalPadLiteSurfaceOptions = {},
@@ -838,9 +660,6 @@ export async function createTacticalPadLiteSurface(
     surfaceVariant === "whiteboard" ? "whiteboard" : "default";
   const pitchMount = createTacticalPitchVisualRoot("gaelic", { theme: pitchTheme });
   world.addChild(pitchMount.root);
-  const itemsLayer = new Container();
-  itemsLayer.eventMode = "passive";
-  world.addChild(itemsLayer);
 
   if (surfaceVariant === "whiteboard") {
     const watermarkLabel = new Text({
@@ -867,8 +686,32 @@ export async function createTacticalPadLiteSurface(
     world.addChild(watermarkAccent);
   }
 
+  const whiteboardDrawingsLayer = new Container();
+  whiteboardDrawingsLayer.eventMode = "none";
+  world.addChild(whiteboardDrawingsLayer);
+
+  const whiteboardPreviewLayer = new Container();
+  whiteboardPreviewLayer.eventMode = "none";
+  world.addChild(whiteboardPreviewLayer);
+
+  const whiteboardPreviewGraphic = new Graphics();
+  whiteboardPreviewGraphic.eventMode = "none";
+  whiteboardPreviewLayer.addChild(whiteboardPreviewGraphic);
+
+  const itemsLayer = new Container();
+  itemsLayer.eventMode = "passive";
+  world.addChild(itemsLayer);
+
   const playersLayer = new Container();
   world.addChild(playersLayer);
+
+  const whiteboardInputLayer = new Container();
+  whiteboardInputLayer.eventMode = "none";
+  whiteboardInputLayer.hitArea = {
+    contains: (x: number, y: number) =>
+      x >= 0 && y >= 0 && x <= WORLD_SIZE.width && y <= WORLD_SIZE.height,
+  };
+  world.addChild(whiteboardInputLayer);
 
   let mapper = createWorldViewport(
     WORLD_SIZE,
@@ -1058,21 +901,21 @@ export async function createTacticalPadLiteSurface(
   let activeWhiteboardTool: WhiteboardDrawTool = "move";
   let activeWhiteboardColor = options.whiteboardDrawColor ?? WHITEBOARD_DEFAULT_STROKE_COLOR;
   const tacticalItems: TacticalSurfaceItem[] = [];
-  const whiteboardDrawingsLayer = new Container();
-  whiteboardDrawingsLayer.eventMode = "none";
-  world.addChild(whiteboardDrawingsLayer);
-  const whiteboardPreviewLayer = new Container();
-  whiteboardPreviewLayer.eventMode = "none";
-  world.addChild(whiteboardPreviewLayer);
-  const whiteboardPreviewGraphic = new Graphics();
-  whiteboardPreviewGraphic.eventMode = "none";
-  whiteboardPreviewLayer.addChild(whiteboardPreviewGraphic);
   const itemSelectionLayer = new Container();
   itemSelectionLayer.eventMode = "none";
   world.addChild(itemSelectionLayer);
-  const completedWhiteboardDrawingObjects: WhiteboardDrawingObject[] = [];
-  let activeWhiteboardDrawing: WhiteboardDrawingObject | null = null;
   let whiteboardDrawingCounter = 0;
+  const tacticalDrawingController = createTacticalDrawingController({
+    drawingsLayer: whiteboardDrawingsLayer,
+    previewGraphic: whiteboardPreviewGraphic,
+    mapperProvider: () => mapper,
+    initialTool: "move",
+    initialColor: activeWhiteboardColor,
+    createDrawingId: () => {
+      whiteboardDrawingCounter += 1;
+      return `qb-drawing-${whiteboardDrawingCounter}`;
+    },
+  });
   let lastTappedPlayer: { playerId: string; atMs: number } | null = null;
 
   function emitPlaybackStateChange(): void {
@@ -1177,6 +1020,7 @@ export async function createTacticalPadLiteSurface(
   function syncWhiteboardTokenInputMode(): void {
     if (!isDrawingEnabledSurface) return;
     const canInteractItems = isItemInteractionEnabled();
+    const isDrawingInteractionActive = activeWhiteboardTool !== "move" && !isPlaybackInputLocked();
     let draggingItemId: string | null = null;
     let draggingPlayerId: string | null = null;
     if (activeDrag && activeDrag.type === "item" && activeDrag.hasCrossedThreshold) {
@@ -1200,6 +1044,8 @@ export async function createTacticalPadLiteSurface(
       player.token.eventMode = canDragPlayers ? "static" : "none";
       player.token.cursor = isCurrentPlayerDragging ? "grabbing" : canDragPlayers ? "grab" : "default";
     }
+    whiteboardInputLayer.eventMode = isDrawingInteractionActive ? "static" : "none";
+    whiteboardInputLayer.cursor = activeWhiteboardTool === "eraser" ? "not-allowed" : "crosshair";
   }
 
   function getBoundedWorldPointFromEvent(event: unknown): { x: number; y: number } | null {
@@ -1490,87 +1336,13 @@ export async function createTacticalPadLiteSurface(
     syncWhiteboardTokenInputMode();
   }
 
-  function drawLineWithTool(
-    tool: WhiteboardDrawingType,
-    graphics: Graphics,
-    from: { x: number; y: number },
-    to: { x: number; y: number },
-    color: number,
-  ): void {
-    if (tool === "dashedArrow") {
-      drawDashedArrowSegment(graphics, from, to, color);
-      return;
-    }
-    if (tool === "arrow") {
-      drawArrowSegment(graphics, from, to, color);
-      return;
-    }
-    drawSolidSegment(graphics, from, to, color);
-  }
-
-  function createDrawingId(): string {
-    whiteboardDrawingCounter += 1;
-    return `wb-drawing-${whiteboardDrawingCounter}`;
-  }
-
-  function cloneWhiteboardDrawingObject(drawing: WhiteboardDrawingObject): WhiteboardDrawingObject {
-    const geometry = drawing.geometry;
-    const clonedGeometry: WhiteboardDrawingGeometry = isWhiteboardPenGeometry(geometry)
-      ? {
-          points: geometry.points.map((point) => ({ x: point.x, y: point.y })),
-        }
-      : {
-          start: { x: geometry.start.x, y: geometry.start.y },
-          end: { x: geometry.end.x, y: geometry.end.y },
-          controlPoint: geometry.controlPoint
-            ? { x: geometry.controlPoint.x, y: geometry.controlPoint.y }
-            : null,
-        };
-    return {
-      id: drawing.id,
-      type: drawing.type,
-      color: drawing.color,
-      geometry: clonedGeometry,
-      createdAt: drawing.createdAt,
-    };
-  }
-
-  function renderWhiteboardDrawing(graphics: Graphics, drawing: WhiteboardDrawingObject): void {
-    const geometry = drawing.geometry;
-    if (drawing.type === "pen") {
-      if (!isWhiteboardPenGeometry(geometry)) return;
-      if (geometry.points.length < 2) return;
-      for (let index = 1; index < geometry.points.length; index += 1) {
-        const from = geometry.points[index - 1];
-        const to = geometry.points[index];
-        if (!from || !to) continue;
-        drawSolidSegment(graphics, from, to, drawing.color);
-      }
-      return;
-    }
-    if (!isWhiteboardLinearGeometry(geometry)) return;
-    const from = geometry.start;
-    const to = geometry.end;
-    drawLineWithTool(drawing.type, graphics, from, to, drawing.color);
-  }
-
   function renderAllWhiteboardDrawings(): void {
     if (!isDrawingEnabledSurface) return;
-    const existingChildren = whiteboardDrawingsLayer.removeChildren();
-    for (const child of existingChildren) {
-      child.destroy({ children: true });
-    }
-    for (const drawing of completedWhiteboardDrawingObjects) {
-      const strokeGraphic = new Graphics();
-      strokeGraphic.eventMode = "none";
-      renderWhiteboardDrawing(strokeGraphic, drawing);
-      whiteboardDrawingsLayer.addChild(strokeGraphic);
-    }
+    tacticalDrawingController.render();
   }
 
   function resetActiveWhiteboardDrawing(): void {
-    activeWhiteboardDrawing = null;
-    whiteboardPreviewGraphic.clear();
+    tacticalDrawingController.cancelActiveDraft();
   }
 
   function startWhiteboardDrawing(event: unknown): void {
@@ -1578,33 +1350,7 @@ export async function createTacticalPadLiteSurface(
     if (activeWhiteboardTool === "move") return;
     const worldPoint = getBoundedWorldPointFromEvent(event);
     if (!worldPoint) return;
-    if (activeWhiteboardTool === "pen") {
-      activeWhiteboardDrawing = {
-        id: createDrawingId(),
-        type: "pen",
-        createdAt: Date.now(),
-        color: activeWhiteboardColor,
-        geometry: {
-          points: [{ x: worldPoint.x, y: worldPoint.y }],
-        },
-      };
-      whiteboardPreviewGraphic.clear();
-      return;
-    }
-    const nextType: WhiteboardDrawingType =
-      activeWhiteboardTool === "dashed" ? "dashedArrow" : activeWhiteboardTool;
-    activeWhiteboardDrawing = {
-      id: createDrawingId(),
-      type: nextType,
-      createdAt: Date.now(),
-      color: activeWhiteboardColor,
-      geometry: {
-        start: { x: worldPoint.x, y: worldPoint.y },
-        end: { x: worldPoint.x, y: worldPoint.y },
-        controlPoint: null,
-      },
-    };
-    whiteboardPreviewGraphic.clear();
+    tacticalDrawingController.handlePointerDown(worldPoint, getPointerIdFromEvent(event));
   }
 
   function updateWhiteboardDrawing(event: unknown): void {
@@ -1612,54 +1358,19 @@ export async function createTacticalPadLiteSurface(
     if (activeWhiteboardTool === "move") return;
     const worldPoint = getBoundedWorldPointFromEvent(event);
     if (!worldPoint) return;
-    if (!activeWhiteboardDrawing) return;
-    if (activeWhiteboardDrawing.type === "pen") {
-      (activeWhiteboardDrawing.geometry as WhiteboardPenGeometry).points.push(worldPoint);
-    } else {
-      (activeWhiteboardDrawing.geometry as WhiteboardLinearGeometry).end = worldPoint;
-    }
-    whiteboardPreviewGraphic.clear();
-    renderWhiteboardDrawing(whiteboardPreviewGraphic, activeWhiteboardDrawing);
+    tacticalDrawingController.handlePointerMove(worldPoint, getPointerIdFromEvent(event));
   }
 
   function endWhiteboardDrawing(event?: unknown): void {
     if (!isDrawingEnabledSurface || isPlaybackInputLocked() || activeDrag) return;
     if (activeWhiteboardTool === "move") return;
-    if (!activeWhiteboardDrawing) return;
-    if (event != null) {
-      const worldPoint = getBoundedWorldPointFromEvent(event);
-      if (worldPoint) {
-        if (activeWhiteboardDrawing.type === "pen") {
-          (activeWhiteboardDrawing.geometry as WhiteboardPenGeometry).points.push(worldPoint);
-        } else {
-          (activeWhiteboardDrawing.geometry as WhiteboardLinearGeometry).end = worldPoint;
-        }
-      }
-    }
-
-    if (
-      activeWhiteboardDrawing.type === "pen" &&
-      (activeWhiteboardDrawing.geometry as WhiteboardPenGeometry).points.length < 2
-    ) {
-      resetActiveWhiteboardDrawing();
-      return;
-    }
-
-    completedWhiteboardDrawingObjects.push(cloneWhiteboardDrawingObject(activeWhiteboardDrawing));
-    renderAllWhiteboardDrawings();
-    resetActiveWhiteboardDrawing();
+    const worldPoint = event == null ? null : getBoundedWorldPointFromEvent(event);
+    tacticalDrawingController.handlePointerUp(worldPoint, event == null ? null : getPointerIdFromEvent(event));
   }
 
   function eraseLastPenStroke(): void {
     if (!isDrawingEnabledSurface) return;
-    resetActiveWhiteboardDrawing();
-    for (let index = completedWhiteboardDrawingObjects.length - 1; index >= 0; index -= 1) {
-      const drawing = completedWhiteboardDrawingObjects[index];
-      if (!drawing || drawing.type !== "pen") continue;
-      completedWhiteboardDrawingObjects.splice(index, 1);
-      renderAllWhiteboardDrawings();
-      return;
-    }
+    tacticalDrawingController.deleteSelectedOrLast();
   }
 
   function setPlayerDragVisualTarget(player: TacticalPlayer, isDragging: boolean): void {
@@ -2103,9 +1814,7 @@ export async function createTacticalPadLiteSurface(
       ...(Number.isFinite(item.rotation) ? { rotation: Number(item.rotation) } : {}),
       ...(Number.isFinite(item.scale) ? { scale: Number(item.scale) } : {}),
     }));
-    const drawingStates: TacticalBoardDrawingSnapshot[] = completedWhiteboardDrawingObjects.map((drawing) =>
-      cloneWhiteboardDrawingObject(drawing),
-    );
+    const drawingStates: TacticalBoardDrawingSnapshot[] = tacticalDrawingController.exportSnapshots();
     const phaseStates = phases.map((phase) => cloneSnapshot(phase));
     const currentTeamState: TacticalBoardTeamState = {
       colors: {
@@ -2164,7 +1873,7 @@ export async function createTacticalPadLiteSurface(
       : [];
     const parsedDrawings = Array.isArray(state.drawings)
       ? state.drawings
-          .map((entry) => sanitizeBoardDrawingSnapshot(entry))
+          .map((entry) => sanitizeBoardDrawingSnapshot(entry, mapper))
           .filter((entry): entry is TacticalBoardDrawingSnapshot => entry != null)
       : [];
     const parsedPhases = Array.isArray(state.phases)
@@ -2228,11 +1937,14 @@ export async function createTacticalPadLiteSurface(
 
     upsertTacticalItems(parsedItems);
 
-    completedWhiteboardDrawingObjects.length = 0;
-    for (const drawing of parsedDrawings) {
-      completedWhiteboardDrawingObjects.push(cloneWhiteboardDrawingObject(drawing));
-    }
-    renderAllWhiteboardDrawings();
+    tacticalDrawingController.importSnapshots(parsedDrawings);
+    const parsedMaxDrawingSerial = parsedDrawings.reduce<number>((maxValue, drawing) => {
+      const match = /(\d+)$/.exec(drawing.id);
+      const serial = match?.[1] ? Number(match[1]) : Number.NaN;
+      if (!Number.isFinite(serial)) return maxValue;
+      return Math.max(maxValue, serial);
+    }, 0);
+    whiteboardDrawingCounter = Math.max(whiteboardDrawingCounter, parsedMaxDrawingSerial);
 
     const nextStartSnapshot = normalizePhaseForPlayerCount(
       parsedStart ?? captureCurrentSnapshot(),
@@ -2242,8 +1954,9 @@ export async function createTacticalPadLiteSurface(
     phases = parsedPhases.map((phase) => normalizePhaseForPlayerCount(phase, players.length));
     options.onPhaseCountChange?.(phases.length);
 
-    if (state.drawTool === "move" || state.drawTool === "pen" || state.drawTool === "line" || state.drawTool === "arrow" || state.drawTool === "dashed") {
-      activeWhiteboardTool = state.drawTool;
+    const parsedDrawTool = sanitizeDrawingTool(state.drawTool);
+    if (parsedDrawTool) {
+      activeWhiteboardTool = drawingToolToWhiteboardTool(parsedDrawTool);
     }
     if (typeof state.drawColor === "number" && Number.isFinite(state.drawColor)) {
       activeWhiteboardColor = Math.max(0, Math.floor(state.drawColor));
@@ -2258,6 +1971,9 @@ export async function createTacticalPadLiteSurface(
     }
     syncWhiteboardTokenInputMode();
     renderTacticalItems();
+    tacticalDrawingController.setColor(activeWhiteboardColor);
+    tacticalDrawingController.setTool(sanitizeDrawingTool(activeWhiteboardTool) ?? "move");
+    renderAllWhiteboardDrawings();
     return true;
   }
 
@@ -2360,6 +2076,8 @@ export async function createTacticalPadLiteSurface(
         clearSelectedItem();
       }
     }
+  });
+  whiteboardInputLayer.on("pointerdown", (event) => {
     startWhiteboardDrawing(event);
   });
   app.ticker.add(() => {
@@ -2463,14 +2181,14 @@ export async function createTacticalPadLiteSurface(
         clearSelectedItem();
       }
       activeWhiteboardTool = tool;
-      resetActiveWhiteboardDrawing();
+      tacticalDrawingController.setTool(sanitizeDrawingTool(tool) ?? "move");
       syncWhiteboardTokenInputMode();
       renderAllWhiteboardDrawings();
     },
     setWhiteboardDrawColor: (color) => {
       if (!isDrawingEnabledSurface) return;
       activeWhiteboardColor = color;
-      resetActiveWhiteboardDrawing();
+      tacticalDrawingController.setColor(activeWhiteboardColor);
       renderAllWhiteboardDrawings();
     },
     eraseWhiteboardPenStroke: () => {
@@ -2479,16 +2197,11 @@ export async function createTacticalPadLiteSurface(
     },
     undoWhiteboardStroke: () => {
       if (!isDrawingEnabledSurface) return;
-      resetActiveWhiteboardDrawing();
-      if (completedWhiteboardDrawingObjects.length === 0) return;
-      completedWhiteboardDrawingObjects.pop();
-      renderAllWhiteboardDrawings();
+      tacticalDrawingController.undo();
     },
     clearWhiteboardStrokes: () => {
       if (!isDrawingEnabledSurface) return;
-      resetActiveWhiteboardDrawing();
-      completedWhiteboardDrawingObjects.length = 0;
-      renderAllWhiteboardDrawings();
+      tacticalDrawingController.clear();
     },
     exportBoardState: () => captureBoardState(),
     importBoardState: (state) => importBoardState(state),
