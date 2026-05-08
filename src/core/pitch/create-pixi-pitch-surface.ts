@@ -150,15 +150,6 @@ export async function createPixiPitchSurface(
     const worldX = (stagePoint.x - world.position.x) / Math.max(1e-6, world.scale.x);
     const worldY = (stagePoint.y - world.position.y) / Math.max(1e-6, world.scale.y);
     const { nx, ny } = worldToBoardNorm(worldX, worldY, BOARD_PITCH_VIEWBOX);
-    // Temporary debug to confirm pointer mapping in QA.
-    console.log("[pitch-tap]", {
-      rawStageX: stagePoint.x,
-      rawStageY: stagePoint.y,
-      worldX,
-      worldY,
-      nx,
-      ny,
-    });
 
     if (!canLogEventsState) return;
 

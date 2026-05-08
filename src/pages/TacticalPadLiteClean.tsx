@@ -505,33 +505,17 @@ const TOOL_BUBBLE_IMAGE_WRAP_STYLE: CSSProperties = {
   background: "radial-gradient(circle at 32% 34%, rgba(21, 33, 28, 0.55) 0%, rgba(5, 8, 10, 0.95) 80%)",
 };
 
-const TOOL_BUBBLE_IMAGE_STYLE: CSSProperties = {
-  position: "absolute",
-  left: "50%",
-  top: "50%",
-  width: "138%",
-  height: "138%",
-  transform: "translate(-34%, -50%)",
-  objectFit: "cover",
-  objectPosition: "26% center",
-  filter: "saturate(0.86) brightness(0.8) contrast(1.03)",
-};
-
-const TOOL_BUBBLE_IMAGE_DARKEN_STYLE: CSSProperties = {
+const TOOL_BUBBLE_LABEL_STYLE: CSSProperties = {
   position: "absolute",
   inset: 0,
-  background:
-    "linear-gradient(180deg, rgba(4, 7, 10, 0.24) 0%, rgba(4, 7, 10, 0.08) 52%, rgba(4, 7, 10, 0.3) 100%)",
-  pointerEvents: "none",
-};
-
-const TOOL_BUBBLE_IMAGE_RIGHT_BLEND_STYLE: CSSProperties = {
-  position: "absolute",
-  top: 0,
-  right: 0,
-  bottom: 0,
-  width: "34%",
-  background: "linear-gradient(90deg, rgba(5, 8, 10, 0) 0%, rgba(5, 8, 10, 0.78) 100%)",
+  display: "grid",
+  placeItems: "center",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "11px",
+  fontWeight: 800,
+  letterSpacing: "0.8px",
+  color: "rgba(227, 255, 224, 0.92)",
+  textShadow: "0 1px 3px rgba(0, 0, 0, 0.8)",
   pointerEvents: "none",
 };
 
@@ -3325,13 +3309,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
           >
             <span className="tool-bubble-icon" aria-hidden="true">
               <span style={TOOL_BUBBLE_IMAGE_WRAP_STYLE}>
-                <img
-                  src="/branding/Screenshot_20260508_091319_Gallery.jpg"
-                  alt=""
-                  style={TOOL_BUBBLE_IMAGE_STYLE}
-                />
-                <span style={TOOL_BUBBLE_IMAGE_DARKEN_STYLE} />
-                <span style={TOOL_BUBBLE_IMAGE_RIGHT_BLEND_STYLE} />
+                <span style={TOOL_BUBBLE_LABEL_STYLE}>PF</span>
                 <span style={TOOL_BUBBLE_IMAGE_EDGE_MASK_STYLE} />
               </span>
             </span>

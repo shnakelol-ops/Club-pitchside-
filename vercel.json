@@ -1,21 +1,27 @@
 {
-  "rewrites": [
+  "redirects": [
     {
       "source": "/tacticalpad-lite",
-      "destination": "/index.html"
+      "destination": "/quickboard",
+      "permanent": false
     },
     {
       "source": "/tacticalpad-lite/(.*)",
-      "destination": "/index.html"
+      "destination": "/quickboard",
+      "permanent": false
     },
     {
       "source": "/tacticalpad-lite-clean",
-      "destination": "/index.html"
+      "destination": "/quickboard",
+      "permanent": false
     },
     {
       "source": "/tacticalpad-lite-clean/(.*)",
-      "destination": "/index.html"
-    },
+      "destination": "/quickboard",
+      "permanent": false
+    }
+  ],
+  "rewrites": [
     {
       "source": "/board",
       "destination": "/index.html"
