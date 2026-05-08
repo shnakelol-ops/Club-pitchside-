@@ -170,7 +170,8 @@ const PLAYER_RADIUS = 4.1;
 const PLAYER_TOUCH_HIT_DIAMETER_PX = 48;
 const TACTICAL_ITEM_HALF_SIZE = 2.2;
 const TACTICAL_ITEM_DRAG_THRESHOLD_PX = 5;
-const TACTICAL_ITEM_TOUCH_HIT_DIAMETER_PX = 46;
+const TACTICAL_ITEM_TOUCH_HIT_DIAMETER_PX = 52;
+const TACTICAL_ITEM_PRIORITY_TOUCH_DIAMETER_PX = 54;
 const WHITEBOARD_DEFAULT_STROKE_COLOR = 0x111111;
 const WHITEBOARD_STROKE_WIDTH = 1.1;
 const WHITEBOARD_BLUE_START_X = 30;
@@ -666,13 +667,20 @@ function setItemTouchHitArea(
   item: Pick<TacticalSurfaceItem, "graphic">,
   mapper: ReturnType<typeof createWorldViewport>,
 ): void {
-  const touchRadiusInWorld = (TACTICAL_ITEM_TOUCH_HIT_DIAMETER_PX * 0.5) / mapper.transform.scale;
-  const itemVisualRadius = TACTICAL_ITEM_HALF_SIZE * 1.35;
-  const hitRadius = Math.max(itemVisualRadius, touchRadiusInWorld);
-  const hitRadiusSquared = hitRadius * hitRadius;
+  const touchRadiusInWorld = getItemTouchRadiusInWorld(mapper);
+  const hitRadiusSquared = touchRadiusInWorld * touchRadiusInWorld;
   item.graphic.hitArea = {
     contains: (x: number, y: number) => x * x + y * y <= hitRadiusSquared,
   };
+}
+
+function getItemTouchRadiusInWorld(
+  mapper: ReturnType<typeof createWorldViewport>,
+  touchDiameterPx = TACTICAL_ITEM_TOUCH_HIT_DIAMETER_PX,
+): number {
+  const touchRadiusInWorld = (touchDiameterPx * 0.5) / mapper.transform.scale;
+  const itemVisualRadius = TACTICAL_ITEM_HALF_SIZE * 1.35;
+  return Math.max(itemVisualRadius, touchRadiusInWorld);
 }
 
 function clampNormalizedValue(value: number): number {
@@ -790,6 +798,38 @@ function drawArrowHead(
   };
   drawSolidSegment(g, to, left, color);
   drawSolidSegment(g, to, right, color);
+}
+
+function drawBallDepthShadow(graphic: Graphics, radius: number): void {
+  graphic.ellipse(0, radius * 0.68, radius * 0.9, radius * 0.48).fill({ color: 0x020617, alpha: 0.16 });
+}
+
+function drawFootballVisual(graphic: Graphics): void {
+  const radius = TACTICAL_ITEM_HALF_SIZE * 0.94;
+  drawBallDepthShadow(graphic, radius);
+  graphic.circle(0, 0, radius).fill(0xf8fafc).stroke({ color: 0x334155, width: 0.34 });
+  graphic.circle(-radius * 0.24, -radius * 0.34, radius * 0.34).fill({ color: 0xffffff, alpha: 0.42 });
+  graphic
+    .moveTo(-radius * 0.68, -radius * 0.38)
+    .lineTo(radius * 0.68, radius * 0.38)
+    .moveTo(radius * 0.68, -radius * 0.38)
+    .lineTo(-radius * 0.68, radius * 0.38)
+    .moveTo(-radius * 0.7, 0)
+    .lineTo(radius * 0.7, 0)
+    .stroke({ color: 0x475569, width: 0.2, alpha: 0.84 });
+}
+
+function drawSliotarVisual(graphic: Graphics): void {
+  const radius = TACTICAL_ITEM_HALF_SIZE * 0.79;
+  drawBallDepthShadow(graphic, radius);
+  graphic.circle(0, 0, radius).fill(0xfffbeb).stroke({ color: 0x6b7280, width: 0.3 });
+  graphic.circle(-radius * 0.23, -radius * 0.36, radius * 0.29).fill({ color: 0xffffff, alpha: 0.48 });
+  graphic
+    .moveTo(-radius * 0.74, 0)
+    .lineTo(radius * 0.74, 0)
+    .moveTo(0, -radius * 0.74)
+    .lineTo(0, radius * 0.74)
+    .stroke({ color: 0x64748b, width: 0.17, alpha: 0.78 });
 }
 
 function drawDashedArrowSegment(
@@ -1218,6 +1258,30 @@ export async function createTacticalPadLiteSurface(
     };
   }
 
+  function findNearestItemAtEvent(event: unknown): TacticalSurfaceItem | null {
+    if (!isItemInteractionEnabled()) return null;
+    const pointerWorld = getBoundedWorldPointFromEvent(event);
+    if (!pointerWorld) return null;
+    const hitRadius = getItemTouchRadiusInWorld(mapper, TACTICAL_ITEM_PRIORITY_TOUCH_DIAMETER_PX);
+    const hitRadiusSquared = hitRadius * hitRadius;
+    let closestItem: TacticalSurfaceItem | null = null;
+    let closestDistanceSquared = Number.POSITIVE_INFINITY;
+    for (let index = tacticalItems.length - 1; index >= 0; index -= 1) {
+      const item = tacticalItems[index];
+      if (!item) continue;
+      const itemWorld = mapper.normalizedToWorld({ x: item.x, y: item.y });
+      const deltaX = pointerWorld.x - itemWorld.x;
+      const deltaY = pointerWorld.y - itemWorld.y;
+      const distanceSquared = deltaX * deltaX + deltaY * deltaY;
+      if (distanceSquared > hitRadiusSquared) continue;
+      if (distanceSquared < closestDistanceSquared) {
+        closestItem = item;
+        closestDistanceSquared = distanceSquared;
+      }
+    }
+    return closestItem;
+  }
+
   function setItemWorldPosition(
     item: Pick<TacticalSurfaceItem, "x" | "y" | "rotation" | "scale" | "graphic" | "selectionGraphic">,
     itemMapper: ReturnType<typeof createWorldViewport>,
@@ -1293,23 +1357,12 @@ export async function createTacticalPadLiteSurface(
       return;
     }
     if (item.type === "football") {
-      graphic.circle(0, 0, TACTICAL_ITEM_HALF_SIZE * 0.95).fill(0xffffff).stroke({
-        color: 0x334155,
-        width: 0.32,
-      });
-      graphic
-        .moveTo(-0.8, -0.62)
-        .lineTo(0.8, 0.62)
-        .moveTo(0.8, -0.62)
-        .lineTo(-0.8, 0.62)
-        .stroke({ color: 0x334155, width: 0.24 });
+      drawFootballVisual(graphic);
       return;
     }
-    graphic
-      .circle(0, 0, TACTICAL_ITEM_HALF_SIZE * 0.75)
-      .fill(0xffffff)
-      .stroke({ color: 0x6b7280, width: 0.28 });
-    graphic.circle(0, 0, TACTICAL_ITEM_HALF_SIZE * 0.22).fill(0xdbeafe);
+    if (item.type === "sliotar") {
+      drawSliotarVisual(graphic);
+    }
   }
 
   function drawSelectedItemGraphic(graphic: Graphics, selected: boolean): void {
@@ -1949,6 +2002,11 @@ export async function createTacticalPadLiteSurface(
       if (isPlaybackInputLocked()) return;
       if (activeWhiteboardTool !== "move") return;
       if (activeDrag) return;
+      const prioritizedItem = findNearestItemAtEvent(event);
+      if (prioritizedItem) {
+        beginItemDrag(prioritizedItem, event);
+        return;
+      }
       clearSelectedItem();
       const useDragThreshold = surfaceVariant === "tactical";
       const pointerId = getPointerIdFromEvent(event);
