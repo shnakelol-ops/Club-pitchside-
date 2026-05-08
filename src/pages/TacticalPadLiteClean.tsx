@@ -2069,7 +2069,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const handleSaveCurrentBoard = () => {
     const surface = surfaceRef.current;
     if (!surface || isWhiteboardMode || isStatsMode) {
-      showQuickBoardNotice("Quick Board not ready");
+      showQuickBoardNotice("Vision Board not ready");
       return;
     }
     if (hasReachedQuickBoardSaveLimit()) {
@@ -2325,7 +2325,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     if (isWhiteboardMode || isStatsMode) return;
     const surface = surfaceRef.current;
     if (!surface) {
-      showQuickBoardNotice("Quick Board not ready");
+      showQuickBoardNotice("Vision Board not ready");
       return;
     }
     const confirmed = window.confirm("Start a new board?\nUnsaved changes on the current board will be lost.");
@@ -2509,7 +2509,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   }
 
   return (
-    <OrientationGate modeLabel={isWhiteboardMode ? "Whiteboard Mode" : "Quick Board"}>
+    <OrientationGate modeLabel={isWhiteboardMode ? "Whiteboard Mode" : "Vision Board"}>
       <div
         style={isWhiteboardMode ? ROOT_WHITEBOARD_STYLE : ROOT_STYLE}
         className={isWhiteboardMode ? undefined : "simulator-container"}
