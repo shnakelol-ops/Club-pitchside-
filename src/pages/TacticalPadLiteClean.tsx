@@ -14,6 +14,15 @@ import {
 } from "../engine/pixi/createTacticalPadLiteSurface";
 import StatsModeSurface from "../StatsModeSurface";
 import OrientationGate from "../components/OrientationGate";
+import {
+  PITCHFLOW_ACTION_ORB_SHELL_STYLE,
+  PITCHFLOW_ACTION_ORB_WATERMARK_DARKEN_STYLE,
+  PITCHFLOW_ACTION_ORB_WATERMARK_EDGE_BLEND_STYLE,
+  PITCHFLOW_ACTION_ORB_WATERMARK_GLOSS_STYLE,
+  PITCHFLOW_ACTION_ORB_WATERMARK_IMAGE_STYLE,
+  PITCHFLOW_ACTION_ORB_WATERMARK_IMAGE_WRAP_STYLE,
+  PITCHFLOW_ACTION_ORB_WATERMARK_RING_STYLE,
+} from "../styles/pitchflowActionOrb";
 import { captureQuickBoardSnapshot, restoreQuickBoardSnapshot } from "../features/quickboard/storage/quickboard-snapshot";
 import { generateQuickBoardThumbnail } from "../features/quickboard/storage/quickboard-thumbnail";
 import {
@@ -490,43 +499,31 @@ const RIGHT_BUBBLE_STYLE: CSSProperties = {
 
 const TOOL_BUBBLE_STYLE: CSSProperties = {
   ...RIGHT_BUBBLE_STYLE,
-  background: "rgba(5, 8, 10, 0.92)",
-  border: "2px solid rgba(255, 255, 255, 0.18)",
-  boxShadow: "0 8px 24px rgba(0, 0, 0, 0.55), inset 0 1px 2px rgba(255, 255, 255, 0.18)",
+  ...PITCHFLOW_ACTION_ORB_SHELL_STYLE,
 };
 
 const TOOL_BUBBLE_IMAGE_WRAP_STYLE: CSSProperties = {
-  position: "relative",
-  width: "100%",
-  height: "100%",
-  borderRadius: "inherit",
-  overflow: "hidden",
+  ...PITCHFLOW_ACTION_ORB_WATERMARK_IMAGE_WRAP_STYLE,
 };
 
 const TOOL_BUBBLE_IMAGE_STYLE: CSSProperties = {
-  width: "100%",
-  height: "100%",
-  display: "block",
-  objectFit: "cover",
-  objectPosition: "center",
-  filter: "saturate(0.92) brightness(0.86)",
+  ...PITCHFLOW_ACTION_ORB_WATERMARK_IMAGE_STYLE,
 };
 
 const TOOL_BUBBLE_IMAGE_DARKEN_STYLE: CSSProperties = {
-  position: "absolute",
-  inset: 0,
-  background:
-    "linear-gradient(180deg, rgba(4, 7, 10, 0.26) 0%, rgba(4, 7, 10, 0.08) 50%, rgba(4, 7, 10, 0.3) 100%)",
-  pointerEvents: "none",
+  ...PITCHFLOW_ACTION_ORB_WATERMARK_DARKEN_STYLE,
+};
+
+const TOOL_BUBBLE_IMAGE_GLOSS_STYLE: CSSProperties = {
+  ...PITCHFLOW_ACTION_ORB_WATERMARK_GLOSS_STYLE,
 };
 
 const TOOL_BUBBLE_IMAGE_RIGHT_BLEND_STYLE: CSSProperties = {
-  position: "absolute",
-  top: 0,
-  right: 0,
-  bottom: 0,
-  width: "34%",
-  background: "linear-gradient(90deg, rgba(5, 8, 10, 0) 0%, rgba(5, 8, 10, 0.78) 100%)",
+  ...PITCHFLOW_ACTION_ORB_WATERMARK_EDGE_BLEND_STYLE,
+};
+
+const TOOL_BUBBLE_IMAGE_RING_STYLE: CSSProperties = {
+  ...PITCHFLOW_ACTION_ORB_WATERMARK_RING_STYLE,
   pointerEvents: "none",
 };
 
@@ -3305,7 +3302,9 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                   style={TOOL_BUBBLE_IMAGE_STYLE}
                 />
                 <span style={TOOL_BUBBLE_IMAGE_DARKEN_STYLE} />
+                <span style={TOOL_BUBBLE_IMAGE_GLOSS_STYLE} />
                 <span style={TOOL_BUBBLE_IMAGE_RIGHT_BLEND_STYLE} />
+                <span style={TOOL_BUBBLE_IMAGE_RING_STYLE} />
               </span>
             </span>
           </button>
