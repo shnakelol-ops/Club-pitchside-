@@ -4233,12 +4233,23 @@ export default function StatsModeSurface() {
             <button
               type="button"
               className="utility-review-btn"
-              onClick={() => {
-                saveCurrentMatchSnapshot();
-              }}
+              onClick={saveCurrentMatchSnapshot}
+              style={
+                saveFeedback === "Match saved"
+                  ? {
+                      border: "1px solid rgba(34,197,94,0.92)",
+                      background: "rgba(22,101,52,0.76)",
+                    }
+                  : undefined
+              }
             >
-              Save Match
+              {saveFeedback === "Match saved" ? "Saved" : "Save Match"}
             </button>
+            {saveFeedback ? (
+              <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.9, textTransform: "none" }}>
+                {saveFeedback}
+              </div>
+            ) : null}
             <button
               type="button"
               className="utility-review-btn"
