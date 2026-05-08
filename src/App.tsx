@@ -3470,7 +3470,7 @@ export default function App() {
             background: "#0a0f0c",
             overflow: "hidden",
           }}
-          aria-label="PitchsideCLUB Pixi pitch"
+          aria-label="PitchFlow Pixi pitch"
           role="img"
         />
       </main>

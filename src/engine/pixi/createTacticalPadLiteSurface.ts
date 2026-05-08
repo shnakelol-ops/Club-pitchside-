@@ -899,7 +899,6 @@ export async function createTacticalPadLiteSurface(
   let playElapsedMs = 0;
   let playbackPath: PhaseSnapshot[] = [];
   let activeSegmentIndex = 0;
-  let loggedSegmentIndex = -1;
   let startPositions: PhaseSnapshot = {
     players: players.map((player) => ({ ...player.current })),
     football: [],
@@ -1543,7 +1542,6 @@ export async function createTacticalPadLiteSurface(
     playElapsedMs = 0;
     playbackPath = [];
     activeSegmentIndex = 0;
-    loggedSegmentIndex = -1;
     emitPlaybackStateChange();
   }
 
@@ -1551,7 +1549,6 @@ export async function createTacticalPadLiteSurface(
     if (path.length < 2) return;
     playbackPath = path;
     activeSegmentIndex = 0;
-    loggedSegmentIndex = -1;
     isPlaying = true;
     isPaused = false;
     playElapsedMs = 0;
@@ -1566,7 +1563,6 @@ export async function createTacticalPadLiteSurface(
 
   function playSavedPhaseSequence(): void {
     const sequence = [cloneSnapshot(startPositions), ...phases.map((phase) => cloneSnapshot(phase))];
-    console.debug("PLAYING_PHASE_SEQUENCE");
     startPlayback(sequence);
   }
 
@@ -1580,8 +1576,6 @@ export async function createTacticalPadLiteSurface(
       return;
     }
     cancelPlaybackAnimation();
-    console.debug("PLAY_CLICKED");
-    console.debug("PHASE_COUNT", phases.length);
     if (phases.length > 0) {
       playSavedPhaseSequence();
       return;
@@ -1599,10 +1593,6 @@ export async function createTacticalPadLiteSurface(
       if (!fromSnapshot || !toSnapshot) {
         cancelPlaybackAnimation();
         return;
-      }
-      if (loggedSegmentIndex !== activeSegmentIndex) {
-        console.debug("SEGMENT", activeSegmentIndex);
-        loggedSegmentIndex = activeSegmentIndex;
       }
 
       const stepMs = Math.min(remainingMs, PLAY_DURATION_MS - playElapsedMs);

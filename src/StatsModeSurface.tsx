@@ -5220,7 +5220,7 @@ export default function StatsModeSurface() {
               : "radial-gradient(ellipse at center, rgba(29,90,54,0.96) 0%, rgba(29,90,54,0.88) 40%, rgba(29,90,54,0) 70%)",
             overflow: "hidden",
           }}
-          aria-label="PitchsideCLUB Pixi pitch"
+          aria-label="PitchFlow Pixi pitch"
           role="img"
         />
       </main>

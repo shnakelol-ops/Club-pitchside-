@@ -32,13 +32,7 @@ function pickRootComponent() {
   if (normalizedPath === "/simulator") {
     return redirectToQuickBoard();
   }
-  if (normalizedPath === "/tacticalpad-lite-clean") {
-    return redirectToQuickBoard();
-  }
   if (normalizedPath === "/flowlab") {
-    return redirectToQuickBoard();
-  }
-  if (normalizedPath === "/tacticalpad-lite") {
     return redirectToQuickBoard();
   }
   if (normalizedPath === "/flowstats") {
