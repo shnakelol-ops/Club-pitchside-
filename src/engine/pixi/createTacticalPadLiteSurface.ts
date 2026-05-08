@@ -170,7 +170,7 @@ const PLAYER_RADIUS = 4.1;
 const PLAYER_TOUCH_HIT_DIAMETER_PX = 48;
 const TACTICAL_ITEM_HALF_SIZE = 2.2;
 const TACTICAL_ITEM_DRAG_THRESHOLD_PX = 5;
-const TACTICAL_ITEM_TOUCH_HIT_DIAMETER_PX = 46;
+const TACTICAL_ITEM_TOUCH_HIT_DIAMETER_PX = 50;
 const WHITEBOARD_DEFAULT_STROKE_COLOR = 0x111111;
 const WHITEBOARD_STROKE_WIDTH = 1.1;
 const WHITEBOARD_BLUE_START_X = 30;
@@ -1293,23 +1293,39 @@ export async function createTacticalPadLiteSurface(
       return;
     }
     if (item.type === "football") {
-      graphic.circle(0, 0, TACTICAL_ITEM_HALF_SIZE * 0.95).fill(0xffffff).stroke({
-        color: 0x334155,
-        width: 0.32,
+      const radius = TACTICAL_ITEM_HALF_SIZE * 0.9;
+      graphic.circle(0, radius * 0.22, radius * 0.88).fill({ color: 0x0f172a, alpha: 0.12 });
+      graphic.circle(0, 0, radius).fill(0xf8fafc).stroke({
+        color: 0x4b5563,
+        width: 0.28,
       });
+      graphic.circle(-radius * 0.23, -radius * 0.31, radius * 0.28).fill({ color: 0xffffff, alpha: 0.44 });
+      graphic.circle(0, 0, radius * 0.25).stroke({ color: 0x475569, width: 0.15, alpha: 0.84 });
       graphic
-        .moveTo(-0.8, -0.62)
-        .lineTo(0.8, 0.62)
-        .moveTo(0.8, -0.62)
-        .lineTo(-0.8, 0.62)
-        .stroke({ color: 0x334155, width: 0.24 });
+        .moveTo(-radius * 0.64, -radius * 0.16)
+        .lineTo(-radius * 0.23, -radius * 0.03)
+        .moveTo(radius * 0.64, -radius * 0.16)
+        .lineTo(radius * 0.23, -radius * 0.03)
+        .moveTo(-radius * 0.55, radius * 0.42)
+        .lineTo(-radius * 0.15, radius * 0.15)
+        .moveTo(radius * 0.55, radius * 0.42)
+        .lineTo(radius * 0.15, radius * 0.15)
+        .stroke({ color: 0x475569, width: 0.13, alpha: 0.76 });
       return;
     }
-    graphic
-      .circle(0, 0, TACTICAL_ITEM_HALF_SIZE * 0.75)
-      .fill(0xffffff)
-      .stroke({ color: 0x6b7280, width: 0.28 });
-    graphic.circle(0, 0, TACTICAL_ITEM_HALF_SIZE * 0.22).fill(0xdbeafe);
+    if (item.type === "sliotar") {
+      const radius = TACTICAL_ITEM_HALF_SIZE * 0.74;
+      graphic.circle(0, radius * 0.22, radius * 0.84).fill({ color: 0x111827, alpha: 0.11 });
+      graphic.circle(0, 0, radius).fill(0xfff7dc).stroke({ color: 0x6b7280, width: 0.25 });
+      graphic.circle(-radius * 0.24, -radius * 0.32, radius * 0.27).fill({ color: 0xffffff, alpha: 0.46 });
+      graphic
+        .moveTo(-radius * 0.72, 0)
+        .lineTo(radius * 0.72, 0)
+        .moveTo(0, -radius * 0.72)
+        .lineTo(0, radius * 0.72)
+        .stroke({ color: 0x64748b, width: 0.14, alpha: 0.78 });
+      return;
+    }
   }
 
   function drawSelectedItemGraphic(graphic: Graphics, selected: boolean): void {
@@ -1323,6 +1339,8 @@ export async function createTacticalPadLiteSurface(
   function renderTacticalItems(): void {
     if (surfaceVariant !== "tactical") return;
     for (const item of tacticalItems) {
+      item.graphic.visible = true;
+      item.selectionGraphic.visible = true;
       setItemWorldPosition(item, mapper);
       drawTacticalItemGraphic(item.graphic, item);
       drawSelectedItemGraphic(item.selectionGraphic, item.id === selectedItemId);
@@ -1343,6 +1361,10 @@ export async function createTacticalPadLiteSurface(
   function beginItemDrag(item: TacticalSurfaceItem, event: unknown): void {
     if (!isItemInteractionEnabled()) return;
     if (activeDrag) return;
+    if (event && typeof event === "object" && "stopPropagation" in event) {
+      const stopPropagation = (event as { stopPropagation?: () => void }).stopPropagation;
+      stopPropagation?.();
+    }
     selectedItemId = item.id;
     const pointerId = getPointerIdFromEvent(event);
     const startStagePoint = getStagePointFromEvent(event, app.stage);
@@ -1359,7 +1381,7 @@ export async function createTacticalPadLiteSurface(
       dragOffset,
       pointerId,
       startStagePoint,
-      hasCrossedThreshold: false,
+      hasCrossedThreshold: true,
     };
     renderTacticalItems();
     syncWhiteboardTokenInputMode();
@@ -1367,7 +1389,8 @@ export async function createTacticalPadLiteSurface(
 
   function bindTacticalItemPointerDown(item: TacticalSurfaceItem): void {
     item.graphic.on("pointerdown", (event) => {
-      beginItemDrag(item, event);
+      event.stopPropagation?.();
+      return beginItemDrag(item, event);
     });
   }
 
@@ -1381,19 +1404,23 @@ export async function createTacticalPadLiteSurface(
     if (surfaceVariant !== "tactical") return;
     const normalizedNextItems = nextItems.map(normalizeTacticalItem);
     const nextIds = new Set(normalizedNextItems.map((item) => item.id));
+    const isLocalItemDragUpdate = activeDrag != null && activeDrag.type === "item";
+    const shouldRemoveMissingItems = normalizedNextItems.length <= 0 || !isLocalItemDragUpdate;
 
-    for (let index = tacticalItems.length - 1; index >= 0; index -= 1) {
-      const item = tacticalItems[index];
-      if (!item || nextIds.has(item.id)) continue;
-      item.graphic.removeAllListeners();
-      item.graphic.destroy();
-      item.selectionGraphic.destroy();
-      tacticalItems.splice(index, 1);
-      if (selectedItemId === item.id) {
-        selectedItemId = null;
-      }
-      if (activeDrag && activeDrag.type === "item" && activeDrag.itemId === item.id) {
-        activeDrag = null;
+    if (shouldRemoveMissingItems) {
+      for (let index = tacticalItems.length - 1; index >= 0; index -= 1) {
+        const item = tacticalItems[index];
+        if (!item || nextIds.has(item.id)) continue;
+        item.graphic.removeAllListeners();
+        item.graphic.destroy();
+        item.selectionGraphic.destroy();
+        tacticalItems.splice(index, 1);
+        if (selectedItemId === item.id) {
+          selectedItemId = null;
+        }
+        if (activeDrag && activeDrag.type === "item" && activeDrag.itemId === item.id) {
+          activeDrag = null;
+        }
       }
     }
 
