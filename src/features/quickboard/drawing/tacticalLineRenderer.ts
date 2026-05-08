@@ -19,6 +19,10 @@ function distance(a: { x: number; y: number }, b: { x: number; y: number }): num
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
+function clampScalar(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
 function normalizeVector(from: WorldPoint, to: WorldPoint): { x: number; y: number; length: number } | null {
   const dx = to.x - from.x;
   const dy = to.y - from.y;
@@ -102,37 +106,99 @@ function sampleQuadraticCurve(start: WorldPoint, control: WorldPoint, end: World
   return sampled;
 }
 
+function chooseCurveReferenceVector(points: readonly NormalizedPoint[]): { x: number; y: number; length: number } | null {
+  if (points.length < 2) return null;
+  const start = points[0]!;
+  const end = points[points.length - 1]!;
+  const direct = normalizeVector(start, end);
+  if (direct && direct.length >= 0.28) {
+    return direct;
+  }
+  let fallback: { x: number; y: number; length: number } | null = null;
+  for (let index = 1; index < points.length; index += 1) {
+    const point = points[index]!;
+    const vector = normalizeVector(start, point);
+    if (!vector) continue;
+    if (!fallback || vector.length > fallback.length) {
+      fallback = vector;
+    }
+  }
+  return fallback ?? direct;
+}
+
 function getControlPointFromGesture(points: readonly NormalizedPoint[]): NormalizedPoint | null {
   if (points.length < 2) return null;
   const start = points[0]!;
   const end = points[points.length - 1]!;
-  const vector = normalizeVector(start, end);
-  if (!vector) return null;
-  let bestPoint: NormalizedPoint | null = null;
-  let bestDistance = 0;
-  for (let index = 1; index < points.length - 1; index += 1) {
-    const point = points[index]!;
-    const relativeX = point.x - start.x;
-    const relativeY = point.y - start.y;
-    const projection = relativeX * vector.x + relativeY * vector.y;
-    const closestX = start.x + vector.x * projection;
-    const closestY = start.y + vector.y * projection;
-    const signedDistance = (point.x - closestX) * -vector.y + (point.y - closestY) * vector.x;
-    const absoluteDistance = Math.abs(signedDistance);
-    if (absoluteDistance > bestDistance) {
-      bestDistance = absoluteDistance;
-      bestPoint = point;
-    }
-  }
-  if (bestPoint && bestDistance >= 0.35) return bestPoint;
+  const reference = chooseCurveReferenceVector(points);
+  if (!reference) return null;
+  const normal = { x: -reference.y, y: reference.x };
   const midpoint = {
     x: (start.x + end.x) * 0.5,
     y: (start.y + end.y) * 0.5,
   };
-  const bowDistance = Math.max(1.6, Math.min(8, vector.length * 0.2));
+  const midpointProjection = (midpoint.x - start.x) * reference.x + (midpoint.y - start.y) * reference.y;
+
+  let weightedSignedTotal = 0;
+  let weightedCount = 0;
+  let dominantSignedDistance = 0;
+  let dominantAbsoluteDistance = 0;
+  let dominantProjection = midpointProjection;
+  let gestureReach = reference.length;
+
+  for (let index = 1; index < points.length - 1; index += 1) {
+    const point = points[index]!;
+    const relativeX = point.x - start.x;
+    const relativeY = point.y - start.y;
+    const projection = relativeX * reference.x + relativeY * reference.y;
+    const signedDistance = relativeX * normal.x + relativeY * normal.y;
+    const absoluteDistance = Math.abs(signedDistance);
+    const pointWeight = Math.max(0.25, 1 - Math.abs((index / (points.length - 1)) * 2 - 1) * 0.58);
+    weightedSignedTotal += signedDistance * pointWeight;
+    weightedCount += pointWeight;
+    if (absoluteDistance > dominantAbsoluteDistance + 1e-6) {
+      dominantAbsoluteDistance = absoluteDistance;
+      dominantSignedDistance = signedDistance;
+      dominantProjection = projection;
+    }
+    gestureReach = Math.max(gestureReach, Math.hypot(relativeX, relativeY));
+  }
+
+  const averageSignedDistance = weightedCount > 0 ? weightedSignedTotal / weightedCount : 0;
+  let bendSign = Math.sign(averageSignedDistance);
+  if (bendSign === 0 && dominantAbsoluteDistance > 1e-6) {
+    bendSign = Math.sign(dominantSignedDistance);
+  }
+  if (bendSign === 0 && points.length >= 3) {
+    const earlyPoint = points[Math.min(points.length - 1, 2)]!;
+    const earlyRelativeX = earlyPoint.x - start.x;
+    const earlyRelativeY = earlyPoint.y - start.y;
+    const earlySignedDistance = earlyRelativeX * normal.x + earlyRelativeY * normal.y;
+    bendSign = Math.sign(earlySignedDistance);
+  }
+  if (bendSign === 0) {
+    bendSign = 1;
+  }
+
+  const chordLength = distance(start, end);
+  const scaleLength = Math.max(chordLength, reference.length, 0.64);
+  const minBowDistance = clampScalar(scaleLength * 0.17, 0.58, 3.4);
+  const maxBowDistance = Math.max(
+    minBowDistance + 0.24,
+    Math.min(11.5, Math.max(scaleLength * 0.92 + 2.1, gestureReach * 0.94)),
+  );
+  const inferredBow = Math.max(dominantAbsoluteDistance, Math.abs(averageSignedDistance));
+  const bowDistance = clampScalar(inferredBow, minBowDistance, maxBowDistance);
+
+  const maxAlongShift = clampScalar(scaleLength * 0.34, 0.45, 5.6);
+  const alongShift =
+    dominantAbsoluteDistance > 0.08
+      ? clampScalar(dominantProjection - midpointProjection, -maxAlongShift, maxAlongShift)
+      : 0;
+
   return {
-    x: midpoint.x - vector.y * bowDistance,
-    y: midpoint.y + vector.x * bowDistance,
+    x: midpoint.x + reference.x * alongShift + normal.x * bowDistance * bendSign,
+    y: midpoint.y + reference.y * alongShift + normal.y * bowDistance * bendSign,
   };
 }
 
@@ -331,10 +397,11 @@ export function normalizeDraftPoints(kind: TacticalDrawingKind, points: readonly
     return smoothed.length >= 2 ? smoothed : cleaned;
   }
   if (kind === "curved-arrow") {
-    if (smoothed.length < 2) return smoothed;
-    const start = smoothed[0]!;
-    const end = smoothed[smoothed.length - 1]!;
-    const control = getControlPointFromGesture(smoothed) ?? {
+    const sourcePoints = smoothed.length >= 2 ? smoothed : cleaned;
+    if (sourcePoints.length < 2) return sourcePoints;
+    const start = sourcePoints[0]!;
+    const end = sourcePoints[sourcePoints.length - 1]!;
+    const control = getControlPointFromGesture(sourcePoints) ?? {
       x: (start.x + end.x) * 0.5,
       y: (start.y + end.y) * 0.5,
     };

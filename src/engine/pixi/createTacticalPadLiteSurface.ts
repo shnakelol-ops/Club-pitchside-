@@ -152,6 +152,12 @@ const WHITEBOARD_DEFAULT_STROKE_COLOR = 0x111111;
 const WHITEBOARD_BLUE_START_X = 30;
 const WHITEBOARD_RED_START_X = 70;
 const DOUBLE_TAP_WINDOW_MS = 300;
+const PLAYER_ORIGIN_LINE_COLOR_BY_TEAM: Record<WhiteboardTokenColor, number> = {
+  blue: 0x60a5fa,
+  red: 0xf87171,
+  yellow: 0xfacc15,
+  black: 0x94a3b8,
+};
 const KIT_COLOR_NAMES = [
   "navy",
   "blue",
@@ -219,6 +225,7 @@ type ActiveDragState =
   | ({
       type: "player";
       playerId: string;
+      startPlayerPosition: NormalizedPoint;
     } & DragPointerState)
   | null;
 
@@ -702,6 +709,13 @@ export async function createTacticalPadLiteSurface(
   itemsLayer.eventMode = "passive";
   world.addChild(itemsLayer);
 
+  const playerOriginLayer = new Container();
+  playerOriginLayer.eventMode = "none";
+  world.addChild(playerOriginLayer);
+  const playerOriginGraphic = new Graphics();
+  playerOriginGraphic.eventMode = "none";
+  playerOriginLayer.addChild(playerOriginGraphic);
+
   const playersLayer = new Container();
   world.addChild(playersLayer);
 
@@ -969,6 +983,7 @@ export async function createTacticalPadLiteSurface(
     }
     renderTacticalItems();
     renderAllWhiteboardDrawings();
+    renderPlayerOriginGraphic();
   }
 
   function isItemInteractionEnabled(): boolean {
@@ -996,6 +1011,7 @@ export async function createTacticalPadLiteSurface(
         setPlayerDragVisualTarget(dragPlayer, true);
       }
       syncWhiteboardTokenInputMode();
+      renderPlayerOriginGraphic();
     }
 
     const worldPoint = mapper.viewportToWorld({ x: stagePoint.x, y: stagePoint.y });
@@ -1008,6 +1024,7 @@ export async function createTacticalPadLiteSurface(
     const dragPlayer = players.find((player) => player.id === activePlayerId);
     if (!dragPlayer) {
       activeDrag = null;
+      clearPlayerOriginGraphic();
       return;
     }
     dragPlayer.current = {
@@ -1015,6 +1032,7 @@ export async function createTacticalPadLiteSurface(
       y: Math.max(NORMALIZED_MIN, Math.min(NORMALIZED_MAX, normalized.y)),
     };
     setTokenWorldPositionForPoint(dragPlayer, dragPlayer.current, mapper);
+    renderPlayerOriginGraphic();
   }
 
   function syncWhiteboardTokenInputMode(): void {
@@ -1046,6 +1064,52 @@ export async function createTacticalPadLiteSurface(
     }
     whiteboardInputLayer.eventMode = isDrawingInteractionActive ? "static" : "none";
     whiteboardInputLayer.cursor = activeWhiteboardTool === "eraser" ? "not-allowed" : "crosshair";
+  }
+
+  function clearPlayerOriginGraphic(): void {
+    playerOriginGraphic.clear();
+  }
+
+  function renderPlayerOriginGraphic(): void {
+    clearPlayerOriginGraphic();
+    if (!activeDrag || activeDrag.type !== "player") return;
+    if (!activeDrag.hasCrossedThreshold) return;
+    const draggedPlayer = players.find((player) => player.id === activeDrag.playerId);
+    if (!draggedPlayer) return;
+    const startWorld = mapper.normalizedToWorld(activeDrag.startPlayerPosition);
+    const currentWorld = mapper.normalizedToWorld(draggedPlayer.current);
+    const travelDistance = Math.hypot(currentWorld.x - startWorld.x, currentWorld.y - startWorld.y);
+    if (travelDistance < 0.24) return;
+    const lineColor = PLAYER_ORIGIN_LINE_COLOR_BY_TEAM[draggedPlayer.teamColor] ?? 0x94a3b8;
+    playerOriginGraphic
+      .moveTo(startWorld.x, startWorld.y)
+      .lineTo(currentWorld.x, currentWorld.y)
+      .stroke({
+        color: lineColor,
+        alpha: 0.18,
+        width: 0.84,
+        cap: "round",
+        join: "round",
+        alignment: 0.5,
+      })
+      .moveTo(startWorld.x, startWorld.y)
+      .lineTo(currentWorld.x, currentWorld.y)
+      .stroke({
+        color: lineColor,
+        alpha: 0.42,
+        width: 0.34,
+        cap: "round",
+        join: "round",
+        alignment: 0.5,
+      })
+      .circle(startWorld.x, startWorld.y, 0.6)
+      .fill({ color: lineColor, alpha: 0.14 })
+      .stroke({
+        color: lineColor,
+        alpha: 0.46,
+        width: 0.16,
+        alignment: 0.5,
+      });
   }
 
   function getBoundedWorldPointFromEvent(event: unknown): { x: number; y: number } | null {
@@ -1333,6 +1397,7 @@ export async function createTacticalPadLiteSurface(
       }
     }
     activeDrag = null;
+    clearPlayerOriginGraphic();
     syncWhiteboardTokenInputMode();
   }
 
@@ -1693,6 +1758,7 @@ export async function createTacticalPadLiteSurface(
       activeDrag = {
         type: "player",
         playerId: player.id,
+        startPlayerPosition: { x: player.current.x, y: player.current.y },
         pointerId,
         startStagePoint,
         hasCrossedThreshold: !useDragThreshold,
@@ -1721,6 +1787,7 @@ export async function createTacticalPadLiteSurface(
       setPlayerTouchHitArea(player, mapper);
       setTokenWorldPositionForPoint(player, player.current, mapper);
     }
+    renderPlayerOriginGraphic();
   }
 
   function rebuildWhiteboardPlayers(
