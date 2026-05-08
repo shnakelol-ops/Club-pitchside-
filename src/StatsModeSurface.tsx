@@ -56,6 +56,17 @@ type LoggedMatchEvent = MatchEvent & {
   squadId?: string;
   team?: TeamSide;
 };
+type SavedMatchRestoreContext = {
+  matchState?: MatchState;
+  currentHalf?: 1 | 2;
+  matchTimeSeconds?: number;
+  firstHalfAttackingDirection?: AttackingDirection;
+  fullTimeResumeState?: {
+    matchState: "FIRST_HALF" | "SECOND_HALF";
+    currentHalf: 1 | 2;
+    matchTimeSeconds: number;
+  };
+};
 type SavedMatch = {
   id: string;
   createdAt: number;
@@ -66,6 +77,7 @@ type SavedMatch = {
   events: readonly LoggedMatchEvent[];
   eventCount: number;
   scorelineSnapshot: string;
+  restoreContext?: SavedMatchRestoreContext;
 };
 type ModeScoringEventKind =
   | "GOAL"
@@ -211,6 +223,7 @@ function parseStoredSavedMatch(input: unknown): SavedMatch | null {
   const maybeEvents = "events" in input ? input.events : null;
   const maybeEventCount = "eventCount" in input ? input.eventCount : null;
   const maybeScorelineSnapshot = "scorelineSnapshot" in input ? input.scorelineSnapshot : null;
+  const maybeRestoreContext = "restoreContext" in input ? input.restoreContext : null;
 
   if (typeof maybeId !== "string" || maybeId.trim().length === 0) return null;
   if (typeof maybeCreatedAt !== "number" || !Number.isFinite(maybeCreatedAt) || maybeCreatedAt <= 0) return null;
@@ -227,6 +240,64 @@ function parseStoredSavedMatch(input: unknown): SavedMatch | null {
   const events = parsedEvents.filter((event): event is LoggedMatchEvent => event != null);
   if (events.length === 0) return null;
   if (Math.floor(maybeEventCount) !== events.length) return null;
+  const parseSavedMatchState = (value: unknown): MatchState | null => {
+    if (
+      value === "PRE_MATCH" ||
+      value === "FIRST_HALF" ||
+      value === "HALF_TIME" ||
+      value === "SECOND_HALF" ||
+      value === "FULL_TIME"
+    ) {
+      return value;
+    }
+    return null;
+  };
+  const parseCurrentHalf = (value: unknown): 1 | 2 | null => {
+    if (value === 1 || value === 2) return value;
+    return null;
+  };
+  const parseClock = (value: unknown): number | null => {
+    if (typeof value !== "number" || !Number.isFinite(value)) return null;
+    return Math.max(0, Math.floor(value));
+  };
+  const parseAttackingDirection = (value: unknown): AttackingDirection | null => {
+    if (value === "LEFT" || value === "RIGHT") return value;
+    return null;
+  };
+  const parseRestoreContext = (value: unknown): SavedMatchRestoreContext | undefined => {
+    if (!value || typeof value !== "object") return undefined;
+    const source = value as Record<string, unknown>;
+    const parsedMatchState = parseSavedMatchState(source.matchState);
+    const parsedCurrentHalf = parseCurrentHalf(source.currentHalf);
+    const parsedClock = parseClock(source.matchTimeSeconds);
+    const parsedDirection = parseAttackingDirection(source.firstHalfAttackingDirection);
+    const parsedResumeSource =
+      source.fullTimeResumeState && typeof source.fullTimeResumeState === "object"
+        ? (source.fullTimeResumeState as Record<string, unknown>)
+        : null;
+    const parsedResumeMatchState = parseSavedMatchState(parsedResumeSource?.matchState);
+    const parsedResumeHalf = parseCurrentHalf(parsedResumeSource?.currentHalf);
+    const parsedResumeClock = parseClock(parsedResumeSource?.matchTimeSeconds);
+    const parsedResume =
+      (parsedResumeMatchState === "FIRST_HALF" || parsedResumeMatchState === "SECOND_HALF") &&
+      parsedResumeHalf != null &&
+      parsedResumeClock != null
+        ? {
+            matchState: parsedResumeMatchState,
+            currentHalf: parsedResumeHalf,
+            matchTimeSeconds: parsedResumeClock,
+          }
+        : undefined;
+
+    const nextContext: SavedMatchRestoreContext = {};
+    if (parsedMatchState) nextContext.matchState = parsedMatchState;
+    if (parsedCurrentHalf != null) nextContext.currentHalf = parsedCurrentHalf;
+    if (parsedClock != null) nextContext.matchTimeSeconds = parsedClock;
+    if (parsedDirection) nextContext.firstHalfAttackingDirection = parsedDirection;
+    if (parsedResume) nextContext.fullTimeResumeState = parsedResume;
+    return Object.keys(nextContext).length > 0 ? nextContext : undefined;
+  };
+  const restoreContext = parseRestoreContext(maybeRestoreContext);
 
   return {
     id: maybeId,
@@ -238,6 +309,7 @@ function parseStoredSavedMatch(input: unknown): SavedMatch | null {
     events,
     eventCount: events.length,
     scorelineSnapshot: maybeScorelineSnapshot.trim().slice(0, 120),
+    ...(restoreContext ? { restoreContext } : {}),
   };
 }
 
@@ -277,6 +349,93 @@ function parseStoredSavedMatches(input: string | null): SavedMatch[] {
 function readSavedMatchesFromStorage(): SavedMatch[] {
   if (typeof window === "undefined") return [];
   return parseStoredSavedMatches(window.localStorage.getItem(SAVED_MATCHES_STORAGE_KEY));
+}
+
+function resolveSavedMatchRestoreContext(record: SavedMatch): {
+  engineState: MatchEngineState;
+  firstHalfAttackingDirection: AttackingDirection;
+  fullTimeResumeState: MatchEngineState | null;
+} {
+  const clampClock = (value: number): number => Math.max(0, Math.floor(value));
+  const normalizeMatchAndHalf = (matchState: MatchState): { matchState: MatchState; half: 1 | 2 } => {
+    if (matchState === "FIRST_HALF" || matchState === "HALF_TIME") {
+      return { matchState, half: 1 };
+    }
+    if (matchState === "SECOND_HALF" || matchState === "FULL_TIME") {
+      return { matchState, half: 2 };
+    }
+    return { matchState: "PRE_MATCH", half: 1 };
+  };
+  const createPausedEngineState = (matchState: MatchState, currentHalf: 1 | 2, matchTimeSeconds: number): MatchEngineState => {
+    const clampedClock = clampClock(matchTimeSeconds);
+    return {
+      matchState,
+      currentHalf,
+      matchTimeSeconds: clampedClock,
+      isRunning: false,
+      phaseStartTimeMs: null,
+      accumulatedElapsedSeconds: clampedClock,
+    };
+  };
+  const deriveLegacySnapshot = (): { matchState: MatchState; currentHalf: 1 | 2; matchTimeSeconds: number } => {
+    const halfOneTimes = record.events
+      .filter((event) => event.half === 1)
+      .map((event) => event.timestamp)
+      .filter((timestamp) => Number.isFinite(timestamp));
+    const halfTwoTimes = record.events
+      .filter((event) => event.half === 2)
+      .map((event) => event.timestamp)
+      .filter((timestamp) => Number.isFinite(timestamp));
+    if (halfTwoTimes.length > 0) {
+      return {
+        matchState: "SECOND_HALF",
+        currentHalf: 2,
+        matchTimeSeconds: Math.max(...halfTwoTimes),
+      };
+    }
+    if (halfOneTimes.length > 0) {
+      return {
+        matchState: "FIRST_HALF",
+        currentHalf: 1,
+        matchTimeSeconds: Math.max(...halfOneTimes),
+      };
+    }
+    return {
+      matchState: "PRE_MATCH",
+      currentHalf: 1,
+      matchTimeSeconds: 0,
+    };
+  };
+
+  const inferred = deriveLegacySnapshot();
+  const restoreContext = record.restoreContext;
+  const rawMatchState = restoreContext?.matchState ?? inferred.matchState;
+  const rawClock = restoreContext?.matchTimeSeconds ?? inferred.matchTimeSeconds;
+  const normalized = normalizeMatchAndHalf(rawMatchState);
+  const engineState = createPausedEngineState(normalized.matchState, normalized.half, rawClock);
+
+  const fullTimeResumeSource = restoreContext?.fullTimeResumeState;
+  let fullTimeResumeState: MatchEngineState | null = null;
+  if (
+    engineState.matchState === "FULL_TIME" &&
+    fullTimeResumeSource &&
+    (fullTimeResumeSource.matchState === "FIRST_HALF" || fullTimeResumeSource.matchState === "SECOND_HALF")
+  ) {
+    const normalizedResume = normalizeMatchAndHalf(fullTimeResumeSource.matchState);
+    if (normalizedResume.matchState === "FIRST_HALF" || normalizedResume.matchState === "SECOND_HALF") {
+      fullTimeResumeState = createPausedEngineState(
+        normalizedResume.matchState,
+        normalizedResume.half,
+        fullTimeResumeSource.matchTimeSeconds,
+      );
+    }
+  }
+
+  return {
+    engineState,
+    firstHalfAttackingDirection: restoreContext?.firstHalfAttackingDirection ?? "RIGHT",
+    fullTimeResumeState,
+  };
 }
 
 function persistSavedMatches(matches: readonly SavedMatch[]) {
@@ -3079,6 +3238,23 @@ export default function StatsModeSurface() {
         events: snapshotEvents,
         eventCount: snapshotEvents.length,
         scorelineSnapshot: `${homeTeamName} ${formatGaelicScore(snapshotHomeScore)} (${snapshotHomeScore.total}) v ${awayTeamName} ${formatGaelicScore(snapshotAwayScore)} (${snapshotAwayScore.total})`,
+        restoreContext: {
+          matchState,
+          currentHalf,
+          matchTimeSeconds: Math.max(0, Math.floor(matchTimeSeconds)),
+          firstHalfAttackingDirection,
+          ...(fullTimeResumeStateRef.current &&
+          (fullTimeResumeStateRef.current.matchState === "FIRST_HALF" ||
+            fullTimeResumeStateRef.current.matchState === "SECOND_HALF")
+            ? {
+                fullTimeResumeState: {
+                  matchState: fullTimeResumeStateRef.current.matchState,
+                  currentHalf: fullTimeResumeStateRef.current.currentHalf,
+                  matchTimeSeconds: Math.max(0, Math.floor(fullTimeResumeStateRef.current.matchTimeSeconds)),
+                },
+              }
+            : {}),
+        },
       };
       const nextSavedMatches = sanitizeSavedMatches([savedRecord, ...readSavedMatchesFromStorage()]);
       persistSavedMatches(nextSavedMatches);
@@ -3175,6 +3351,23 @@ export default function StatsModeSurface() {
       AWAY: parsedRecord.awayTeamName,
     });
     setVenueName(parsedRecord.venue);
+    const restoredContext = resolveSavedMatchRestoreContext(parsedRecord);
+    setFirstHalfAttackingDirection(restoredContext.firstHalfAttackingDirection);
+    matchEngineStateRef.current = restoredContext.engineState;
+    fullTimeResumeStateRef.current = restoredContext.fullTimeResumeState;
+    setMatchState(restoredContext.engineState.matchState);
+    setCurrentHalf(restoredContext.engineState.currentHalf);
+    setMatchTimeSeconds(restoredContext.engineState.matchTimeSeconds);
+    setIsCountsOverlayOpen(false);
+    setIsResetConfirmOpen(false);
+    setIsPickerOpen(false);
+    setIsUtilityOpen(false);
+    setIsFullTimeActionsOpen(restoredContext.engineState.matchState === "FULL_TIME");
+    handleRef.current?.setEventContext({
+      half: restoredContext.engineState.currentHalf,
+      timestamp: restoredContext.engineState.matchTimeSeconds,
+      canLog: isLoggingActive(restoredContext.engineState.matchState) && activeTeamRef.current === "HOME",
+    });
     setSaveLoadBlockedReason(null);
     setUtilityPanel(null);
   };
