@@ -1098,13 +1098,17 @@ const PANEL_CSS = `
   width: 39px;
   height: 39px;
   border-radius: 999px;
-  border: 1px solid rgba(125, 211, 252, 0.3);
-  background: rgba(15, 23, 42, 0.74);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.12), 0 0 8px rgba(96, 165, 250, 0.14);
+  border: 1px solid rgba(124, 255, 114, 0.34);
+  background: linear-gradient(180deg, rgba(18, 27, 32, 0.88) 0%, rgba(7, 13, 16, 0.94) 100%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow:
+    0 10px 22px rgba(0, 0, 0, 0.42),
+    0 0 0 1px rgba(124, 255, 114, 0.1),
+    0 0 10px rgba(124, 255, 114, 0.14),
+    inset 0 1px 2px rgba(255, 255, 255, 0.12);
   z-index: 9999;
-  color: #dbeafe;
+  color: rgba(236, 255, 238, 0.96);
   font-size: 15px;
   line-height: 1;
   cursor: pointer;

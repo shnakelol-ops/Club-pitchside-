@@ -490,33 +490,38 @@ const RIGHT_BUBBLE_STYLE: CSSProperties = {
 
 const TOOL_BUBBLE_STYLE: CSSProperties = {
   ...RIGHT_BUBBLE_STYLE,
-  background: "rgba(5, 8, 10, 0.92)",
-  border: "2px solid rgba(255, 255, 255, 0.18)",
-  boxShadow: "0 8px 24px rgba(0, 0, 0, 0.55), inset 0 1px 2px rgba(255, 255, 255, 0.18)",
+  background: "rgba(4, 8, 10, 0.9)",
+  border: "1px solid rgba(124, 255, 114, 0.34)",
+  boxShadow:
+    "0 10px 24px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(124, 255, 114, 0.12), 0 0 12px rgba(124, 255, 114, 0.14), inset 0 1px 2px rgba(255, 255, 255, 0.15)",
 };
 
 const TOOL_BUBBLE_IMAGE_WRAP_STYLE: CSSProperties = {
   position: "relative",
   width: "100%",
   height: "100%",
-  borderRadius: "inherit",
+  borderRadius: "999px",
   overflow: "hidden",
+  background: "radial-gradient(circle at 32% 34%, rgba(21, 33, 28, 0.55) 0%, rgba(5, 8, 10, 0.95) 80%)",
 };
 
 const TOOL_BUBBLE_IMAGE_STYLE: CSSProperties = {
-  width: "100%",
-  height: "100%",
-  display: "block",
+  position: "absolute",
+  left: "50%",
+  top: "50%",
+  width: "138%",
+  height: "138%",
+  transform: "translate(-34%, -50%)",
   objectFit: "cover",
-  objectPosition: "center",
-  filter: "saturate(0.92) brightness(0.86)",
+  objectPosition: "26% center",
+  filter: "saturate(0.86) brightness(0.8) contrast(1.03)",
 };
 
 const TOOL_BUBBLE_IMAGE_DARKEN_STYLE: CSSProperties = {
   position: "absolute",
   inset: 0,
   background:
-    "linear-gradient(180deg, rgba(4, 7, 10, 0.26) 0%, rgba(4, 7, 10, 0.08) 50%, rgba(4, 7, 10, 0.3) 100%)",
+    "linear-gradient(180deg, rgba(4, 7, 10, 0.24) 0%, rgba(4, 7, 10, 0.08) 52%, rgba(4, 7, 10, 0.3) 100%)",
   pointerEvents: "none",
 };
 
@@ -527,6 +532,14 @@ const TOOL_BUBBLE_IMAGE_RIGHT_BLEND_STYLE: CSSProperties = {
   bottom: 0,
   width: "34%",
   background: "linear-gradient(90deg, rgba(5, 8, 10, 0) 0%, rgba(5, 8, 10, 0.78) 100%)",
+  pointerEvents: "none",
+};
+
+const TOOL_BUBBLE_IMAGE_EDGE_MASK_STYLE: CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  borderRadius: "999px",
+  boxShadow: "inset 0 0 0 1px rgba(124, 255, 114, 0.16), inset 0 0 11px rgba(5, 8, 10, 0.68)",
   pointerEvents: "none",
 };
 
@@ -3306,6 +3319,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                 />
                 <span style={TOOL_BUBBLE_IMAGE_DARKEN_STYLE} />
                 <span style={TOOL_BUBBLE_IMAGE_RIGHT_BLEND_STYLE} />
+                <span style={TOOL_BUBBLE_IMAGE_EDGE_MASK_STYLE} />
               </span>
             </span>
           </button>
