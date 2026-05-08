@@ -61,8 +61,8 @@ const TACTICAL_ITEM_CHOICES: ReadonlyArray<{ label: string; type: TacticalItem["
   { label: "Football", type: "football" },
   { label: "Sliotar", type: "sliotar" },
 ];
-type WhiteboardToolControl = "move" | "pen" | "line" | "arrow" | "dashed";
-type WhiteboardToolAction = WhiteboardToolControl | "eraser";
+type WhiteboardToolControl = "move" | "line" | "arrow" | "curved" | "dashed" | "wavy" | "eraser";
+type WhiteboardToolAction = WhiteboardToolControl;
 const WHITEBOARD_BUBBLE_SIZE = 36;
 const WHITEBOARD_BUBBLE_MARGIN = 12;
 const KIT_EDITOR_MARGIN = 10;
@@ -2304,10 +2304,6 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const applyWhiteboardTool = (tool: WhiteboardToolAction) => {
     const surface = surfaceRef.current;
     if (!surface) return;
-    if (tool === "eraser") {
-      surface.eraseWhiteboardPenStroke();
-      return;
-    }
     setWhiteboardTool(tool);
     surface.setWhiteboardDrawTool(tool);
     surface.setWhiteboardDrawColor(whiteboardPenColor);
@@ -2326,10 +2322,6 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const applyTacticalTool = (tool: WhiteboardToolAction) => {
     const surface = surfaceRef.current;
     if (!surface) return;
-    if (tool === "eraser") {
-      surface.eraseWhiteboardPenStroke();
-      return;
-    }
     setTacticalTool(tool);
     surface.setWhiteboardDrawTool(tool);
     surface.setWhiteboardDrawColor(tacticalPenColor);
@@ -2707,35 +2699,42 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                     </button>
                     <button
                       type="button"
-                      style={whiteboardTool === "pen" ? WHITEBOARD_TOOLS_BUTTON_ACTIVE_STYLE : WHITEBOARD_TOOLS_BUTTON_STYLE}
-                      onClick={() => applyWhiteboardTool("pen")}
-                    >
-                      Pen
-                    </button>
-                    <button
-                      type="button"
                       style={whiteboardTool === "line" ? WHITEBOARD_TOOLS_BUTTON_ACTIVE_STYLE : WHITEBOARD_TOOLS_BUTTON_STYLE}
                       onClick={() => applyWhiteboardTool("line")}
                     >
-                      Line
+                      Plain
                     </button>
                     <button
                       type="button"
                       style={whiteboardTool === "arrow" ? WHITEBOARD_TOOLS_BUTTON_ACTIVE_STYLE : WHITEBOARD_TOOLS_BUTTON_STYLE}
                       onClick={() => applyWhiteboardTool("arrow")}
                     >
-                      Arrow
+                      Straight
+                    </button>
+                    <button
+                      type="button"
+                      style={whiteboardTool === "curved" ? WHITEBOARD_TOOLS_BUTTON_ACTIVE_STYLE : WHITEBOARD_TOOLS_BUTTON_STYLE}
+                      onClick={() => applyWhiteboardTool("curved")}
+                    >
+                      Curved
                     </button>
                     <button
                       type="button"
                       style={whiteboardTool === "dashed" ? WHITEBOARD_TOOLS_BUTTON_ACTIVE_STYLE : WHITEBOARD_TOOLS_BUTTON_STYLE}
                       onClick={() => applyWhiteboardTool("dashed")}
                     >
-                      Dash
+                      Dashed
                     </button>
                     <button
                       type="button"
-                      style={WHITEBOARD_TOOLS_BUTTON_STYLE}
+                      style={whiteboardTool === "wavy" ? WHITEBOARD_TOOLS_BUTTON_ACTIVE_STYLE : WHITEBOARD_TOOLS_BUTTON_STYLE}
+                      onClick={() => applyWhiteboardTool("wavy")}
+                    >
+                      Wavy
+                    </button>
+                    <button
+                      type="button"
+                      style={whiteboardTool === "eraser" ? WHITEBOARD_TOOLS_BUTTON_ACTIVE_STYLE : WHITEBOARD_TOOLS_BUTTON_STYLE}
                       onClick={() => applyWhiteboardTool("eraser")}
                     >
                       Eraser
@@ -3025,31 +3024,45 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                   </button>
                   <button
                     type="button"
-                    style={tacticalTool === "pen" ? COACH_HUB_TOOL_BUTTON_ACTIVE_STYLE : COACH_HUB_TOOL_BUTTON_STYLE}
-                    onClick={() => applyTacticalTool("pen")}
-                  >
-                    Pen
-                  </button>
-                  <button
-                    type="button"
                     style={tacticalTool === "line" ? COACH_HUB_TOOL_BUTTON_ACTIVE_STYLE : COACH_HUB_TOOL_BUTTON_STYLE}
                     onClick={() => applyTacticalTool("line")}
                   >
-                    Line
+                    Plain
                   </button>
                   <button
                     type="button"
                     style={tacticalTool === "arrow" ? COACH_HUB_TOOL_BUTTON_ACTIVE_STYLE : COACH_HUB_TOOL_BUTTON_STYLE}
                     onClick={() => applyTacticalTool("arrow")}
                   >
-                    Arrow
+                    Straight
+                  </button>
+                  <button
+                    type="button"
+                    style={tacticalTool === "curved" ? COACH_HUB_TOOL_BUTTON_ACTIVE_STYLE : COACH_HUB_TOOL_BUTTON_STYLE}
+                    onClick={() => applyTacticalTool("curved")}
+                  >
+                    Curved
                   </button>
                   <button
                     type="button"
                     style={tacticalTool === "dashed" ? COACH_HUB_TOOL_BUTTON_ACTIVE_STYLE : COACH_HUB_TOOL_BUTTON_STYLE}
                     onClick={() => applyTacticalTool("dashed")}
                   >
-                    Dash
+                    Dashed
+                  </button>
+                  <button
+                    type="button"
+                    style={tacticalTool === "wavy" ? COACH_HUB_TOOL_BUTTON_ACTIVE_STYLE : COACH_HUB_TOOL_BUTTON_STYLE}
+                    onClick={() => applyTacticalTool("wavy")}
+                  >
+                    Wavy
+                  </button>
+                  <button
+                    type="button"
+                    style={tacticalTool === "eraser" ? COACH_HUB_TOOL_BUTTON_ACTIVE_STYLE : COACH_HUB_TOOL_BUTTON_STYLE}
+                    onClick={() => applyTacticalTool("eraser")}
+                  >
+                    Eraser
                   </button>
                 </div>
                 <div style={COACH_HUB_COLOR_GRID_STYLE}>
