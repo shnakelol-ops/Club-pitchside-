@@ -89,6 +89,7 @@ export type TacticalPadLiteSurface = {
   setStart: () => void;
   addPhase: () => void;
   undoPhase: () => void;
+  newBoard: () => void;
   play: () => void;
   pausePlayback: () => void;
   resumePlayback: () => void;
@@ -1935,6 +1936,13 @@ export async function createTacticalPadLiteSurface(
     };
   }
 
+  function cloneBoardStateSnapshot(state: TacticalBoardState): TacticalBoardState {
+    if (typeof structuredClone === "function") {
+      return structuredClone(state);
+    }
+    return JSON.parse(JSON.stringify(state)) as TacticalBoardState;
+  }
+
   function importBoardState(state: TacticalBoardState): boolean {
     if (surfaceVariant !== "tactical") return false;
     if (!isRecord(state)) return false;
@@ -2170,6 +2178,7 @@ export async function createTacticalPadLiteSurface(
   fitToHost();
   options.onPhaseCountChange?.(0);
   emitPlaybackStateChange();
+  const pristineBoardState = cloneBoardStateSnapshot(captureBoardState());
 
   return {
     setStart: () => {
@@ -2196,6 +2205,10 @@ export async function createTacticalPadLiteSurface(
       const previousSnapshot = phases[phases.length - 1] ?? startPositions;
       applySnapshotToSurface(previousSnapshot);
       options.onPhaseCountChange?.(phases.length);
+    },
+    newBoard: () => {
+      if (surfaceVariant !== "tactical") return;
+      importBoardState(cloneBoardStateSnapshot(pristineBoardState));
     },
     play: handlePlay,
     pausePlayback: () => {

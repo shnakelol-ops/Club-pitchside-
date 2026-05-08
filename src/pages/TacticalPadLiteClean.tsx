@@ -2321,6 +2321,31 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     setIsPaused(false);
   };
 
+  const handleNewBoard = () => {
+    if (isWhiteboardMode || isStatsMode) return;
+    const surface = surfaceRef.current;
+    if (!surface) {
+      showQuickBoardNotice("Quick Board not ready");
+      return;
+    }
+    const confirmed = window.confirm("Start a new board?\nUnsaved changes on the current board will be lost.");
+    if (!confirmed) return;
+    surface.newBoard();
+    tacticalItemCounterRef.current = 0;
+    setItems([]);
+    setItemMode("locked");
+    setTacticalTool("move");
+    setKitEditorState(null);
+    setPhaseCount(0);
+    setIsPlaying(false);
+    setIsPaused(false);
+    setPhasesOpen(false);
+    setToolsOpen(false);
+    setControlsOpen(false);
+    closeActionsMenu();
+    showQuickBoardNotice("New board ready");
+  };
+
   const openMenuFromTools = () => {
     setToolsOpen(false);
     setActionsOpen((open) => {
@@ -3155,6 +3180,9 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
               <div style={COACH_HUB_SECTION_STYLE}>
                 <p style={COACH_HUB_SECTION_TITLE_STYLE}>Board</p>
                 <div style={COACH_HUB_ACTION_GRID_STYLE}>
+                  <button type="button" style={COACH_HUB_ACTION_BUTTON_STYLE} onClick={handleNewBoard}>
+                    New Board
+                  </button>
                   <button type="button" style={COACH_HUB_ACTION_BUTTON_STYLE} onClick={clearTacticalDrawings}>
                     Clear Drawings
                   </button>
@@ -3179,6 +3207,9 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             </button>
             <button type="button" className="control-button" style={ACTIONS_MENU_BUTTON_STYLE} onClick={openMyBoardsEntry}>
               My Boards
+            </button>
+            <button type="button" className="control-button" style={ACTIONS_MENU_BUTTON_STYLE} onClick={handleNewBoard}>
+              New Board
             </button>
             <button type="button" className="control-button" style={ACTIONS_MENU_BUTTON_STYLE} onClick={goHome}>
               Home
