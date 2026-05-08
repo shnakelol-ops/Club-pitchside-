@@ -490,9 +490,11 @@ const RIGHT_BUBBLE_STYLE: CSSProperties = {
 
 const TOOL_BUBBLE_STYLE: CSSProperties = {
   ...RIGHT_BUBBLE_STYLE,
-  background: "rgba(5, 8, 10, 0.92)",
-  border: "2px solid rgba(255, 255, 255, 0.18)",
-  boxShadow: "0 8px 24px rgba(0, 0, 0, 0.55), inset 0 1px 2px rgba(255, 255, 255, 0.18)",
+  background:
+    "radial-gradient(circle at 30% 25%, rgba(28, 45, 22, 0.9) 0%, rgba(6, 10, 8, 0.94) 62%, rgba(5, 8, 10, 0.98) 100%)",
+  border: "1.4px solid rgba(119, 210, 55, 0.72)",
+  boxShadow:
+    "0 8px 22px rgba(0, 0, 0, 0.56), 0 0 9px rgba(119, 210, 55, 0.48), 0 0 20px rgba(119, 210, 55, 0.2), inset 0 0 0 1px rgba(228, 240, 233, 0.11), inset 0 1px 2px rgba(255, 255, 255, 0.12), inset 0 -4px 8px rgba(0, 0, 0, 0.34)",
 };
 
 const TOOL_BUBBLE_IMAGE_WRAP_STYLE: CSSProperties = {
@@ -508,15 +510,25 @@ const TOOL_BUBBLE_IMAGE_STYLE: CSSProperties = {
   height: "100%",
   display: "block",
   objectFit: "cover",
-  objectPosition: "center",
-  filter: "saturate(0.92) brightness(0.86)",
+  objectPosition: "50% 54%",
+  transform: "scale(1.15)",
+  transformOrigin: "center",
+  filter: "saturate(0.98) brightness(0.92) contrast(1.08)",
 };
 
 const TOOL_BUBBLE_IMAGE_DARKEN_STYLE: CSSProperties = {
   position: "absolute",
   inset: 0,
   background:
-    "linear-gradient(180deg, rgba(4, 7, 10, 0.26) 0%, rgba(4, 7, 10, 0.08) 50%, rgba(4, 7, 10, 0.3) 100%)",
+    "linear-gradient(180deg, rgba(4, 7, 10, 0.18) 0%, rgba(4, 7, 10, 0.02) 46%, rgba(4, 7, 10, 0.32) 100%)",
+  pointerEvents: "none",
+};
+
+const TOOL_BUBBLE_IMAGE_GLOSS_STYLE: CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  background:
+    "radial-gradient(circle at 30% 18%, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.05) 23%, rgba(255, 255, 255, 0) 48%)",
   pointerEvents: "none",
 };
 
@@ -526,7 +538,15 @@ const TOOL_BUBBLE_IMAGE_RIGHT_BLEND_STYLE: CSSProperties = {
   right: 0,
   bottom: 0,
   width: "34%",
-  background: "linear-gradient(90deg, rgba(5, 8, 10, 0) 0%, rgba(5, 8, 10, 0.78) 100%)",
+  background: "linear-gradient(90deg, rgba(5, 8, 10, 0) 0%, rgba(5, 8, 10, 0.88) 100%)",
+  pointerEvents: "none",
+};
+
+const TOOL_BUBBLE_IMAGE_RING_STYLE: CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  borderRadius: "inherit",
+  boxShadow: "inset 0 0 0 1px rgba(140, 220, 90, 0.5), inset 0 0 6px rgba(119, 210, 55, 0.16)",
   pointerEvents: "none",
 };
 
@@ -3305,7 +3325,9 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                   style={TOOL_BUBBLE_IMAGE_STYLE}
                 />
                 <span style={TOOL_BUBBLE_IMAGE_DARKEN_STYLE} />
+                <span style={TOOL_BUBBLE_IMAGE_GLOSS_STYLE} />
                 <span style={TOOL_BUBBLE_IMAGE_RIGHT_BLEND_STYLE} />
+                <span style={TOOL_BUBBLE_IMAGE_RING_STYLE} />
               </span>
             </span>
           </button>
