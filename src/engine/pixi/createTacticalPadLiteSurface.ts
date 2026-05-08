@@ -21,6 +21,7 @@ import {
 } from "../shared/normalization";
 import { createTacticalDrawingController } from "../../features/quickboard/drawing/tacticalDrawingController";
 import {
+  cloneDrawingSnapshot,
   drawingToolToWhiteboardTool,
   sanitizeDrawingSnapshot,
   sanitizeDrawingTool,
@@ -140,6 +141,12 @@ type PhaseBallSnapshot = {
 type PhaseSnapshot = {
   players: NormalizedPoint[];
   football: PhaseBallSnapshot[];
+};
+
+type PhaseFrame = {
+  id: string;
+  movement: PhaseSnapshot;
+  drawings: TacticalDrawingSnapshot[];
 };
 
 const WORLD_SIZE = { width: 160, height: 100 } as const;
@@ -885,13 +892,17 @@ export async function createTacticalPadLiteSurface(
   let isPaused = false;
   let playElapsedMs = 0;
   let playbackPath: PhaseSnapshot[] = [];
+  let playbackDrawingPath: TacticalDrawingSnapshot[][] = [];
   let activeSegmentIndex = 0;
   let loggedSegmentIndex = -1;
   let startPositions: PhaseSnapshot = {
     players: players.map((player) => ({ ...player.current })),
     football: [],
   };
-  let phases: PhaseSnapshot[] = [];
+  let startDrawings: TacticalDrawingSnapshot[] = [];
+  let phases: PhaseFrame[] = [];
+  let currentPhaseIndex = 0;
+  let phaseFrameCounter = 0;
 
   let activeDrag: ActiveDragState = null;
   let selectedItemId: string | null = null;
@@ -1366,11 +1377,13 @@ export async function createTacticalPadLiteSurface(
     if (activeWhiteboardTool === "move") return;
     const worldPoint = event == null ? null : getBoundedWorldPointFromEvent(event);
     tacticalDrawingController.handlePointerUp(worldPoint, event == null ? null : getPointerIdFromEvent(event));
+    syncCurrentPhaseDrawingsFromController();
   }
 
   function eraseLastPenStroke(): void {
     if (!isDrawingEnabledSurface) return;
     tacticalDrawingController.deleteSelectedOrLast();
+    syncCurrentPhaseDrawingsFromController();
   }
 
   function setPlayerDragVisualTarget(player: TacticalPlayer, isDragging: boolean): void {
@@ -1400,6 +1413,21 @@ export async function createTacticalPadLiteSurface(
     };
   }
 
+  function cloneDrawingSnapshots(snapshots: readonly TacticalDrawingSnapshot[]): TacticalDrawingSnapshot[] {
+    return snapshots.map((snapshot) => cloneDrawingSnapshot(snapshot));
+  }
+
+  function createPhaseFrameId(): string {
+    phaseFrameCounter += 1;
+    return `phase-${phaseFrameCounter}`;
+  }
+
+  function normalizeDrawingSnapshotsForPhase(
+    snapshots: readonly TacticalDrawingSnapshot[],
+  ): TacticalDrawingSnapshot[] {
+    return cloneDrawingSnapshots(snapshots);
+  }
+
   function normalizePhaseForPlayerCount(snapshot: PhaseSnapshot, playerCount: number): PhaseSnapshot {
     const normalizedPlayers = Array.from({ length: playerCount }, (_, index) => {
       const existing = snapshot.players[index];
@@ -1425,6 +1453,101 @@ export async function createTacticalPadLiteSurface(
         }))
         .filter((ball) => ball.id.trim().length > 0),
     };
+  }
+
+  function normalizePhaseFrameForPlayerCount(
+    frame: PhaseFrame,
+    playerCount: number,
+  ): PhaseFrame {
+    return {
+      id: frame.id,
+      movement: normalizePhaseForPlayerCount(frame.movement, playerCount),
+      drawings: normalizeDrawingSnapshotsForPhase(frame.drawings),
+    };
+  }
+
+  function buildPhaseFrame(
+    movement: PhaseSnapshot,
+    drawings: readonly TacticalDrawingSnapshot[],
+    playerCount: number,
+    id?: string,
+  ): PhaseFrame {
+    return {
+      id: id ?? createPhaseFrameId(),
+      movement: normalizePhaseForPlayerCount(movement, playerCount),
+      drawings: normalizeDrawingSnapshotsForPhase(drawings),
+    };
+  }
+
+  function snapshotFromCurrentDrawings(): TacticalDrawingSnapshot[] {
+    return cloneDrawingSnapshots(tacticalDrawingController.exportSnapshots());
+  }
+
+  function getFrameForPhaseIndex(phaseIndex: number): PhaseFrame | null {
+    if (phaseIndex <= 0) return null;
+    return phases[phaseIndex - 1] ?? null;
+  }
+
+  function getCurrentMovementSnapshot(): PhaseSnapshot {
+    const frame = getFrameForPhaseIndex(currentPhaseIndex);
+    return frame ? frame.movement : startPositions;
+  }
+
+  function getCurrentDrawingsSnapshot(): TacticalDrawingSnapshot[] {
+    const frame = getFrameForPhaseIndex(currentPhaseIndex);
+    return frame ? frame.drawings : startDrawings;
+  }
+
+  function setCurrentDrawingsSnapshot(nextDrawings: readonly TacticalDrawingSnapshot[]): void {
+    const normalized = normalizeDrawingSnapshotsForPhase(nextDrawings);
+    const frame = getFrameForPhaseIndex(currentPhaseIndex);
+    if (frame) {
+      frame.drawings = normalized;
+      return;
+    }
+    startDrawings = normalized;
+  }
+
+  function syncCurrentPhaseDrawingsFromController(): void {
+    setCurrentDrawingsSnapshot(snapshotFromCurrentDrawings());
+  }
+
+  function applyCurrentPhaseState(): void {
+    applySnapshotToSurface(getCurrentMovementSnapshot());
+    tacticalDrawingController.importSnapshots(getCurrentDrawingsSnapshot());
+  }
+
+  function normalizeAllPhaseStateForPlayerCount(playerCount: number): void {
+    startPositions = normalizePhaseForPlayerCount(startPositions, playerCount);
+    phases = phases.map((frame) => normalizePhaseFrameForPlayerCount(frame, playerCount));
+    currentPhaseIndex = Math.max(0, Math.min(currentPhaseIndex, phases.length));
+  }
+
+  function setCurrentPhaseIndex(nextIndex: number): void {
+    currentPhaseIndex = Math.max(0, Math.min(nextIndex, phases.length));
+  }
+
+  function commitCurrentFrameAsNextPhase(): void {
+    const nextMovement = captureCurrentSnapshot();
+    const nextDrawings = snapshotFromCurrentDrawings();
+    const committedPrefix = phases.slice(0, currentPhaseIndex);
+    const nextFrame = buildPhaseFrame(nextMovement, nextDrawings, players.length);
+    phases = [...committedPrefix, nextFrame];
+    setCurrentPhaseIndex(phases.length);
+  }
+
+  function getPhaseSequenceForPlayback(): Array<{ movement: PhaseSnapshot; drawings: TacticalDrawingSnapshot[] }> {
+    const phaseSequence: Array<{ movement: PhaseSnapshot; drawings: TacticalDrawingSnapshot[] }> = [
+      {
+        movement: normalizePhaseForPlayerCount(startPositions, players.length),
+        drawings: normalizeDrawingSnapshotsForPhase(startDrawings),
+      },
+      ...phases.map((frame) => ({
+        movement: normalizePhaseForPlayerCount(frame.movement, players.length),
+        drawings: normalizeDrawingSnapshotsForPhase(frame.drawings),
+      })),
+    ];
+    return phaseSequence;
   }
 
   function captureCurrentSnapshot(): PhaseSnapshot {
@@ -1457,30 +1580,44 @@ export async function createTacticalPadLiteSurface(
     isPaused = false;
     playElapsedMs = 0;
     playbackPath = [];
+    playbackDrawingPath = [];
     activeSegmentIndex = 0;
     loggedSegmentIndex = -1;
     emitPlaybackStateChange();
   }
 
-  function startPlayback(path: PhaseSnapshot[]): void {
+  function startPlayback(path: Array<{ movement: PhaseSnapshot; drawings: TacticalDrawingSnapshot[] }>): void {
     if (path.length < 2) return;
-    playbackPath = path;
+    playbackPath = path.map((entry) => cloneSnapshot(entry.movement));
+    playbackDrawingPath = path.map((entry) => normalizeDrawingSnapshotsForPhase(entry.drawings));
     activeSegmentIndex = 0;
     loggedSegmentIndex = -1;
     isPlaying = true;
     isPaused = false;
     playElapsedMs = 0;
-    applySnapshotToSurface(path[0]!);
+    applySnapshotToSurface(playbackPath[0]!);
+    tacticalDrawingController.importSnapshots(playbackDrawingPath[0] ?? []);
+    setCurrentPhaseIndex(0);
     emitPlaybackStateChange();
   }
 
   function playSingleStartToCurrent(): void {
-    const playbackTarget = captureCurrentSnapshot();
-    startPlayback([cloneSnapshot(startPositions), playbackTarget]);
+    const playbackTarget = normalizePhaseForPlayerCount(captureCurrentSnapshot(), players.length);
+    const playbackStart = normalizePhaseForPlayerCount(startPositions, players.length);
+    startPlayback([
+      {
+        movement: playbackStart,
+        drawings: normalizeDrawingSnapshotsForPhase(startDrawings),
+      },
+      {
+        movement: playbackTarget,
+        drawings: snapshotFromCurrentDrawings(),
+      },
+    ]);
   }
 
   function playSavedPhaseSequence(): void {
-    const sequence = [cloneSnapshot(startPositions), ...phases.map((phase) => cloneSnapshot(phase))];
+    const sequence = getPhaseSequenceForPlayback();
     console.debug("PLAYING_PHASE_SEQUENCE");
     startPlayback(sequence);
   }
@@ -1495,6 +1632,7 @@ export async function createTacticalPadLiteSurface(
       return;
     }
     cancelPlaybackAnimation();
+    syncCurrentPhaseDrawingsFromController();
     console.debug("PLAY_CLICKED");
     console.debug("PHASE_COUNT", phases.length);
     if (phases.length > 0) {
@@ -1512,8 +1650,13 @@ export async function createTacticalPadLiteSurface(
       const fromSnapshot = playbackPath[activeSegmentIndex];
       const toSnapshot = playbackPath[activeSegmentIndex + 1];
       if (!fromSnapshot || !toSnapshot) {
-        cancelPlaybackAnimation();
-        return;
+        activeSegmentIndex += 1;
+        playElapsedMs = 0;
+        if (activeSegmentIndex >= playbackPath.length - 1) {
+          cancelPlaybackAnimation();
+          return;
+        }
+        continue;
       }
       if (loggedSegmentIndex !== activeSegmentIndex) {
         console.debug("SEGMENT", activeSegmentIndex);
@@ -1547,6 +1690,9 @@ export async function createTacticalPadLiteSurface(
 
       if (progress >= 1) {
         applySnapshotToSurface(toSnapshot);
+        const nextPhaseIndex = Math.min(phases.length, activeSegmentIndex + 1);
+        setCurrentPhaseIndex(nextPhaseIndex);
+        tacticalDrawingController.importSnapshots(playbackDrawingPath[nextPhaseIndex] ?? []);
         activeSegmentIndex += 1;
         playElapsedMs = 0;
         if (activeSegmentIndex >= playbackPath.length - 1) {
@@ -1815,7 +1961,7 @@ export async function createTacticalPadLiteSurface(
       ...(Number.isFinite(item.scale) ? { scale: Number(item.scale) } : {}),
     }));
     const drawingStates: TacticalBoardDrawingSnapshot[] = tacticalDrawingController.exportSnapshots();
-    const phaseStates = phases.map((phase) => cloneSnapshot(phase));
+    const phaseStates = phases.map((phase) => cloneSnapshot(phase.movement));
     const currentTeamState: TacticalBoardTeamState = {
       colors: {
         blue: tacticalTeamColors.blue ?? "blue",
@@ -1876,11 +2022,15 @@ export async function createTacticalPadLiteSurface(
           .map((entry) => sanitizeBoardDrawingSnapshot(entry, mapper))
           .filter((entry): entry is TacticalBoardDrawingSnapshot => entry != null)
       : [];
-    const parsedPhases = Array.isArray(state.phases)
-      ? state.phases
-          .map((entry) => sanitizePhaseSnapshot(entry))
-          .filter((entry): entry is PhaseSnapshot => entry != null)
-      : [];
+    const rawPhaseEntries =
+      Array.isArray(state.phases) && state.phases.length > 0
+        ? state.phases
+        : Array.isArray(state.movementPaths)
+          ? state.movementPaths
+          : [];
+    const parsedPhases = rawPhaseEntries
+      .map((entry) => sanitizePhaseSnapshot(entry))
+      .filter((entry): entry is PhaseSnapshot => entry != null);
     const parsedStart = sanitizePhaseSnapshot(state.startSnapshot);
     const parsedTeamState = isRecord(state.teamState) ? state.teamState : null;
     const nextBlueColor = sanitizeWhiteboardTokenColor(parsedTeamState?.colors && isRecord(parsedTeamState.colors) ? parsedTeamState.colors.blue : undefined);
@@ -1951,7 +2101,18 @@ export async function createTacticalPadLiteSurface(
       players.length,
     );
     startPositions = nextStartSnapshot;
-    phases = parsedPhases.map((phase) => normalizePhaseForPlayerCount(phase, players.length));
+    startDrawings = [];
+    phases = parsedPhases.map((phase) => buildPhaseFrame(phase, [], players.length));
+    setCurrentPhaseIndex(phases.length);
+    if (currentPhaseIndex <= 0) {
+      startDrawings = cloneDrawingSnapshots(parsedDrawings);
+    } else {
+      const activeFrame = phases[currentPhaseIndex - 1];
+      if (activeFrame) {
+        activeFrame.drawings = cloneDrawingSnapshots(parsedDrawings);
+      }
+    }
+    normalizeAllPhaseStateForPlayerCount(players.length);
     options.onPhaseCountChange?.(phases.length);
 
     const parsedDrawTool = sanitizeDrawingTool(state.drawTool);
@@ -2021,6 +2182,7 @@ export async function createTacticalPadLiteSurface(
     releaseActiveDrag();
     const nextPlayer = createSurfacePlayer(nextSeed);
     players.push(nextPlayer);
+    normalizeAllPhaseStateForPlayerCount(players.length);
     bindPlayerTokenInteraction(nextPlayer);
     syncPlayersToViewport();
     syncWhiteboardTokenInputMode();
@@ -2045,6 +2207,8 @@ export async function createTacticalPadLiteSurface(
     }
     removedPlayer.token.removeAllListeners();
     removedPlayer.token.destroy({ children: true });
+    normalizeAllPhaseStateForPlayerCount(players.length);
+    applyCurrentPhaseState();
     syncPlayersToViewport();
     syncWhiteboardTokenInputMode();
   }
@@ -2100,15 +2264,17 @@ export async function createTacticalPadLiteSurface(
       releaseActiveDrag();
       clearSelectedItem();
       cancelPlaybackAnimation();
-      startPositions = captureCurrentSnapshot();
+      startPositions = normalizePhaseForPlayerCount(captureCurrentSnapshot(), players.length);
+      startDrawings = snapshotFromCurrentDrawings();
       phases = [];
+      setCurrentPhaseIndex(0);
       options.onPhaseCountChange?.(0);
     },
     addPhase: () => {
       releaseActiveDrag();
       clearSelectedItem();
       cancelPlaybackAnimation();
-      phases = [...phases, captureCurrentSnapshot()];
+      commitCurrentFrameAsNextPhase();
       options.onPhaseCountChange?.(phases.length);
     },
     undoPhase: () => {
@@ -2117,8 +2283,8 @@ export async function createTacticalPadLiteSurface(
       cancelPlaybackAnimation();
       if (phases.length <= 0) return;
       phases = phases.slice(0, -1);
-      const previousSnapshot = phases[phases.length - 1] ?? startPositions;
-      applySnapshotToSurface(previousSnapshot);
+      setCurrentPhaseIndex(Math.min(currentPhaseIndex, phases.length));
+      applyCurrentPhaseState();
       options.onPhaseCountChange?.(phases.length);
     },
     play: handlePlay,
@@ -2157,7 +2323,8 @@ export async function createTacticalPadLiteSurface(
     reset: () => {
       releaseActiveDrag();
       cancelPlaybackAnimation();
-      applySnapshotToSurface(startPositions);
+      setCurrentPhaseIndex(0);
+      applyCurrentPhaseState();
     },
     reflow: () => {
       fitToHost();
@@ -2198,10 +2365,12 @@ export async function createTacticalPadLiteSurface(
     undoWhiteboardStroke: () => {
       if (!isDrawingEnabledSurface) return;
       tacticalDrawingController.undo();
+      syncCurrentPhaseDrawingsFromController();
     },
     clearWhiteboardStrokes: () => {
       if (!isDrawingEnabledSurface) return;
       tacticalDrawingController.clear();
+      syncCurrentPhaseDrawingsFromController();
     },
     exportBoardState: () => captureBoardState(),
     importBoardState: (state) => importBoardState(state),
