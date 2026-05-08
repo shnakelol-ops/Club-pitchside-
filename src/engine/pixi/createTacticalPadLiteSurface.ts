@@ -1293,28 +1293,52 @@ export async function createTacticalPadLiteSurface(
       return;
     }
     if (item.type === "football") {
-      graphic.circle(0, 0, TACTICAL_ITEM_HALF_SIZE * 0.95).fill(0xffffff).stroke({
+      const widthRadius = TACTICAL_ITEM_HALF_SIZE * 0.96;
+      const heightRadius = TACTICAL_ITEM_HALF_SIZE * 0.8;
+      graphic.ellipse(0, heightRadius * 0.74, widthRadius * 0.78, heightRadius * 0.45).fill({
+        color: 0x0f172a,
+        alpha: 0.14,
+      });
+      graphic.ellipse(0, 0, widthRadius, heightRadius).fill(0xf8fafc).stroke({
         color: 0x334155,
-        width: 0.32,
+        width: 0.3,
+      });
+      graphic.ellipse(-widthRadius * 0.22, -heightRadius * 0.34, widthRadius * 0.33, heightRadius * 0.24).fill({
+        color: 0xffffff,
+        alpha: 0.44,
       });
       graphic
-        .moveTo(-0.8, -0.62)
-        .lineTo(0.8, 0.62)
-        .moveTo(0.8, -0.62)
-        .lineTo(-0.8, 0.62)
-        .stroke({ color: 0x334155, width: 0.24 });
+        .moveTo(-widthRadius * 0.72, 0)
+        .lineTo(widthRadius * 0.72, 0)
+        .moveTo(-widthRadius * 0.54, -heightRadius * 0.42)
+        .lineTo(widthRadius * 0.54, heightRadius * 0.42)
+        .moveTo(widthRadius * 0.54, -heightRadius * 0.42)
+        .lineTo(-widthRadius * 0.54, heightRadius * 0.42)
+        .stroke({ color: 0x475569, width: 0.18, alpha: 0.86 });
       return;
     }
-    graphic
-      .circle(0, 0, TACTICAL_ITEM_HALF_SIZE * 0.75)
-      .fill(0xffffff)
-      .stroke({ color: 0x6b7280, width: 0.28 });
-    graphic.circle(0, 0, TACTICAL_ITEM_HALF_SIZE * 0.22).fill(0xdbeafe);
+    if (item.type === "sliotar") {
+      const radius = TACTICAL_ITEM_HALF_SIZE * 0.77;
+      graphic.ellipse(0, radius * 0.7, radius * 0.74, radius * 0.44).fill({ color: 0x111827, alpha: 0.12 });
+      graphic.circle(0, 0, radius).fill(0xfffbeb).stroke({ color: 0x6b7280, width: 0.28 });
+      graphic.circle(-radius * 0.24, -radius * 0.34, radius * 0.3).fill({ color: 0xffffff, alpha: 0.5 });
+      graphic
+        .moveTo(-radius * 0.72, 0)
+        .lineTo(radius * 0.72, 0)
+        .moveTo(0, -radius * 0.72)
+        .lineTo(0, radius * 0.72)
+        .stroke({ color: 0x64748b, width: 0.16, alpha: 0.8 });
+      return;
+    }
   }
 
   function drawSelectedItemGraphic(graphic: Graphics, selected: boolean): void {
     graphic.clear();
     if (!selected) return;
+    graphic.circle(0, TACTICAL_ITEM_HALF_SIZE * 0.62, TACTICAL_ITEM_HALF_SIZE * 0.94).fill({
+      color: 0x0f172a,
+      alpha: 0.08,
+    });
     graphic
       .circle(0, 0, TACTICAL_ITEM_HALF_SIZE * 1.45)
       .stroke({ color: 0x7dd3fc, alpha: 0.92, width: 0.42 });
@@ -1323,6 +1347,8 @@ export async function createTacticalPadLiteSurface(
   function renderTacticalItems(): void {
     if (surfaceVariant !== "tactical") return;
     for (const item of tacticalItems) {
+      item.graphic.visible = true;
+      item.selectionGraphic.visible = true;
       setItemWorldPosition(item, mapper);
       drawTacticalItemGraphic(item.graphic, item);
       drawSelectedItemGraphic(item.selectionGraphic, item.id === selectedItemId);
@@ -1343,6 +1369,10 @@ export async function createTacticalPadLiteSurface(
   function beginItemDrag(item: TacticalSurfaceItem, event: unknown): void {
     if (!isItemInteractionEnabled()) return;
     if (activeDrag) return;
+    if (event && typeof event === "object" && "stopPropagation" in event) {
+      const stopPropagation = (event as { stopPropagation?: () => void }).stopPropagation;
+      stopPropagation?.();
+    }
     selectedItemId = item.id;
     const pointerId = getPointerIdFromEvent(event);
     const startStagePoint = getStagePointFromEvent(event, app.stage);
@@ -1367,6 +1397,7 @@ export async function createTacticalPadLiteSurface(
 
   function bindTacticalItemPointerDown(item: TacticalSurfaceItem): void {
     item.graphic.on("pointerdown", (event) => {
+      event.stopPropagation?.();
       beginItemDrag(item, event);
     });
   }
@@ -1381,19 +1412,23 @@ export async function createTacticalPadLiteSurface(
     if (surfaceVariant !== "tactical") return;
     const normalizedNextItems = nextItems.map(normalizeTacticalItem);
     const nextIds = new Set(normalizedNextItems.map((item) => item.id));
+    const isLocalItemDragUpdate = activeDrag != null && activeDrag.type === "item";
+    const shouldRemoveMissingItems = normalizedNextItems.length <= 0 || !isLocalItemDragUpdate;
 
-    for (let index = tacticalItems.length - 1; index >= 0; index -= 1) {
-      const item = tacticalItems[index];
-      if (!item || nextIds.has(item.id)) continue;
-      item.graphic.removeAllListeners();
-      item.graphic.destroy();
-      item.selectionGraphic.destroy();
-      tacticalItems.splice(index, 1);
-      if (selectedItemId === item.id) {
-        selectedItemId = null;
-      }
-      if (activeDrag && activeDrag.type === "item" && activeDrag.itemId === item.id) {
-        activeDrag = null;
+    if (shouldRemoveMissingItems) {
+      for (let index = tacticalItems.length - 1; index >= 0; index -= 1) {
+        const item = tacticalItems[index];
+        if (!item || nextIds.has(item.id)) continue;
+        item.graphic.removeAllListeners();
+        item.graphic.destroy();
+        item.selectionGraphic.destroy();
+        tacticalItems.splice(index, 1);
+        if (selectedItemId === item.id) {
+          selectedItemId = null;
+        }
+        if (activeDrag && activeDrag.type === "item" && activeDrag.itemId === item.id) {
+          activeDrag = null;
+        }
       }
     }
 
