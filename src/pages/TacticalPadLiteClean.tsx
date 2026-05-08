@@ -490,9 +490,11 @@ const RIGHT_BUBBLE_STYLE: CSSProperties = {
 
 const TOOL_BUBBLE_STYLE: CSSProperties = {
   ...RIGHT_BUBBLE_STYLE,
-  background: "rgba(5, 8, 10, 0.92)",
-  border: "2px solid rgba(255, 255, 255, 0.18)",
-  boxShadow: "0 8px 24px rgba(0, 0, 0, 0.55), inset 0 1px 2px rgba(255, 255, 255, 0.18)",
+  background:
+    "radial-gradient(circle at 30% 25%, rgba(28, 45, 22, 0.9) 0%, rgba(6, 10, 8, 0.94) 62%, rgba(5, 8, 10, 0.98) 100%)",
+  border: "1.5px solid rgba(119, 210, 55, 0.75)",
+  boxShadow:
+    "0 8px 24px rgba(0, 0, 0, 0.55), 0 0 14px rgba(119, 210, 55, 0.55), 0 0 30px rgba(119, 210, 55, 0.25), inset 0 1px 2px rgba(255, 255, 255, 0.14)",
 };
 
 const TOOL_BUBBLE_IMAGE_WRAP_STYLE: CSSProperties = {
@@ -516,7 +518,7 @@ const TOOL_BUBBLE_IMAGE_DARKEN_STYLE: CSSProperties = {
   position: "absolute",
   inset: 0,
   background:
-    "linear-gradient(180deg, rgba(4, 7, 10, 0.26) 0%, rgba(4, 7, 10, 0.08) 50%, rgba(4, 7, 10, 0.3) 100%)",
+    "linear-gradient(180deg, rgba(4, 7, 10, 0.22) 0%, rgba(4, 7, 10, 0.06) 50%, rgba(4, 7, 10, 0.34) 100%)",
   pointerEvents: "none",
 };
 
@@ -525,8 +527,16 @@ const TOOL_BUBBLE_IMAGE_RIGHT_BLEND_STYLE: CSSProperties = {
   top: 0,
   right: 0,
   bottom: 0,
-  width: "34%",
-  background: "linear-gradient(90deg, rgba(5, 8, 10, 0) 0%, rgba(5, 8, 10, 0.78) 100%)",
+  width: "38%",
+  background: "linear-gradient(90deg, rgba(5, 8, 10, 0) 0%, rgba(5, 8, 10, 0.9) 100%)",
+  pointerEvents: "none",
+};
+
+const TOOL_BUBBLE_IMAGE_RING_STYLE: CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  borderRadius: "inherit",
+  boxShadow: "inset 0 0 0 1px rgba(119, 210, 55, 0.42), inset 0 0 10px rgba(119, 210, 55, 0.18)",
   pointerEvents: "none",
 };
 
@@ -3306,6 +3316,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                 />
                 <span style={TOOL_BUBBLE_IMAGE_DARKEN_STYLE} />
                 <span style={TOOL_BUBBLE_IMAGE_RIGHT_BLEND_STYLE} />
+                <span style={TOOL_BUBBLE_IMAGE_RING_STYLE} />
               </span>
             </span>
           </button>
