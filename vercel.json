@@ -19,6 +19,16 @@
       "source": "/tacticalpad-lite-clean/(.*)",
       "destination": "/quickboard",
       "permanent": false
+    },
+    {
+      "source": "/library",
+      "destination": "/notes",
+      "permanent": false
+    },
+    {
+      "source": "/library/(.*)",
+      "destination": "/notes",
+      "permanent": false
     }
   ],
   "rewrites": [
@@ -36,6 +46,14 @@
     },
     {
       "source": "/quickboard/(.*)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/notes",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/notes/(.*)",
       "destination": "/index.html"
     },
     {

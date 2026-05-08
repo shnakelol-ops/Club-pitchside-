@@ -6,6 +6,7 @@ import TacticalPadLiteClean from "./pages/TacticalPadLiteClean";
 
 const boardShell = () => <PitchFlowCoachShell initialTab="home" />;
 const QUICK_BOARD_PATH = "/quickboard";
+const NOTES_PATH = "/notes";
 
 function redirectToBoard() {
   if (window.location.pathname !== "/board") {
@@ -19,6 +20,13 @@ function redirectToQuickBoard() {
     window.history.replaceState(null, "", QUICK_BOARD_PATH);
   }
   return TacticalPadLiteClean;
+}
+
+function redirectToNotes() {
+  if (window.location.pathname !== NOTES_PATH) {
+    window.history.replaceState(null, "", NOTES_PATH);
+  }
+  return () => <PitchFlowCoachShell initialTab="notes" />;
 }
 
 function pickRootComponent() {
@@ -47,8 +55,11 @@ function pickRootComponent() {
   if (normalizedPath === "/board") {
     return boardShell;
   }
+  if (normalizedPath === NOTES_PATH) {
+    return () => <PitchFlowCoachShell initialTab="notes" />;
+  }
   if (normalizedPath === "/library") {
-    return () => <PitchFlowCoachShell initialTab="library" />;
+    return redirectToNotes();
   }
   if (normalizedPath === "/sessions") {
     return () => <PitchFlowCoachShell initialTab="sessions" />;
