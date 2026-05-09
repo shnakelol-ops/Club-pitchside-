@@ -895,8 +895,9 @@ const QUICK_SHARE_ONBOARDING_BUTTON_STYLE: CSSProperties = {
 };
 
 const QUICK_SHARE_ONBOARDING_STORAGE_KEY = "flowlabs_quick_share_onboarding_seen";
-const QUICK_SHARE_DOWNLOAD_FILENAME = "quickboard-snapshot.png";
+const QUICK_SHARE_DOWNLOAD_FILENAME = "pitchflow-vision-board.png";
 const QUICK_SHARE_PNG_MIME_TYPE = "image/png";
+const QUICK_SHARE_DOWNLOAD_SUCCESS_MESSAGE = "Snapshot saved. Share it to WhatsApp from downloads/photos.";
 
 type QuickShareCanvasValidationResult =
   | { ok: true }
@@ -1090,6 +1091,16 @@ function triggerPngDownload(url: string, fileName: string): boolean {
   } catch {
     return false;
   }
+}
+
+function getErrorDetails(error: unknown): { name: string; message: string } {
+  if (error instanceof DOMException) {
+    return { name: error.name, message: error.message };
+  }
+  if (error instanceof Error) {
+    return { name: error.name, message: error.message };
+  }
+  return { name: "UnknownError", message: String(error) };
 }
 
 const MY_BOARDS_POPOUT_STYLE: CSSProperties = {
@@ -2289,11 +2300,11 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
       "Use your phone’s screen recorder 🎥\nAndroid: swipe down twice → Screen Record\niPhone: Control Centre → Screen Recording",
     );
   };
-  const shareSnapshotViaNavigator = async (blob: Blob): Promise<"shared" | "unsupported" | "cancelled" | "error"> => {
+  const shareSnapshotViaNavigator = async (blob: Blob): Promise<"shared" | "unsupported" | "cancelled" | "failed"> => {
     const typedNavigator = navigator as Navigator & {
       canShare?: (data?: ShareData) => boolean;
     };
-    if (typeof typedNavigator.share !== "function") {
+    if (typeof typedNavigator.share !== "function" || typeof typedNavigator.canShare !== "function") {
       return "unsupported";
     }
     const shareFile = createQuickShareFile(blob);
@@ -2303,26 +2314,19 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     const fileShareData: ShareData = {
       files: [shareFile],
     };
-    if (typeof typedNavigator.canShare === "function") {
-      try {
-        if (!typedNavigator.canShare(fileShareData)) {
-          return "unsupported";
-        }
-      } catch {
-        return "unsupported";
-      }
+    if (!typedNavigator.canShare(fileShareData)) {
+      return "unsupported";
     }
     try {
       await typedNavigator.share(fileShareData);
       return "shared";
     } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") {
+      const details = getErrorDetails(error);
+      console.warn(`[QuickShare] navigator.share failed (${details.name}): ${details.message}`);
+      if (details.name === "AbortError") {
         return "cancelled";
       }
-      if (error instanceof TypeError) {
-        return "unsupported";
-      }
-      return "error";
+      return "failed";
     }
   };
   const handleQuickShareSnapshot = async () => {
@@ -2341,26 +2345,33 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
       const exportedCanvas = surface.exportImageCanvas();
       const validation = validateQuickShareCanvas(exportedCanvas);
       if (!validation.ok || !exportedCanvas) {
-        showQuickBoardNotice("Share failed.\nTry again in a second.");
+        showQuickBoardNotice("Could not prepare snapshot.\nTry again.");
         return;
       }
       const shareCanvas = cloneCanvasForQuickShare(exportedCanvas);
       if (!shareCanvas) {
-        showQuickBoardNotice("Share unavailable.\nTake a screenshot and send via WhatsApp.");
+        showQuickBoardNotice("Could not prepare snapshot.\nTry again.");
         return;
       }
       const exportedBlob = await canvasToPngBlob(shareCanvas);
       if (!exportedBlob || exportedBlob.size <= 0) {
-        showQuickBoardNotice("Share unavailable.\nTake a screenshot and send via WhatsApp.");
+        showQuickBoardNotice("Could not prepare snapshot.\nTry again.");
         return;
       }
       const normalizedExportBlob = normalizeQuickSharePngBlob(exportedBlob);
       if (!normalizedExportBlob) {
-        showQuickBoardNotice("Share unavailable.\nTake a screenshot and send via WhatsApp.");
+        showQuickBoardNotice("Could not prepare snapshot.\nTry again.");
         return;
       }
 
-      const tier1Result = await shareSnapshotViaNavigator(normalizedExportBlob);
+      let tier1Result: "shared" | "unsupported" | "cancelled" | "failed" = "unsupported";
+      try {
+        tier1Result = await shareSnapshotViaNavigator(normalizedExportBlob);
+      } catch (error) {
+        const details = getErrorDetails(error);
+        console.warn(`[QuickShare] native share guard failed (${details.name}): ${details.message}`);
+        tier1Result = "failed";
+      }
       if (tier1Result === "shared") {
         showQuickBoardNotice("Shared");
         return;
@@ -2370,19 +2381,27 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         return;
       }
 
+      let fallbackDownloadSucceeded = false;
       revokeQuickShareDownloadUrl();
-      const objectUrl = URL.createObjectURL(normalizedExportBlob);
-      quickShareDownloadUrlRef.current = objectUrl;
-      if (triggerPngDownload(objectUrl, QUICK_SHARE_DOWNLOAD_FILENAME)) {
+      try {
+        const objectUrl = URL.createObjectURL(normalizedExportBlob);
+        quickShareDownloadUrlRef.current = objectUrl;
+        fallbackDownloadSucceeded = triggerPngDownload(objectUrl, QUICK_SHARE_DOWNLOAD_FILENAME);
+      } catch (error) {
+        const details = getErrorDetails(error);
+        console.warn(`[QuickShare] fallback download failed (${details.name}): ${details.message}`);
+        fallbackDownloadSucceeded = false;
+      }
+      if (fallbackDownloadSucceeded) {
         scheduleQuickShareDownloadCleanup();
-        showQuickBoardNotice("PNG ready.\nAttach it in WhatsApp.");
+        showQuickBoardNotice(QUICK_SHARE_DOWNLOAD_SUCCESS_MESSAGE);
         return;
       }
 
       revokeQuickShareDownloadUrl();
-      showQuickBoardNotice("Share unavailable.\nTake a screenshot and send via WhatsApp.");
+      showQuickBoardNotice("Share failed");
     } catch {
-      showQuickBoardNotice("Share failed.\nTake a screenshot and send via WhatsApp.");
+      showQuickBoardNotice("Could not prepare snapshot.\nTry again.");
     } finally {
       setIsPreparingQuickShare(false);
     }
