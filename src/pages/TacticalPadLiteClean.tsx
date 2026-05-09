@@ -895,6 +895,213 @@ const QUICK_SHARE_ONBOARDING_BUTTON_STYLE: CSSProperties = {
 };
 
 const QUICK_SHARE_ONBOARDING_STORAGE_KEY = "flowlabs_quick_share_onboarding_seen";
+const QUICK_SHARE_DOWNLOAD_FILENAME = "pitchflow-vision-board.png";
+const QUICK_SHARE_PNG_MIME_TYPE = "image/png";
+const QUICK_SHARE_DOWNLOAD_SUCCESS_MESSAGE = "Snapshot saved. Share it to WhatsApp from downloads/photos.";
+
+type QuickShareCanvasValidationResult =
+  | { ok: true }
+  | {
+      ok: false;
+      reason:
+        | "missing-canvas"
+        | "invalid-size"
+        | "readback-unavailable"
+        | "empty-pixels"
+        | "fully-transparent"
+        | "blank-frame";
+    };
+
+function waitForNextAnimationFrame(): Promise<void> {
+  return new Promise((resolve) => {
+    window.requestAnimationFrame(() => {
+      resolve();
+    });
+  });
+}
+
+function normalizeQuickSharePngBlob(blob: Blob): Blob | null {
+  if (blob.size <= 0) return null;
+  if (blob.type === QUICK_SHARE_PNG_MIME_TYPE) {
+    return blob;
+  }
+  const normalized = new Blob([blob], { type: QUICK_SHARE_PNG_MIME_TYPE });
+  return normalized.size > 0 ? normalized : null;
+}
+
+function decodeBase64ToBytes(base64Input: string): Uint8Array | null {
+  if (!base64Input) return null;
+  try {
+    const decoded = window.atob(base64Input);
+    const bytes = new Uint8Array(decoded.length);
+    for (let index = 0; index < decoded.length; index += 1) {
+      bytes[index] = decoded.charCodeAt(index);
+    }
+    return bytes;
+  } catch {
+    return null;
+  }
+}
+
+function toBlobPartArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const slicedBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+  if (slicedBuffer instanceof ArrayBuffer) {
+    return slicedBuffer;
+  }
+  const copiedBuffer = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(copiedBuffer).set(bytes);
+  return copiedBuffer;
+}
+
+function canvasDataUrlToPngBlob(canvas: HTMLCanvasElement): Blob | null {
+  let dataUrl: string;
+  try {
+    dataUrl = canvas.toDataURL(QUICK_SHARE_PNG_MIME_TYPE);
+  } catch {
+    return null;
+  }
+  const commaIndex = dataUrl.indexOf(",");
+  if (commaIndex <= 0) return null;
+  const meta = dataUrl.slice(0, commaIndex).toLowerCase();
+  if (!meta.includes("image/png")) return null;
+  const base64Payload = dataUrl.slice(commaIndex + 1);
+  const bytes = decodeBase64ToBytes(base64Payload);
+  if (!bytes || bytes.length <= 0) return null;
+  const blobPartBuffer = toBlobPartArrayBuffer(bytes);
+  const blob = new Blob([blobPartBuffer], { type: QUICK_SHARE_PNG_MIME_TYPE });
+  return blob.size > 0 ? blob : null;
+}
+
+function cloneCanvasForQuickShare(canvas: HTMLCanvasElement): HTMLCanvasElement | null {
+  if (!Number.isFinite(canvas.width) || !Number.isFinite(canvas.height) || canvas.width <= 0 || canvas.height <= 0) {
+    return null;
+  }
+  const snapshotCanvas = document.createElement("canvas");
+  snapshotCanvas.width = canvas.width;
+  snapshotCanvas.height = canvas.height;
+  const context2d = snapshotCanvas.getContext("2d");
+  if (!context2d) {
+    return null;
+  }
+  context2d.drawImage(canvas, 0, 0);
+  return snapshotCanvas;
+}
+
+async function canvasToPngBlob(canvas: HTMLCanvasElement): Promise<Blob | null> {
+  const blobFromToBlob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob((blob) => {
+      resolve(blob);
+    }, QUICK_SHARE_PNG_MIME_TYPE);
+  });
+  if (blobFromToBlob) {
+    const normalizedBlob = normalizeQuickSharePngBlob(blobFromToBlob);
+    if (normalizedBlob) return normalizedBlob;
+  }
+  return canvasDataUrlToPngBlob(canvas);
+}
+
+function createQuickShareFile(blob: Blob): File | null {
+  const normalizedBlob = normalizeQuickSharePngBlob(blob);
+  if (!normalizedBlob) {
+    return null;
+  }
+  if (typeof File !== "function") {
+    return null;
+  }
+  try {
+    return new File([normalizedBlob], QUICK_SHARE_DOWNLOAD_FILENAME, {
+      type: QUICK_SHARE_PNG_MIME_TYPE,
+      lastModified: Date.now(),
+    });
+  } catch {
+    return null;
+  }
+}
+
+function validateQuickShareCanvas(canvas: HTMLCanvasElement | null): QuickShareCanvasValidationResult {
+  if (!canvas) {
+    return { ok: false, reason: "missing-canvas" };
+  }
+  if (!Number.isFinite(canvas.width) || !Number.isFinite(canvas.height) || canvas.width <= 0 || canvas.height <= 0) {
+    return { ok: false, reason: "invalid-size" };
+  }
+  const sampleWidth = Math.max(1, Math.min(canvas.width, 96));
+  const sampleHeight = Math.max(1, Math.min(canvas.height, 96));
+  const probeCanvas = document.createElement("canvas");
+  probeCanvas.width = sampleWidth;
+  probeCanvas.height = sampleHeight;
+  const probeContext = probeCanvas.getContext("2d", { willReadFrequently: true });
+  if (!probeContext) {
+    return { ok: false, reason: "readback-unavailable" };
+  }
+  probeContext.clearRect(0, 0, sampleWidth, sampleHeight);
+  probeContext.drawImage(canvas, 0, 0, sampleWidth, sampleHeight);
+
+  let imageData: ImageData;
+  try {
+    imageData = probeContext.getImageData(0, 0, sampleWidth, sampleHeight);
+  } catch {
+    return { ok: false, reason: "readback-unavailable" };
+  }
+  const data = imageData.data;
+  if (data.length <= 0) {
+    return { ok: false, reason: "empty-pixels" };
+  }
+
+  let nonTransparentCount = 0;
+  let minLuma = 255;
+  let maxLuma = 0;
+  const sampledColors = new Set<number>();
+
+  for (let index = 0; index < data.length; index += 4) {
+    const alpha = data[index + 3] ?? 0;
+    if (alpha <= 0) continue;
+    const red = data[index] ?? 0;
+    const green = data[index + 1] ?? 0;
+    const blue = data[index + 2] ?? 0;
+    nonTransparentCount += 1;
+    const luma = red * 0.299 + green * 0.587 + blue * 0.114;
+    minLuma = Math.min(minLuma, luma);
+    maxLuma = Math.max(maxLuma, luma);
+    if (sampledColors.size < 8) {
+      sampledColors.add(((red >> 4) << 8) | ((green >> 4) << 4) | (blue >> 4));
+    }
+  }
+
+  if (nonTransparentCount <= 0) {
+    return { ok: false, reason: "fully-transparent" };
+  }
+  const hasVisualVariance = sampledColors.size > 1 || maxLuma - minLuma >= 2;
+  if (!hasVisualVariance) {
+    return { ok: false, reason: "blank-frame" };
+  }
+  return { ok: true };
+}
+
+function triggerPngDownload(url: string, fileName: string): boolean {
+  try {
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = fileName;
+    anchor.rel = "noopener";
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function getErrorDetails(error: unknown): { name: string; message: string } {
+  if (error instanceof DOMException) {
+    return { name: error.name, message: error.message };
+  }
+  if (error instanceof Error) {
+    return { name: error.name, message: error.message };
+  }
+  return { name: "UnknownError", message: String(error) };
+}
 
 const MY_BOARDS_POPOUT_STYLE: CSSProperties = {
   ...POPOUT_BASE_STYLE,
@@ -1525,6 +1732,8 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const myBoardsPopoverRef = useRef<HTMLDivElement | null>(null);
   const shareTipTimerRef = useRef<number | null>(null);
   const quickBoardFeedbackTimerRef = useRef<number | null>(null);
+  const quickShareDownloadUrlRef = useRef<string | null>(null);
+  const quickShareCleanupTimerRef = useRef<number | null>(null);
   const whiteboardBubbleButtonRef = useRef<HTMLButtonElement | null>(null);
   const whiteboardBubbleMenuRef = useRef<HTMLDivElement | null>(null);
   const whiteboardHomeButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -1577,6 +1786,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const [quickShareOnboardingEntered, setQuickShareOnboardingEntered] = useState(false);
   const [shareTipMessage, setShareTipMessage] = useState<string | null>(null);
   const [quickBoardFeedback, setQuickBoardFeedback] = useState<string | null>(null);
+  const [isPreparingQuickShare, setIsPreparingQuickShare] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [activeToolsSection, setActiveToolsSection] = useState<"draw" | "teams" | "items" | "board">("draw");
@@ -2060,6 +2270,20 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     window.location.assign("/board");
   };
   const closeQuickShareMenu = () => setQuickShareOpen(false);
+  const revokeQuickShareDownloadUrl = () => {
+    if (quickShareDownloadUrlRef.current == null) return;
+    URL.revokeObjectURL(quickShareDownloadUrlRef.current);
+    quickShareDownloadUrlRef.current = null;
+  };
+  const scheduleQuickShareDownloadCleanup = () => {
+    if (quickShareCleanupTimerRef.current !== null) {
+      window.clearTimeout(quickShareCleanupTimerRef.current);
+    }
+    quickShareCleanupTimerRef.current = window.setTimeout(() => {
+      revokeQuickShareDownloadUrl();
+      quickShareCleanupTimerRef.current = null;
+    }, 30_000);
+  };
   const showShareTip = (message: string) => {
     if (shareTipTimerRef.current !== null) {
       window.clearTimeout(shareTipTimerRef.current);
@@ -2076,9 +2300,111 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
       "Use your phone’s screen recorder 🎥\nAndroid: swipe down twice → Screen Record\niPhone: Control Centre → Screen Recording",
     );
   };
-  const handleQuickShareSnapshot = () => {
+  const shareSnapshotViaNavigator = async (blob: Blob): Promise<"shared" | "unsupported" | "cancelled" | "failed"> => {
+    const typedNavigator = navigator as Navigator & {
+      canShare?: (data?: ShareData) => boolean;
+    };
+    if (typeof typedNavigator.share !== "function" || typeof typedNavigator.canShare !== "function") {
+      return "unsupported";
+    }
+    const shareFile = createQuickShareFile(blob);
+    if (!shareFile) {
+      return "unsupported";
+    }
+    const fileShareData: ShareData = {
+      files: [shareFile],
+    };
+    if (!typedNavigator.canShare(fileShareData)) {
+      return "unsupported";
+    }
+    try {
+      await typedNavigator.share(fileShareData);
+      return "shared";
+    } catch (error) {
+      const details = getErrorDetails(error);
+      console.warn(`[QuickShare] navigator.share failed (${details.name}): ${details.message}`);
+      if (details.name === "AbortError") {
+        return "cancelled";
+      }
+      return "failed";
+    }
+  };
+  const handleQuickShareSnapshot = async () => {
     closeQuickShareMenu();
-    showShareTip("Take a screenshot to share this setup 📸\nFastest way to send it to WhatsApp");
+    if (isPreparingQuickShare) return;
+    const surface = surfaceRef.current;
+    if (!surface || isWhiteboardMode || isStatsMode) {
+      showQuickBoardNotice("Quick Board not ready");
+      return;
+    }
+    setIsPreparingQuickShare(true);
+    showQuickBoardNotice("Preparing share…");
+    try {
+      await surface.awaitRenderCompletion();
+      await waitForNextAnimationFrame();
+      const exportedCanvas = surface.exportImageCanvas();
+      const validation = validateQuickShareCanvas(exportedCanvas);
+      if (!validation.ok || !exportedCanvas) {
+        showQuickBoardNotice("Could not prepare snapshot.\nTry again.");
+        return;
+      }
+      const shareCanvas = cloneCanvasForQuickShare(exportedCanvas);
+      if (!shareCanvas) {
+        showQuickBoardNotice("Could not prepare snapshot.\nTry again.");
+        return;
+      }
+      const exportedBlob = await canvasToPngBlob(shareCanvas);
+      if (!exportedBlob || exportedBlob.size <= 0) {
+        showQuickBoardNotice("Could not prepare snapshot.\nTry again.");
+        return;
+      }
+      const normalizedExportBlob = normalizeQuickSharePngBlob(exportedBlob);
+      if (!normalizedExportBlob) {
+        showQuickBoardNotice("Could not prepare snapshot.\nTry again.");
+        return;
+      }
+
+      let tier1Result: "shared" | "unsupported" | "cancelled" | "failed" = "unsupported";
+      try {
+        tier1Result = await shareSnapshotViaNavigator(normalizedExportBlob);
+      } catch (error) {
+        const details = getErrorDetails(error);
+        console.warn(`[QuickShare] native share guard failed (${details.name}): ${details.message}`);
+        tier1Result = "failed";
+      }
+      if (tier1Result === "shared") {
+        showQuickBoardNotice("Shared");
+        return;
+      }
+      if (tier1Result === "cancelled") {
+        showQuickBoardNotice("Share cancelled");
+        return;
+      }
+
+      let fallbackDownloadSucceeded = false;
+      revokeQuickShareDownloadUrl();
+      try {
+        const objectUrl = URL.createObjectURL(normalizedExportBlob);
+        quickShareDownloadUrlRef.current = objectUrl;
+        fallbackDownloadSucceeded = triggerPngDownload(objectUrl, QUICK_SHARE_DOWNLOAD_FILENAME);
+      } catch (error) {
+        const details = getErrorDetails(error);
+        console.warn(`[QuickShare] fallback download failed (${details.name}): ${details.message}`);
+        fallbackDownloadSucceeded = false;
+      }
+      if (fallbackDownloadSucceeded) {
+        scheduleQuickShareDownloadCleanup();
+        showQuickBoardNotice(QUICK_SHARE_DOWNLOAD_SUCCESS_MESSAGE);
+        return;
+      }
+
+      revokeQuickShareDownloadUrl();
+      showQuickBoardNotice("Share failed");
+    } catch {
+      showQuickBoardNotice("Could not prepare snapshot.\nTry again.");
+    } finally {
+      setIsPreparingQuickShare(false);
+    }
   };
   const openMyBoardsEntry = () => {
     setQuickShareOpen(false);
@@ -2237,6 +2563,10 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
       if (quickBoardFeedbackTimerRef.current !== null) {
         window.clearTimeout(quickBoardFeedbackTimerRef.current);
       }
+      if (quickShareCleanupTimerRef.current !== null) {
+        window.clearTimeout(quickShareCleanupTimerRef.current);
+      }
+      revokeQuickShareDownloadUrl();
     };
   }, []);
   const openWhiteboardHomeConfirm = () => {
@@ -3419,9 +3749,19 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
               <span style={QUICK_SHARE_OPTION_TITLE_STYLE}>🎥 Record Clip</span>
               <span style={QUICK_SHARE_OPTION_SUBTITLE_STYLE}>Best for movement & plays</span>
             </button>
-            <button type="button" className="control-button" style={QUICK_SHARE_OPTION_BUTTON_STYLE} onClick={handleQuickShareSnapshot}>
+            <button
+              type="button"
+              className="control-button"
+              style={QUICK_SHARE_OPTION_BUTTON_STYLE}
+              onClick={() => {
+                void handleQuickShareSnapshot();
+              }}
+              disabled={isPreparingQuickShare}
+            >
               <span style={QUICK_SHARE_OPTION_TITLE_STYLE}>📸 Share Snapshot</span>
-              <span style={QUICK_SHARE_OPTION_SUBTITLE_STYLE}>Best for setups & drills</span>
+              <span style={QUICK_SHARE_OPTION_SUBTITLE_STYLE}>
+                {isPreparingQuickShare ? "Preparing share…" : "Best for setups & drills"}
+              </span>
             </button>
           </div>
         ) : null}

@@ -112,6 +112,7 @@ export type TacticalPadLiteSurface = {
   clearWhiteboardStrokes: () => void;
   exportBoardState: () => TacticalBoardState;
   importBoardState: (state: TacticalBoardState) => boolean;
+  awaitRenderCompletion: () => Promise<void>;
   exportImageCanvas: () => HTMLCanvasElement | null;
   destroy: () => void;
 };
@@ -2179,6 +2180,43 @@ export async function createTacticalPadLiteSurface(
   options.onPhaseCountChange?.(0);
   emitPlaybackStateChange();
   const pristineBoardState = cloneBoardStateSnapshot(captureBoardState());
+  const waitForRaf = () =>
+    new Promise<void>((resolve) => {
+      window.requestAnimationFrame(() => {
+        resolve();
+      });
+    });
+  const awaitRenderCompletion = async () => {
+    await waitForRaf();
+    await new Promise<void>((resolve) => {
+      let settled = false;
+      let timeoutId: number | null = null;
+      const settle = () => {
+        if (settled) return;
+        settled = true;
+        if (timeoutId !== null) {
+          window.clearTimeout(timeoutId);
+        }
+        resolve();
+      };
+      timeoutId = window.setTimeout(() => {
+        settle();
+      }, 60);
+      try {
+        app.ticker.addOnce(() => {
+          try {
+            app.render();
+          } catch {
+            // Use timeout fallback if render throws.
+          }
+          settle();
+        });
+      } catch {
+        settle();
+      }
+    });
+    await waitForRaf();
+  };
 
   return {
     setStart: () => {
@@ -2294,6 +2332,7 @@ export async function createTacticalPadLiteSurface(
     },
     exportBoardState: () => captureBoardState(),
     importBoardState: (state) => importBoardState(state),
+    awaitRenderCompletion: () => awaitRenderCompletion(),
     exportImageCanvas: () => {
       const rendererWithExtract = app.renderer as typeof app.renderer & {
         extract?: {
