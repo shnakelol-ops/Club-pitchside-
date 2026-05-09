@@ -118,7 +118,11 @@ export default function OrientationGate({ children }: OrientationGateProps) {
               <p style={WORDMARK_STYLE}>PITCHFLOW</p>
               <div style={WORDMARK_ACCENT_STYLE} />
             </div>
-            <p style={MESSAGE_STYLE}>Rotate to landscape to continue</p>
+            <p style={MESSAGE_STYLE}>
+              Rotate to landscape to use PitchFlow.
+              <br />
+              For best results, open from Chrome/Safari and keep your phone sideways.
+            </p>
           </div>
         </div>
       ) : null}
