@@ -929,47 +929,43 @@ function normalizeQuickSharePngBlob(blob: Blob): Blob | null {
   return normalized.size > 0 ? normalized : null;
 }
 
-function decodeBase64ToBytes(base64Input: string): Uint8Array | null {
-  if (!base64Input) return null;
-  try {
-    const decoded = window.atob(base64Input);
-    const bytes = new Uint8Array(decoded.length);
-    for (let index = 0; index < decoded.length; index += 1) {
-      bytes[index] = decoded.charCodeAt(index);
-    }
-    return bytes;
-  } catch {
-    return null;
+function logQuickSharePreparationFailure(reason: string, details?: string): void {
+  if (typeof details === "string" && details.length > 0) {
+    console.warn(`[QuickShare] snapshot preparation failed: ${reason} (${details})`);
+    return;
   }
+  console.warn(`[QuickShare] snapshot preparation failed: ${reason}`);
 }
 
-function toBlobPartArrayBuffer(bytes: Uint8Array): ArrayBuffer {
-  const slicedBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
-  if (slicedBuffer instanceof ArrayBuffer) {
-    return slicedBuffer;
-  }
-  const copiedBuffer = new ArrayBuffer(bytes.byteLength);
-  new Uint8Array(copiedBuffer).set(bytes);
-  return copiedBuffer;
-}
-
-function canvasDataUrlToPngBlob(canvas: HTMLCanvasElement): Blob | null {
+async function canvasDataUrlToPngBlob(canvas: HTMLCanvasElement): Promise<Blob | null> {
   let dataUrl: string;
   try {
     dataUrl = canvas.toDataURL(QUICK_SHARE_PNG_MIME_TYPE);
   } catch {
+    logQuickSharePreparationFailure("canvas.toDataURL threw");
     return null;
   }
-  const commaIndex = dataUrl.indexOf(",");
-  if (commaIndex <= 0) return null;
-  const meta = dataUrl.slice(0, commaIndex).toLowerCase();
-  if (!meta.includes("image/png")) return null;
-  const base64Payload = dataUrl.slice(commaIndex + 1);
-  const bytes = decodeBase64ToBytes(base64Payload);
-  if (!bytes || bytes.length <= 0) return null;
-  const blobPartBuffer = toBlobPartArrayBuffer(bytes);
-  const blob = new Blob([blobPartBuffer], { type: QUICK_SHARE_PNG_MIME_TYPE });
-  return blob.size > 0 ? blob : null;
+  if (!dataUrl.startsWith("data:image/png")) {
+    logQuickSharePreparationFailure("canvas.toDataURL returned non-PNG payload");
+    return null;
+  }
+  try {
+    const response = await fetch(dataUrl);
+    if (!response.ok) {
+      logQuickSharePreparationFailure("fetch(dataUrl) returned non-ok status", String(response.status));
+      return null;
+    }
+    const blob = await response.blob();
+    const normalizedBlob = normalizeQuickSharePngBlob(blob);
+    if (!normalizedBlob) {
+      logQuickSharePreparationFailure("dataUrl fallback produced invalid blob");
+      return null;
+    }
+    return normalizedBlob;
+  } catch {
+    logQuickSharePreparationFailure("fetch(dataUrl) fallback threw");
+    return null;
+  }
 }
 
 function cloneCanvasForQuickShare(canvas: HTMLCanvasElement): HTMLCanvasElement | null {
@@ -989,15 +985,24 @@ function cloneCanvasForQuickShare(canvas: HTMLCanvasElement): HTMLCanvasElement 
 
 async function canvasToPngBlob(canvas: HTMLCanvasElement): Promise<Blob | null> {
   const blobFromToBlob = await new Promise<Blob | null>((resolve) => {
-    canvas.toBlob((blob) => {
-      resolve(blob);
-    }, QUICK_SHARE_PNG_MIME_TYPE);
+    try {
+      canvas.toBlob((blob) => {
+        resolve(blob);
+      }, QUICK_SHARE_PNG_MIME_TYPE);
+    } catch {
+      resolve(null);
+    }
   });
-  if (blobFromToBlob) {
+  if (blobFromToBlob != null) {
     const normalizedBlob = normalizeQuickSharePngBlob(blobFromToBlob);
-    if (normalizedBlob) return normalizedBlob;
+    if (normalizedBlob) {
+      return normalizedBlob;
+    }
+    logQuickSharePreparationFailure("canvas.toBlob produced invalid blob");
+  } else {
+    logQuickSharePreparationFailure("canvas.toBlob returned null");
   }
-  return canvasDataUrlToPngBlob(canvas);
+  return await canvasDataUrlToPngBlob(canvas);
 }
 
 function createQuickShareFile(blob: Blob): File | null {
@@ -2345,21 +2350,31 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
       const exportedCanvas = surface.exportImageCanvas();
       const validation = validateQuickShareCanvas(exportedCanvas);
       if (!validation.ok || !exportedCanvas) {
+        let validationReason = "unknown";
+        if (exportedCanvas == null) {
+          validationReason = "missing-canvas";
+        } else if ("reason" in validation) {
+          validationReason = validation.reason;
+        }
+        logQuickSharePreparationFailure("canvas validation failed", validationReason);
         showQuickBoardNotice("Could not prepare snapshot.\nTry again.");
         return;
       }
       const shareCanvas = cloneCanvasForQuickShare(exportedCanvas);
       if (!shareCanvas) {
+        logQuickSharePreparationFailure("snapshot canvas clone failed");
         showQuickBoardNotice("Could not prepare snapshot.\nTry again.");
         return;
       }
       const exportedBlob = await canvasToPngBlob(shareCanvas);
       if (!exportedBlob || exportedBlob.size <= 0) {
+        logQuickSharePreparationFailure("blob preparation failed");
         showQuickBoardNotice("Could not prepare snapshot.\nTry again.");
         return;
       }
       const normalizedExportBlob = normalizeQuickSharePngBlob(exportedBlob);
       if (!normalizedExportBlob) {
+        logQuickSharePreparationFailure("normalized blob invalid");
         showQuickBoardNotice("Could not prepare snapshot.\nTry again.");
         return;
       }
@@ -2400,7 +2415,9 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
 
       revokeQuickShareDownloadUrl();
       showQuickBoardNotice("Share failed");
-    } catch {
+    } catch (error) {
+      const details = getErrorDetails(error);
+      logQuickSharePreparationFailure("unexpected preparation error", `${details.name}: ${details.message}`);
       showQuickBoardNotice("Could not prepare snapshot.\nTry again.");
     } finally {
       setIsPreparingQuickShare(false);
