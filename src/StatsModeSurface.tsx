@@ -114,6 +114,30 @@ const SQUADS_STORAGE_KEY = "pitchsideclub.squads";
 const SAVED_SQUADS_STORAGE_KEY = "pitchflow_saved_squads_v1";
 const SAVED_MATCHES_STORAGE_KEY = "pitchflow_matches_v1";
 const MAX_SAVED_MATCHES = 10;
+const PF_MONOGRAM_GOLD_UNDERLINE = "linear-gradient(90deg, rgba(242, 201, 76, 0.92), rgba(242, 201, 76, 0.58))";
+const EVENT_PICKER_MONOGRAM_STACK_STYLE: CSSProperties = {
+  display: "inline-flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: "2px",
+  transform: "translateY(0.5px)",
+};
+const EVENT_PICKER_MONOGRAM_TEXT_STYLE: CSSProperties = {
+  fontSize: "11px",
+  fontWeight: 800,
+  lineHeight: 1,
+  letterSpacing: "0.06em",
+  color: "rgba(246, 250, 255, 0.96)",
+  textTransform: "uppercase",
+};
+const EVENT_PICKER_MONOGRAM_UNDERLINE_STYLE: CSSProperties = {
+  width: "14px",
+  height: "2px",
+  borderRadius: "999px",
+  background: PF_MONOGRAM_GOLD_UNDERLINE,
+  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.28)",
+};
 const REVIEW_FILTER_OPTIONS_BASE: ReadonlyArray<{ id: ReviewEventFilter; label: string }> = [
   { id: "ALL", label: "All" },
   { id: "SCORES", label: "Scores" },
@@ -5397,14 +5421,20 @@ export default function StatsModeSurface() {
             className="bubble-btn"
             style={{
               border: isPickerOpen
-                ? "1px solid rgba(34,197,94,0.78)"
-                : "1px solid rgba(148,163,184,0.45)",
+                ? "1px solid rgba(124,255,114,0.52)"
+                : "1px solid rgba(124,255,114,0.32)",
+              background: isPickerOpen
+                ? "linear-gradient(180deg, rgba(17, 31, 49, 0.95) 0%, rgba(8, 15, 28, 0.98) 100%)"
+                : "linear-gradient(180deg, rgba(20, 34, 52, 0.9) 0%, rgba(10, 18, 30, 0.96) 100%)",
               boxShadow: isPickerOpen
-                ? "0 0 0 1px rgba(34,197,94,0.34), 0 0 14px rgba(34,197,94,0.32)"
-                : "0 0 0 1px rgba(148,163,184,0.16), 0 0 8px rgba(148,163,184,0.16)",
+                ? "0 10px 24px rgba(0, 0, 0, 0.44), 0 0 0 1px rgba(124, 255, 114, 0.28), 0 0 12px rgba(124, 255, 114, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.14)"
+                : "0 10px 22px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(124, 255, 114, 0.14), 0 0 9px rgba(124, 255, 114, 0.14), inset 0 1px 1px rgba(255, 255, 255, 0.12)",
             }}
           >
-            {isPickerOpen ? "×" : "●"}
+            <span aria-hidden="true" style={EVENT_PICKER_MONOGRAM_STACK_STYLE}>
+              <span style={EVENT_PICKER_MONOGRAM_TEXT_STYLE}>PF</span>
+              <span style={EVENT_PICKER_MONOGRAM_UNDERLINE_STYLE} />
+            </span>
           </button>
       </div>
         <div
