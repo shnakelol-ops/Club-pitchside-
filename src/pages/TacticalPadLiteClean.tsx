@@ -906,6 +906,25 @@ const QUICK_SHARE_ONBOARDING_BUTTON_STYLE: CSSProperties = {
 
 const QUICK_SHARE_ONBOARDING_STORAGE_KEY = "flowlabs_quick_share_onboarding_seen";
 
+function safeReadLocalStorageFlag(key: string): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(key) === "true";
+  } catch (error) {
+    console.warn("[quickboard-storage] Could not read localStorage flag", { key, error });
+    return false;
+  }
+}
+
+function safeWriteLocalStorageFlag(key: string, value: boolean): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(key, value ? "true" : "false");
+  } catch (error) {
+    console.warn("[quickboard-storage] Could not write localStorage flag", { key, error });
+  }
+}
+
 const MY_BOARDS_POPOUT_STYLE: CSSProperties = {
   ...POPOUT_BASE_STYLE,
   left: "max(194px, calc(env(safe-area-inset-left, 0px) + 192px))",
@@ -1614,7 +1633,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const seen = window.localStorage.getItem(QUICK_SHARE_ONBOARDING_STORAGE_KEY) === "true";
+    const seen = safeReadLocalStorageFlag(QUICK_SHARE_ONBOARDING_STORAGE_KEY);
     setQuickShareOnboardingSeen(seen);
     setSavedBoards(loadAllBoards());
   }, []);
@@ -1705,6 +1724,21 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
       window.removeEventListener("resize", handleViewportChange);
     };
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (isStatsMode || isWhiteboardMode) return;
+
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "Save your board in My Boards before leaving or refreshing.";
+    };
+
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", onBeforeUnload);
+    };
+  }, [isStatsMode, isWhiteboardMode]);
 
   useEffect(() => {
     whiteboardCountsRef.current = {
@@ -2083,12 +2117,12 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const handleQuickShareRecordClip = () => {
     closeQuickShareMenu();
     showShareTip(
-      "Use your phone’s screen recorder 🎥\nAndroid: swipe down twice → Screen Record\niPhone: Control Centre → Screen Recording",
+      "Quick Share is beta.\nUse your phone’s screen recorder for reliable sharing 🎥\nAndroid: swipe down twice → Screen Record\niPhone: Control Centre → Screen Recording",
     );
   };
   const handleQuickShareSnapshot = () => {
     closeQuickShareMenu();
-    showShareTip("Take a screenshot to share this setup 📸\nFastest way to send it to WhatsApp");
+    showShareTip("Quick Share is beta.\nTake a screenshot for the most reliable share 📸\nThen send it in WhatsApp.");
   };
   const openMyBoardsEntry = () => {
     setQuickShareOpen(false);
@@ -2222,11 +2256,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const dismissQuickShareOnboarding = (openQuickShareAfter = false) => {
     setQuickShareOnboardingOpen(false);
     setQuickShareOnboardingSeen(true);
-    try {
-      window.localStorage.setItem(QUICK_SHARE_ONBOARDING_STORAGE_KEY, "true");
-    } catch {
-      // Keep onboarding state in-memory if storage is unavailable.
-    }
+    safeWriteLocalStorageFlag(QUICK_SHARE_ONBOARDING_STORAGE_KEY, true);
     if (openQuickShareAfter) {
       setQuickShareOpen(true);
     }
@@ -3233,7 +3263,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         {!isWhiteboardMode && actionsOpen ? (
           <div ref={actionsMenuRef} style={ACTIONS_POPOUT_STYLE}>
             <button type="button" className="control-button" style={ACTIONS_MENU_BUTTON_STYLE} onClick={openQuickShareEntry}>
-              Quick Share
+              Quick Share (Beta)
             </button>
             <button type="button" className="control-button" style={ACTIONS_MENU_BUTTON_STYLE} onClick={openMyBoardsEntry}>
               My Boards
@@ -3400,38 +3430,40 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
               aria-modal="false"
               aria-label="Quick Share onboarding"
             >
-              <p style={QUICK_SHARE_ONBOARDING_TITLE_STYLE}>⚡ Quick Share</p>
-              <p style={QUICK_SHARE_ONBOARDING_BODY_STYLE}>Share plays using the tools already on your phone.</p>
+              <p style={QUICK_SHARE_ONBOARDING_TITLE_STYLE}>⚡ Quick Share (Beta)</p>
+              <p style={QUICK_SHARE_ONBOARDING_BODY_STYLE}>
+                Quick Share is in beta. For now, screenshot and screen recording are the reliable methods.
+              </p>
               <div style={QUICK_SHARE_ONBOARDING_ROW_STYLE}>
                 <p style={QUICK_SHARE_ONBOARDING_ROW_TITLE_STYLE}>🎥 Record Play</p>
-                <p style={QUICK_SHARE_ONBOARDING_ROW_TEXT_STYLE}>Swipe down → Screen Record → press Play</p>
+                <p style={QUICK_SHARE_ONBOARDING_ROW_TEXT_STYLE}>Swipe down → Screen Record → press Play (manual beta flow)</p>
               </div>
               <div style={QUICK_SHARE_ONBOARDING_ROW_STYLE}>
                 <p style={QUICK_SHARE_ONBOARDING_ROW_TITLE_STYLE}>📸 Snapshot</p>
-                <p style={QUICK_SHARE_ONBOARDING_ROW_TEXT_STYLE}>Take a screenshot → send it to WhatsApp</p>
+                <p style={QUICK_SHARE_ONBOARDING_ROW_TEXT_STYLE}>Take a screenshot → share it to WhatsApp</p>
               </div>
-              <p style={QUICK_SHARE_ONBOARDING_NOTE_STYLE}>Fast, reliable, matchday-safe.</p>
+              <p style={QUICK_SHARE_ONBOARDING_NOTE_STYLE}>Best for beta sessions and matchday reliability.</p>
               <button
                 type="button"
                 className="control-button"
                 style={QUICK_SHARE_ONBOARDING_BUTTON_STYLE}
                 onClick={() => dismissQuickShareOnboarding(true)}
               >
-                Got it 👍
+                Continue to Quick Share
               </button>
             </div>
           </div>
         ) : null}
         {!isWhiteboardMode && quickShareOpen ? (
           <div ref={quickSharePopoverRef} style={QUICK_SHARE_POPOUT_STYLE} role="dialog" aria-modal="false" aria-label="Quick Share">
-            <p style={QUICK_SHARE_TITLE_STYLE}>⚡ Quick Share</p>
+            <p style={QUICK_SHARE_TITLE_STYLE}>⚡ Quick Share (Beta)</p>
             <button type="button" className="control-button" style={QUICK_SHARE_OPTION_BUTTON_STYLE} onClick={handleQuickShareRecordClip}>
               <span style={QUICK_SHARE_OPTION_TITLE_STYLE}>🎥 Record Clip</span>
-              <span style={QUICK_SHARE_OPTION_SUBTITLE_STYLE}>Best for movement & plays</span>
+              <span style={QUICK_SHARE_OPTION_SUBTITLE_STYLE}>Reliable manual method</span>
             </button>
             <button type="button" className="control-button" style={QUICK_SHARE_OPTION_BUTTON_STYLE} onClick={handleQuickShareSnapshot}>
               <span style={QUICK_SHARE_OPTION_TITLE_STYLE}>📸 Share Snapshot</span>
-              <span style={QUICK_SHARE_OPTION_SUBTITLE_STYLE}>Best for setups & drills</span>
+              <span style={QUICK_SHARE_OPTION_SUBTITLE_STYLE}>Reliable manual method</span>
             </button>
           </div>
         ) : null}

@@ -21,6 +21,46 @@
       "permanent": false
     },
     {
+      "source": "/flowlab",
+      "destination": "/quickboard",
+      "permanent": false
+    },
+    {
+      "source": "/flowlab/(.*)",
+      "destination": "/quickboard",
+      "permanent": false
+    },
+    {
+      "source": "/simulator",
+      "destination": "/quickboard",
+      "permanent": false
+    },
+    {
+      "source": "/simulator/(.*)",
+      "destination": "/quickboard",
+      "permanent": false
+    },
+    {
+      "source": "/whiteboard",
+      "destination": "/quickboard",
+      "permanent": false
+    },
+    {
+      "source": "/whiteboard/(.*)",
+      "destination": "/quickboard",
+      "permanent": false
+    },
+    {
+      "source": "/stats",
+      "destination": "/flowstats",
+      "permanent": false
+    },
+    {
+      "source": "/stats/(.*)",
+      "destination": "/flowstats",
+      "permanent": false
+    },
+    {
       "source": "/library",
       "destination": "/notes",
       "permanent": false
@@ -81,43 +121,11 @@
       "destination": "/index.html"
     },
     {
-      "source": "/flowlab",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/flowlab/(.*)",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/simulator",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/simulator/(.*)",
-      "destination": "/index.html"
-    },
-    {
       "source": "/flowstats",
       "destination": "/index.html"
     },
     {
       "source": "/flowstats/(.*)",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/stats",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/stats/(.*)",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/whiteboard",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/whiteboard/(.*)",
       "destination": "/index.html"
     }
   ]

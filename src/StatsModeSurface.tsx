@@ -115,6 +115,26 @@ const SAVED_SQUADS_STORAGE_KEY = "pitchflow_saved_squads_v1";
 const SAVED_MATCHES_STORAGE_KEY = "pitchflow_matches_v1";
 const MAX_SAVED_MATCHES = 10;
 const PF_MONOGRAM_GOLD_UNDERLINE = "linear-gradient(90deg, rgba(242, 201, 76, 0.92), rgba(242, 201, 76, 0.58))";
+
+function safeReadLocalStorage(key: string): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage.getItem(key);
+  } catch (error) {
+    console.warn("[stats-storage] Could not read localStorage", { key, error });
+    return null;
+  }
+}
+
+function safeWriteLocalStorage(key: string, value: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(key, value);
+  } catch (error) {
+    console.warn("[stats-storage] Could not write localStorage", { key, error });
+  }
+}
+
 const EVENT_PICKER_MONOGRAM_STACK_STYLE: CSSProperties = {
   display: "inline-flex",
   flexDirection: "column",
@@ -372,7 +392,7 @@ function parseStoredSavedMatches(input: string | null): SavedMatch[] {
 
 function readSavedMatchesFromStorage(): SavedMatch[] {
   if (typeof window === "undefined") return [];
-  return parseStoredSavedMatches(window.localStorage.getItem(SAVED_MATCHES_STORAGE_KEY));
+  return parseStoredSavedMatches(safeReadLocalStorage(SAVED_MATCHES_STORAGE_KEY));
 }
 
 function resolveSavedMatchRestoreContext(record: SavedMatch): {
@@ -464,7 +484,7 @@ function resolveSavedMatchRestoreContext(record: SavedMatch): {
 
 function persistSavedMatches(matches: readonly SavedMatch[]) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(SAVED_MATCHES_STORAGE_KEY, JSON.stringify(sanitizeSavedMatches(matches)));
+  safeWriteLocalStorage(SAVED_MATCHES_STORAGE_KEY, JSON.stringify(sanitizeSavedMatches(matches)));
 }
 
 function formatSavedMatchCreatedAt(createdAtMillis: number): string {
@@ -2359,12 +2379,12 @@ export default function StatsModeSurface() {
     if (typeof window === "undefined") {
       return [createDefaultSquad()];
     }
-    const parsed = parseStoredSquads(window.localStorage.getItem(SQUADS_STORAGE_KEY));
+    const parsed = parseStoredSquads(safeReadLocalStorage(SQUADS_STORAGE_KEY));
     return parsed.length > 0 ? parsed : [createDefaultSquad()];
   });
   const [savedSquads, setSavedSquads] = useState<SavedSquad[]>(() => {
     if (typeof window === "undefined") return [];
-    return parseStoredSavedSquads(window.localStorage.getItem(SAVED_SQUADS_STORAGE_KEY));
+    return parseStoredSavedSquads(safeReadLocalStorage(SAVED_SQUADS_STORAGE_KEY));
   });
   const [activeSquadId, setActiveSquadId] = useState("");
   const [squadDraft, setSquadDraft] = useState("");
@@ -2837,12 +2857,12 @@ export default function StatsModeSurface() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    window.localStorage.setItem(SQUADS_STORAGE_KEY, JSON.stringify(squads));
+    safeWriteLocalStorage(SQUADS_STORAGE_KEY, JSON.stringify(squads));
   }, [squads]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    window.localStorage.setItem(SAVED_SQUADS_STORAGE_KEY, JSON.stringify(savedSquads));
+    safeWriteLocalStorage(SAVED_SQUADS_STORAGE_KEY, JSON.stringify(savedSquads));
   }, [savedSquads]);
 
   useEffect(() => {
@@ -2862,6 +2882,22 @@ export default function StatsModeSurface() {
       window.clearTimeout(timerId);
     };
   }, [saveFeedback]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const hasLiveMatchState = loggedEvents.length > 0 || matchState !== "PRE_MATCH";
+    if (!hasLiveMatchState) return;
+
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "Save match before leaving or refreshing.";
+    };
+
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", onBeforeUnload);
+    };
+  }, [loggedEvents.length, matchState]);
 
   useEffect(() => {
     if (canEditTeamNames) return;
