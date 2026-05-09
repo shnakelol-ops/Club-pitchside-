@@ -34,8 +34,12 @@ type TacticalPadLiteCleanProps = {
   initialMode?: PadMode;
 };
 
+const CAN_USE_CSS_SUPPORTS = typeof window !== "undefined" && typeof window.CSS !== "undefined";
+const VIEWPORT_HEIGHT_UNIT = CAN_USE_CSS_SUPPORTS && window.CSS.supports("height: 100dvh") ? "100dvh" : "100vh";
+const VIEWPORT_WIDTH_UNIT = CAN_USE_CSS_SUPPORTS && window.CSS.supports("width: 100dvw") ? "100dvw" : "100vw";
+
 const CONTENT_WIDTH_EXPR =
-  "min(calc(100dvw - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), calc(100vw - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), calc((100dvh - 10px) * 1.6), calc((100vh - 10px) * 1.6), 1360px)";
+  `min(calc(${VIEWPORT_WIDTH_UNIT} - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), calc((${VIEWPORT_HEIGHT_UNIT} - 10px) * 1.6), 1360px)`;
 const WHITEBOARD_PLAYER_COLOR_CHOICES: ReadonlyArray<{
   value: WhiteboardTokenColor;
   css: string;
@@ -184,10 +188,16 @@ function clampKitEditorPosition(anchor: { left: number; top: number }, viewport:
 const ROOT_STYLE: CSSProperties = {
   position: "fixed",
   inset: 0,
+  width: "100vw",
+  height: VIEWPORT_HEIGHT_UNIT,
+  minHeight: VIEWPORT_HEIGHT_UNIT,
   background:
     "linear-gradient(135deg, rgba(220, 238, 242, 1) 0%, rgba(180, 210, 220, 1) 45%, rgba(120, 170, 195, 1) 100%)",
   margin: 0,
-  padding: "4px",
+  paddingTop: "max(4px, calc(env(safe-area-inset-top, 0px) + 2px))",
+  paddingRight: "max(4px, calc(env(safe-area-inset-right, 0px) + 2px))",
+  paddingBottom: "max(4px, calc(env(safe-area-inset-bottom, 0px) + 2px))",
+  paddingLeft: "max(4px, calc(env(safe-area-inset-left, 0px) + 2px))",
   boxSizing: "border-box",
   display: "flex",
   alignItems: "center",
@@ -199,8 +209,8 @@ const ROOT_WHITEBOARD_STYLE: CSSProperties = {
   ...ROOT_STYLE,
   background:
     "linear-gradient(165deg, rgba(245, 248, 251, 1) 0%, rgba(236, 241, 246, 1) 52%, rgba(228, 235, 242, 1) 100%)",
-  paddingTop: "8px",
-  paddingBottom: "8px",
+  paddingTop: "max(8px, calc(env(safe-area-inset-top, 0px) + 6px))",
+  paddingBottom: "max(8px, calc(env(safe-area-inset-bottom, 0px) + 6px))",
   paddingLeft: "max(12px, calc(env(safe-area-inset-left, 0px) + 8px))",
   paddingRight: "max(12px, calc(env(safe-area-inset-right, 0px) + 8px))",
 };
@@ -406,7 +416,7 @@ const CONTENT_STYLE: CSSProperties = {
   width: CONTENT_WIDTH_EXPR,
   maxWidth: "calc(100vw - 24px)",
   aspectRatio: "16 / 10",
-  maxHeight: "min(calc(100dvh - 10px), calc(100vh - 10px))",
+  maxHeight: `calc(${VIEWPORT_HEIGHT_UNIT} - 10px)`,
   boxSizing: "border-box",
   position: "relative",
   zIndex: 1,
@@ -416,9 +426,9 @@ const CONTENT_STYLE: CSSProperties = {
 
 const WHITEBOARD_CONTENT_STYLE: CSSProperties = {
   width: "100%",
-  maxWidth: "min(900px, calc((100dvh - 16px) * 1.6), calc((100vh - 16px) * 1.6))",
+  maxWidth: `min(900px, calc((${VIEWPORT_HEIGHT_UNIT} - 16px) * 1.6))`,
   aspectRatio: "16 / 10",
-  maxHeight: "min(calc(100dvh - 16px), calc(100vh - 16px))",
+  maxHeight: `calc(${VIEWPORT_HEIGHT_UNIT} - 16px)`,
   boxSizing: "border-box",
   position: "relative",
   zIndex: 1,
