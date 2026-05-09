@@ -896,6 +896,7 @@ const QUICK_SHARE_ONBOARDING_BUTTON_STYLE: CSSProperties = {
 
 const QUICK_SHARE_ONBOARDING_STORAGE_KEY = "flowlabs_quick_share_onboarding_seen";
 const QUICK_SHARE_DOWNLOAD_FILENAME = "quickboard-snapshot.png";
+const QUICK_SHARE_PNG_MIME_TYPE = "image/png";
 
 type QuickShareCanvasValidationResult =
   | { ok: true }
@@ -918,12 +919,91 @@ function waitForNextAnimationFrame(): Promise<void> {
   });
 }
 
-function canvasToPngBlob(canvas: HTMLCanvasElement): Promise<Blob | null> {
-  return new Promise((resolve) => {
+function normalizeQuickSharePngBlob(blob: Blob): Blob | null {
+  if (blob.size <= 0) return null;
+  if (blob.type === QUICK_SHARE_PNG_MIME_TYPE) {
+    return blob;
+  }
+  const normalized = new Blob([blob], { type: QUICK_SHARE_PNG_MIME_TYPE });
+  return normalized.size > 0 ? normalized : null;
+}
+
+function decodeBase64ToBytes(base64Input: string): Uint8Array | null {
+  if (!base64Input) return null;
+  try {
+    const decoded = window.atob(base64Input);
+    const bytes = new Uint8Array(decoded.length);
+    for (let index = 0; index < decoded.length; index += 1) {
+      bytes[index] = decoded.charCodeAt(index);
+    }
+    return bytes;
+  } catch {
+    return null;
+  }
+}
+
+function canvasDataUrlToPngBlob(canvas: HTMLCanvasElement): Blob | null {
+  let dataUrl: string;
+  try {
+    dataUrl = canvas.toDataURL(QUICK_SHARE_PNG_MIME_TYPE);
+  } catch {
+    return null;
+  }
+  const commaIndex = dataUrl.indexOf(",");
+  if (commaIndex <= 0) return null;
+  const meta = dataUrl.slice(0, commaIndex).toLowerCase();
+  if (!meta.includes("image/png")) return null;
+  const base64Payload = dataUrl.slice(commaIndex + 1);
+  const bytes = decodeBase64ToBytes(base64Payload);
+  if (!bytes || bytes.length <= 0) return null;
+  const blob = new Blob([bytes], { type: QUICK_SHARE_PNG_MIME_TYPE });
+  return blob.size > 0 ? blob : null;
+}
+
+function cloneCanvasForQuickShare(canvas: HTMLCanvasElement): HTMLCanvasElement | null {
+  if (!Number.isFinite(canvas.width) || !Number.isFinite(canvas.height) || canvas.width <= 0 || canvas.height <= 0) {
+    return null;
+  }
+  const snapshotCanvas = document.createElement("canvas");
+  snapshotCanvas.width = canvas.width;
+  snapshotCanvas.height = canvas.height;
+  const context2d = snapshotCanvas.getContext("2d");
+  if (!context2d) {
+    return null;
+  }
+  context2d.drawImage(canvas, 0, 0);
+  return snapshotCanvas;
+}
+
+async function canvasToPngBlob(canvas: HTMLCanvasElement): Promise<Blob | null> {
+  const blobFromToBlob = await new Promise<Blob | null>((resolve) => {
     canvas.toBlob((blob) => {
       resolve(blob);
-    }, "image/png");
+    }, QUICK_SHARE_PNG_MIME_TYPE);
   });
+  if (blobFromToBlob) {
+    const normalizedBlob = normalizeQuickSharePngBlob(blobFromToBlob);
+    if (normalizedBlob) return normalizedBlob;
+  }
+  return canvasDataUrlToPngBlob(canvas);
+}
+
+function createQuickShareFile(blob: Blob): File | null {
+  const normalizedBlob = normalizeQuickSharePngBlob(blob);
+  if (!normalizedBlob) {
+    return null;
+  }
+  if (typeof File !== "function") {
+    return null;
+  }
+  try {
+    return new File([normalizedBlob], QUICK_SHARE_DOWNLOAD_FILENAME, {
+      type: QUICK_SHARE_PNG_MIME_TYPE,
+      lastModified: Date.now(),
+    });
+  } catch {
+    return null;
+  }
 }
 
 function validateQuickShareCanvas(canvas: HTMLCanvasElement | null): QuickShareCanvasValidationResult {
@@ -2180,7 +2260,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     quickShareCleanupTimerRef.current = window.setTimeout(() => {
       revokeQuickShareDownloadUrl();
       quickShareCleanupTimerRef.current = null;
-    }, 1800);
+    }, 30_000);
   };
   const showShareTip = (message: string) => {
     if (shareTipTimerRef.current !== null) {
@@ -2205,25 +2285,31 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     if (typeof typedNavigator.share !== "function") {
       return "unsupported";
     }
-    let file: File;
-    try {
-      file = new File([blob], QUICK_SHARE_DOWNLOAD_FILENAME, { type: "image/png" });
-    } catch {
+    const shareFile = createQuickShareFile(blob);
+    if (!shareFile) {
       return "unsupported";
     }
-    const shareData: ShareData = {
-      title: "QuickBoard Snapshot",
-      files: [file],
+    const fileShareData: ShareData = {
+      files: [shareFile],
     };
-    if (typeof typedNavigator.canShare === "function" && !typedNavigator.canShare(shareData)) {
-      return "unsupported";
+    if (typeof typedNavigator.canShare === "function") {
+      try {
+        if (!typedNavigator.canShare(fileShareData)) {
+          return "unsupported";
+        }
+      } catch {
+        return "unsupported";
+      }
     }
     try {
-      await typedNavigator.share(shareData);
+      await typedNavigator.share(fileShareData);
       return "shared";
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
         return "cancelled";
+      }
+      if (error instanceof TypeError) {
+        return "unsupported";
       }
       return "error";
     }
@@ -2238,7 +2324,6 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     }
     setIsPreparingQuickShare(true);
     showQuickBoardNotice("Preparing share…");
-    let exportedBlob: Blob | null = null;
     try {
       await surface.awaitRenderCompletion();
       await waitForNextAnimationFrame();
@@ -2248,13 +2333,23 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         showQuickBoardNotice("Share failed.\nTry again in a second.");
         return;
       }
-      exportedBlob = await canvasToPngBlob(exportedCanvas);
+      const shareCanvas = cloneCanvasForQuickShare(exportedCanvas);
+      if (!shareCanvas) {
+        showQuickBoardNotice("Share unavailable.\nTake a screenshot and send via WhatsApp.");
+        return;
+      }
+      const exportedBlob = await canvasToPngBlob(shareCanvas);
       if (!exportedBlob || exportedBlob.size <= 0) {
-        showQuickBoardNotice("Share failed.\nTry again in a second.");
+        showQuickBoardNotice("Share unavailable.\nTake a screenshot and send via WhatsApp.");
+        return;
+      }
+      const normalizedExportBlob = normalizeQuickSharePngBlob(exportedBlob);
+      if (!normalizedExportBlob) {
+        showQuickBoardNotice("Share unavailable.\nTake a screenshot and send via WhatsApp.");
         return;
       }
 
-      const tier1Result = await shareSnapshotViaNavigator(exportedBlob);
+      const tier1Result = await shareSnapshotViaNavigator(normalizedExportBlob);
       if (tier1Result === "shared") {
         showQuickBoardNotice("Shared");
         return;
@@ -2265,7 +2360,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
       }
 
       revokeQuickShareDownloadUrl();
-      const objectUrl = URL.createObjectURL(exportedBlob);
+      const objectUrl = URL.createObjectURL(normalizedExportBlob);
       quickShareDownloadUrlRef.current = objectUrl;
       if (triggerPngDownload(objectUrl, QUICK_SHARE_DOWNLOAD_FILENAME)) {
         scheduleQuickShareDownloadCleanup();
@@ -2278,7 +2373,6 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     } catch {
       showQuickBoardNotice("Share failed.\nTake a screenshot and send via WhatsApp.");
     } finally {
-      exportedBlob = null;
       setIsPreparingQuickShare(false);
     }
   };
