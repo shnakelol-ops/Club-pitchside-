@@ -942,6 +942,16 @@ function decodeBase64ToBytes(base64Input: string): Uint8Array | null {
   }
 }
 
+function toBlobPartArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const slicedBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+  if (slicedBuffer instanceof ArrayBuffer) {
+    return slicedBuffer;
+  }
+  const copiedBuffer = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(copiedBuffer).set(bytes);
+  return copiedBuffer;
+}
+
 function canvasDataUrlToPngBlob(canvas: HTMLCanvasElement): Blob | null {
   let dataUrl: string;
   try {
@@ -956,7 +966,8 @@ function canvasDataUrlToPngBlob(canvas: HTMLCanvasElement): Blob | null {
   const base64Payload = dataUrl.slice(commaIndex + 1);
   const bytes = decodeBase64ToBytes(base64Payload);
   if (!bytes || bytes.length <= 0) return null;
-  const blob = new Blob([bytes], { type: QUICK_SHARE_PNG_MIME_TYPE });
+  const blobPartBuffer = toBlobPartArrayBuffer(bytes);
+  const blob = new Blob([blobPartBuffer], { type: QUICK_SHARE_PNG_MIME_TYPE });
   return blob.size > 0 ? blob : null;
 }
 
