@@ -886,9 +886,14 @@ function BoardPage() {
           <h1 className="pf-title">PitchFlow</h1>
         </div>
         <p className="pf-subtitle">
-          Built for coaches.
+          Built for Gaelic Games coaches.
           <br />
-          From the heart of the Galtees.
+          <br />
+          Create the vision.
+          <br />
+          Track the game.
+          <br />
+          Capture matchday.
         </p>
         <div className="pf-home-primary-wrap">
           <button type="button" className="pf-home-primary-btn" onClick={() => navigateTo("/flowstats")}>
