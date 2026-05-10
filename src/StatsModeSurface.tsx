@@ -114,7 +114,14 @@ const SQUADS_STORAGE_KEY = "pitchsideclub.squads";
 const SAVED_SQUADS_STORAGE_KEY = "pitchflow_saved_squads_v1";
 const SAVED_MATCHES_STORAGE_KEY = "pitchflow_matches_v1";
 const MAX_SAVED_MATCHES = 10;
-const PF_MONOGRAM_GOLD_UNDERLINE = "linear-gradient(90deg, rgba(242, 201, 76, 0.92), rgba(242, 201, 76, 0.58))";
+const EVENT_PICKER_LOGO_STYLE: CSSProperties = {
+  width: "auto",
+  height: "42px",
+  maxWidth: "42px",
+  objectFit: "contain",
+  display: "block",
+  imageRendering: "crisp-edges",
+};
 
 function safeReadLocalStorage(key: string): string | null {
   if (typeof window === "undefined") return null;
@@ -135,29 +142,6 @@ function safeWriteLocalStorage(key: string, value: string): void {
   }
 }
 
-const EVENT_PICKER_MONOGRAM_STACK_STYLE: CSSProperties = {
-  display: "inline-flex",
-  flexDirection: "column",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: "2px",
-  transform: "translateY(0.5px)",
-};
-const EVENT_PICKER_MONOGRAM_TEXT_STYLE: CSSProperties = {
-  fontSize: "11px",
-  fontWeight: 800,
-  lineHeight: 1,
-  letterSpacing: "0.06em",
-  color: "rgba(246, 250, 255, 0.96)",
-  textTransform: "uppercase",
-};
-const EVENT_PICKER_MONOGRAM_UNDERLINE_STYLE: CSSProperties = {
-  width: "14px",
-  height: "2px",
-  borderRadius: "999px",
-  background: PF_MONOGRAM_GOLD_UNDERLINE,
-  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.28)",
-};
 const REVIEW_FILTER_OPTIONS_BASE: ReadonlyArray<{ id: ReviewEventFilter; label: string }> = [
   { id: "ALL", label: "All" },
   { id: "SCORES", label: "Scores" },
@@ -5488,10 +5472,7 @@ export default function StatsModeSurface() {
                 : "0 10px 22px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(124, 255, 114, 0.14), 0 0 9px rgba(124, 255, 114, 0.14), inset 0 1px 1px rgba(255, 255, 255, 0.12)",
             }}
           >
-            <span aria-hidden="true" style={EVENT_PICKER_MONOGRAM_STACK_STYLE}>
-              <span style={EVENT_PICKER_MONOGRAM_TEXT_STYLE}>PF</span>
-              <span style={EVENT_PICKER_MONOGRAM_UNDERLINE_STYLE} />
-            </span>
+            <img src="/tacavision-logo.png" alt="" aria-hidden="true" style={EVENT_PICKER_LOGO_STYLE} />
           </button>
       </div>
         <div

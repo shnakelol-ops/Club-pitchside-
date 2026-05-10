@@ -347,14 +347,19 @@ const STADIUM_FLOODLIGHT_CSS = `
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 40px;
+  height: 40px;
 }
 
-.tool-bubble-mark-svg {
-  width: 24px;
-  height: 24px;
+.tool-bubble-logo {
+  width: auto;
+  height: 40px;
+  min-height: 40px;
+  max-width: 40px;
+  object-fit: contain;
   display: block;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
 }
 
 .control-button {
@@ -535,75 +540,28 @@ const RIGHT_BUBBLE_STYLE: CSSProperties = {
 
 const TOOL_BUBBLE_STYLE: CSSProperties = {
   ...RIGHT_BUBBLE_STYLE,
+  width: "54px",
+  height: "54px",
+  borderRadius: "16px",
   background: "rgba(4, 8, 10, 0.9)",
   border: "1px solid rgba(124, 255, 114, 0.3)",
+  backdropFilter: "blur(10px)",
+  WebkitBackdropFilter: "blur(10px)",
   boxShadow:
     "0 10px 22px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(124, 255, 114, 0.1), 0 0 9px rgba(124, 255, 114, 0.12), inset 0 1px 2px rgba(255, 255, 255, 0.14)",
 };
 
 const MOBILE_TOOLS_BUBBLE_STYLE: CSSProperties = {
   ...RIGHT_BUBBLE_STYLE,
-  width: "68px",
-  borderRadius: "999px",
+  width: "54px",
+  height: "54px",
+  borderRadius: "16px",
   border: "1px solid rgba(124, 255, 114, 0.32)",
-  background: "linear-gradient(180deg, rgba(18, 56, 33, 0.92) 0%, rgba(11, 28, 19, 0.96) 100%)",
+  background: "rgba(5, 10, 12, 0.9)",
+  backdropFilter: "blur(10px)",
+  WebkitBackdropFilter: "blur(10px)",
   boxShadow:
     "0 10px 22px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(124, 255, 114, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.08)",
-  color: "#f1f7f0",
-  fontSize: "11px",
-  fontWeight: 700,
-  letterSpacing: "0.22px",
-};
-
-const TOOL_BUBBLE_IMAGE_WRAP_STYLE: CSSProperties = {
-  position: "relative",
-  width: "100%",
-  height: "100%",
-  borderRadius: "999px",
-  overflow: "hidden",
-  background: "radial-gradient(circle at 32% 34%, rgba(21, 33, 28, 0.55) 0%, rgba(5, 8, 10, 0.95) 80%)",
-};
-
-const TOOL_BUBBLE_LABEL_STYLE: CSSProperties = {
-  position: "absolute",
-  inset: 0,
-  display: "grid",
-  placeItems: "center",
-  fontFamily: "Inter, system-ui, sans-serif",
-  fontSize: "11px",
-  fontWeight: 800,
-  letterSpacing: "0.8px",
-  color: "rgba(227, 255, 224, 0.92)",
-  textShadow: "0 1px 3px rgba(0, 0, 0, 0.8)",
-  pointerEvents: "none",
-};
-
-const TOOL_BUBBLE_MONOGRAM_STACK_STYLE: CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  gap: "2px",
-  transform: "translateY(-0.5px)",
-};
-
-const TOOL_BUBBLE_MONOGRAM_TEXT_STYLE: CSSProperties = {
-  lineHeight: 1,
-};
-
-const TOOL_BUBBLE_MONOGRAM_UNDERLINE_STYLE: CSSProperties = {
-  width: "12px",
-  height: "1.5px",
-  borderRadius: "99px",
-  // Keep gold tone aligned with OrientationGate wordmark accent.
-  background: "linear-gradient(90deg, rgba(242, 201, 76, 0.92), rgba(242, 201, 76, 0.58))",
-};
-
-const TOOL_BUBBLE_IMAGE_EDGE_MASK_STYLE: CSSProperties = {
-  position: "absolute",
-  inset: 0,
-  borderRadius: "999px",
-  boxShadow: "inset 0 0 0 1px rgba(124, 255, 114, 0.16), inset 0 0 11px rgba(5, 8, 10, 0.68)",
-  pointerEvents: "none",
 };
 
 const POPOUT_BASE_STYLE: CSSProperties = {
@@ -3947,21 +3905,9 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
               })
             }
           >
-            {isCompactLandscapeTools ? (
-              "Tools"
-            ) : (
-              <span className="tool-bubble-icon" aria-hidden="true">
-                <span style={TOOL_BUBBLE_IMAGE_WRAP_STYLE}>
-                  <span style={TOOL_BUBBLE_LABEL_STYLE}>
-                    <span style={TOOL_BUBBLE_MONOGRAM_STACK_STYLE}>
-                      <span style={TOOL_BUBBLE_MONOGRAM_TEXT_STYLE}>PF</span>
-                      <span style={TOOL_BUBBLE_MONOGRAM_UNDERLINE_STYLE} />
-                    </span>
-                  </span>
-                  <span style={TOOL_BUBBLE_IMAGE_EDGE_MASK_STYLE} />
-                </span>
-              </span>
-            )}
+            <span className="tool-bubble-icon" aria-hidden="true">
+              <img className="tool-bubble-logo" src="/tacavision-logo.png" alt="" />
+            </span>
           </button>
         ) : null}
         {!isWhiteboardMode && quickShareOnboardingOpen ? (
