@@ -7,7 +7,7 @@ type OrientationGateProps = {
 
 const ROOT_STYLE: CSSProperties = {
   position: "fixed",
-  top: "max(14px, calc(env(safe-area-inset-top, 0px) + 12px))",
+  top: "max(52px, calc(env(safe-area-inset-top, 0px) + 50px))",
   left: "50%",
   transform: "translateX(-50%)",
   width: "min(86vw, 360px)",
