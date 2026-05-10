@@ -504,7 +504,8 @@ const ACTIONS_BUBBLE_STYLE: CSSProperties = {
 
 const PORTRAIT_ACTIONS_BUBBLE_STYLE: CSSProperties = {
   ...ACTIONS_BUBBLE_STYLE,
-  left: "max(60px, calc(env(safe-area-inset-left, 0px) + 58px))",
+  left: "auto",
+  right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
   top: "auto",
   bottom: "max(12px, calc(env(safe-area-inset-bottom, 0px) + 10px))",
   transform: "none",
@@ -3025,32 +3026,36 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             )}
           </div>
         ) : null}
-        {!isWhiteboardMode && controlsOpen ? (
+        {!isWhiteboardMode && (controlsOpen || isPortraitViewingMode) ? (
           <div style={CONTROLS_POPOUT_STYLE}>
-            <button
-              type="button"
-              className="control-button"
-              disabled={isPlaybackLocked || isPortraitViewingMode}
-              style={isPlaybackLocked || isPortraitViewingMode ? DISABLED_CONTROL_BUTTON_STYLE : SET_START_BUTTON_STYLE}
-              onClick={() => {
-                surfaceRef.current?.setStart();
-                closeControlsMenu();
-              }}
-            >
-              Set Start
-            </button>
-            <button
-              type="button"
-              className="control-button"
-              disabled={isPlaybackLocked || isPortraitViewingMode}
-              style={isPlaybackLocked || isPortraitViewingMode ? DISABLED_CONTROL_BUTTON_STYLE : ADD_PHASE_BUTTON_STYLE}
-              onClick={() => {
-                surfaceRef.current?.addPhase();
-                closeControlsMenu();
-              }}
-            >
-              Add Phase
-            </button>
+            {!isPortraitViewingMode ? (
+              <button
+                type="button"
+                className="control-button"
+                disabled={isPlaybackLocked}
+                style={isPlaybackLocked ? DISABLED_CONTROL_BUTTON_STYLE : SET_START_BUTTON_STYLE}
+                onClick={() => {
+                  surfaceRef.current?.setStart();
+                  closeControlsMenu();
+                }}
+              >
+                Set Start
+              </button>
+            ) : null}
+            {!isPortraitViewingMode ? (
+              <button
+                type="button"
+                className="control-button"
+                disabled={isPlaybackLocked}
+                style={isPlaybackLocked ? DISABLED_CONTROL_BUTTON_STYLE : ADD_PHASE_BUTTON_STYLE}
+                onClick={() => {
+                  surfaceRef.current?.addPhase();
+                  closeControlsMenu();
+                }}
+              >
+                Add Phase
+              </button>
+            ) : null}
             <button
               type="button"
               className="control-button"
@@ -3069,23 +3074,24 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             >
               Pause
             </button>
+            {!isPortraitViewingMode ? (
+              <button
+                type="button"
+                className="control-button"
+                disabled={phaseCount <= 0}
+                style={phaseCount <= 0 ? DISABLED_CONTROL_BUTTON_STYLE : UNDO_PHASE_BUTTON_STYLE}
+                onClick={() => {
+                  surfaceRef.current?.undoPhase();
+                  closeControlsMenu();
+                }}
+              >
+                Undo Phase
+              </button>
+            ) : null}
             <button
               type="button"
               className="control-button"
-              disabled={phaseCount <= 0 || isPortraitViewingMode}
-              style={phaseCount <= 0 || isPortraitViewingMode ? DISABLED_CONTROL_BUTTON_STYLE : UNDO_PHASE_BUTTON_STYLE}
-              onClick={() => {
-                surfaceRef.current?.undoPhase();
-                closeControlsMenu();
-              }}
-            >
-              Undo Phase
-            </button>
-            <button
-              type="button"
-              className="control-button"
-              disabled={isPortraitViewingMode}
-              style={isPortraitViewingMode ? DISABLED_CONTROL_BUTTON_STYLE : RESET_BUTTON_STYLE}
+              style={RESET_BUTTON_STYLE}
               onClick={() => {
                 surfaceRef.current?.reset();
                 setIsPlaying(false);
@@ -3413,7 +3419,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             ⋯
           </button>
         ) : null}
-        {!isWhiteboardMode ? (
+        {!isWhiteboardMode && !isPortraitViewingMode ? (
           <button
             type="button"
             className="floating-bubble"
