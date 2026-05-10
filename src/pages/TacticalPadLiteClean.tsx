@@ -1578,6 +1578,7 @@ const WHITEBOARD_HOME_CONFIRM_GO_BUTTON_STYLE: CSSProperties = {
 export default function TacticalPadLiteClean({ initialMode = "tactical" }: TacticalPadLiteCleanProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const surfaceRef = useRef<TacticalPadLiteSurface | null>(null);
+  const latestThumbnailSaveTokenRef = useRef(0);
   const tacticalItemCounterRef = useRef(0);
   const actionsBubbleButtonRef = useRef<HTMLButtonElement | null>(null);
   const actionsMenuRef = useRef<HTMLDivElement | null>(null);
@@ -2206,16 +2207,19 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
       return;
     }
     const now = new Date();
-    const fallbackName = `Board ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    const fallbackName = `Board ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
     const saved = saveBoard({ name: fallbackName, boardState: snapshot });
     if (!saved) {
       showQuickBoardNotice("Save failed");
       return;
     }
+    latestThumbnailSaveTokenRef.current += 1;
+    const thumbnailSaveToken = latestThumbnailSaveTokenRef.current;
     refreshSavedBoards();
     showQuickBoardNotice("Board saved");
     void generateQuickBoardThumbnail(surface).then((thumbnail) => {
       if (!thumbnail) return;
+      if (thumbnailSaveToken !== latestThumbnailSaveTokenRef.current) return;
       const updated = setBoardThumbnail(saved.id, thumbnail);
       if (!updated) return;
       refreshSavedBoards();

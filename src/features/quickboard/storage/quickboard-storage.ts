@@ -151,7 +151,6 @@ export function setBoardThumbnail(boardId: string, thumbnail: string): SavedQuic
   const updated: SavedQuickBoard = {
     ...current,
     thumbnail,
-    updatedAt: Date.now(),
   };
   boards.splice(boardIndex, 1, updated);
   boards.sort((a, b) => b.updatedAt - a.updatedAt);
