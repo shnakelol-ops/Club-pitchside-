@@ -1850,6 +1850,15 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             ? "edit"
             : "locked";
         surface.setItemMode(initialSurfaceItemMode);
+        const query = new URLSearchParams(window.location.search);
+        const boardIdFromQuery = query.get("boardId")?.trim() ?? "";
+        if (boardIdFromQuery.length > 0) {
+          handleOpenSavedBoard(boardIdFromQuery);
+          query.delete("boardId");
+          const nextQuery = query.toString();
+          const nextUrl = `${window.location.pathname}${nextQuery.length > 0 ? `?${nextQuery}` : ""}${window.location.hash}`;
+          window.history.replaceState(window.history.state, "", nextUrl);
+        }
       }
       window.requestAnimationFrame(() => {
         window.requestAnimationFrame(() => {
