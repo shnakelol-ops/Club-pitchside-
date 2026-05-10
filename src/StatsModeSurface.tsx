@@ -1190,6 +1190,27 @@ const PANEL_CSS = `
   transform: translateY(0.5px);
 }
 
+.event-btn:disabled,
+.landscape-toolbar-btn:disabled,
+.landscape-toolbar-secondary-btn:disabled,
+.utility-player-btn:disabled,
+.utility-review-btn:disabled,
+.utility-menu-btn:disabled,
+.scoreboard-attack-btn:disabled {
+  opacity: 0.46;
+  cursor: not-allowed;
+  box-shadow: none;
+  filter: none;
+}
+
+.event-btn:disabled:hover,
+.event-btn:disabled:active,
+.landscape-toolbar-btn:disabled:hover,
+.landscape-toolbar-btn:disabled:active {
+  transform: none;
+  box-shadow: none;
+}
+
 .visibility-row {
   margin-top: 1px;
   display: flex;
@@ -1308,17 +1329,17 @@ const PANEL_CSS = `
   position: fixed;
   left: 16px;
   bottom: 90px;
-  width: 39px;
-  height: 39px;
+  width: 40px;
+  height: 40px;
   border-radius: 999px;
-  border: 1px solid rgba(124, 255, 114, 0.34);
+  border: 1px solid rgba(124, 255, 114, 0.3);
   background: linear-gradient(180deg, rgba(18, 27, 32, 0.88) 0%, rgba(7, 13, 16, 0.94) 100%);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   box-shadow:
-    0 10px 22px rgba(0, 0, 0, 0.42),
-    0 0 0 1px rgba(124, 255, 114, 0.1),
-    0 0 10px rgba(124, 255, 114, 0.14),
+    0 10px 20px rgba(0, 0, 0, 0.42),
+    0 0 0 1px rgba(124, 255, 114, 0.08),
+    0 0 8px rgba(124, 255, 114, 0.12),
     inset 0 1px 2px rgba(255, 255, 255, 0.12);
   z-index: 9999;
   color: rgba(236, 255, 238, 0.96);
@@ -1349,13 +1370,13 @@ const PANEL_CSS = `
 }
 
 .utility-menu-btn {
-  height: 28px;
+  height: 30px;
   border-radius: 8px;
-  border: 1px solid rgba(148, 163, 184, 0.36);
+  border: 1px solid rgba(148, 163, 184, 0.34);
   background: rgba(15, 23, 42, 0.86);
   color: #dbe7f5;
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 620;
   line-height: 1;
   letter-spacing: 0.2px;
   text-transform: uppercase;
@@ -1686,11 +1707,11 @@ const PANEL_CSS = `
 .utility-review-btn {
   height: 30px;
   border-radius: 8px;
-  border: 1px solid rgba(148, 163, 184, 0.36);
+  border: 1px solid rgba(148, 163, 184, 0.34);
   background: rgba(15, 23, 42, 0.86);
   color: #dbe7f5;
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 620;
   line-height: 1;
   text-align: left;
   padding: 0 9px;
@@ -1977,7 +1998,7 @@ const PANEL_CSS = `
 }
 
 .scoreboard-attack-btn:disabled {
-  cursor: default;
+  cursor: not-allowed;
 }
 
 .scoreboard-attack-btn--rail {
