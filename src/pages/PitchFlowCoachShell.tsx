@@ -265,6 +265,12 @@ const SHELL_CSS = `
   gap: 10px;
 }
 
+.pf-wordmark {
+  display: inline-grid;
+  justify-items: start;
+  gap: 6px;
+}
+
 .pf-home-icon-btn {
   width: 34px;
   height: 34px;
@@ -288,9 +294,19 @@ const SHELL_CSS = `
 
 .pf-title {
   margin: 0;
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: 0.2px;
+  font-size: clamp(28px, 7vw, 34px);
+  font-weight: 850;
+  line-height: 0.98;
+  letter-spacing: 0.02em;
+  color: #f4f7f5;
+}
+
+.pf-title-accent {
+  width: min(170px, 46vw);
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(242, 201, 76, 0.92), rgba(242, 201, 76, 0.58));
+  filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.34));
 }
 
 .pf-subtitle {
@@ -883,7 +899,10 @@ function BoardPage() {
     <>
       <div className="pf-header-card">
         <div className="pf-header-top">
-          <h1 className="pf-title">PitchFlow</h1>
+          <div className="pf-wordmark">
+            <h1 className="pf-title">PitchFlow</h1>
+            <span className="pf-title-accent" aria-hidden="true" />
+          </div>
         </div>
         <p className="pf-subtitle">
           Built for Gaelic Games coaches.
