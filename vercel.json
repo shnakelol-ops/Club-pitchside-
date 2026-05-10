@@ -2,52 +2,62 @@
   "redirects": [
     {
       "source": "/tacticalpad-lite",
-      "destination": "/quickboard",
+      "destination": "/vision-board",
       "permanent": false
     },
     {
       "source": "/tacticalpad-lite/(.*)",
-      "destination": "/quickboard",
+      "destination": "/vision-board",
       "permanent": false
     },
     {
       "source": "/tacticalpad-lite-clean",
-      "destination": "/quickboard",
+      "destination": "/vision-board",
       "permanent": false
     },
     {
       "source": "/tacticalpad-lite-clean/(.*)",
-      "destination": "/quickboard",
+      "destination": "/vision-board",
       "permanent": false
     },
     {
       "source": "/flowlab",
-      "destination": "/quickboard",
+      "destination": "/vision-board",
       "permanent": false
     },
     {
       "source": "/flowlab/(.*)",
-      "destination": "/quickboard",
+      "destination": "/vision-board",
       "permanent": false
     },
     {
       "source": "/simulator",
-      "destination": "/quickboard",
+      "destination": "/vision-board",
       "permanent": false
     },
     {
       "source": "/simulator/(.*)",
-      "destination": "/quickboard",
+      "destination": "/vision-board",
       "permanent": false
     },
     {
       "source": "/whiteboard",
-      "destination": "/quickboard",
+      "destination": "/vision-board",
       "permanent": false
     },
     {
       "source": "/whiteboard/(.*)",
-      "destination": "/quickboard",
+      "destination": "/vision-board",
+      "permanent": false
+    },
+    {
+      "source": "/quickboard",
+      "destination": "/vision-board",
+      "permanent": false
+    },
+    {
+      "source": "/quickboard/(.*)",
+      "destination": "/vision-board",
       "permanent": false
     },
     {
@@ -81,11 +91,11 @@
       "destination": "/index.html"
     },
     {
-      "source": "/quickboard",
+      "source": "/vision-board",
       "destination": "/index.html"
     },
     {
-      "source": "/quickboard/(.*)",
+      "source": "/vision-board/(.*)",
       "destination": "/index.html"
     },
     {
