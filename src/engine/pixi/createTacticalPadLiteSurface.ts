@@ -1,4 +1,4 @@
-import { Application, Container, Graphics, Text } from "pixi.js";
+import { Application, Assets, Container, Graphics, Sprite, Text } from "pixi.js";
 
 import { createWorldViewport } from "./createWorldViewport";
 import {
@@ -669,21 +669,36 @@ export async function createTacticalPadLiteSurface(
   world.addChild(pitchMount.root);
 
   if (surfaceVariant === "whiteboard") {
-    const watermarkLabel = new Text({
-      text: "P",
-      style: {
-        fill: 0x202934,
-        fontSize: 3.3,
-        fontWeight: "800",
-        fontFamily: "Inter, Arial Narrow, Arial, system-ui, sans-serif",
-        letterSpacing: 0.32,
-      },
-    });
-    watermarkLabel.anchor.set(1, 1);
-    watermarkLabel.position.set(WORLD_SIZE.width - 2.2, WORLD_SIZE.height - 1.8);
-    watermarkLabel.alpha = 0.15;
-    watermarkLabel.eventMode = "none";
-    world.addChild(watermarkLabel);
+    try {
+      const watermarkTexture = await Assets.load("/tacavision-logo.png");
+      const watermarkLogo = new Sprite(watermarkTexture);
+      const targetHeight = 3.3;
+      const textureRatio =
+        watermarkTexture.height > 0 ? watermarkTexture.width / watermarkTexture.height : 1;
+      watermarkLogo.width = targetHeight * textureRatio;
+      watermarkLogo.height = targetHeight;
+      watermarkLogo.anchor.set(1, 1);
+      watermarkLogo.position.set(WORLD_SIZE.width - 2.2, WORLD_SIZE.height - 1.8);
+      watermarkLogo.alpha = 0.15;
+      watermarkLogo.eventMode = "none";
+      world.addChild(watermarkLogo);
+    } catch {
+      const watermarkLabel = new Text({
+        text: "T",
+        style: {
+          fill: 0x202934,
+          fontSize: 3.3,
+          fontWeight: "800",
+          fontFamily: "Inter, Arial Narrow, Arial, system-ui, sans-serif",
+          letterSpacing: 0.32,
+        },
+      });
+      watermarkLabel.anchor.set(1, 1);
+      watermarkLabel.position.set(WORLD_SIZE.width - 2.2, WORLD_SIZE.height - 1.8);
+      watermarkLabel.alpha = 0.15;
+      watermarkLabel.eventMode = "none";
+      world.addChild(watermarkLabel);
+    }
 
     const watermarkAccent = new Graphics();
     watermarkAccent

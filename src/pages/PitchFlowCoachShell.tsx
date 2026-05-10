@@ -274,6 +274,31 @@ const SHELL_CSS = `
   gap: 6px;
 }
 
+.pf-wordmark-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.pf-logo {
+  width: auto;
+  height: clamp(42px, 11vw, 52px);
+  object-fit: contain;
+  align-self: center;
+  display: block;
+  flex: 0 0 auto;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.28));
+}
+
+.pf-home-title {
+  font-size: clamp(24px, 7vw, 34px);
+  white-space: nowrap;
+}
+
 .pf-home-icon-btn {
   width: 34px;
   height: 34px;
@@ -928,7 +953,10 @@ function BoardPage() {
       <div className="pf-header-card">
         <div className="pf-header-top">
           <div className="pf-wordmark">
-            <h1 className="pf-title">PitchFlow</h1>
+            <div className="pf-wordmark-brand">
+              <img className="pf-logo" src="/tacavision-logo.png" alt="TacaVision logo" />
+              <h1 className="pf-title pf-home-title">TacaVision</h1>
+            </div>
             <span className="pf-title-accent" aria-hidden="true" />
           </div>
         </div>
