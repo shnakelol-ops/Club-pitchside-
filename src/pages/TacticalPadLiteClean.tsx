@@ -811,14 +811,7 @@ const QUICK_SHARE_OPTION_SUBTITLE_STYLE: CSSProperties = {
   fontSize: "9px",
   fontWeight: 520,
   letterSpacing: "0.12px",
-};
-
-const QUICK_SHARE_OPTION_GUIDANCE_STYLE: CSSProperties = {
-  color: "rgba(194, 216, 235, 0.92)",
-  fontSize: "8.5px",
-  fontWeight: 520,
-  letterSpacing: "0.1px",
-  whiteSpace: "pre-line",
+  lineHeight: 1.25,
 };
 
 const QUICK_SHARE_ONBOARDING_OVERLAY_STYLE: CSSProperties = {
@@ -865,42 +858,6 @@ const QUICK_SHARE_ONBOARDING_BODY_STYLE: CSSProperties = {
   fontSize: "10px",
   fontWeight: 520,
   lineHeight: 1.4,
-};
-
-const QUICK_SHARE_ONBOARDING_ROW_STYLE: CSSProperties = {
-  borderRadius: "10px",
-  border: "1px solid rgba(187, 211, 233, 0.24)",
-  background: "rgba(16, 28, 37, 0.78)",
-  padding: "9px 10px",
-  display: "grid",
-  gap: "3px",
-};
-
-const QUICK_SHARE_ONBOARDING_ROW_TITLE_STYLE: CSSProperties = {
-  margin: 0,
-  color: "#edf7ff",
-  fontFamily: "Inter, system-ui, sans-serif",
-  fontSize: "10.5px",
-  fontWeight: 650,
-  letterSpacing: "0.14px",
-};
-
-const QUICK_SHARE_ONBOARDING_ROW_TEXT_STYLE: CSSProperties = {
-  margin: 0,
-  color: "rgba(208, 227, 242, 0.9)",
-  fontFamily: "Inter, system-ui, sans-serif",
-  fontSize: "9.5px",
-  fontWeight: 520,
-  lineHeight: 1.35,
-};
-
-const QUICK_SHARE_ONBOARDING_NOTE_STYLE: CSSProperties = {
-  margin: 0,
-  color: "rgba(199, 220, 238, 0.88)",
-  fontFamily: "Inter, system-ui, sans-serif",
-  fontSize: "9.5px",
-  fontWeight: 560,
-  letterSpacing: "0.1px",
 };
 
 const QUICK_SHARE_ONBOARDING_BUTTON_STYLE: CSSProperties = {
@@ -2124,13 +2081,11 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   };
   const handleQuickShareRecordClip = () => {
     closeQuickShareMenu();
-    showShareTip(
-      "PitchFlow Vision Board:\nUse your phone’s screen recorder while playing your Vision.\nAfter recording:\n• Android → tap 'Share' when 'Video saved' appears\n• iPhone → open Photos and share the saved video to WhatsApp",
-    );
+    showShareTip("Use your phone’s screen recorder.\nShare the saved video directly to WhatsApp.");
   };
   const handleQuickShareSnapshot = () => {
     closeQuickShareMenu();
-    showShareTip("PitchFlow Vision Board:\nTake a screenshot and share the saved image from your phone gallery.");
+    showShareTip("Take a screenshot and share the saved image.");
   };
   const openMyBoardsEntry = () => {
     setQuickShareOpen(false);
@@ -2273,9 +2228,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     closeActionsMenu();
     setQuickShareOpen(true);
     if (quickShareOnboardingSeen) return;
-    showShareTip(
-      "Best results:\nRecord your Vision using your phone’s screen recorder, then share the saved video directly to WhatsApp.",
-    );
+    showShareTip("Best results:\nUse your phone’s screen recorder.\nShare the saved video directly to WhatsApp.");
     setQuickShareOnboardingSeen(true);
     safeWriteLocalStorageFlag(QUICK_SHARE_ONBOARDING_STORAGE_KEY, true);
   };
@@ -3440,19 +3393,12 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
               aria-modal="false"
               aria-label="Quick Share onboarding"
             >
-              <p style={QUICK_SHARE_ONBOARDING_TITLE_STYLE}>⚡ Quick Share (Beta)</p>
+              <p style={QUICK_SHARE_ONBOARDING_TITLE_STYLE}>PitchFlow Vision Board Share</p>
               <p style={QUICK_SHARE_ONBOARDING_BODY_STYLE}>
-                Quick Share is in beta. For now, screenshot and screen recording are the reliable methods.
+                Use your phone&apos;s screen recorder.
+                <br />
+                Share the saved video directly to WhatsApp.
               </p>
-              <div style={QUICK_SHARE_ONBOARDING_ROW_STYLE}>
-                <p style={QUICK_SHARE_ONBOARDING_ROW_TITLE_STYLE}>🎥 Record Play</p>
-                <p style={QUICK_SHARE_ONBOARDING_ROW_TEXT_STYLE}>Swipe down → Screen Record → press Play (manual beta flow)</p>
-              </div>
-              <div style={QUICK_SHARE_ONBOARDING_ROW_STYLE}>
-                <p style={QUICK_SHARE_ONBOARDING_ROW_TITLE_STYLE}>📸 Snapshot</p>
-                <p style={QUICK_SHARE_ONBOARDING_ROW_TEXT_STYLE}>Take a screenshot → share it to WhatsApp</p>
-              </div>
-              <p style={QUICK_SHARE_ONBOARDING_NOTE_STYLE}>Best for beta sessions and matchday reliability.</p>
               <button
                 type="button"
                 className="control-button"
@@ -3469,14 +3415,15 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             <p style={QUICK_SHARE_TITLE_STYLE}>PitchFlow Vision Board Share</p>
             <button type="button" className="control-button" style={QUICK_SHARE_OPTION_BUTTON_STYLE} onClick={handleQuickShareRecordClip}>
               <span style={QUICK_SHARE_OPTION_TITLE_STYLE}>🎥 Record Coaching Clip</span>
-              <span style={QUICK_SHARE_OPTION_SUBTITLE_STYLE}>Use your phone’s screen recorder while playing your Vision.</span>
-              <span style={QUICK_SHARE_OPTION_GUIDANCE_STYLE}>
-                {"After recording:\n• Android → tap 'Share' when 'Video saved' appears\n• iPhone → open Photos and share the saved video to WhatsApp"}
+              <span style={QUICK_SHARE_OPTION_SUBTITLE_STYLE}>
+                Use your phone&apos;s screen recorder.
+                <br />
+                Share the saved video directly to WhatsApp.
               </span>
             </button>
             <button type="button" className="control-button" style={QUICK_SHARE_OPTION_BUTTON_STYLE} onClick={handleQuickShareSnapshot}>
               <span style={QUICK_SHARE_OPTION_TITLE_STYLE}>📸 Share Snapshot</span>
-              <span style={QUICK_SHARE_OPTION_SUBTITLE_STYLE}>Take a screenshot and share the saved image from your phone gallery.</span>
+              <span style={QUICK_SHARE_OPTION_SUBTITLE_STYLE}>Take a screenshot and share the saved image.</span>
             </button>
           </div>
         ) : null}
