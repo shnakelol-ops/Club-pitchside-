@@ -5,6 +5,7 @@ import PitchFlowCoachShell from "./pages/PitchFlowCoachShell";
 import TacticalPadLiteClean from "./pages/TacticalPadLiteClean";
 
 const boardShell = () => <PitchFlowCoachShell initialTab="home" />;
+const VISION_BOARD_PATH = "/vision-board";
 const QUICK_BOARD_PATH = "/quickboard";
 const FLOW_STATS_PATH = "/flowstats";
 const NOTES_PATH = "/notes";
@@ -16,9 +17,9 @@ function redirectToBoard() {
   return boardShell;
 }
 
-function redirectToQuickBoard() {
-  if (window.location.pathname !== QUICK_BOARD_PATH) {
-    window.history.replaceState(null, "", QUICK_BOARD_PATH);
+function redirectToVisionBoard() {
+  if (window.location.pathname !== VISION_BOARD_PATH) {
+    window.history.replaceState(null, "", VISION_BOARD_PATH);
   }
   return TacticalPadLiteClean;
 }
@@ -42,20 +43,23 @@ function pickRootComponent() {
   if (normalizedPath === "/") {
     return redirectToBoard();
   }
-  if (normalizedPath === QUICK_BOARD_PATH) {
+  if (normalizedPath === VISION_BOARD_PATH) {
     return TacticalPadLiteClean;
   }
+  if (normalizedPath === QUICK_BOARD_PATH) {
+    return redirectToVisionBoard();
+  }
   if (normalizedPath === "/simulator") {
-    return redirectToQuickBoard();
+    return redirectToVisionBoard();
   }
   if (normalizedPath === "/flowlab") {
-    return redirectToQuickBoard();
+    return redirectToVisionBoard();
   }
   if (normalizedPath === "/tacticalpad-lite") {
-    return redirectToQuickBoard();
+    return redirectToVisionBoard();
   }
   if (normalizedPath === "/tacticalpad-lite-clean") {
-    return redirectToQuickBoard();
+    return redirectToVisionBoard();
   }
   if (normalizedPath === FLOW_STATS_PATH) {
     return () => <TacticalPadLiteClean initialMode="stats" />;
@@ -64,7 +68,7 @@ function pickRootComponent() {
     return redirectToFlowStats();
   }
   if (normalizedPath === "/whiteboard") {
-    return redirectToQuickBoard();
+    return redirectToVisionBoard();
   }
   if (normalizedPath === "/board") {
     return boardShell;
