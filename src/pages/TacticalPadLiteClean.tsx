@@ -1105,24 +1105,24 @@ const MOBILE_COACH_HUB_OVERLAY_STYLE: CSSProperties = {
   placeItems: "center",
   padding:
     "max(16px, calc(env(safe-area-inset-top, 0px) + 8px)) max(16px, calc(env(safe-area-inset-right, 0px) + 8px)) max(16px, calc(env(safe-area-inset-bottom, 0px) + 8px)) max(16px, calc(env(safe-area-inset-left, 0px) + 8px))",
-  background: "rgba(5, 11, 17, 0.32)",
+  background: "rgba(5, 11, 17, 0.22)",
   zIndex: 24,
 };
 
 const MOBILE_COACH_HUB_PANEL_STYLE: CSSProperties = {
-  width: "min(440px, calc(100dvw - 32px))",
+  width: "min(82vw, 410px)",
   maxWidth: "calc(100dvw - 32px)",
   maxHeight: "calc(100dvh - 32px)",
   overflowY: "auto",
   overflowX: "hidden",
   display: "flex",
   flexDirection: "column",
-  gap: "8px",
-  padding: "12px",
-  borderRadius: "18px",
-  border: "1px solid rgba(39, 92, 59, 0.85)",
-  background: "linear-gradient(180deg, rgba(23, 61, 40, 0.92) 0%, rgba(16, 41, 27, 0.97) 100%)",
-  boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 18px 36px rgba(0, 0, 0, 0.38)",
+  gap: "6px",
+  padding: "10px",
+  borderRadius: "16px",
+  border: "1px solid rgba(116, 148, 133, 0.34)",
+  background: "linear-gradient(180deg, rgba(13, 23, 24, 0.92) 0%, rgba(9, 16, 19, 0.96) 100%)",
+  boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 16px 32px rgba(0, 0, 0, 0.34)",
   backdropFilter: "blur(12px)",
   WebkitBackdropFilter: "blur(12px)",
 };
@@ -1131,28 +1131,32 @@ const MOBILE_COACH_HUB_HEADER_STYLE: CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: "8px",
+  gap: "6px",
+  paddingBottom: "4px",
+  borderBottom: "1px solid rgba(135, 162, 151, 0.18)",
 };
 
 const MOBILE_COACH_HUB_TITLE_STYLE: CSSProperties = {
   margin: 0,
-  color: "#f1f7f0",
-  fontSize: "13px",
-  fontWeight: 760,
-  letterSpacing: "0.2px",
+  color: "#ecf6ef",
+  fontSize: "12px",
+  fontWeight: 720,
+  letterSpacing: "0.16px",
   fontFamily: "Inter, system-ui, sans-serif",
 };
 
 const MOBILE_COACH_HUB_CLOSE_STYLE: CSSProperties = {
   ...ACTIONS_MENU_BUTTON_STYLE,
   width: "fit-content",
-  minWidth: "72px",
-  height: "30px",
+  minWidth: "56px",
+  height: "26px",
+  fontSize: "9px",
+  fontWeight: 620,
   textAlign: "center",
   justifyContent: "center",
-  borderRadius: "10px",
-  border: "1px solid rgba(124, 255, 114, 0.36)",
-  background: "rgba(16, 41, 27, 0.9)",
+  borderRadius: "9px",
+  border: "1px solid rgba(142, 169, 155, 0.34)",
+  background: "rgba(13, 22, 25, 0.9)",
 };
 
 const COACH_HUB_SECTION_STYLE: CSSProperties = {
@@ -2765,28 +2769,97 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const quickSharePopoverStyle = isPortraitViewingMode ? PORTRAIT_QUICK_SHARE_POPOUT_STYLE : QUICK_SHARE_POPOUT_STYLE;
   const myBoardsPopoverStyle = isPortraitViewingMode ? PORTRAIT_MY_BOARDS_POPOUT_STYLE : MY_BOARDS_POPOUT_STYLE;
   const isCompactLandscapeTools = !isWhiteboardMode && !isPortraitViewingMode && isCompactLandscapeToolsMenu;
+  const coachHubSectionTitleStyle = isCompactLandscapeTools
+    ? {
+        ...COACH_HUB_SECTION_TITLE_STYLE,
+        fontSize: "8.5px",
+        letterSpacing: "0.28px",
+        color: "rgba(202, 222, 213, 0.86)",
+        marginTop: "1px",
+      }
+    : COACH_HUB_SECTION_TITLE_STYLE;
+  const coachHubTabGridStyle = isCompactLandscapeTools
+    ? {
+        ...COACH_HUB_TAB_GRID_STYLE,
+        gap: "5px",
+        padding: "3px",
+        borderRadius: "12px",
+        border: "1px solid rgba(129, 157, 144, 0.16)",
+        background: "rgba(9, 16, 20, 0.54)",
+      }
+    : COACH_HUB_TAB_GRID_STYLE;
+  const coachHubTabButtonStyle = isCompactLandscapeTools
+    ? {
+        ...COACH_HUB_TAB_BUTTON_STYLE,
+        height: "28px",
+        borderRadius: "999px",
+        fontSize: "9.5px",
+        letterSpacing: "0.2px",
+        padding: "0 8px",
+        border: "1px solid rgba(127, 156, 142, 0.28)",
+        background: "rgba(13, 22, 25, 0.8)",
+        color: "rgba(220, 235, 227, 0.9)",
+      }
+    : COACH_HUB_TAB_BUTTON_STYLE;
+  const coachHubTabButtonActiveStyle = isCompactLandscapeTools
+    ? {
+        ...coachHubTabButtonStyle,
+        border: "1px solid rgba(124, 255, 114, 0.42)",
+        background: "rgba(124, 255, 114, 0.12)",
+        color: "#f1f7f0",
+      }
+    : COACH_HUB_TAB_BUTTON_ACTIVE_STYLE;
   const coachHubToolButtonStyle = isCompactLandscapeTools
     ? {
         ...COACH_HUB_TOOL_BUTTON_STYLE,
-        height: "36px",
-        fontSize: "11px",
+        height: "41px",
+        borderRadius: "10px",
+        fontSize: "10.5px",
         padding: "0 6px",
+        border: "1px solid rgba(127, 156, 142, 0.26)",
+        background: "rgba(13, 22, 25, 0.82)",
+        color: "#e6f0ea",
       }
     : COACH_HUB_TOOL_BUTTON_STYLE;
   const coachHubToolButtonActiveStyle = isCompactLandscapeTools
     ? {
         ...coachHubToolButtonStyle,
-        border: "1px solid rgba(125, 211, 252, 0.68)",
-        background: "rgba(38, 72, 102, 0.68)",
+        border: "1px solid rgba(124, 255, 114, 0.46)",
+        background: "rgba(124, 255, 114, 0.14)",
         color: "#f7fcff",
       }
     : COACH_HUB_TOOL_BUTTON_ACTIVE_STYLE;
+  const coachHubColorGridStyle = isCompactLandscapeTools
+    ? {
+        ...COACH_HUB_COLOR_GRID_STYLE,
+        gap: "4px",
+      }
+    : COACH_HUB_COLOR_GRID_STYLE;
+  const coachHubColorButtonStyle = isCompactLandscapeTools
+    ? {
+        ...COACH_HUB_COLOR_BUTTON_STYLE,
+        height: "22px",
+        border: "1px solid rgba(129, 157, 144, 0.26)",
+        background: "rgba(10, 18, 22, 0.84)",
+      }
+    : COACH_HUB_COLOR_BUTTON_STYLE;
+  const coachHubColorSwatchStyle = isCompactLandscapeTools
+    ? {
+        ...COACH_HUB_COLOR_SWATCH_STYLE,
+        width: "14px",
+        height: "14px",
+      }
+    : COACH_HUB_COLOR_SWATCH_STYLE;
   const coachHubActionButtonStyle = isCompactLandscapeTools
     ? {
         ...COACH_HUB_ACTION_BUTTON_STYLE,
-        height: "36px",
-        fontSize: "11px",
+        height: "41px",
+        borderRadius: "10px",
+        fontSize: "10.5px",
         padding: "0 6px",
+        border: "1px solid rgba(127, 156, 142, 0.26)",
+        background: "rgba(13, 22, 25, 0.82)",
+        color: "#e6f0ea",
       }
     : COACH_HUB_ACTION_BUTTON_STYLE;
 
@@ -3301,31 +3374,31 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                     Close
                   </button>
                 </div>
-                <div style={COACH_HUB_TAB_GRID_STYLE}>
+                <div style={coachHubTabGridStyle}>
                   <button
                     type="button"
-                    style={activeToolsSection === "draw" ? COACH_HUB_TAB_BUTTON_ACTIVE_STYLE : COACH_HUB_TAB_BUTTON_STYLE}
+                    style={activeToolsSection === "draw" ? coachHubTabButtonActiveStyle : coachHubTabButtonStyle}
                     onClick={() => setActiveToolsSection("draw")}
                   >
                     Draw
                   </button>
                   <button
                     type="button"
-                    style={activeToolsSection === "teams" ? COACH_HUB_TAB_BUTTON_ACTIVE_STYLE : COACH_HUB_TAB_BUTTON_STYLE}
+                    style={activeToolsSection === "teams" ? coachHubTabButtonActiveStyle : coachHubTabButtonStyle}
                     onClick={() => setActiveToolsSection("teams")}
                   >
                     Teams
                   </button>
                   <button
                     type="button"
-                    style={activeToolsSection === "items" ? COACH_HUB_TAB_BUTTON_ACTIVE_STYLE : COACH_HUB_TAB_BUTTON_STYLE}
+                    style={activeToolsSection === "items" ? coachHubTabButtonActiveStyle : coachHubTabButtonStyle}
                     onClick={() => setActiveToolsSection("items")}
                   >
                     Items
                   </button>
                   <button
                     type="button"
-                    style={activeToolsSection === "board" ? COACH_HUB_TAB_BUTTON_ACTIVE_STYLE : COACH_HUB_TAB_BUTTON_STYLE}
+                    style={activeToolsSection === "board" ? coachHubTabButtonActiveStyle : coachHubTabButtonStyle}
                     onClick={() => setActiveToolsSection("board")}
                   >
                     Board
@@ -3334,7 +3407,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
 
                 {activeToolsSection === "draw" ? (
                   <div style={COACH_HUB_SECTION_STYLE}>
-                    <p style={COACH_HUB_SECTION_TITLE_STYLE}>Draw</p>
+                    <p style={coachHubSectionTitleStyle}>Draw</p>
                     <div className="coach-hub-tool-grid" style={COACH_HUB_TOOL_GRID_STYLE}>
                       <button
                         type="button"
@@ -3386,7 +3459,8 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                         Eraser
                       </button>
                     </div>
-                    <div style={COACH_HUB_COLOR_GRID_STYLE}>
+                    {isCompactLandscapeTools ? <p style={coachHubSectionTitleStyle}>Colour</p> : null}
+                    <div style={coachHubColorGridStyle}>
                       {WHITEBOARD_PEN_COLOR_CHOICES.map((choice) => {
                         const isActive = activeTacticalPenColor === choice.value;
                         return (
@@ -3395,7 +3469,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                             type="button"
                             aria-label={`Set tactical drawing colour ${choice.label}`}
                             style={{
-                              ...COACH_HUB_COLOR_BUTTON_STYLE,
+                              ...coachHubColorButtonStyle,
                               ...(isActive
                                 ? {
                                     boxShadow: "0 0 0 2px rgba(125, 211, 252, 0.88)",
@@ -3405,7 +3479,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                             }}
                             onClick={() => applyTacticalPenColor(choice.value)}
                           >
-                            <span style={{ ...COACH_HUB_COLOR_SWATCH_STYLE, background: choice.css }} />
+                            <span style={{ ...coachHubColorSwatchStyle, background: choice.css }} />
                           </button>
                         );
                       })}
@@ -3415,7 +3489,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
 
                 {activeToolsSection === "teams" ? (
                   <div style={COACH_HUB_SECTION_STYLE}>
-                    <p style={COACH_HUB_SECTION_TITLE_STYLE}>Teams</p>
+                    <p style={coachHubSectionTitleStyle}>{isCompactLandscapeTools ? "Players" : "Teams"}</p>
                     <div style={COACH_HUB_ACTION_GRID_STYLE}>
                       <button
                         type="button"
@@ -3455,7 +3529,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
 
                 {activeToolsSection === "items" ? (
                   <div style={COACH_HUB_SECTION_STYLE}>
-                    <p style={COACH_HUB_SECTION_TITLE_STYLE}>Items</p>
+                    <p style={coachHubSectionTitleStyle}>Items</p>
                     <div style={COACH_HUB_ACTION_GRID_STYLE}>
                       <button
                         type="button"
@@ -3490,7 +3564,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
 
                 {activeToolsSection === "board" ? (
                   <div style={COACH_HUB_SECTION_STYLE}>
-                    <p style={COACH_HUB_SECTION_TITLE_STYLE}>Board</p>
+                    <p style={coachHubSectionTitleStyle}>Board</p>
                     <div style={COACH_HUB_ACTION_GRID_STYLE}>
                       <button type="button" style={coachHubActionButtonStyle} onClick={handleNewBoard}>
                         New Board
@@ -3514,31 +3588,31 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             </div>
           ) : (
           <div ref={toolsMenuRef} style={COACH_HUB_PANEL_STYLE}>
-            <div style={COACH_HUB_TAB_GRID_STYLE}>
+            <div style={coachHubTabGridStyle}>
               <button
                 type="button"
-                style={activeToolsSection === "draw" ? COACH_HUB_TAB_BUTTON_ACTIVE_STYLE : COACH_HUB_TAB_BUTTON_STYLE}
+                style={activeToolsSection === "draw" ? coachHubTabButtonActiveStyle : coachHubTabButtonStyle}
                 onClick={() => setActiveToolsSection("draw")}
               >
                 Draw
               </button>
               <button
                 type="button"
-                style={activeToolsSection === "teams" ? COACH_HUB_TAB_BUTTON_ACTIVE_STYLE : COACH_HUB_TAB_BUTTON_STYLE}
+                style={activeToolsSection === "teams" ? coachHubTabButtonActiveStyle : coachHubTabButtonStyle}
                 onClick={() => setActiveToolsSection("teams")}
               >
                 Teams
               </button>
               <button
                 type="button"
-                style={activeToolsSection === "items" ? COACH_HUB_TAB_BUTTON_ACTIVE_STYLE : COACH_HUB_TAB_BUTTON_STYLE}
+                style={activeToolsSection === "items" ? coachHubTabButtonActiveStyle : coachHubTabButtonStyle}
                 onClick={() => setActiveToolsSection("items")}
               >
                 Items
               </button>
               <button
                 type="button"
-                style={activeToolsSection === "board" ? COACH_HUB_TAB_BUTTON_ACTIVE_STYLE : COACH_HUB_TAB_BUTTON_STYLE}
+                style={activeToolsSection === "board" ? coachHubTabButtonActiveStyle : coachHubTabButtonStyle}
                 onClick={() => setActiveToolsSection("board")}
               >
                 Board
@@ -3547,7 +3621,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
 
             {activeToolsSection === "draw" ? (
               <div style={COACH_HUB_SECTION_STYLE}>
-                <p style={COACH_HUB_SECTION_TITLE_STYLE}>Draw</p>
+                <p style={coachHubSectionTitleStyle}>Draw</p>
                 <div className="coach-hub-tool-grid" style={COACH_HUB_TOOL_GRID_STYLE}>
                   <button
                     type="button"
@@ -3599,7 +3673,8 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                     Eraser
                   </button>
                 </div>
-                <div style={COACH_HUB_COLOR_GRID_STYLE}>
+                {isCompactLandscapeTools ? <p style={coachHubSectionTitleStyle}>Colour</p> : null}
+                <div style={coachHubColorGridStyle}>
                   {WHITEBOARD_PEN_COLOR_CHOICES.map((choice) => {
                     const isActive = activeTacticalPenColor === choice.value;
                     return (
@@ -3608,7 +3683,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                         type="button"
                         aria-label={`Set tactical drawing colour ${choice.label}`}
                         style={{
-                          ...COACH_HUB_COLOR_BUTTON_STYLE,
+                          ...coachHubColorButtonStyle,
                           ...(isActive
                             ? {
                                 boxShadow: "0 0 0 2px rgba(125, 211, 252, 0.88)",
@@ -3618,7 +3693,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                         }}
                         onClick={() => applyTacticalPenColor(choice.value)}
                       >
-                        <span style={{ ...COACH_HUB_COLOR_SWATCH_STYLE, background: choice.css }} />
+                        <span style={{ ...coachHubColorSwatchStyle, background: choice.css }} />
                       </button>
                     );
                   })}
@@ -3628,7 +3703,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
 
             {activeToolsSection === "teams" ? (
               <div style={COACH_HUB_SECTION_STYLE}>
-                <p style={COACH_HUB_SECTION_TITLE_STYLE}>Teams</p>
+                <p style={coachHubSectionTitleStyle}>{isCompactLandscapeTools ? "Players" : "Teams"}</p>
                 <div style={COACH_HUB_ACTION_GRID_STYLE}>
                   <button
                     type="button"
@@ -3668,7 +3743,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
 
             {activeToolsSection === "items" ? (
               <div style={COACH_HUB_SECTION_STYLE}>
-                <p style={COACH_HUB_SECTION_TITLE_STYLE}>Items</p>
+                <p style={coachHubSectionTitleStyle}>Items</p>
                 <div style={COACH_HUB_ACTION_GRID_STYLE}>
                   <button
                     type="button"
@@ -3703,7 +3778,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
 
             {activeToolsSection === "board" ? (
               <div style={COACH_HUB_SECTION_STYLE}>
-                <p style={COACH_HUB_SECTION_TITLE_STYLE}>Board</p>
+                <p style={coachHubSectionTitleStyle}>Board</p>
                 <div style={COACH_HUB_ACTION_GRID_STYLE}>
                   <button type="button" style={coachHubActionButtonStyle} onClick={handleNewBoard}>
                     New Board
