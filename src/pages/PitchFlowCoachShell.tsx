@@ -15,6 +15,8 @@ import {
   type ProblemTag,
   type SportFilter,
 } from "../data/libraryContent";
+import { loadAllBoards } from "../features/quickboard/storage/quickboard-storage";
+import type { SavedQuickBoard } from "../features/quickboard/storage/quickboard-types";
 
 export type PitchFlowTab = "home" | "notes" | "library" | "sessions" | "plans";
 
@@ -39,7 +41,8 @@ const BOTTOM_NAV_ITEMS: ReadonlyArray<BottomNavItem> = [
   { id: "notes", label: "Notes", short: "N", path: "/notes" },
 ];
 
-const BOARD_RECENT = ["Weekend Press Trigger", "Kickout Pressure 6v6", "Wide Attack Flow"];
+const VISION_BOARD_PATH = "/vision-board";
+const HOME_RECENT_BOARDS_LIMIT = 3;
 const SESSION_CATEGORIES = ["Warm-Ups", "Skill Development", "Attack", "Defence"];
 const PLAN_TYPES = [
   "Pre-Season",
@@ -763,7 +766,7 @@ const SHELL_CSS = `
   backdrop-filter: blur(12px);
   box-shadow: 0 14px 28px rgba(0,0,0,0.36);
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   padding: 5px;
   z-index: 50;
 }
@@ -780,6 +783,16 @@ const SHELL_CSS = `
   padding: 8px 2px 7px;
   font-size: 11px;
   font-weight: 600;
+  width: 100%;
+  min-width: 0;
+}
+
+.pf-nav-label {
+  display: block;
+  width: 100%;
+  text-align: center;
+  line-height: 1.15;
+  font-size: 10.5px;
 }
 
 .pf-nav-icon {
@@ -894,7 +907,22 @@ function navigateTo(path: string) {
   window.location.assign(path);
 }
 
+function navigateToVisionBoard(boardId?: string) {
+  const nextPath = boardId ? `${VISION_BOARD_PATH}?boardId=${encodeURIComponent(boardId)}` : VISION_BOARD_PATH;
+  if (`${window.location.pathname}${window.location.search}` === nextPath) return;
+  window.location.assign(nextPath);
+}
+
 function BoardPage() {
+  const [recentBoards, setRecentBoards] = useState<SavedQuickBoard[]>(() => {
+    if (typeof window === "undefined") return [];
+    return loadAllBoards().slice(0, HOME_RECENT_BOARDS_LIMIT);
+  });
+
+  useEffect(() => {
+    setRecentBoards(loadAllBoards().slice(0, HOME_RECENT_BOARDS_LIMIT));
+  }, []);
+
   return (
     <>
       <div className="pf-header-card">
@@ -924,7 +952,7 @@ function BoardPage() {
       <p className="pf-section-title pf-home-section-title-actions">Quick Actions</p>
       <div className="pf-card">
         <div className="pf-home-secondary-grid">
-          <button type="button" className="pf-home-secondary-btn" onClick={() => navigateTo("/vision-board")}>
+          <button type="button" className="pf-home-secondary-btn" onClick={() => navigateToVisionBoard()}>
             <span>Vision Board</span>
             <small>Open Vision Board</small>
           </button>
@@ -937,18 +965,25 @@ function BoardPage() {
       <p className="pf-section-title pf-home-section-title-recent">Recent Boards</p>
       <div className="pf-card pf-card-soft">
         <p className="pf-card-title">Recent Boards</p>
-        <div className="pf-list">
-          {BOARD_RECENT.map((item) => (
-            <button
-              key={item}
-              type="button"
-              className="pf-list-item pf-list-item-soft"
-              onClick={() => navigateTo("/vision-board")}
-            >
-              {item}
-            </button>
-          ))}
-        </div>
+        {recentBoards.length <= 0 ? (
+          <p className="pf-card-text" style={{ marginTop: "10px" }}>
+            No saved boards yet. Save a board in Vision Board to see it here.
+          </p>
+        ) : (
+          <div className="pf-list">
+            {recentBoards.map((board) => (
+              <button
+                key={board.id}
+                type="button"
+                className="pf-list-item pf-list-item-soft"
+                onClick={() => navigateToVisionBoard(board.id)}
+                title={board.name}
+              >
+                {board.name}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </>
   );
@@ -1561,7 +1596,7 @@ export default function PitchFlowCoachShell({ initialTab }: PitchFlowCoachShellP
               <span className="pf-nav-icon" aria-hidden="true">
                 {item.short}
               </span>
-              <span>{item.label}</span>
+              <span className="pf-nav-label">{item.label}</span>
             </button>
           );
         })}
