@@ -502,6 +502,14 @@ const ACTIONS_BUBBLE_STYLE: CSSProperties = {
   zIndex: 21,
 };
 
+const PORTRAIT_ACTIONS_BUBBLE_STYLE: CSSProperties = {
+  ...ACTIONS_BUBBLE_STYLE,
+  left: "max(60px, calc(env(safe-area-inset-left, 0px) + 58px))",
+  top: "auto",
+  bottom: "max(12px, calc(env(safe-area-inset-bottom, 0px) + 10px))",
+  transform: "none",
+};
+
 const RIGHT_BUBBLE_STYLE: CSSProperties = {
   ...BUBBLE_BASE_STYLE,
   right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
@@ -752,6 +760,25 @@ const ACTIONS_POPOUT_STYLE: CSSProperties = {
   zIndex: 21,
 };
 
+const PORTRAIT_POPOUT_BASE_STYLE: CSSProperties = {
+  left: "16px",
+  right: "16px",
+  top: "auto",
+  bottom: "max(64px, calc(env(safe-area-inset-bottom, 0px) + 62px))",
+  transform: "none",
+  width: "calc(100vw - 32px)",
+  maxWidth: "calc(100vw - 32px)",
+  boxSizing: "border-box",
+  overflowX: "hidden",
+};
+
+const PORTRAIT_ACTIONS_POPOUT_STYLE: CSSProperties = {
+  ...ACTIONS_POPOUT_STYLE,
+  ...PORTRAIT_POPOUT_BASE_STYLE,
+  width: "calc(100vw - 32px)",
+  maxWidth: "calc(100vw - 32px)",
+};
+
 const ACTIONS_MENU_BUTTON_STYLE: CSSProperties = {
   borderRadius: "9px",
   border: "1px solid rgba(224, 236, 248, 0.2)",
@@ -786,6 +813,15 @@ const QUICK_SHARE_POPOUT_STYLE: CSSProperties = {
   border: "1px solid rgba(212, 228, 244, 0.24)",
   boxShadow: "0 12px 26px rgba(0, 0, 0, 0.34)",
   zIndex: 22,
+};
+
+const PORTRAIT_QUICK_SHARE_POPOUT_STYLE: CSSProperties = {
+  ...QUICK_SHARE_POPOUT_STYLE,
+  ...PORTRAIT_POPOUT_BASE_STYLE,
+  width: "calc(100vw - 32px)",
+  maxWidth: "calc(100vw - 32px)",
+  maxHeight: "min(58vh, 360px)",
+  overflowY: "auto",
 };
 
 const QUICK_SHARE_TITLE_STYLE: CSSProperties = {
@@ -916,6 +952,14 @@ const MY_BOARDS_POPOUT_STYLE: CSSProperties = {
   border: "1px solid rgba(212, 228, 244, 0.24)",
   boxShadow: "0 12px 26px rgba(0, 0, 0, 0.34)",
   zIndex: 22,
+};
+
+const PORTRAIT_MY_BOARDS_POPOUT_STYLE: CSSProperties = {
+  ...MY_BOARDS_POPOUT_STYLE,
+  ...PORTRAIT_POPOUT_BASE_STYLE,
+  width: "calc(100vw - 32px)",
+  maxWidth: "calc(100vw - 32px)",
+  maxHeight: "min(60vh, 430px)",
 };
 
 const MY_BOARDS_HEADER_STYLE: CSSProperties = {
@@ -2559,6 +2603,10 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
       zIndex: 22,
     } as const;
   })();
+  const actionsBubbleStyle = isPortraitViewingMode ? PORTRAIT_ACTIONS_BUBBLE_STYLE : ACTIONS_BUBBLE_STYLE;
+  const actionsPopoutStyle = isPortraitViewingMode ? PORTRAIT_ACTIONS_POPOUT_STYLE : ACTIONS_POPOUT_STYLE;
+  const quickSharePopoverStyle = isPortraitViewingMode ? PORTRAIT_QUICK_SHARE_POPOUT_STYLE : QUICK_SHARE_POPOUT_STYLE;
+  const myBoardsPopoverStyle = isPortraitViewingMode ? PORTRAIT_MY_BOARDS_POPOUT_STYLE : MY_BOARDS_POPOUT_STYLE;
 
   if (isStatsMode) {
     return (
@@ -3263,7 +3311,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
           </div>
         ) : null}
         {!isWhiteboardMode && actionsOpen ? (
-          <div ref={actionsMenuRef} style={ACTIONS_POPOUT_STYLE}>
+          <div ref={actionsMenuRef} style={actionsPopoutStyle}>
             <button type="button" className="control-button" style={ACTIONS_MENU_BUTTON_STYLE} onClick={openQuickShareEntry}>
               Quick Share (Beta)
             </button>
@@ -3285,7 +3333,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
           </div>
         ) : null}
         {!isWhiteboardMode && myBoardsOpen ? (
-          <div ref={myBoardsPopoverRef} style={MY_BOARDS_POPOUT_STYLE} role="dialog" aria-modal="false" aria-label="My Boards">
+          <div ref={myBoardsPopoverRef} style={myBoardsPopoverStyle} role="dialog" aria-modal="false" aria-label="My Boards">
             <div style={MY_BOARDS_HEADER_STYLE}>
               <p style={MY_BOARDS_TITLE_STYLE}>My Boards</p>
               <button type="button" className="control-button" style={MY_BOARDS_SAVE_BUTTON_STYLE} onClick={handleSaveCurrentBoard}>
@@ -3348,7 +3396,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             ref={actionsBubbleButtonRef}
             type="button"
             className="floating-bubble"
-            style={ACTIONS_BUBBLE_STYLE}
+            style={actionsBubbleStyle}
             aria-label="Open actions"
             onClick={() =>
               setActionsOpen((open) => {
@@ -3456,7 +3504,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
           </div>
         ) : null}
         {!isWhiteboardMode && quickShareOpen ? (
-          <div ref={quickSharePopoverRef} style={QUICK_SHARE_POPOUT_STYLE} role="dialog" aria-modal="false" aria-label="Quick Share">
+          <div ref={quickSharePopoverRef} style={quickSharePopoverStyle} role="dialog" aria-modal="false" aria-label="Quick Share">
             <p style={QUICK_SHARE_TITLE_STYLE}>PitchFlow Vision Board Share</p>
             <button type="button" className="control-button" style={QUICK_SHARE_OPTION_BUTTON_STYLE} onClick={handleQuickShareRecordClip}>
               <span style={QUICK_SHARE_OPTION_TITLE_STYLE}>🎥 Record Coaching Clip</span>
