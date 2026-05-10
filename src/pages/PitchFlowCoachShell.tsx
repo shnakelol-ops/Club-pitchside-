@@ -282,9 +282,10 @@ const SHELL_CSS = `
 
 .pf-logo {
   width: auto;
-  height: auto;
-  max-width: clamp(88px, 22vw, 120px);
-  max-height: clamp(30px, 6.5vw, 36px);
+  height: 42px;
+  object-fit: contain;
+  align-self: center;
+  display: block;
   image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
   filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.28));
@@ -945,7 +946,7 @@ function BoardPage() {
         <div className="pf-header-top">
           <div className="pf-wordmark">
             <div className="pf-wordmark-brand">
-              <img className="pf-logo" src="/Screenshot_20260510_195230_ChatGPT.jpg" alt="TacaVision logo" />
+              <img className="pf-logo" src="/tacavision-logo.png" alt="TacaVision logo" />
               <h1 className="pf-title">TacaVision</h1>
             </div>
             <span className="pf-title-accent" aria-hidden="true" />
