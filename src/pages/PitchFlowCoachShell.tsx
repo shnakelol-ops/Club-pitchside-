@@ -441,7 +441,7 @@ const SHELL_CSS = `
 
 .pf-home-primary-btn {
   width: 100%;
-  border-radius: 16px;
+  border-radius: 14px;
   border: 1px solid var(--pf-primary-strong);
   background: linear-gradient(180deg, rgba(34,197,94,0.45) 0%, rgba(26,74,48,0.96) 100%);
   color: var(--pf-text);
@@ -482,7 +482,7 @@ const SHELL_CSS = `
 }
 
 .pf-home-secondary-btn {
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px solid var(--pf-border);
   background: rgba(20,52,33,0.92);
   color: var(--pf-text);
@@ -761,7 +761,7 @@ const SHELL_CSS = `
   bottom: calc(10px + env(safe-area-inset-bottom, 0px));
   width: min(520px, calc(100vw - 18px));
   border: 1px solid var(--pf-border);
-  border-radius: 18px;
+  border-radius: 16px;
   background: var(--pf-bottom-nav);
   backdrop-filter: blur(12px);
   box-shadow: 0 14px 28px rgba(0,0,0,0.36);
@@ -774,7 +774,7 @@ const SHELL_CSS = `
 .pf-nav-item {
   position: relative;
   border: 0;
-  border-radius: 14px;
+  border-radius: 12px;
   background: transparent;
   color: var(--pf-text-muted);
   display: grid;
@@ -1574,10 +1574,29 @@ function renderPage(activeTab: PitchFlowTab) {
 }
 
 export default function PitchFlowCoachShell({ initialTab }: PitchFlowCoachShellProps) {
+  const normalizedPath =
+    typeof window === "undefined" ? "/board" : window.location.pathname.replace(/\/+$/, "") || "/";
   const activeNav: BottomNavItem["id"] =
-    initialTab === "notes" || initialTab === "library" || initialTab === "sessions" || initialTab === "plans"
-      ? "notes"
-      : "home";
+    normalizedPath === "/vision-board" ||
+    normalizedPath === "/flowlab" ||
+    normalizedPath === "/quickboard" ||
+    normalizedPath === "/simulator" ||
+    normalizedPath === "/tacticalpad-lite" ||
+    normalizedPath === "/tacticalpad-lite-clean" ||
+    normalizedPath === "/whiteboard"
+      ? "flowlab"
+      : normalizedPath === "/flowstats" || normalizedPath === "/stats"
+        ? "flowstats"
+        : normalizedPath === "/notes" ||
+            normalizedPath === "/library" ||
+            normalizedPath === "/sessions" ||
+            normalizedPath === "/plans" ||
+            initialTab === "notes" ||
+            initialTab === "library" ||
+            initialTab === "sessions" ||
+            initialTab === "plans"
+          ? "notes"
+          : "home";
 
   return (
     <main className="pf-shell">

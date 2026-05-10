@@ -362,6 +362,17 @@ const STADIUM_FLOODLIGHT_CSS = `
   filter: brightness(1.1);
 }
 
+.control-button:disabled {
+  cursor: not-allowed;
+  filter: none;
+}
+
+.control-button:disabled:hover,
+.control-button:disabled:active {
+  transform: none;
+  filter: none;
+}
+
 @media (max-width: 700px) and (orientation: portrait) {
   .stadium-light {
     top: 5%;
@@ -464,23 +475,23 @@ const PORTRAIT_INTERACTION_SHIELD_STYLE: CSSProperties = {
 
 const BUBBLE_BASE_STYLE: CSSProperties = {
   position: "fixed",
-  width: "42px",
-  height: "42px",
+  width: "40px",
+  height: "40px",
   borderRadius: "999px",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
   color: "rgba(255, 255, 255, 0.95)",
   fontFamily: "Inter, system-ui, sans-serif",
-  fontSize: "10.5px",
+  fontSize: "10px",
   fontWeight: 600,
   letterSpacing: "0.3px",
-  border: "1px solid rgba(255, 255, 255, 0.25)",
+  border: "1px solid rgba(255, 255, 255, 0.24)",
   background: "rgba(20, 25, 30, 0.65)",
   backdropFilter: "blur(12px)",
   WebkitBackdropFilter: "blur(12px)",
   boxShadow:
-    "0 6px 20px rgba(0, 0, 0, 0.45), 0 0 18px rgba(255, 255, 255, 0.12), inset 0 1px 2px rgba(255, 255, 255, 0.25)",
+    "0 8px 20px rgba(0, 0, 0, 0.42), 0 0 12px rgba(255, 255, 255, 0.1), inset 0 1px 2px rgba(255, 255, 255, 0.22)",
   cursor: "pointer",
   zIndex: 20,
 };
@@ -497,8 +508,8 @@ const ACTIONS_BUBBLE_STYLE: CSSProperties = {
   top: "50%",
   transform: "translateY(-50%)",
   background: "rgba(32, 40, 50, 0.74)",
-  border: "1px solid rgba(233, 242, 255, 0.34)",
-  boxShadow: "0 8px 20px rgba(0, 0, 0, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.22)",
+  border: "1px solid rgba(233, 242, 255, 0.3)",
+  boxShadow: "0 8px 18px rgba(0, 0, 0, 0.38), inset 0 1px 2px rgba(255, 255, 255, 0.2)",
   zIndex: 21,
 };
 
@@ -520,9 +531,9 @@ const RIGHT_BUBBLE_STYLE: CSSProperties = {
 const TOOL_BUBBLE_STYLE: CSSProperties = {
   ...RIGHT_BUBBLE_STYLE,
   background: "rgba(4, 8, 10, 0.9)",
-  border: "1px solid rgba(124, 255, 114, 0.34)",
+  border: "1px solid rgba(124, 255, 114, 0.3)",
   boxShadow:
-    "0 10px 24px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(124, 255, 114, 0.12), 0 0 12px rgba(124, 255, 114, 0.14), inset 0 1px 2px rgba(255, 255, 255, 0.15)",
+    "0 10px 22px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(124, 255, 114, 0.1), 0 0 9px rgba(124, 255, 114, 0.12), inset 0 1px 2px rgba(255, 255, 255, 0.14)",
 };
 
 const TOOL_BUBBLE_IMAGE_WRAP_STYLE: CSSProperties = {
@@ -781,11 +792,11 @@ const PORTRAIT_ACTIONS_POPOUT_STYLE: CSSProperties = {
 };
 
 const ACTIONS_MENU_BUTTON_STYLE: CSSProperties = {
-  borderRadius: "9px",
-  border: "1px solid rgba(224, 236, 248, 0.2)",
+  borderRadius: "8px",
+  border: "1px solid rgba(224, 236, 248, 0.28)",
   color: "rgba(255, 255, 255, 0.95)",
   fontFamily: "Inter, system-ui, sans-serif",
-  fontWeight: 600,
+  fontWeight: 620,
   width: "100%",
   height: "30px",
   minWidth: 0,
@@ -1195,7 +1206,8 @@ const CONTROL_BUTTON_STYLE: CSSProperties = {
 
 const DISABLED_CONTROL_BUTTON_STYLE: CSSProperties = {
   ...CONTROL_BUTTON_STYLE,
-  opacity: 0.4,
+  opacity: 0.45,
+  boxShadow: "inset 0 1px 1px rgba(255, 255, 255, 0.08)",
   cursor: "not-allowed",
 };
 
