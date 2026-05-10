@@ -2133,7 +2133,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const handleSaveCurrentBoard = () => {
     const surface = surfaceRef.current;
     if (!surface || isWhiteboardMode || isStatsMode) {
-      showQuickBoardNotice("Quick Board not ready");
+      showQuickBoardNotice("Vision Board not ready");
       return;
     }
     if (hasReachedQuickBoardSaveLimit()) {
@@ -2385,7 +2385,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     if (isWhiteboardMode || isStatsMode) return;
     const surface = surfaceRef.current;
     if (!surface) {
-      showQuickBoardNotice("Quick Board not ready");
+      showQuickBoardNotice("Vision Board not ready");
       return;
     }
     const confirmed = window.confirm("Start a new board?\nUnsaved changes on the current board will be lost.");
@@ -2569,7 +2569,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   }
 
   return (
-    <OrientationGate modeLabel={isWhiteboardMode ? "Whiteboard Mode" : "Quick Board"}>
+    <OrientationGate modeLabel="Vision Board">
       <div
         style={isWhiteboardMode ? ROOT_WHITEBOARD_STYLE : ROOT_STYLE}
         className={isWhiteboardMode ? undefined : "simulator-container"}
@@ -3491,7 +3491,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             </button>
             {whiteboardHomeConfirmOpen ? (
               <div ref={whiteboardHomeConfirmRef} style={WHITEBOARD_HOME_CONFIRM_STYLE} role="dialog" aria-modal="false">
-                <p style={WHITEBOARD_HOME_CONFIRM_TITLE_STYLE}>Leave Whiteboard?</p>
+                <p style={WHITEBOARD_HOME_CONFIRM_TITLE_STYLE}>Leave Vision Board?</p>
                 <p style={WHITEBOARD_HOME_CONFIRM_MESSAGE_STYLE}>Your current board may not be saved.</p>
                 <div style={WHITEBOARD_HOME_CONFIRM_ACTIONS_STYLE}>
                   <button type="button" style={WHITEBOARD_HOME_CONFIRM_BUTTON_STYLE} onClick={closeWhiteboardHomeConfirm}>

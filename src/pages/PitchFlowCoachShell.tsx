@@ -34,7 +34,7 @@ type QuickBrowseId = "systems" | "sessions" | "eight-week-plans" | "season-plans
 
 const BOTTOM_NAV_ITEMS: ReadonlyArray<BottomNavItem> = [
   { id: "home", label: "Home", short: "H", path: "/board" },
-  { id: "flowlab", label: "Quick Board", short: "Q", path: "/quickboard" },
+  { id: "flowlab", label: "Vision Board", short: "V", path: "/vision-board" },
   { id: "flowstats", label: "FlowStats", short: "S", path: "/flowstats" },
   { id: "notes", label: "Notes", short: "N", path: "/notes" },
 ];
@@ -900,9 +900,9 @@ function BoardPage() {
       <p className="pf-section-title pf-home-section-title-actions">Quick Actions</p>
       <div className="pf-card">
         <div className="pf-home-secondary-grid">
-          <button type="button" className="pf-home-secondary-btn" onClick={() => navigateTo("/quickboard")}>
-            <span>Quick Board</span>
-            <small>Open Quick Board</small>
+          <button type="button" className="pf-home-secondary-btn" onClick={() => navigateTo("/vision-board")}>
+            <span>Vision Board</span>
+            <small>Open Vision Board</small>
           </button>
           <button type="button" className="pf-home-secondary-btn" onClick={() => navigateTo("/notes")}>
             <span>Written Notes</span>
@@ -919,7 +919,7 @@ function BoardPage() {
               key={item}
               type="button"
               className="pf-list-item pf-list-item-soft"
-              onClick={() => navigateTo("/quickboard")}
+              onClick={() => navigateTo("/vision-board")}
             >
               {item}
             </button>
