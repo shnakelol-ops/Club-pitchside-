@@ -813,6 +813,13 @@ const QUICK_SHARE_OPTION_SUBTITLE_STYLE: CSSProperties = {
   letterSpacing: "0.12px",
 };
 
+const QUICK_SHARE_OPTION_SECONDARY_STYLE: CSSProperties = {
+  color: "rgba(191, 215, 236, 0.9)",
+  fontSize: "8.5px",
+  fontWeight: 520,
+  letterSpacing: "0.1px",
+};
+
 const QUICK_SHARE_ONBOARDING_OVERLAY_STYLE: CSSProperties = {
   position: "fixed",
   inset: 0,
@@ -2083,12 +2090,12 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const handleQuickShareRecordClip = () => {
     closeQuickShareMenu();
     showShareTip(
-      "Use your phone’s screen recorder 🎥\nAndroid: swipe down twice → Screen Record\niPhone: Control Centre → Screen Recording",
+      "PitchFlow Vision Board:\nUse your phone's screen recorder while playing phases.\nShare the saved video directly to WhatsApp.",
     );
   };
   const handleQuickShareSnapshot = () => {
     closeQuickShareMenu();
-    showShareTip("Take a screenshot to share this setup 📸\nFastest way to send it to WhatsApp");
+    showShareTip("PitchFlow Vision Board:\nTake a screenshot and share the image directly.");
   };
   const openMyBoardsEntry = () => {
     setQuickShareOpen(false);
@@ -2233,11 +2240,17 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   };
   const openQuickShareEntry = () => {
     closeActionsMenu();
-    if (quickShareOnboardingSeen) {
-      setQuickShareOpen(true);
-      return;
+    setQuickShareOpen(true);
+    if (quickShareOnboardingSeen) return;
+    showShareTip(
+      "Best results: use your phone's screen recorder and share the saved video directly to WhatsApp.",
+    );
+    setQuickShareOnboardingSeen(true);
+    try {
+      window.localStorage.setItem(QUICK_SHARE_ONBOARDING_STORAGE_KEY, "true");
+    } catch {
+      // Keep tip state in-memory if storage is unavailable.
     }
-    setQuickShareOnboardingOpen(true);
   };
   useEffect(() => {
     return () => {
@@ -3233,7 +3246,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         {!isWhiteboardMode && actionsOpen ? (
           <div ref={actionsMenuRef} style={ACTIONS_POPOUT_STYLE}>
             <button type="button" className="control-button" style={ACTIONS_MENU_BUTTON_STYLE} onClick={openQuickShareEntry}>
-              Quick Share
+              Share Vision Board
             </button>
             <button type="button" className="control-button" style={ACTIONS_MENU_BUTTON_STYLE} onClick={openMyBoardsEntry}>
               My Boards
@@ -3424,14 +3437,15 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         ) : null}
         {!isWhiteboardMode && quickShareOpen ? (
           <div ref={quickSharePopoverRef} style={QUICK_SHARE_POPOUT_STYLE} role="dialog" aria-modal="false" aria-label="Quick Share">
-            <p style={QUICK_SHARE_TITLE_STYLE}>⚡ Quick Share</p>
+            <p style={QUICK_SHARE_TITLE_STYLE}>PitchFlow Vision Board Share</p>
             <button type="button" className="control-button" style={QUICK_SHARE_OPTION_BUTTON_STYLE} onClick={handleQuickShareRecordClip}>
-              <span style={QUICK_SHARE_OPTION_TITLE_STYLE}>🎥 Record Clip</span>
-              <span style={QUICK_SHARE_OPTION_SUBTITLE_STYLE}>Best for movement & plays</span>
+              <span style={QUICK_SHARE_OPTION_TITLE_STYLE}>🎥 Record Coaching Clip</span>
+              <span style={QUICK_SHARE_OPTION_SUBTITLE_STYLE}>Use your phone&apos;s screen recorder while playing phases.</span>
+              <span style={QUICK_SHARE_OPTION_SECONDARY_STYLE}>Share the saved video directly to WhatsApp.</span>
             </button>
             <button type="button" className="control-button" style={QUICK_SHARE_OPTION_BUTTON_STYLE} onClick={handleQuickShareSnapshot}>
               <span style={QUICK_SHARE_OPTION_TITLE_STYLE}>📸 Share Snapshot</span>
-              <span style={QUICK_SHARE_OPTION_SUBTITLE_STYLE}>Best for setups & drills</span>
+              <span style={QUICK_SHARE_OPTION_SUBTITLE_STYLE}>Take a screenshot and share the image directly.</span>
             </button>
           </div>
         ) : null}

@@ -5,7 +5,9 @@ import PitchFlowCoachShell from "./pages/PitchFlowCoachShell";
 import TacticalPadLiteClean from "./pages/TacticalPadLiteClean";
 
 const boardShell = () => <PitchFlowCoachShell initialTab="home" />;
+const VISION_BOARD_PATH = "/vision-board";
 const QUICK_BOARD_PATH = "/quickboard";
+const FLOW_STATS_PATH = "/flowstats";
 const NOTES_PATH = "/notes";
 
 function redirectToBoard() {
@@ -16,8 +18,8 @@ function redirectToBoard() {
 }
 
 function redirectToQuickBoard() {
-  if (window.location.pathname !== QUICK_BOARD_PATH) {
-    window.history.replaceState(null, "", QUICK_BOARD_PATH);
+  if (window.location.pathname !== VISION_BOARD_PATH) {
+    window.history.replaceState(null, "", VISION_BOARD_PATH);
   }
   return TacticalPadLiteClean;
 }
@@ -29,12 +31,22 @@ function redirectToNotes() {
   return () => <PitchFlowCoachShell initialTab="notes" />;
 }
 
+function redirectToFlowStats() {
+  if (window.location.pathname !== FLOW_STATS_PATH) {
+    window.history.replaceState(null, "", FLOW_STATS_PATH);
+  }
+  return () => <TacticalPadLiteClean initialMode="stats" />;
+}
+
 function pickRootComponent() {
   const normalizedPath = window.location.pathname.replace(/\/+$/, "") || "/";
   if (normalizedPath === "/") {
     return redirectToBoard();
   }
   if (normalizedPath === QUICK_BOARD_PATH) {
+    return redirectToQuickBoard();
+  }
+  if (normalizedPath === VISION_BOARD_PATH) {
     return TacticalPadLiteClean;
   }
   if (normalizedPath === "/simulator") {
@@ -43,14 +55,20 @@ function pickRootComponent() {
   if (normalizedPath === "/flowlab") {
     return redirectToQuickBoard();
   }
-  if (normalizedPath === "/flowstats") {
+  if (normalizedPath === FLOW_STATS_PATH) {
     return () => <TacticalPadLiteClean initialMode="stats" />;
   }
   if (normalizedPath === "/stats") {
-    return () => <TacticalPadLiteClean initialMode="stats" />;
+    return redirectToFlowStats();
   }
   if (normalizedPath === "/whiteboard") {
-    return () => <TacticalPadLiteClean initialMode="whiteboard" />;
+    return redirectToQuickBoard();
+  }
+  if (normalizedPath === "/tacticalpad-lite") {
+    return redirectToQuickBoard();
+  }
+  if (normalizedPath === "/tacticalpad-lite-clean") {
+    return redirectToQuickBoard();
   }
   if (normalizedPath === "/board") {
     return boardShell;
