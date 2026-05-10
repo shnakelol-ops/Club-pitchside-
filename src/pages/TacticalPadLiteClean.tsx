@@ -350,7 +350,7 @@ const STADIUM_BEAM_RIGHT_STYLE: CSSProperties = {
 
 const CONTENT_STYLE: CSSProperties = {
   width: CONTENT_WIDTH_EXPR,
-  maxWidth: "calc(100vw - 24px)",
+  maxWidth: "min(calc(100dvw - 24px), calc(100vw - 24px))",
   aspectRatio: "16 / 10",
   maxHeight: "min(calc(100dvh - 10px), calc(100vh - 10px))",
   boxSizing: "border-box",
@@ -482,7 +482,7 @@ const POPOUT_BASE_STYLE: CSSProperties = {
 
 const KIT_EDITOR_STYLE: CSSProperties = {
   position: "fixed",
-  width: "min(236px, calc(100vw - 20px))",
+  width: "min(236px, calc(100dvw - 20px), calc(100vw - 20px))",
   display: "grid",
   gap: "7px",
   padding: "8px",
@@ -601,7 +601,7 @@ const CONTROLS_POPOUT_STYLE: CSSProperties = {
   transform: "translateX(-50%)",
   bottom: "max(12px, calc(env(safe-area-inset-bottom, 0px) + 10px))",
   width: "fit-content",
-  maxWidth: "calc(100vw - 128px)",
+  maxWidth: "min(calc(100dvw - 128px), calc(100vw - 128px))",
   overflowX: "auto",
   overflowY: "hidden",
   whiteSpace: "nowrap",
@@ -710,7 +710,7 @@ const QUICK_SHARE_ONBOARDING_OVERLAY_STYLE: CSSProperties = {
 };
 
 const QUICK_SHARE_ONBOARDING_CARD_STYLE: CSSProperties = {
-  width: "min(420px, calc(100vw - 32px))",
+  width: "min(420px, calc(100dvw - 32px), calc(100vw - 32px))",
   display: "flex",
   flexDirection: "column",
   gap: "9px",
@@ -795,7 +795,9 @@ const COACH_HUB_PANEL_STYLE: CSSProperties = {
   display: "flex",
   flexDirection: "column",
   gap: "6px",
-  width: "clamp(128px, 15vw, 168px)",
+  width: "clamp(128px, 15dvw, 168px)",
+  maxWidth:
+    "min(168px, calc(100dvw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 12px), calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 12px))",
   maxHeight: "min(60vh, 360px)",
   overflowY: "auto",
   overflowX: "hidden",
@@ -966,7 +968,7 @@ const SHARE_TIP_TOAST_STYLE: CSSProperties = {
   position: "fixed",
   left: "max(62px, calc(env(safe-area-inset-left, 0px) + 60px))",
   top: "calc(50% + 98px)",
-  width: "min(286px, calc(100vw - 72px))",
+  width: "min(286px, calc(100dvw - 72px), calc(100vw - 72px))",
   display: "flex",
   flexDirection: "column",
   gap: "6px",
@@ -1105,7 +1107,9 @@ const WHITEBOARD_COUNT_SELECTOR_STYLE: CSSProperties = {
   top: "max(16px, env(safe-area-inset-top, 0px))",
   bottom: "auto",
   zIndex: 22,
-  width: "clamp(148px, 23vw, 176px)",
+  width: "clamp(148px, 23dvw, 176px)",
+  maxWidth:
+    "min(176px, calc(100dvw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 16px), calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 16px))",
   display: "flex",
   flexDirection: "column",
   gap: "5px",
@@ -1235,7 +1239,7 @@ const WHITEBOARD_HOME_CONFIRM_STYLE: CSSProperties = {
   position: "fixed",
   top: "max(54px, calc(env(safe-area-inset-top, 0px) + 50px))",
   right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
-  width: "min(244px, calc(100vw - 24px))",
+  width: "min(244px, calc(100dvw - 24px), calc(100vw - 24px))",
   display: "flex",
   flexDirection: "column",
   gap: "7px",
