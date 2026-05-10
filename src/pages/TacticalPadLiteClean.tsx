@@ -13,7 +13,7 @@ import {
   sanitizeInitials,
 } from "../engine/pixi/createTacticalPadLiteSurface";
 import StatsModeSurface from "../StatsModeSurface";
-import OrientationGate from "../components/OrientationGate";
+import OrientationGate, { usePortraitOrientation } from "../components/OrientationGate";
 import { captureQuickBoardSnapshot, restoreQuickBoardSnapshot } from "../features/quickboard/storage/quickboard-snapshot";
 import { generateQuickBoardThumbnail } from "../features/quickboard/storage/quickboard-thumbnail";
 import {
@@ -452,6 +452,16 @@ const PITCH_WHITEBOARD_STYLE: CSSProperties = {
   boxShadow: "0 40px 90px rgba(34, 42, 51, 0.22), 0 14px 30px rgba(45, 56, 68, 0.17)",
 };
 
+const PORTRAIT_INTERACTION_SHIELD_STYLE: CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  zIndex: 3,
+  borderRadius: "12px",
+  background: "rgba(6, 14, 20, 0.03)",
+  pointerEvents: "auto",
+  touchAction: "pan-x pan-y pinch-zoom",
+};
+
 const BUBBLE_BASE_STYLE: CSSProperties = {
   position: "fixed",
   width: "42px",
@@ -490,6 +500,15 @@ const ACTIONS_BUBBLE_STYLE: CSSProperties = {
   border: "1px solid rgba(233, 242, 255, 0.34)",
   boxShadow: "0 8px 20px rgba(0, 0, 0, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.22)",
   zIndex: 21,
+};
+
+const PORTRAIT_ACTIONS_BUBBLE_STYLE: CSSProperties = {
+  ...ACTIONS_BUBBLE_STYLE,
+  left: "auto",
+  right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
+  top: "auto",
+  bottom: "max(12px, calc(env(safe-area-inset-bottom, 0px) + 10px))",
+  transform: "none",
 };
 
 const RIGHT_BUBBLE_STYLE: CSSProperties = {
@@ -742,6 +761,25 @@ const ACTIONS_POPOUT_STYLE: CSSProperties = {
   zIndex: 21,
 };
 
+const PORTRAIT_POPOUT_BASE_STYLE: CSSProperties = {
+  left: "16px",
+  right: "16px",
+  top: "auto",
+  bottom: "max(64px, calc(env(safe-area-inset-bottom, 0px) + 62px))",
+  transform: "none",
+  width: "calc(100vw - 32px)",
+  maxWidth: "calc(100vw - 32px)",
+  boxSizing: "border-box",
+  overflowX: "hidden",
+};
+
+const PORTRAIT_ACTIONS_POPOUT_STYLE: CSSProperties = {
+  ...ACTIONS_POPOUT_STYLE,
+  ...PORTRAIT_POPOUT_BASE_STYLE,
+  width: "calc(100vw - 32px)",
+  maxWidth: "calc(100vw - 32px)",
+};
+
 const ACTIONS_MENU_BUTTON_STYLE: CSSProperties = {
   borderRadius: "9px",
   border: "1px solid rgba(224, 236, 248, 0.2)",
@@ -776,6 +814,15 @@ const QUICK_SHARE_POPOUT_STYLE: CSSProperties = {
   border: "1px solid rgba(212, 228, 244, 0.24)",
   boxShadow: "0 12px 26px rgba(0, 0, 0, 0.34)",
   zIndex: 22,
+};
+
+const PORTRAIT_QUICK_SHARE_POPOUT_STYLE: CSSProperties = {
+  ...QUICK_SHARE_POPOUT_STYLE,
+  ...PORTRAIT_POPOUT_BASE_STYLE,
+  width: "calc(100vw - 32px)",
+  maxWidth: "calc(100vw - 32px)",
+  maxHeight: "min(58vh, 360px)",
+  overflowY: "auto",
 };
 
 const QUICK_SHARE_TITLE_STYLE: CSSProperties = {
@@ -906,6 +953,14 @@ const MY_BOARDS_POPOUT_STYLE: CSSProperties = {
   border: "1px solid rgba(212, 228, 244, 0.24)",
   boxShadow: "0 12px 26px rgba(0, 0, 0, 0.34)",
   zIndex: 22,
+};
+
+const PORTRAIT_MY_BOARDS_POPOUT_STYLE: CSSProperties = {
+  ...MY_BOARDS_POPOUT_STYLE,
+  ...PORTRAIT_POPOUT_BASE_STYLE,
+  width: "calc(100vw - 32px)",
+  maxWidth: "calc(100vw - 32px)",
+  maxHeight: "min(60vh, 430px)",
 };
 
 const MY_BOARDS_HEADER_STYLE: CSSProperties = {
@@ -1534,6 +1589,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   } | null>(null);
   const suppressWhiteboardBubbleClickRef = useRef(false);
   const mode: PadMode = initialMode;
+  const isPortraitOrientation = usePortraitOrientation();
   const [whiteboardBlueCount, setWhiteboardBlueCount] = useState(1);
   const [whiteboardRedCount, setWhiteboardRedCount] = useState(1);
   const [whiteboardCountPickerTeam, setWhiteboardCountPickerTeam] = useState<"BLUE" | "RED">("BLUE");
@@ -1580,7 +1636,13 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
 
   const isStatsMode = mode === "stats";
   const isWhiteboardMode = mode === "whiteboard";
+  const isPortraitViewingMode = !isStatsMode && !isWhiteboardMode && isPortraitOrientation;
+  const isPortraitViewingModeRef = useRef(isPortraitViewingMode);
   const wakeLockRef = useRef<{ release: () => Promise<void> } | null>(null);
+
+  useEffect(() => {
+    isPortraitViewingModeRef.current = isPortraitViewingMode;
+  }, [isPortraitViewingMode]);
 
   useEffect(() => {
     if (isWhiteboardMode || isStatsMode) {
@@ -1759,7 +1821,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         );
       },
       onTacticalPlayerDoubleTap: ({ playerId, clientX, clientY }) => {
-        if (disposed || isWhiteboardMode) return;
+        if (disposed || isWhiteboardMode || isPortraitViewingModeRef.current) return;
         const player = surfaceRef.current?.getTacticalPlayer(playerId);
         if (!player) return;
         setKitEditorTab("base");
@@ -1828,9 +1890,21 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     surfaceRef.current?.setItems(items);
   }, [isStatsMode, isWhiteboardMode, items]);
 
+  useEffect(() => {
+    if (isStatsMode || isWhiteboardMode || !isPortraitViewingMode) return;
+    setToolsOpen(false);
+    setKitEditorState(null);
+    setItemMode("locked");
+    setTacticalTool("move");
+    const surface = surfaceRef.current;
+    if (!surface) return;
+    surface.setItemMode("locked");
+    surface.setWhiteboardDrawTool("move");
+  }, [isPortraitViewingMode, isStatsMode, isWhiteboardMode]);
+
   const isPlaybackLocked = isPlaying || isPaused;
   const effectiveItemMode: ItemMode =
-    itemMode === "edit" && tacticalTool === "move" && !isPlaybackLocked ? "edit" : "locked";
+    isPortraitViewingMode || (itemMode !== "edit" || tacticalTool !== "move" || isPlaybackLocked) ? "locked" : "edit";
 
   useEffect(() => {
     if (isStatsMode || isWhiteboardMode) return;
@@ -2322,11 +2396,13 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   };
 
   const applyTacticalPenColor = (color: number) => {
+    if (isPortraitViewingMode) return;
     setTacticalPenColor(color);
     surfaceRef.current?.setWhiteboardDrawColor(color);
   };
 
   const applyTacticalTool = (tool: WhiteboardToolAction) => {
+    if (isPortraitViewingMode && tool !== "move") return;
     const surface = surfaceRef.current;
     if (!surface) return;
     setTacticalTool(tool);
@@ -2335,17 +2411,19 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   };
 
   const clearTacticalDrawings = () => {
+    if (isPortraitViewingMode) return;
     surfaceRef.current?.clearWhiteboardStrokes();
   };
 
   const resetBoardFromTools = () => {
+    if (isPortraitViewingMode) return;
     surfaceRef.current?.reset();
     setIsPlaying(false);
     setIsPaused(false);
   };
 
   const handleNewBoard = () => {
-    if (isWhiteboardMode || isStatsMode) return;
+    if (isWhiteboardMode || isStatsMode || isPortraitViewingMode) return;
     const surface = surfaceRef.current;
     if (!surface) {
       showQuickBoardNotice("Vision Board not ready");
@@ -2383,16 +2461,19 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   };
 
   const addTacticalPlayer = (team: "BLUE" | "RED") => {
+    if (isPortraitViewingMode) return;
     surfaceRef.current?.addTacticalPlayer(team);
     setKitEditorState(null);
   };
 
   const removeTacticalPlayer = (team: "BLUE" | "RED") => {
+    if (isPortraitViewingMode) return;
     surfaceRef.current?.removeTacticalPlayer(team);
     setKitEditorState(null);
   };
 
   const addItem = (type: TacticalItem["type"]) => {
+    if (isPortraitViewingMode) return;
     tacticalItemCounterRef.current += 1;
     const nextId = `item-${tacticalItemCounterRef.current}`;
     setItems((previous) => {
@@ -2406,6 +2487,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   };
 
   const clearItems = () => {
+    if (isPortraitViewingMode) return;
     setItems([]);
   };
 
@@ -2522,6 +2604,10 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
       zIndex: 22,
     } as const;
   })();
+  const actionsBubbleStyle = isPortraitViewingMode ? PORTRAIT_ACTIONS_BUBBLE_STYLE : ACTIONS_BUBBLE_STYLE;
+  const actionsPopoutStyle = isPortraitViewingMode ? PORTRAIT_ACTIONS_POPOUT_STYLE : ACTIONS_POPOUT_STYLE;
+  const quickSharePopoverStyle = isPortraitViewingMode ? PORTRAIT_QUICK_SHARE_POPOUT_STYLE : QUICK_SHARE_POPOUT_STYLE;
+  const myBoardsPopoverStyle = isPortraitViewingMode ? PORTRAIT_MY_BOARDS_POPOUT_STYLE : MY_BOARDS_POPOUT_STYLE;
 
   if (isStatsMode) {
     return (
@@ -2558,8 +2644,9 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         ) : null}
         <div style={isWhiteboardMode ? WHITEBOARD_CONTENT_STYLE : CONTENT_STYLE}>
           <div ref={hostRef} style={isWhiteboardMode ? PITCH_WHITEBOARD_STYLE : PITCH_STYLE} />
+          {!isWhiteboardMode && isPortraitViewingMode ? <div style={PORTRAIT_INTERACTION_SHIELD_STYLE} aria-hidden="true" /> : null}
         </div>
-        {!isWhiteboardMode && kitEditorState && activeKitPlayer && kitEditorPosition ? (
+        {!isWhiteboardMode && !isPortraitViewingMode && kitEditorState && activeKitPlayer && kitEditorPosition ? (
           <div
             style={{
               ...KIT_EDITOR_STYLE,
@@ -2939,32 +3026,36 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             )}
           </div>
         ) : null}
-        {!isWhiteboardMode && controlsOpen ? (
+        {!isWhiteboardMode && (controlsOpen || isPortraitViewingMode) ? (
           <div style={CONTROLS_POPOUT_STYLE}>
-            <button
-              type="button"
-              className="control-button"
-              disabled={isPlaybackLocked}
-              style={isPlaybackLocked ? DISABLED_CONTROL_BUTTON_STYLE : SET_START_BUTTON_STYLE}
-              onClick={() => {
-                surfaceRef.current?.setStart();
-                closeControlsMenu();
-              }}
-            >
-              Set Start
-            </button>
-            <button
-              type="button"
-              className="control-button"
-              disabled={isPlaybackLocked}
-              style={isPlaybackLocked ? DISABLED_CONTROL_BUTTON_STYLE : ADD_PHASE_BUTTON_STYLE}
-              onClick={() => {
-                surfaceRef.current?.addPhase();
-                closeControlsMenu();
-              }}
-            >
-              Add Phase
-            </button>
+            {!isPortraitViewingMode ? (
+              <button
+                type="button"
+                className="control-button"
+                disabled={isPlaybackLocked}
+                style={isPlaybackLocked ? DISABLED_CONTROL_BUTTON_STYLE : SET_START_BUTTON_STYLE}
+                onClick={() => {
+                  surfaceRef.current?.setStart();
+                  closeControlsMenu();
+                }}
+              >
+                Set Start
+              </button>
+            ) : null}
+            {!isPortraitViewingMode ? (
+              <button
+                type="button"
+                className="control-button"
+                disabled={isPlaybackLocked}
+                style={isPlaybackLocked ? DISABLED_CONTROL_BUTTON_STYLE : ADD_PHASE_BUTTON_STYLE}
+                onClick={() => {
+                  surfaceRef.current?.addPhase();
+                  closeControlsMenu();
+                }}
+              >
+                Add Phase
+              </button>
+            ) : null}
             <button
               type="button"
               className="control-button"
@@ -2983,18 +3074,20 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             >
               Pause
             </button>
-            <button
-              type="button"
-              className="control-button"
-              disabled={phaseCount <= 0}
-              style={phaseCount <= 0 ? DISABLED_CONTROL_BUTTON_STYLE : UNDO_PHASE_BUTTON_STYLE}
-              onClick={() => {
-                surfaceRef.current?.undoPhase();
-                closeControlsMenu();
-              }}
-            >
-              Undo Phase
-            </button>
+            {!isPortraitViewingMode ? (
+              <button
+                type="button"
+                className="control-button"
+                disabled={phaseCount <= 0}
+                style={phaseCount <= 0 ? DISABLED_CONTROL_BUTTON_STYLE : UNDO_PHASE_BUTTON_STYLE}
+                onClick={() => {
+                  surfaceRef.current?.undoPhase();
+                  closeControlsMenu();
+                }}
+              >
+                Undo Phase
+              </button>
+            ) : null}
             <button
               type="button"
               className="control-button"
@@ -3010,7 +3103,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             </button>
           </div>
         ) : null}
-        {!isWhiteboardMode && toolsOpen ? (
+        {!isWhiteboardMode && !isPortraitViewingMode && toolsOpen ? (
           <div style={COACH_HUB_PANEL_STYLE}>
             <div style={COACH_HUB_TAB_GRID_STYLE}>
               <button
@@ -3224,14 +3317,20 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
           </div>
         ) : null}
         {!isWhiteboardMode && actionsOpen ? (
-          <div ref={actionsMenuRef} style={ACTIONS_POPOUT_STYLE}>
+          <div ref={actionsMenuRef} style={actionsPopoutStyle}>
             <button type="button" className="control-button" style={ACTIONS_MENU_BUTTON_STYLE} onClick={openQuickShareEntry}>
               Quick Share (Beta)
             </button>
             <button type="button" className="control-button" style={ACTIONS_MENU_BUTTON_STYLE} onClick={openMyBoardsEntry}>
               My Boards
             </button>
-            <button type="button" className="control-button" style={ACTIONS_MENU_BUTTON_STYLE} onClick={handleNewBoard}>
+            <button
+              type="button"
+              className="control-button"
+              style={isPortraitViewingMode ? DISABLED_CONTROL_BUTTON_STYLE : ACTIONS_MENU_BUTTON_STYLE}
+              onClick={handleNewBoard}
+              disabled={isPortraitViewingMode}
+            >
               New Board
             </button>
             <button type="button" className="control-button" style={ACTIONS_MENU_BUTTON_STYLE} onClick={goHome}>
@@ -3240,7 +3339,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
           </div>
         ) : null}
         {!isWhiteboardMode && myBoardsOpen ? (
-          <div ref={myBoardsPopoverRef} style={MY_BOARDS_POPOUT_STYLE} role="dialog" aria-modal="false" aria-label="My Boards">
+          <div ref={myBoardsPopoverRef} style={myBoardsPopoverStyle} role="dialog" aria-modal="false" aria-label="My Boards">
             <div style={MY_BOARDS_HEADER_STYLE}>
               <p style={MY_BOARDS_TITLE_STYLE}>My Boards</p>
               <button type="button" className="control-button" style={MY_BOARDS_SAVE_BUTTON_STYLE} onClick={handleSaveCurrentBoard}>
@@ -3303,7 +3402,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             ref={actionsBubbleButtonRef}
             type="button"
             className="floating-bubble"
-            style={ACTIONS_BUBBLE_STYLE}
+            style={actionsBubbleStyle}
             aria-label="Open actions"
             onClick={() =>
               setActionsOpen((open) => {
@@ -3320,7 +3419,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             ⋯
           </button>
         ) : null}
-        {!isWhiteboardMode ? (
+        {!isWhiteboardMode && !isPortraitViewingMode ? (
           <button
             type="button"
             className="floating-bubble"
@@ -3341,7 +3440,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             Ctrl
           </button>
         ) : null}
-        {!isWhiteboardMode ? (
+        {!isWhiteboardMode && !isPortraitViewingMode ? (
           <button
             type="button"
             className="floating-bubble floating-bubble-tool"
@@ -3411,7 +3510,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
           </div>
         ) : null}
         {!isWhiteboardMode && quickShareOpen ? (
-          <div ref={quickSharePopoverRef} style={QUICK_SHARE_POPOUT_STYLE} role="dialog" aria-modal="false" aria-label="Quick Share">
+          <div ref={quickSharePopoverRef} style={quickSharePopoverStyle} role="dialog" aria-modal="false" aria-label="Quick Share">
             <p style={QUICK_SHARE_TITLE_STYLE}>PitchFlow Vision Board Share</p>
             <button type="button" className="control-button" style={QUICK_SHARE_OPTION_BUTTON_STYLE} onClick={handleQuickShareRecordClip}>
               <span style={QUICK_SHARE_OPTION_TITLE_STYLE}>🎥 Record Coaching Clip</span>
