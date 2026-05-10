@@ -92,6 +92,22 @@ function getViewportRect(): ViewportRect {
   };
 }
 
+function isIPhoneDevice(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  return /iPhone/i.test(ua);
+}
+
+function isNarrowIPhoneLandscapeViewport(): boolean {
+  if (typeof window === "undefined") return false;
+  if (!isIPhoneDevice()) return false;
+  const viewport = window.visualViewport;
+  const width = viewport?.width ?? window.innerWidth;
+  const height = viewport?.height ?? window.innerHeight;
+  const isLandscape = width > height;
+  return isLandscape && (height <= 480 || width <= 900);
+}
+
 function clampWhiteboardBubblePosition(
   position: { left: number; top: number },
   viewport: ViewportRect,
@@ -439,6 +455,16 @@ const TOOL_BUBBLE_STYLE: CSSProperties = {
   background: "rgba(5, 8, 10, 0.92)",
   border: "2px solid rgba(255, 255, 255, 0.18)",
   boxShadow: "0 8px 24px rgba(0, 0, 0, 0.55), inset 0 1px 2px rgba(255, 255, 255, 0.18)",
+};
+
+const NARROW_IPHONE_TOOL_BUBBLE_STYLE: CSSProperties = {
+  ...TOOL_BUBBLE_STYLE,
+  width: "56px",
+  borderRadius: "999px",
+  fontSize: "9.5px",
+  right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
+  top: "max(12px, calc(env(safe-area-inset-top, 0px) + 10px))",
+  bottom: "auto",
 };
 
 const TOOL_BUBBLE_MONOGRAM_WRAP_STYLE: CSSProperties = {
@@ -1349,6 +1375,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const [shareTipMessage, setShareTipMessage] = useState<string | null>(null);
   const [controlsOpen, setControlsOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [isNarrowIPhoneLandscape, setIsNarrowIPhoneLandscape] = useState(() => isNarrowIPhoneLandscapeViewport());
   const [phasesOpen, setPhasesOpen] = useState(false);
   const [kitEditorState, setKitEditorState] = useState<KitEditorState | null>(null);
 
@@ -1418,9 +1445,29 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   }, [isStatsMode, isWhiteboardMode]);
 
   useEffect(() => {
+    const syncNarrowLayout = () => {
+      setIsNarrowIPhoneLandscape(isNarrowIPhoneLandscapeViewport());
+    };
+
+    syncNarrowLayout();
+    window.addEventListener("orientationchange", syncNarrowLayout);
+    window.addEventListener("resize", syncNarrowLayout);
+    window.visualViewport?.addEventListener("resize", syncNarrowLayout);
+    window.visualViewport?.addEventListener("scroll", syncNarrowLayout);
+
+    return () => {
+      window.removeEventListener("orientationchange", syncNarrowLayout);
+      window.removeEventListener("resize", syncNarrowLayout);
+      window.visualViewport?.removeEventListener("resize", syncNarrowLayout);
+      window.visualViewport?.removeEventListener("scroll", syncNarrowLayout);
+    };
+  }, []);
+
+  useEffect(() => {
     const media = window.matchMedia("(orientation: landscape)");
     let rafA = 0;
     let rafB = 0;
+
 
     const runDoubleRafReflow = () => {
       rafA = window.requestAnimationFrame(() => {
@@ -1576,6 +1623,21 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     if (isStatsMode || isWhiteboardMode) return;
     surfaceRef.current?.setItems(items);
   }, [isStatsMode, isWhiteboardMode, items]);
+
+  const coachHubPanelStyle: CSSProperties = isNarrowIPhoneLandscape
+    ? {
+        ...COACH_HUB_PANEL_STYLE,
+        left: "50%",
+        right: "auto",
+        bottom: "max(12px, calc(env(safe-area-inset-bottom, 0px) + 10px))",
+        transform: "translateX(-50%)",
+        width: "min(420px, calc(100dvw - 32px), calc(100vw - 32px))",
+        maxWidth: "calc(100dvw - 32px)",
+        maxHeight: "calc(100dvh - 32px)",
+        overflowY: "auto",
+        overflowX: "hidden",
+      }
+    : COACH_HUB_PANEL_STYLE;
 
   const isPlaybackLocked = isPlaying || isPaused;
   const effectiveItemMode: ItemMode =
@@ -2531,7 +2593,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
           </div>
         ) : null}
         {!isWhiteboardMode && toolsOpen ? (
-          <div style={COACH_HUB_PANEL_STYLE}>
+          <div style={coachHubPanelStyle} role={isNarrowIPhoneLandscape ? "dialog" : undefined} aria-modal="false" aria-label="Tools drawer">
             <div style={COACH_HUB_SECTION_STYLE}>
               <p style={COACH_HUB_SECTION_TITLE_STYLE}>Tools</p>
               <div className="coach-hub-tool-grid" style={COACH_HUB_TOOL_GRID_STYLE}>
@@ -2792,16 +2854,30 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
           <button
             type="button"
             className="floating-bubble floating-bubble-tool"
-            style={TOOL_BUBBLE_STYLE}
+            style={isNarrowIPhoneLandscape ? NARROW_IPHONE_TOOL_BUBBLE_STYLE : TOOL_BUBBLE_STYLE}
             aria-label="Open tools"
-            onClick={() => setToolsOpen((open) => !open)}
+            onClick={() =>
+              setToolsOpen((open) => {
+                const next = !open;
+                if (next && isNarrowIPhoneLandscape) {
+                  setControlsOpen(false);
+                  setActionsOpen(false);
+                  setQuickShareOpen(false);
+                }
+                return next;
+              })
+            }
           >
-            <span className="tool-bubble-icon" aria-hidden="true">
-              <span style={TOOL_BUBBLE_MONOGRAM_WRAP_STYLE}>
-                <span style={TOOL_BUBBLE_MONOGRAM_STYLE}>P</span>
-                <span style={TOOL_BUBBLE_MONOGRAM_ACCENT_STYLE} />
+            {isNarrowIPhoneLandscape ? (
+              "Tools"
+            ) : (
+              <span className="tool-bubble-icon" aria-hidden="true">
+                <span style={TOOL_BUBBLE_MONOGRAM_WRAP_STYLE}>
+                  <span style={TOOL_BUBBLE_MONOGRAM_STYLE}>P</span>
+                  <span style={TOOL_BUBBLE_MONOGRAM_ACCENT_STYLE} />
+                </span>
               </span>
-            </span>
+            )}
           </button>
         ) : null}
         {!isWhiteboardMode && quickShareOnboardingOpen ? (
