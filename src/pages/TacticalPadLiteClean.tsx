@@ -13,7 +13,7 @@ import {
   sanitizeInitials,
 } from "../engine/pixi/createTacticalPadLiteSurface";
 import StatsModeSurface from "../StatsModeSurface";
-import OrientationGate from "../components/OrientationGate";
+import OrientationGate, { usePortraitOrientation } from "../components/OrientationGate";
 import { captureQuickBoardSnapshot, restoreQuickBoardSnapshot } from "../features/quickboard/storage/quickboard-snapshot";
 import { generateQuickBoardThumbnail } from "../features/quickboard/storage/quickboard-thumbnail";
 import {
@@ -450,6 +450,16 @@ const PITCH_WHITEBOARD_STYLE: CSSProperties = {
   ...PITCH_STYLE,
   background: "#f8f9fb",
   boxShadow: "0 40px 90px rgba(34, 42, 51, 0.22), 0 14px 30px rgba(45, 56, 68, 0.17)",
+};
+
+const PORTRAIT_INTERACTION_SHIELD_STYLE: CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  zIndex: 3,
+  borderRadius: "12px",
+  background: "rgba(6, 14, 20, 0.03)",
+  pointerEvents: "auto",
+  touchAction: "pan-x pan-y pinch-zoom",
 };
 
 const BUBBLE_BASE_STYLE: CSSProperties = {
@@ -1534,6 +1544,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   } | null>(null);
   const suppressWhiteboardBubbleClickRef = useRef(false);
   const mode: PadMode = initialMode;
+  const isPortraitOrientation = usePortraitOrientation();
   const [whiteboardBlueCount, setWhiteboardBlueCount] = useState(1);
   const [whiteboardRedCount, setWhiteboardRedCount] = useState(1);
   const [whiteboardCountPickerTeam, setWhiteboardCountPickerTeam] = useState<"BLUE" | "RED">("BLUE");
@@ -1580,7 +1591,13 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
 
   const isStatsMode = mode === "stats";
   const isWhiteboardMode = mode === "whiteboard";
+  const isPortraitViewingMode = !isStatsMode && !isWhiteboardMode && isPortraitOrientation;
+  const isPortraitViewingModeRef = useRef(isPortraitViewingMode);
   const wakeLockRef = useRef<{ release: () => Promise<void> } | null>(null);
+
+  useEffect(() => {
+    isPortraitViewingModeRef.current = isPortraitViewingMode;
+  }, [isPortraitViewingMode]);
 
   useEffect(() => {
     if (isWhiteboardMode || isStatsMode) {
@@ -1759,7 +1776,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         );
       },
       onTacticalPlayerDoubleTap: ({ playerId, clientX, clientY }) => {
-        if (disposed || isWhiteboardMode) return;
+        if (disposed || isWhiteboardMode || isPortraitViewingModeRef.current) return;
         const player = surfaceRef.current?.getTacticalPlayer(playerId);
         if (!player) return;
         setKitEditorTab("base");
@@ -1828,9 +1845,21 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     surfaceRef.current?.setItems(items);
   }, [isStatsMode, isWhiteboardMode, items]);
 
+  useEffect(() => {
+    if (isStatsMode || isWhiteboardMode || !isPortraitViewingMode) return;
+    setToolsOpen(false);
+    setKitEditorState(null);
+    setItemMode("locked");
+    setTacticalTool("move");
+    const surface = surfaceRef.current;
+    if (!surface) return;
+    surface.setItemMode("locked");
+    surface.setWhiteboardDrawTool("move");
+  }, [isPortraitViewingMode, isStatsMode, isWhiteboardMode]);
+
   const isPlaybackLocked = isPlaying || isPaused;
   const effectiveItemMode: ItemMode =
-    itemMode === "edit" && tacticalTool === "move" && !isPlaybackLocked ? "edit" : "locked";
+    isPortraitViewingMode || (itemMode !== "edit" || tacticalTool !== "move" || isPlaybackLocked) ? "locked" : "edit";
 
   useEffect(() => {
     if (isStatsMode || isWhiteboardMode) return;
@@ -2322,11 +2351,13 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   };
 
   const applyTacticalPenColor = (color: number) => {
+    if (isPortraitViewingMode) return;
     setTacticalPenColor(color);
     surfaceRef.current?.setWhiteboardDrawColor(color);
   };
 
   const applyTacticalTool = (tool: WhiteboardToolAction) => {
+    if (isPortraitViewingMode && tool !== "move") return;
     const surface = surfaceRef.current;
     if (!surface) return;
     setTacticalTool(tool);
@@ -2335,17 +2366,19 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   };
 
   const clearTacticalDrawings = () => {
+    if (isPortraitViewingMode) return;
     surfaceRef.current?.clearWhiteboardStrokes();
   };
 
   const resetBoardFromTools = () => {
+    if (isPortraitViewingMode) return;
     surfaceRef.current?.reset();
     setIsPlaying(false);
     setIsPaused(false);
   };
 
   const handleNewBoard = () => {
-    if (isWhiteboardMode || isStatsMode) return;
+    if (isWhiteboardMode || isStatsMode || isPortraitViewingMode) return;
     const surface = surfaceRef.current;
     if (!surface) {
       showQuickBoardNotice("Vision Board not ready");
@@ -2383,16 +2416,19 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   };
 
   const addTacticalPlayer = (team: "BLUE" | "RED") => {
+    if (isPortraitViewingMode) return;
     surfaceRef.current?.addTacticalPlayer(team);
     setKitEditorState(null);
   };
 
   const removeTacticalPlayer = (team: "BLUE" | "RED") => {
+    if (isPortraitViewingMode) return;
     surfaceRef.current?.removeTacticalPlayer(team);
     setKitEditorState(null);
   };
 
   const addItem = (type: TacticalItem["type"]) => {
+    if (isPortraitViewingMode) return;
     tacticalItemCounterRef.current += 1;
     const nextId = `item-${tacticalItemCounterRef.current}`;
     setItems((previous) => {
@@ -2406,6 +2442,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   };
 
   const clearItems = () => {
+    if (isPortraitViewingMode) return;
     setItems([]);
   };
 
@@ -2558,8 +2595,9 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         ) : null}
         <div style={isWhiteboardMode ? WHITEBOARD_CONTENT_STYLE : CONTENT_STYLE}>
           <div ref={hostRef} style={isWhiteboardMode ? PITCH_WHITEBOARD_STYLE : PITCH_STYLE} />
+          {!isWhiteboardMode && isPortraitViewingMode ? <div style={PORTRAIT_INTERACTION_SHIELD_STYLE} aria-hidden="true" /> : null}
         </div>
-        {!isWhiteboardMode && kitEditorState && activeKitPlayer && kitEditorPosition ? (
+        {!isWhiteboardMode && !isPortraitViewingMode && kitEditorState && activeKitPlayer && kitEditorPosition ? (
           <div
             style={{
               ...KIT_EDITOR_STYLE,
@@ -2944,8 +2982,8 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             <button
               type="button"
               className="control-button"
-              disabled={isPlaybackLocked}
-              style={isPlaybackLocked ? DISABLED_CONTROL_BUTTON_STYLE : SET_START_BUTTON_STYLE}
+              disabled={isPlaybackLocked || isPortraitViewingMode}
+              style={isPlaybackLocked || isPortraitViewingMode ? DISABLED_CONTROL_BUTTON_STYLE : SET_START_BUTTON_STYLE}
               onClick={() => {
                 surfaceRef.current?.setStart();
                 closeControlsMenu();
@@ -2956,8 +2994,8 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             <button
               type="button"
               className="control-button"
-              disabled={isPlaybackLocked}
-              style={isPlaybackLocked ? DISABLED_CONTROL_BUTTON_STYLE : ADD_PHASE_BUTTON_STYLE}
+              disabled={isPlaybackLocked || isPortraitViewingMode}
+              style={isPlaybackLocked || isPortraitViewingMode ? DISABLED_CONTROL_BUTTON_STYLE : ADD_PHASE_BUTTON_STYLE}
               onClick={() => {
                 surfaceRef.current?.addPhase();
                 closeControlsMenu();
@@ -2986,8 +3024,8 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             <button
               type="button"
               className="control-button"
-              disabled={phaseCount <= 0}
-              style={phaseCount <= 0 ? DISABLED_CONTROL_BUTTON_STYLE : UNDO_PHASE_BUTTON_STYLE}
+              disabled={phaseCount <= 0 || isPortraitViewingMode}
+              style={phaseCount <= 0 || isPortraitViewingMode ? DISABLED_CONTROL_BUTTON_STYLE : UNDO_PHASE_BUTTON_STYLE}
               onClick={() => {
                 surfaceRef.current?.undoPhase();
                 closeControlsMenu();
@@ -2998,7 +3036,8 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             <button
               type="button"
               className="control-button"
-              style={RESET_BUTTON_STYLE}
+              disabled={isPortraitViewingMode}
+              style={isPortraitViewingMode ? DISABLED_CONTROL_BUTTON_STYLE : RESET_BUTTON_STYLE}
               onClick={() => {
                 surfaceRef.current?.reset();
                 setIsPlaying(false);
@@ -3010,7 +3049,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             </button>
           </div>
         ) : null}
-        {!isWhiteboardMode && toolsOpen ? (
+        {!isWhiteboardMode && !isPortraitViewingMode && toolsOpen ? (
           <div style={COACH_HUB_PANEL_STYLE}>
             <div style={COACH_HUB_TAB_GRID_STYLE}>
               <button
@@ -3231,7 +3270,13 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             <button type="button" className="control-button" style={ACTIONS_MENU_BUTTON_STYLE} onClick={openMyBoardsEntry}>
               My Boards
             </button>
-            <button type="button" className="control-button" style={ACTIONS_MENU_BUTTON_STYLE} onClick={handleNewBoard}>
+            <button
+              type="button"
+              className="control-button"
+              style={isPortraitViewingMode ? DISABLED_CONTROL_BUTTON_STYLE : ACTIONS_MENU_BUTTON_STYLE}
+              onClick={handleNewBoard}
+              disabled={isPortraitViewingMode}
+            >
               New Board
             </button>
             <button type="button" className="control-button" style={ACTIONS_MENU_BUTTON_STYLE} onClick={goHome}>
@@ -3341,7 +3386,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             Ctrl
           </button>
         ) : null}
-        {!isWhiteboardMode ? (
+        {!isWhiteboardMode && !isPortraitViewingMode ? (
           <button
             type="button"
             className="floating-bubble floating-bubble-tool"
