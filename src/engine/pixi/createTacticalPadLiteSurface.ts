@@ -147,6 +147,7 @@ type PhaseSnapshot = {
 const WORLD_SIZE = { width: 160, height: 100 } as const;
 const PLAYER_RADIUS = 4.1;
 const PLAYER_TOUCH_HIT_DIAMETER_PX = 48;
+const TACTICAL_PLAYER_VISUAL_SCALE = 0.9;
 const TACTICAL_ITEM_HALF_SIZE = 2.2;
 const TACTICAL_ITEM_DRAG_THRESHOLD_PX = 5;
 const TACTICAL_ITEM_TOUCH_HIT_DIAMETER_PX = 46;
@@ -844,7 +845,7 @@ export async function createTacticalPadLiteSurface(
     return createMicroAthleteToken({
       label,
       teamColor: player.teamColor,
-      scale: PLAYER_RADIUS / 4.1,
+      scale: (PLAYER_RADIUS / 4.1) * TACTICAL_PLAYER_VISUAL_SCALE,
       style: {
         primaryColor: KIT_COLOR_NUMERIC[baseColor],
         secondaryColor: KIT_COLOR_NUMERIC[baseColor],
