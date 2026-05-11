@@ -101,16 +101,23 @@ function contrastRatio(foreground: number, background: number): number {
 function getReadableTextColors(backgroundColor: number): {
   fill: number;
   stroke: number;
+  embossShadow: number;
+  embossHighlight: number;
+  contrastPlate: number;
 } {
-  const lightFill = 0xffffff;
-  const darkFill = 0x0f172a;
+  const lightFill = 0xf3f5f8;
+  const darkFill = 0x152033;
   const fill =
     contrastRatio(lightFill, backgroundColor) >= contrastRatio(darkFill, backgroundColor)
       ? lightFill
       : darkFill;
+  const stroke = mixColor(backgroundColor, 0x020617, fill === lightFill ? 0.66 : 0.54);
   return {
     fill,
-    stroke: 0x020617,
+    stroke,
+    embossShadow: mixColor(stroke, 0x020617, 0.24),
+    embossHighlight: mixColor(fill, 0xffffff, 0.28),
+    contrastPlate: mixColor(backgroundColor, fill === lightFill ? 0xffffff : 0x020617, 0.24),
   };
 }
 
@@ -412,6 +419,15 @@ export function createMicroAthleteToken({
   const badgeBaseColor = jerseyFill;
   const labelColors = getReadableTextColors(badgeBaseColor);
   const isNumericLabel = /^\d+$/.test(label.trim());
+  const labelFontFamily = isNumericLabel
+    ? "\"Barlow Condensed\", \"Inter Tight\", Inter, system-ui, sans-serif"
+    : "Inter, system-ui, sans-serif";
+  const labelBaseY = isNumericLabel ? -0.2 : -0.06;
+  const labelFontSize = isNumericLabel ? 4.54 : 3.78;
+  const labelFontWeight = isNumericLabel ? "900" : "800";
+  const labelLetterSpacing = isNumericLabel ? 0.03 : 0.12;
+  const textResolution =
+    typeof window !== "undefined" ? Math.max(2, Math.min(3, window.devicePixelRatio || 1)) : 2;
   const tokenOuterGlow = new Graphics();
   tokenOuterGlow
     .circle(0, 0, badgeRadius * 1.2)
@@ -436,25 +452,74 @@ export function createMicroAthleteToken({
     .fill({ color: 0xffffff, alpha: 0.09 });
   token.addChild(badge);
 
+  if (isNumericLabel) {
+    const labelContrastPlate = new Graphics();
+    labelContrastPlate
+      .roundRect(-1.42, -1.44, 2.84, 1.94, 0.58)
+      .fill({ color: labelColors.contrastPlate, alpha: 0.12 });
+    labelContrastPlate.position.y = labelBaseY;
+    token.addChild(labelContrastPlate);
+
+    const labelEmbossShadow = new Text({
+      text: label,
+      style: {
+        fill: labelColors.embossShadow,
+        fontSize: labelFontSize,
+        fontWeight: labelFontWeight,
+        fontFamily: labelFontFamily,
+        align: "center",
+        letterSpacing: labelLetterSpacing,
+      },
+    });
+    labelEmbossShadow.anchor.set(0.5, 0.5);
+    labelEmbossShadow.position.y = labelBaseY + 0.08;
+    labelEmbossShadow.alpha = 0.2;
+    labelEmbossShadow.resolution = textResolution;
+    labelEmbossShadow.roundPixels = true;
+    token.addChild(labelEmbossShadow);
+  }
+
   const labelText = new Text({
     text: label,
     style: {
       fill: labelColors.fill,
-      fontSize: isNumericLabel ? 4.54 : 3.78,
-      fontWeight: isNumericLabel ? "900" : "800",
-      fontFamily: "Inter, system-ui, sans-serif",
+      fontSize: labelFontSize,
+      fontWeight: labelFontWeight,
+      fontFamily: labelFontFamily,
       align: "center",
-      letterSpacing: isNumericLabel ? 0.05 : 0.12,
+      letterSpacing: labelLetterSpacing,
       stroke: {
         color: labelColors.stroke,
-        width: isNumericLabel ? 0.76 : 0.52,
+        width: isNumericLabel ? 0.62 : 0.52,
         join: "round",
       },
     },
   });
   labelText.anchor.set(0.5, 0.5);
-  labelText.position.y = isNumericLabel ? -0.2 : -0.06;
+  labelText.position.y = labelBaseY;
+  labelText.resolution = textResolution;
+  labelText.roundPixels = true;
   token.addChild(labelText);
+
+  if (isNumericLabel) {
+    const labelEmbossHighlight = new Text({
+      text: label,
+      style: {
+        fill: labelColors.embossHighlight,
+        fontSize: labelFontSize,
+        fontWeight: labelFontWeight,
+        fontFamily: labelFontFamily,
+        align: "center",
+        letterSpacing: labelLetterSpacing,
+      },
+    });
+    labelEmbossHighlight.anchor.set(0.5, 0.5);
+    labelEmbossHighlight.position.y = labelBaseY - 0.06;
+    labelEmbossHighlight.alpha = 0.14;
+    labelEmbossHighlight.resolution = textResolution;
+    labelEmbossHighlight.roundPixels = true;
+    token.addChild(labelEmbossHighlight);
+  }
 
   return { token, shadow };
 }
