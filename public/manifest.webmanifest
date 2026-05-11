@@ -1,7 +1,7 @@
 {
-  "name": "PitchFlow",
-  "short_name": "PitchFlow",
-  "description": "PitchFlow coaching workspace",
+  "name": "TacaVision",
+  "short_name": "TacaVision",
+  "description": "TacaVision coaching workspace",
   "start_url": "/board",
   "scope": "/",
   "display": "standalone",
