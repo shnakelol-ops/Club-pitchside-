@@ -333,11 +333,11 @@ export function createMicroAthleteToken({
   const shadow = new Graphics();
   shadow
     .ellipse(0.54, badgeRadius * 1.28, badgeRadius * 1.72, badgeRadius * 0.72)
-    .fill({ color: 0x020617, alpha: 0.06 })
+    .fill({ color: 0x020617, alpha: 0.05 })
     .ellipse(0.54, badgeRadius * 1.19, badgeRadius * 1.44, badgeRadius * 0.5)
-    .fill({ color: 0x020617, alpha: 0.1 })
+    .fill({ color: 0x020617, alpha: 0.085 })
     .ellipse(0.54, badgeRadius * 1.1, badgeRadius * 1.16, badgeRadius * 0.36)
-    .fill({ color: 0x020617, alpha: 0.16 });
+    .fill({ color: 0x020617, alpha: 0.13 });
   token.addChild(shadow);
 
   const athlete = new Container();
@@ -443,7 +443,7 @@ export function createMicroAthleteToken({
     .circle(0, 0, badgeRadius)
     .fill({ color: badgeFillColor })
     .circle(0, 0, badgeRadius)
-    .stroke({ color: badgeRimColor, width: 0.22, alpha: 0.42 });
+    .stroke({ color: badgeRimColor, width: 0.18, alpha: 0.36 });
   drawBadgePattern(badge, kitPattern, resolvedKitPatternColor, badgeRadius * 0.96);
   badge
     .ellipse(0.06, badgeRadius * 0.56, badgeRadius * 0.9, badgeRadius * 0.4)
@@ -490,7 +490,7 @@ export function createMicroAthleteToken({
       letterSpacing: labelLetterSpacing,
       stroke: {
         color: labelColors.stroke,
-        width: isNumericLabel ? 0.62 : 0.52,
+        width: isNumericLabel ? 0.56 : 0.47,
         join: "round",
       },
     },
