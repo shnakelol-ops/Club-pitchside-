@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ChangeEvent, type PointerEvent as ReactPointerEvent } from "react";
 
 import {
   createTacticalPadLiteSurface,
@@ -57,6 +57,15 @@ const WHITEBOARD_PEN_COLOR_CHOICES: ReadonlyArray<{ label: string; value: number
   { label: "Blue", value: 0x2563eb, css: "#2563eb" },
 ];
 const WHITEBOARD_DRAW_COLOR = WHITEBOARD_PEN_COLOR_CHOICES[0]?.value ?? 0x111111;
+const PLAYBACK_SPEED_OPTIONS: ReadonlyArray<{ multiplier: number; label: string }> = [
+  { multiplier: 0.25, label: "0.25x" },
+  { multiplier: 0.5, label: "0.5x" },
+  { multiplier: 0.75, label: "0.75x" },
+  { multiplier: 1.0, label: "1.0x" },
+  { multiplier: 1.25, label: "1.25x" },
+  { multiplier: 1.5, label: "1.5x" },
+];
+const DEFAULT_PLAYBACK_SPEED_MULTIPLIER = 1.0;
 const TACTICAL_ITEM_CHOICES: ReadonlyArray<{ label: string; type: TacticalItem["type"] }> = [
   { label: "Cone", type: "cone" },
   { label: "Pole", type: "pole" },
@@ -388,6 +397,65 @@ const STADIUM_FLOODLIGHT_CSS = `
 .control-button:disabled:active {
   transform: none;
   filter: none;
+}
+
+.speed-control-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 12px;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.speed-control-range:focus {
+  outline: none;
+}
+
+.speed-control-range::-webkit-slider-runnable-track {
+  height: 5px;
+  border-radius: 999px;
+  border: 1px solid rgba(225, 232, 228, 0.42);
+  background: var(
+    --speed-track,
+    linear-gradient(90deg, rgba(34, 197, 94, 0.95) 0%, rgba(34, 197, 94, 0.95) 50%, rgba(255, 255, 255, 0.9) 50%, rgba(255, 255, 255, 0.9) 100%)
+  );
+}
+
+.speed-control-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(14, 20, 19, 0.8);
+  background: #f8fbfa;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5), 0 2px 5px rgba(0, 0, 0, 0.34);
+  margin-top: -4px;
+}
+
+.speed-control-range::-moz-range-track {
+  height: 5px;
+  border-radius: 999px;
+  border: 1px solid rgba(225, 232, 228, 0.42);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.speed-control-range::-moz-range-progress {
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(34, 197, 94, 0.95);
+}
+
+.speed-control-range::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(14, 20, 19, 0.8);
+  background: #f8fbfa;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5), 0 2px 5px rgba(0, 0, 0, 0.34);
 }
 
 @media (max-width: 700px) and (orientation: portrait) {
@@ -1297,6 +1365,45 @@ const UNDO_PHASE_BUTTON_STYLE: CSSProperties = {
     "0 6px 20px rgba(0, 0, 0, 0.45), 0 0 18px rgba(168, 85, 247, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.25)",
 };
 
+const PLAYBACK_SPEED_BAR_STYLE: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "auto 56px auto",
+  alignItems: "center",
+  gap: "5px",
+  minWidth: "116px",
+  height: "30px",
+  padding: "0 7px",
+  borderRadius: "999px",
+  border: "1px solid rgba(211, 224, 217, 0.32)",
+  background: "rgba(10, 20, 16, 0.72)",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+  boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 7px 20px rgba(0, 0, 0, 0.35)",
+  flex: "0 0 auto",
+};
+
+const PLAYBACK_SPEED_LABEL_STYLE: CSSProperties = {
+  color: "rgba(230, 238, 233, 0.62)",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "8px",
+  fontWeight: 620,
+  letterSpacing: "0.22px",
+};
+
+const PLAYBACK_SPEED_VALUE_STYLE: CSSProperties = {
+  color: "#eef7f1",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "9px",
+  fontWeight: 700,
+  letterSpacing: "0.14px",
+  textAlign: "right",
+};
+
+const PLAYBACK_SPEED_SLIDER_STYLE: CSSProperties = {
+  width: "100%",
+  minWidth: 0,
+};
+
 const SHARE_TIP_TOAST_STYLE: CSSProperties = {
   position: "fixed",
   left: "max(62px, calc(env(safe-area-inset-left, 0px) + 60px))",
@@ -1678,6 +1785,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const [phaseCount, setPhaseCount] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [playbackSpeedMultiplier, setPlaybackSpeedMultiplier] = useState<number>(DEFAULT_PLAYBACK_SPEED_MULTIPLIER);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [quickShareOpen, setQuickShareOpen] = useState(false);
   const [myBoardsOpen, setMyBoardsOpen] = useState(false);
@@ -1703,10 +1811,15 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const isPortraitViewingMode = !isStatsMode && !isWhiteboardMode && isPortraitOrientation;
   const isPortraitViewingModeRef = useRef(isPortraitViewingMode);
   const wakeLockRef = useRef<{ release: () => Promise<void> } | null>(null);
+  const playbackSpeedMultiplierRef = useRef(playbackSpeedMultiplier);
 
   useEffect(() => {
     isPortraitViewingModeRef.current = isPortraitViewingMode;
   }, [isPortraitViewingMode]);
+
+  useEffect(() => {
+    playbackSpeedMultiplierRef.current = playbackSpeedMultiplier;
+  }, [playbackSpeedMultiplier]);
 
   useEffect(() => {
     if (isWhiteboardMode || isStatsMode) {
@@ -1924,6 +2037,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
       destroySurface = surface.destroy;
       const initialDrawTool = isWhiteboardMode ? whiteboardTool : tacticalTool;
       const initialDrawColor = isWhiteboardMode ? whiteboardPenColor : tacticalPenColor;
+      surface.setPlaybackSpeedMultiplier(playbackSpeedMultiplierRef.current);
       surface.setWhiteboardDrawTool(initialDrawTool);
       surface.setWhiteboardDrawColor(initialDrawColor);
       if (!isWhiteboardMode) {
@@ -1969,6 +2083,11 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
 
   useEffect(() => {
     if (isStatsMode) return;
+    surfaceRef.current?.setPlaybackSpeedMultiplier(playbackSpeedMultiplier);
+  }, [isStatsMode, playbackSpeedMultiplier]);
+
+  useEffect(() => {
+    if (isStatsMode) return;
     const surface = surfaceRef.current;
     if (!surface) return;
     surface.setWhiteboardTeamConfig({
@@ -1995,6 +2114,17 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   }, [isPortraitViewingMode, isStatsMode, isWhiteboardMode]);
 
   const isPlaybackLocked = isPlaying || isPaused;
+  const playbackSpeedOptionIndex = Math.max(
+    0,
+    PLAYBACK_SPEED_OPTIONS.findIndex((option) => option.multiplier === playbackSpeedMultiplier),
+  );
+  const playbackSpeedLabel = PLAYBACK_SPEED_OPTIONS[playbackSpeedOptionIndex]?.label ?? "1.0x";
+  const playbackSpeedTrackFillPercent =
+    (playbackSpeedOptionIndex / Math.max(1, PLAYBACK_SPEED_OPTIONS.length - 1)) * 100;
+  const playbackSpeedSliderStyle = {
+    ...PLAYBACK_SPEED_SLIDER_STYLE,
+    "--speed-track": `linear-gradient(90deg, rgba(34, 197, 94, 0.95) 0%, rgba(34, 197, 94, 0.95) ${playbackSpeedTrackFillPercent}%, rgba(255, 255, 255, 0.9) ${playbackSpeedTrackFillPercent}%, rgba(255, 255, 255, 0.9) 100%)`,
+  } as CSSProperties;
   const effectiveItemMode: ItemMode =
     isPortraitViewingMode || (itemMode !== "edit" || tacticalTool !== "move" || isPlaybackLocked) ? "locked" : "edit";
 
@@ -2229,6 +2359,15 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const handlePausePress = () => {
     surfaceRef.current?.pausePlayback();
     setControlsOpen(false);
+  };
+
+  const handlePlaybackSpeedChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const nextIndex = Number.parseInt(event.target.value, 10);
+    if (!Number.isFinite(nextIndex)) return;
+    const boundedIndex = Math.max(0, Math.min(PLAYBACK_SPEED_OPTIONS.length - 1, nextIndex));
+    const nextSpeed = PLAYBACK_SPEED_OPTIONS[boundedIndex]?.multiplier;
+    if (nextSpeed == null) return;
+    setPlaybackSpeedMultiplier(nextSpeed);
   };
 
   const phaseItems = Array.from({ length: phaseCount }, (_, index) => index + 1);
@@ -3262,6 +3401,21 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         ) : null}
         {!isWhiteboardMode && (controlsOpen || isPortraitViewingMode) ? (
           <div style={CONTROLS_POPOUT_STYLE}>
+            <div style={PLAYBACK_SPEED_BAR_STYLE}>
+              <span style={PLAYBACK_SPEED_LABEL_STYLE}>SPEED</span>
+              <input
+                type="range"
+                className="speed-control-range"
+                min={0}
+                max={PLAYBACK_SPEED_OPTIONS.length - 1}
+                step={1}
+                value={playbackSpeedOptionIndex}
+                onChange={handlePlaybackSpeedChange}
+                aria-label="Playback speed"
+                style={playbackSpeedSliderStyle}
+              />
+              <span style={PLAYBACK_SPEED_VALUE_STYLE}>{playbackSpeedLabel}</span>
+            </div>
             {!isPortraitViewingMode ? (
               <button
                 type="button"
