@@ -1037,10 +1037,11 @@ const COACH_HUB_PANEL_STYLE: CSSProperties = {
   flexDirection: "column",
   gap: "4px",
   width: "clamp(112px, 13vw, 148px)",
-  maxHeight: "min(54vh, 312px)",
+  maxWidth: "calc(100dvw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 12px)",
+  maxHeight: "min(54vh, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 72px))",
   overflowY: "auto",
   overflowX: "hidden",
-  right: "max(6px, calc(env(safe-area-inset-right, 0px) + 4px))",
+  right: "max(10px, calc(env(safe-area-inset-right, 0px) + 8px))",
   bottom: "max(60px, calc(env(safe-area-inset-bottom, 0px) + 58px))",
   padding: "5px",
   background: "rgba(9, 17, 24, 0.68)",
@@ -1058,15 +1059,15 @@ const MOBILE_COACH_HUB_OVERLAY_STYLE: CSSProperties = {
   justifyContent: "flex-end",
   alignItems: "flex-end",
   padding:
-    "max(8px, calc(env(safe-area-inset-top, 0px) + 4px)) max(8px, calc(env(safe-area-inset-right, 0px) + 4px)) max(8px, calc(env(safe-area-inset-bottom, 0px) + 4px)) max(8px, calc(env(safe-area-inset-left, 0px) + 4px))",
+    "max(8px, calc(env(safe-area-inset-top, 0px) + 4px)) max(10px, calc(env(safe-area-inset-right, 0px) + 10px)) max(8px, calc(env(safe-area-inset-bottom, 0px) + 8px)) max(10px, calc(env(safe-area-inset-left, 0px) + 10px))",
   background: "rgba(5, 11, 17, 0.08)",
   zIndex: 24,
 };
 
 const MOBILE_COACH_HUB_PANEL_STYLE: CSSProperties = {
   width: "min(52vw, 320px)",
-  maxWidth: "calc(100dvw - 16px)",
-  maxHeight: "min(58dvh, calc(100dvh - 18px))",
+  maxWidth: "calc(100dvw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 20px)",
+  maxHeight: "min(58dvh, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 18px))",
   overflowY: "auto",
   overflowX: "hidden",
   display: "flex",
@@ -2723,6 +2724,20 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const quickSharePopoverStyle = isPortraitViewingMode ? PORTRAIT_QUICK_SHARE_POPOUT_STYLE : QUICK_SHARE_POPOUT_STYLE;
   const myBoardsPopoverStyle = isPortraitViewingMode ? PORTRAIT_MY_BOARDS_POPOUT_STYLE : MY_BOARDS_POPOUT_STYLE;
   const isCompactLandscapeTools = !isWhiteboardMode && !isPortraitViewingMode && isCompactLandscapeToolsMenu;
+  const compactLandscapeViewportWidth = isCompactLandscapeTools ? getViewportRect().width : 0;
+  const isTightCompactLandscapeTools = isCompactLandscapeTools && compactLandscapeViewportWidth <= 760;
+  const mobileCoachHubPanelStyle = isCompactLandscapeTools
+    ? {
+        ...MOBILE_COACH_HUB_PANEL_STYLE,
+        ...(isTightCompactLandscapeTools
+          ? {
+              width: "min(49vw, 292px)",
+              gap: "3px",
+              padding: "5px",
+            }
+          : null),
+      }
+    : MOBILE_COACH_HUB_PANEL_STYLE;
   const coachHubSectionTitleStyle = isCompactLandscapeTools
     ? {
         ...COACH_HUB_SECTION_TITLE_STYLE,
@@ -2736,8 +2751,8 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     ? {
         ...COACH_HUB_TAB_GRID_STYLE,
         gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-        gap: "2px",
-        padding: "2px",
+        gap: isTightCompactLandscapeTools ? "1px" : "2px",
+        padding: isTightCompactLandscapeTools ? "1px" : "2px",
         borderRadius: "9px",
         border: "1px solid rgba(129, 157, 144, 0.12)",
         background: "rgba(9, 16, 20, 0.44)",
@@ -2746,11 +2761,11 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const coachHubTabButtonStyle = isCompactLandscapeTools
     ? {
         ...COACH_HUB_TAB_BUTTON_STYLE,
-        height: "24px",
+        height: isTightCompactLandscapeTools ? "22px" : "24px",
         borderRadius: "999px",
-        fontSize: "8.8px",
+        fontSize: isTightCompactLandscapeTools ? "8.4px" : "8.8px",
         letterSpacing: "0.14px",
-        padding: "0 4px",
+        padding: isTightCompactLandscapeTools ? "0 3px" : "0 4px",
         border: "1px solid rgba(127, 156, 142, 0.24)",
         background: "rgba(13, 22, 25, 0.68)",
         color: "rgba(220, 235, 227, 0.9)",
@@ -2767,10 +2782,10 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const coachHubToolButtonStyle = isCompactLandscapeTools
     ? {
         ...COACH_HUB_TOOL_BUTTON_STYLE,
-        height: "30px",
+        height: isTightCompactLandscapeTools ? "28px" : "30px",
         borderRadius: "7px",
-        fontSize: "9px",
-        padding: "0 4px",
+        fontSize: isTightCompactLandscapeTools ? "8.8px" : "9px",
+        padding: isTightCompactLandscapeTools ? "0 3px" : "0 4px",
         border: "1px solid rgba(127, 156, 142, 0.22)",
         background: "rgba(13, 22, 25, 0.68)",
         color: "#e6f0ea",
@@ -2787,13 +2802,13 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const coachHubColorGridStyle = isCompactLandscapeTools
     ? {
         ...COACH_HUB_COLOR_GRID_STYLE,
-        gap: "2px",
+        gap: isTightCompactLandscapeTools ? "1px" : "2px",
       }
     : COACH_HUB_COLOR_GRID_STYLE;
   const coachHubColorButtonStyle = isCompactLandscapeTools
     ? {
         ...COACH_HUB_COLOR_BUTTON_STYLE,
-        height: "20px",
+        height: isTightCompactLandscapeTools ? "18px" : "20px",
         border: "1px solid rgba(129, 157, 144, 0.22)",
         background: "rgba(10, 18, 22, 0.7)",
       }
@@ -2801,17 +2816,17 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const coachHubColorSwatchStyle = isCompactLandscapeTools
     ? {
         ...COACH_HUB_COLOR_SWATCH_STYLE,
-        width: "11px",
-        height: "11px",
+        width: isTightCompactLandscapeTools ? "10px" : "11px",
+        height: isTightCompactLandscapeTools ? "10px" : "11px",
       }
     : COACH_HUB_COLOR_SWATCH_STYLE;
   const coachHubActionButtonStyle = isCompactLandscapeTools
     ? {
         ...COACH_HUB_ACTION_BUTTON_STYLE,
-        height: "30px",
+        height: isTightCompactLandscapeTools ? "28px" : "30px",
         borderRadius: "7px",
-        fontSize: "9px",
-        padding: "0 4px",
+        fontSize: isTightCompactLandscapeTools ? "8.8px" : "9px",
+        padding: isTightCompactLandscapeTools ? "0 3px" : "0 4px",
         border: "1px solid rgba(127, 156, 142, 0.22)",
         background: "rgba(13, 22, 25, 0.68)",
         color: "#e6f0ea",
@@ -3317,7 +3332,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             <div style={MOBILE_COACH_HUB_OVERLAY_STYLE} role="presentation" onClick={() => setToolsOpen(false)}>
               <div
                 ref={toolsMenuRef}
-                style={MOBILE_COACH_HUB_PANEL_STYLE}
+                style={mobileCoachHubPanelStyle}
                 role="dialog"
                 aria-modal="false"
                 aria-label="Vision Board tools"
