@@ -3340,22 +3340,41 @@ export default function StatsModeSurface() {
   };
 
   const shareOrExportMatch = async () => {
-    const homeTeamName = teamNames.HOME.trim() || "Team A";
-    const awayTeamName = teamNames.AWAY.trim() || "Team B";
-    const venueLabel = venueName.trim() || "Unknown venue";
+    const safeLabel = (value: unknown, fallback: string): string => {
+      if (typeof value !== "string") return fallback;
+      const trimmed = value.trim();
+      return trimmed.length > 0 ? trimmed : fallback;
+    };
+    const safeCount = (value: unknown): number => {
+      if (typeof value !== "number" || !Number.isFinite(value)) return 0;
+      return Math.max(0, Math.floor(value));
+    };
+
+    const homeTeamName = safeLabel(teamNames.HOME, "Team A");
+    const awayTeamName = safeLabel(teamNames.AWAY, "Team B");
+    const venueLabel = safeLabel(venueName, "Unknown venue");
+    const stateLabel = safeLabel(matchState === "FULL_TIME" ? "Full Time" : matchStateToken, "Unknown");
+    const clockLabel = safeLabel(formatMatchClock(matchTimeSeconds), "00:00");
+
     const summaryText = [
-      `${homeTeamName} ${formatGaelicScore(homeScore)} (${homeScore.total}) v ${awayTeamName} ${formatGaelicScore(awayScore)} (${awayScore.total})`,
-      `Venue: ${venueLabel}`,
-      `State: ${matchState === "FULL_TIME" ? "Full Time" : matchStateToken}`,
-      `Clock: ${formatMatchClock(matchTimeSeconds)}`,
-      `Events: ${loggedEvents.length}`,
-      `Goals: ${liveCounts.goals}`,
-      `Points: ${liveCounts.points}`,
-      `Shots: ${liveCounts.shots}`,
-      `Wides: ${liveCounts.wides}`,
-      `Turnover Won/Lost: ${liveCounts.turnoverWon}/${liveCounts.turnoverLost}`,
-      `Kickout Won/Lost: ${liveCounts.kickoutWon}/${liveCounts.kickoutLost}`,
-      `Free Won/Conceded: ${liveCounts.freeWon}/${liveCounts.freeConceded}`,
+      `${homeTeamName} ${formatGaelicScore(homeScore)} (${safeCount(homeScore.total)})`,
+      `${awayTeamName} ${formatGaelicScore(awayScore)} (${safeCount(awayScore.total)})`,
+      "",
+      `📍 Venue: ${venueLabel}`,
+      `⏱ State: ${stateLabel}`,
+      `🕒 Clock: ${clockLabel}`,
+      "",
+      "📊 Match Summary",
+      `Events: ${safeCount(loggedEvents.length)}`,
+      `Goals: ${safeCount(liveCounts.goals)}`,
+      `Points: ${safeCount(liveCounts.points)}`,
+      `Shots: ${safeCount(liveCounts.shots)}`,
+      `Wides: ${safeCount(liveCounts.wides)}`,
+      "",
+      "🔁 Coaching Metrics",
+      `Turnovers: ${safeCount(liveCounts.turnoverWon)} won / ${safeCount(liveCounts.turnoverLost)} lost`,
+      `Kickouts: ${safeCount(liveCounts.kickoutWon)} won / ${safeCount(liveCounts.kickoutLost)} lost`,
+      `Frees: ${safeCount(liveCounts.freeWon)} won / ${safeCount(liveCounts.freeConceded)} conceded`,
     ].join("\n");
 
     const shareData: ShareData = {
