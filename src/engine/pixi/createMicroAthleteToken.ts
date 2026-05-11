@@ -9,6 +9,8 @@ export type MicroAthleteStyle = {
   goalkeeper?: boolean;
 };
 
+export type MicroAthleteTokenRenderVariant = "classic-badge" | "jersey-number-no-disc";
+
 type MicroAthleteTeamColor = "blue" | "red" | "green" | "yellow" | "black" | "white";
 export type MicroAthleteKitPattern = "plain" | "hoops" | "slash" | "stripes";
 
@@ -310,6 +312,7 @@ export function createMicroAthleteToken({
   scale,
   kitPattern = "plain",
   kitPatternColor,
+  renderVariant = "classic-badge",
 }: {
   label: string;
   teamColor: MicroAthleteTeamColor;
@@ -317,6 +320,7 @@ export function createMicroAthleteToken({
   scale?: number;
   kitPattern?: MicroAthleteKitPattern;
   kitPatternColor?: number;
+  renderVariant?: MicroAthleteTokenRenderVariant;
 }): { token: Container; shadow: Graphics } {
   const defaults = DEFAULT_STYLE_BY_TEAM[teamColor];
   const resolved: MicroAthleteStyle = {
@@ -332,6 +336,7 @@ export function createMicroAthleteToken({
   token.scale.set(scale ?? 1);
 
   const badgeRadius = 3.66 * MICRO_ATHLETE_BADGE_SCALE;
+  const useClassicBadge = renderVariant === "classic-badge";
 
   const shadow = new Graphics();
   shadow
@@ -424,48 +429,70 @@ export function createMicroAthleteToken({
   athlete.addChild(body);
 
   const badgeBaseColor = jerseyFill;
-  const labelColors = getReadableTextColors(badgeBaseColor);
+  const labelSurfaceColor = useClassicBadge ? badgeBaseColor : jerseyFill;
+  const labelColors = getReadableTextColors(labelSurfaceColor);
   const isNumericLabel = /^\d+$/.test(label.trim());
   const labelFontFamily = isNumericLabel
     ? "\"Barlow Condensed\", \"Inter Tight\", Inter, system-ui, sans-serif"
     : "Inter, system-ui, sans-serif";
-  const labelBaseY = isNumericLabel ? -0.2 : -0.06;
-  const labelFontSize = isNumericLabel ? 4.3 : 3.6;
+  const labelBaseY = useClassicBadge ? (isNumericLabel ? -0.2 : -0.06) : (isNumericLabel ? -3.18 : -3.08);
+  const labelFontSize = useClassicBadge ? (isNumericLabel ? 4.3 : 3.6) : (isNumericLabel ? 3.16 : 2.6);
   const labelFontWeight = isNumericLabel ? "900" : "800";
-  const labelLetterSpacing = isNumericLabel ? 0.03 : 0.12;
+  const labelLetterSpacing = useClassicBadge ? (isNumericLabel ? 0.03 : 0.12) : (isNumericLabel ? 0.02 : 0.08);
   const textResolution =
     typeof window !== "undefined" ? Math.max(2, Math.min(3, window.devicePixelRatio || 1)) : 2;
-  const tokenOuterGlow = new Graphics();
-  tokenOuterGlow
-    .circle(0, 0, badgeRadius * 1.2)
-    .fill({ color: mixColor(badgeBaseColor, 0xffffff, 0.12), alpha: 0.03 })
-    .circle(0, 0, badgeRadius * 1.06)
-    .fill({ color: mixColor(badgeBaseColor, 0xffffff, 0.08), alpha: 0.04 });
-  token.addChild(tokenOuterGlow);
+  const labelContainer = useClassicBadge ? token : athlete;
+  if (useClassicBadge) {
+    const tokenOuterGlow = new Graphics();
+    tokenOuterGlow
+      .circle(0, 0, badgeRadius * 1.2)
+      .fill({ color: mixColor(badgeBaseColor, 0xffffff, 0.12), alpha: 0.03 })
+      .circle(0, 0, badgeRadius * 1.06)
+      .fill({ color: mixColor(badgeBaseColor, 0xffffff, 0.08), alpha: 0.04 });
+    token.addChild(tokenOuterGlow);
 
-  const badge = new Graphics();
-  const badgeFillColor = mixColor(badgeBaseColor, 0xffffff, 0.06);
-  const badgeRimColor = mixColor(badgeBaseColor, 0x000000, 0.32);
-  badge
-    .circle(0, 0, badgeRadius)
-    .fill({ color: badgeFillColor })
-    .circle(0, 0, badgeRadius)
-    .stroke({ color: badgeRimColor, width: 0.18, alpha: 0.36 });
-  drawBadgePattern(badge, kitPattern, resolvedKitPatternColor, badgeRadius * 0.96);
-  badge
-    .ellipse(0.06, badgeRadius * 0.56, badgeRadius * 0.9, badgeRadius * 0.4)
-    .fill({ color: 0x020617, alpha: 0.14 })
-    .ellipse(-badgeRadius * 0.18, -badgeRadius * 0.56, badgeRadius * 0.52, badgeRadius * 0.15)
-    .fill({ color: 0xffffff, alpha: 0.09 });
-  token.addChild(badge);
+    const badge = new Graphics();
+    const badgeFillColor = mixColor(badgeBaseColor, 0xffffff, 0.06);
+    const badgeRimColor = mixColor(badgeBaseColor, 0x000000, 0.32);
+    badge
+      .circle(0, 0, badgeRadius)
+      .fill({ color: badgeFillColor })
+      .circle(0, 0, badgeRadius)
+      .stroke({ color: badgeRimColor, width: 0.18, alpha: 0.36 });
+    drawBadgePattern(badge, kitPattern, resolvedKitPatternColor, badgeRadius * 0.96);
+    badge
+      .ellipse(0.06, badgeRadius * 0.56, badgeRadius * 0.9, badgeRadius * 0.4)
+      .fill({ color: 0x020617, alpha: 0.14 })
+      .ellipse(-badgeRadius * 0.18, -badgeRadius * 0.56, badgeRadius * 0.52, badgeRadius * 0.15)
+      .fill({ color: 0xffffff, alpha: 0.09 });
+    token.addChild(badge);
+  }
 
   if (isNumericLabel) {
     const labelContrastPlate = new Graphics();
-    labelContrastPlate
-      .roundRect(-1.42 * MICRO_ATHLETE_BADGE_SCALE, -1.44 * MICRO_ATHLETE_BADGE_SCALE, 2.84 * MICRO_ATHLETE_BADGE_SCALE, 1.94 * MICRO_ATHLETE_BADGE_SCALE, 0.58 * MICRO_ATHLETE_BADGE_SCALE)
-      .fill({ color: labelColors.contrastPlate, alpha: 0.12 });
+    if (useClassicBadge) {
+      labelContrastPlate
+        .roundRect(
+          -1.42 * MICRO_ATHLETE_BADGE_SCALE,
+          -1.44 * MICRO_ATHLETE_BADGE_SCALE,
+          2.84 * MICRO_ATHLETE_BADGE_SCALE,
+          1.94 * MICRO_ATHLETE_BADGE_SCALE,
+          0.58 * MICRO_ATHLETE_BADGE_SCALE,
+        )
+        .fill({ color: labelColors.contrastPlate, alpha: 0.12 });
+    } else {
+      labelContrastPlate
+        .roundRect(-1.12, -0.72, 2.24, 1.48, 0.38)
+        .fill({ color: labelColors.contrastPlate, alpha: 0.48 })
+        .stroke({
+          color: mixColor(labelSurfaceColor, 0x020617, 0.3),
+          alpha: 0.28,
+          width: 0.11,
+          join: "round",
+        });
+    }
     labelContrastPlate.position.y = labelBaseY;
-    token.addChild(labelContrastPlate);
+    labelContainer.addChild(labelContrastPlate);
 
     const labelEmbossShadow = new Text({
       text: label,
@@ -483,7 +510,7 @@ export function createMicroAthleteToken({
     labelEmbossShadow.alpha = 0.2;
     labelEmbossShadow.resolution = textResolution;
     labelEmbossShadow.roundPixels = true;
-    token.addChild(labelEmbossShadow);
+    labelContainer.addChild(labelEmbossShadow);
   }
 
   const labelText = new Text({
@@ -497,7 +524,7 @@ export function createMicroAthleteToken({
       letterSpacing: labelLetterSpacing,
       stroke: {
         color: labelColors.stroke,
-        width: isNumericLabel ? 0.56 : 0.47,
+        width: isNumericLabel ? (useClassicBadge ? 0.56 : 0.5) : (useClassicBadge ? 0.47 : 0.44),
         join: "round",
       },
     },
@@ -506,7 +533,7 @@ export function createMicroAthleteToken({
   labelText.position.y = labelBaseY;
   labelText.resolution = textResolution;
   labelText.roundPixels = true;
-  token.addChild(labelText);
+  labelContainer.addChild(labelText);
 
   if (isNumericLabel) {
     const labelEmbossHighlight = new Text({
@@ -525,7 +552,7 @@ export function createMicroAthleteToken({
     labelEmbossHighlight.alpha = 0.14;
     labelEmbossHighlight.resolution = textResolution;
     labelEmbossHighlight.roundPixels = true;
-    token.addChild(labelEmbossHighlight);
+    labelContainer.addChild(labelEmbossHighlight);
   }
 
   return { token, shadow };
