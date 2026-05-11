@@ -441,7 +441,7 @@ export function createMicroAthleteToken({
     style: {
       fill: labelColors.fill,
       fontSize: isNumericLabel ? 4.54 : 3.78,
-      fontWeight: isNumericLabel ? "950" : "900",
+      fontWeight: isNumericLabel ? "900" : "800",
       fontFamily: "Inter, system-ui, sans-serif",
       align: "center",
       letterSpacing: isNumericLabel ? 0.05 : 0.12,
