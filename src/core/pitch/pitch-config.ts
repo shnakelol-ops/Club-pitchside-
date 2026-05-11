@@ -257,7 +257,7 @@ function buildGaelicFootballLandscapeMarkings(): PitchMarking[] {
 
   const rx40 = (GAELIC_TWO_POINT_RADIUS_M / GAELIC_LANDSCAPE_LEN_M) * playW;
   const ry40 = (GAELIC_TWO_POINT_RADIUS_M / GAELIC_LANDSCAPE_WID_M) * playH;
-  const twoPointArc = Math.PI / 3;
+  const twoPointArc = Math.PI * 0.36;
 
   return [
     { kind: "rect", x: ix, y: iy, w: playW, h: playH, stroke: Lg.lineGridStrong, strokeWidth: wTouch },
