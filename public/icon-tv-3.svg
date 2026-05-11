@@ -1,0 +1,11 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="TacaVision single-stroke TV monogram">
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="#055B39" />
+  <path
+    d="M56 72H200L128 72V126L162 184L128 126L94 184"
+    stroke="#FFFFFF"
+    stroke-width="26"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    shape-rendering="geometricPrecision"
+  />
+</svg>
