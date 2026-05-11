@@ -133,12 +133,13 @@ function safeReadLocalStorage(key: string): string | null {
   }
 }
 
-function safeWriteLocalStorage(key: string, value: string): void {
-  if (typeof window === "undefined") return;
+function safeWriteLocalStorage(key: string, value: string): boolean {
+  if (typeof window === "undefined") return false;
   try {
     window.localStorage.setItem(key, value);
+    return true;
   } catch (error) {
-    console.warn("[stats-storage] Could not write localStorage", { key, error });
+    return false;
   }
 }
 
@@ -466,9 +467,9 @@ function resolveSavedMatchRestoreContext(record: SavedMatch): {
   };
 }
 
-function persistSavedMatches(matches: readonly SavedMatch[]) {
-  if (typeof window === "undefined") return;
-  safeWriteLocalStorage(SAVED_MATCHES_STORAGE_KEY, JSON.stringify(sanitizeSavedMatches(matches)));
+function persistSavedMatches(matches: readonly SavedMatch[]): boolean {
+  if (typeof window === "undefined") return false;
+  return safeWriteLocalStorage(SAVED_MATCHES_STORAGE_KEY, JSON.stringify(sanitizeSavedMatches(matches)));
 }
 
 function formatSavedMatchCreatedAt(createdAtMillis: number): string {
@@ -2411,6 +2412,8 @@ export default function StatsModeSurface() {
   const [savedMatches, setSavedMatches] = useState<SavedMatch[]>(() => readSavedMatchesFromStorage());
   const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
   const [saveLoadBlockedReason, setSaveLoadBlockedReason] = useState<string | null>(null);
+  const [lastSavedAtMillis, setLastSavedAtMillis] = useState<number | null>(null);
+  const [loadedMatchLabel, setLoadedMatchLabel] = useState<string | null>(null);
   const [visibilityMode, setVisibilityMode] = useState<VisibilityMode>("ALL");
   const [matchState, setMatchState] = useState<MatchState>("PRE_MATCH");
   const [currentHalf, setCurrentHalf] = useState<1 | 2>(1);
@@ -3322,12 +3325,17 @@ export default function StatsModeSurface() {
         },
       };
       const nextSavedMatches = sanitizeSavedMatches([savedRecord, ...readSavedMatchesFromStorage()]);
-      persistSavedMatches(nextSavedMatches);
+      const didPersist = persistSavedMatches(nextSavedMatches);
+      if (!didPersist) {
+        setSaveFeedback("Save failed — storage unavailable. Do not close this match yet.");
+        return;
+      }
       setSavedMatches(nextSavedMatches);
       setSaveFeedback("Match saved");
+      setLastSavedAtMillis(savedRecord.createdAt);
       setSaveLoadBlockedReason(null);
     } catch {
-      setSaveFeedback("Could not save match");
+      setSaveFeedback("Save failed — storage unavailable. Do not close this match yet.");
     }
   };
 
@@ -3406,6 +3414,18 @@ export default function StatsModeSurface() {
       setSaveLoadBlockedReason("Load blocked: saved match is invalid.");
       return;
     }
+    const isDirtySession =
+      loggedEvents.length > 0 ||
+      matchTimeSeconds > 0 ||
+      currentHalf !== 1 ||
+      matchState !== "PRE_MATCH" ||
+      teamNames.HOME !== "Team A" ||
+      teamNames.AWAY !== "Team B" ||
+      venueName.trim().length > 0;
+    if (isDirtySession) {
+      const confirmed = window.confirm("Loading this saved match will replace your current live session. Continue?");
+      if (!confirmed) return;
+    }
     const loadedMatchId =
       parsedRecord.id.trim().length > 0 ? parsedRecord.id : newMatchSessionId("loaded");
     setCurrentMatchId(loadedMatchId);
@@ -3434,6 +3454,7 @@ export default function StatsModeSurface() {
       canLog: isLoggingActive(restoredContext.engineState.matchState) && activeTeamRef.current === "HOME",
     });
     setSaveLoadBlockedReason(null);
+    setLoadedMatchLabel(parsedRecord.label);
     setUtilityPanel(null);
   };
 
@@ -3441,6 +3462,16 @@ export default function StatsModeSurface() {
     setUtilityPanel(null);
     setSaveLoadBlockedReason(null);
   };
+  const lastSavedLabel =
+    lastSavedAtMillis != null
+      ? (() => {
+          const savedAt = new Date(lastSavedAtMillis);
+          if (Number.isNaN(savedAt.getTime())) return null;
+          const hour = String(savedAt.getHours()).padStart(2, "0");
+          const minute = String(savedAt.getMinutes()).padStart(2, "0");
+          return `${hour}:${minute}`;
+        })()
+      : null;
 
   const goHome = () => {
     window.location.assign("/board");
@@ -5575,6 +5606,16 @@ export default function StatsModeSurface() {
               {saveLoadBlockedReason ? (
                 <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.9, textTransform: "none" }}>
                   {saveLoadBlockedReason}
+                </div>
+              ) : null}
+              {lastSavedLabel ? (
+                <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.8, textTransform: "none" }}>
+                  Last saved: {lastSavedLabel}
+                </div>
+              ) : null}
+              {loadedMatchLabel ? (
+                <div className="utility-panel-title" style={{ fontSize: "9px", opacity: 0.8, textTransform: "none" }}>
+                  Loaded: {loadedMatchLabel}
                 </div>
               ) : null}
               <button type="button" className="utility-menu-btn" onClick={requestResetMatch}>
