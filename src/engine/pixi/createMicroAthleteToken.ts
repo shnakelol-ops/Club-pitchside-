@@ -613,45 +613,63 @@ export function createMicroAthleteToken({
   }
 
   if (!useClassicBadge && isNumericLabel) {
-    const floatingNumberPlate = new Graphics();
-    const floatingPlateWidth = isDoubleDigitLabel ? 2.18 : 1.8;
-    floatingNumberPlate
-      .ellipse(0, 0.28, floatingPlateWidth * 0.48, 0.22)
-      .fill({ color: 0x020617, alpha: 0.2 })
-      .roundRect(-floatingPlateWidth * 0.5, -0.36, floatingPlateWidth, 0.72, 0.26)
-      .fill({ color: 0x020617, alpha: 0.52 })
-      .stroke({
-        color: mixColor(labelColorPalette.fill, 0xffffff, 0.1),
-        alpha: 0.18,
-        width: 0.08,
-        join: "round",
-      })
-      .roundRect(-floatingPlateWidth * 0.42, -0.22, floatingPlateWidth * 0.84, 0.24, 0.12)
-      .fill({ color: 0xffffff, alpha: 0.1 });
-    floatingNumberPlate.position.set(0, -8.28);
-    token.addChild(floatingNumberPlate);
+    const markerWidth = isDoubleDigitLabel ? 2.22 : 1.92;
+    const markerY = 3.84;
+    const groundedMarkerShadow = new Graphics();
+    groundedMarkerShadow
+      .ellipse(0, markerY + 0.34, markerWidth * 0.58, 0.24)
+      .fill({ color: 0x020617, alpha: 0.17 });
+    token.addChild(groundedMarkerShadow);
 
-    const floatingNumberText = new Text({
+    const groundedMarker = new Graphics();
+    groundedMarker
+      .ellipse(0, markerY, markerWidth * 0.5, 0.44)
+      .fill({ color: 0x0f172a, alpha: 0.42 })
+      .ellipse(0, markerY - 0.05, markerWidth * 0.42, 0.32)
+      .fill({ color: 0x1e293b, alpha: 0.26 })
+      .ellipse(0, markerY - 0.18, markerWidth * 0.2, 0.09)
+      .fill({ color: 0xffffff, alpha: 0.1 });
+    token.addChild(groundedMarker);
+
+    const groundedNumberShadow = new Text({
+      text: label,
+      style: {
+        fill: 0x020617,
+        fontSize: isDoubleDigitLabel ? 1.44 : 1.56,
+        fontWeight: "900",
+        fontFamily: "\"Barlow Condensed\", \"Inter Tight\", Inter, system-ui, sans-serif",
+        align: "center",
+        letterSpacing: isDoubleDigitLabel ? 0.01 : 0.03,
+      },
+    });
+    groundedNumberShadow.anchor.set(0.5, 0.5);
+    groundedNumberShadow.position.set(0, markerY + 0.05);
+    groundedNumberShadow.alpha = 0.26;
+    groundedNumberShadow.resolution = textResolution;
+    groundedNumberShadow.roundPixels = true;
+    token.addChild(groundedNumberShadow);
+
+    const groundedNumberText = new Text({
       text: label,
       style: {
         fill: 0xf8fafc,
-        fontSize: isDoubleDigitLabel ? 1.66 : 1.76,
+        fontSize: isDoubleDigitLabel ? 1.44 : 1.56,
         fontWeight: "900",
         fontFamily: "\"Barlow Condensed\", \"Inter Tight\", Inter, system-ui, sans-serif",
         align: "center",
         letterSpacing: isDoubleDigitLabel ? 0.01 : 0.03,
         stroke: {
           color: 0x111827,
-          width: 0.22,
+          width: 0.16,
           join: "round",
         },
       },
     });
-    floatingNumberText.anchor.set(0.5, 0.5);
-    floatingNumberText.position.set(0, -8.28);
-    floatingNumberText.resolution = textResolution;
-    floatingNumberText.roundPixels = true;
-    token.addChild(floatingNumberText);
+    groundedNumberText.anchor.set(0.5, 0.5);
+    groundedNumberText.position.set(0, markerY);
+    groundedNumberText.resolution = textResolution;
+    groundedNumberText.roundPixels = true;
+    token.addChild(groundedNumberText);
   }
 
   const sanitizedNameplate = typeof nameplateLabel === "string"
