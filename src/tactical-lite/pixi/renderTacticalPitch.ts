@@ -248,8 +248,24 @@ function drawMarkings(
   markings: readonly PitchMarking[],
   options?: { skipLineGlowMarked?: boolean },
 ): void {
+  const drawEllipseArc = (mark: Extract<PitchMarking, { kind: "ellipseArc" }>) => {
+    const stroke = { ...lineStroke(mark.stroke, mark.strokeWidth), cap: mark.strokeLinecap ?? "round" as const };
+    const steps = Math.max(24, Math.ceil(Math.abs(mark.endAngle - mark.startAngle) / (Math.PI / 36)));
+    const angleDelta = mark.endAngle - mark.startAngle;
+    const startX = mark.cx + Math.cos(mark.startAngle) * mark.rx;
+    const startY = mark.cy + Math.sin(mark.startAngle) * mark.ry;
+    g.moveTo(startX, startY);
+    for (let i = 0; i < steps; i += 1) {
+      const t1 = (i + 1) / steps;
+      const a1 = mark.startAngle + angleDelta * t1;
+      const x1 = mark.cx + Math.cos(a1) * mark.rx;
+      const y1 = mark.cy + Math.sin(a1) * mark.ry;
+      g.lineTo(x1, y1);
+    }
+    g.stroke(stroke);
+  };
   for (const m of markings) {
-    if (options?.skipLineGlowMarked && m.kind === "path" && m.skipLineGlow) {
+    if (options?.skipLineGlowMarked && "skipLineGlow" in m && m.skipLineGlow) {
       continue;
     }
     switch (m.kind) {
@@ -304,6 +320,11 @@ function drawMarkings(
         } else {
           g.path(path).stroke({ ...stroke, cap: m.strokeLinecap ?? "round" });
         }
+        break;
+      }
+      case "ellipseArc": {
+        if (m.stroke === "none" || m.strokeWidth <= 0) break;
+        drawEllipseArc(m);
         break;
       }
       default:
