@@ -2801,7 +2801,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         borderRadius: "9px",
         border: "1px solid rgba(129, 157, 144, 0.12)",
         background: "rgba(9, 16, 20, 0.44)",
-        overflowX: "hidden",
+        overflowX: "hidden" as const,
       }
     : COACH_HUB_TAB_GRID_STYLE;
   const coachHubTabButtonStyle = isCompactLandscapeTools
