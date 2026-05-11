@@ -81,25 +81,19 @@ export function createPremiumPlayerToken({
     text: String(number),
     style: {
       fill: 0xffffff,
-      fontSize: 3.95,
-      fontWeight: "800",
+      fontSize: 4.74,
+      fontWeight: "900",
       align: "center",
       fontFamily: "Inter, system-ui, sans-serif",
       stroke: {
         color: 0x0b1220,
-        width: 0.52,
+        width: 0.74,
         join: "round",
-      },
-      dropShadow: {
-        alpha: 0.58,
-        blur: 1.3,
-        color: 0x020617,
-        distance: 0.35,
-        angle: Math.PI / 2,
       },
     },
   });
-  numberLabel.anchor.set(0.5, 0.525);
+  numberLabel.anchor.set(0.5, 0.5);
+  numberLabel.position.y = -radius * 0.1;
   token.addChild(numberLabel);
 
   return { token, shadow };
