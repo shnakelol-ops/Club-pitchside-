@@ -403,7 +403,7 @@ const STADIUM_FLOODLIGHT_CSS = `
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 14px;
+  height: 12px;
   margin: 0;
   padding: 0;
   background: transparent;
@@ -415,7 +415,7 @@ const STADIUM_FLOODLIGHT_CSS = `
 }
 
 .speed-control-range::-webkit-slider-runnable-track {
-  height: 6px;
+  height: 5px;
   border-radius: 999px;
   border: 1px solid rgba(225, 232, 228, 0.42);
   background: var(
@@ -427,31 +427,31 @@ const STADIUM_FLOODLIGHT_CSS = `
 .speed-control-range::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   border-radius: 999px;
   border: 1px solid rgba(14, 20, 19, 0.8);
   background: #f8fbfa;
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5), 0 2px 5px rgba(0, 0, 0, 0.34);
-  margin-top: -5px;
+  margin-top: -4px;
 }
 
 .speed-control-range::-moz-range-track {
-  height: 6px;
+  height: 5px;
   border-radius: 999px;
   border: 1px solid rgba(225, 232, 228, 0.42);
   background: rgba(255, 255, 255, 0.9);
 }
 
 .speed-control-range::-moz-range-progress {
-  height: 6px;
+  height: 5px;
   border-radius: 999px;
   background: rgba(34, 197, 94, 0.95);
 }
 
 .speed-control-range::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   border-radius: 999px;
   border: 1px solid rgba(14, 20, 19, 0.8);
   background: #f8fbfa;
@@ -1367,12 +1367,12 @@ const UNDO_PHASE_BUTTON_STYLE: CSSProperties = {
 
 const PLAYBACK_SPEED_BAR_STYLE: CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "auto minmax(96px, 1fr) auto",
+  gridTemplateColumns: "auto 56px auto",
   alignItems: "center",
-  gap: "8px",
-  minWidth: "170px",
-  height: "34px",
-  padding: "0 10px",
+  gap: "5px",
+  minWidth: "116px",
+  height: "30px",
+  padding: "0 7px",
   borderRadius: "999px",
   border: "1px solid rgba(211, 224, 217, 0.32)",
   background: "rgba(10, 20, 16, 0.72)",
@@ -1383,19 +1383,19 @@ const PLAYBACK_SPEED_BAR_STYLE: CSSProperties = {
 };
 
 const PLAYBACK_SPEED_LABEL_STYLE: CSSProperties = {
-  color: "rgba(230, 238, 233, 0.82)",
+  color: "rgba(230, 238, 233, 0.62)",
   fontFamily: "Inter, system-ui, sans-serif",
-  fontSize: "9px",
-  fontWeight: 650,
-  letterSpacing: "0.28px",
+  fontSize: "8px",
+  fontWeight: 620,
+  letterSpacing: "0.22px",
 };
 
 const PLAYBACK_SPEED_VALUE_STYLE: CSSProperties = {
   color: "#eef7f1",
   fontFamily: "Inter, system-ui, sans-serif",
-  fontSize: "10px",
+  fontSize: "9px",
   fontWeight: 700,
-  letterSpacing: "0.2px",
+  letterSpacing: "0.14px",
   textAlign: "right",
 };
 
