@@ -100,6 +100,17 @@ type LiveMatchCounts = {
 };
 
 type ViewportRect = { left: number; top: number; width: number; height: number };
+type MatchShareSummaryInput = {
+  homeTeamName: string;
+  awayTeamName: string;
+  venueLabel: string;
+  stateLabel: string;
+  clockLabel: string;
+  homeScore: TeamScore;
+  awayScore: TeamScore;
+  eventCount: number;
+  liveCounts: LiveMatchCounts;
+};
 
 const UTILITY_BUBBLE_SIZE = 39;
 const UTILITY_BUBBLE_MARGIN = 12;
@@ -979,6 +990,50 @@ function getViewportRect(): ViewportRect {
   };
 }
 
+function getMobileViewportHeight(): number {
+  if (typeof window === "undefined") return 0;
+  const viewport = window.visualViewport;
+  const visualViewportHeight =
+    viewport && Number.isFinite(viewport.height) ? Math.round(viewport.height) : 0;
+  const innerHeight =
+    Number.isFinite(window.innerHeight) ? Math.round(window.innerHeight) : 0;
+  return Math.max(0, visualViewportHeight || innerHeight);
+}
+
+function safeShareLabel(value: unknown, fallback: string): string {
+  if (typeof value !== "string") return fallback;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : fallback;
+}
+
+function safeShareCount(value: unknown): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) return 0;
+  return Math.max(0, Math.floor(value));
+}
+
+function buildMatchShareSummaryText(input: MatchShareSummaryInput): string {
+  return [
+    `${safeShareLabel(input.homeTeamName, "Team A")} ${formatGaelicScore(input.homeScore)} (${safeShareCount(input.homeScore.total)})`,
+    `${safeShareLabel(input.awayTeamName, "Team B")} ${formatGaelicScore(input.awayScore)} (${safeShareCount(input.awayScore.total)})`,
+    "",
+    `📍 Venue: ${safeShareLabel(input.venueLabel, "Unknown venue")}`,
+    `⏱ State: ${safeShareLabel(input.stateLabel, "Unknown")}`,
+    `🕒 Clock: ${safeShareLabel(input.clockLabel, "00:00")}`,
+    "",
+    "📊 Match Summary",
+    `Events: ${safeShareCount(input.eventCount)}`,
+    `Goals: ${safeShareCount(input.liveCounts.goals)}`,
+    `Points: ${safeShareCount(input.liveCounts.points)}`,
+    `Shots: ${safeShareCount(input.liveCounts.shots)}`,
+    `Wides: ${safeShareCount(input.liveCounts.wides)}`,
+    "",
+    "🔁 Coaching Metrics",
+    `Turnovers: ${safeShareCount(input.liveCounts.turnoverWon)} won / ${safeShareCount(input.liveCounts.turnoverLost)} lost`,
+    `Kickouts: ${safeShareCount(input.liveCounts.kickoutWon)} won / ${safeShareCount(input.liveCounts.kickoutLost)} lost`,
+    `Frees: ${safeShareCount(input.liveCounts.freeWon)} won / ${safeShareCount(input.liveCounts.freeConceded)} conceded`,
+  ].join("\n");
+}
+
 function clampUtilityBubblePosition(
   position: { left: number; top: number },
   viewport: ViewportRect,
@@ -1007,7 +1062,8 @@ const PANEL_CSS = `
   position: fixed;
   inset: 0;
   width: 100dvw;
-  height: 100dvh;
+  height: var(--stats-app-height, 100dvh);
+  min-height: var(--stats-app-height, 100dvh);
   margin: 0;
   display: flex;
   align-items: center;
@@ -2434,6 +2490,7 @@ export default function StatsModeSurface() {
       typeof window !== "undefined" &&
       window.matchMedia("(orientation: landscape)").matches,
   );
+  const [appViewportHeight, setAppViewportHeight] = useState(() => getMobileViewportHeight());
   const selectedEventRef = useRef<MatchEventKind>("POINT");
   const activeTeamRef = useRef<TeamSide>("HOME");
   const activePlayerRef = useRef<string | null>(null);
@@ -2489,6 +2546,12 @@ export default function StatsModeSurface() {
     setVisibleEventLimit: (limit: number | null) => void;
     setEventContext: (context: { half: 1 | 2; timestamp: number; canLog: boolean }) => void;
   } | null>(null);
+  const appRootStyle = useMemo<CSSProperties>(
+    () => ({
+      "--stats-app-height": `${Math.max(0, Math.floor(appViewportHeight))}px`,
+    }),
+    [appViewportHeight],
+  );
   const canEditTeamNames = matchState === "PRE_MATCH";
   const activeSquad =
     squads.find((squad) => squad.id === activeSquadId) ?? squads[0] ?? createDefaultSquad();
@@ -3136,6 +3199,85 @@ export default function StatsModeSurface() {
     };
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    let rafA: number | null = null;
+    let rafB: number | null = null;
+    let settleTimerId: number | null = null;
+
+    const clearScheduled = () => {
+      if (rafA != null) {
+        window.cancelAnimationFrame(rafA);
+        rafA = null;
+      }
+      if (rafB != null) {
+        window.cancelAnimationFrame(rafB);
+        rafB = null;
+      }
+      if (settleTimerId != null) {
+        window.clearTimeout(settleTimerId);
+        settleTimerId = null;
+      }
+    };
+
+    const applyViewportHeight = () => {
+      const nextHeight = getMobileViewportHeight();
+      setAppViewportHeight((prevHeight) =>
+        Math.abs(prevHeight - nextHeight) < 1 ? prevHeight : nextHeight,
+      );
+    };
+
+    const scheduleViewportRecovery = (notifyResize: boolean) => {
+      clearScheduled();
+      applyViewportHeight();
+      rafA = window.requestAnimationFrame(() => {
+        applyViewportHeight();
+        rafB = window.requestAnimationFrame(() => {
+          applyViewportHeight();
+          if (notifyResize) {
+            window.dispatchEvent(new Event("resize"));
+          }
+        });
+      });
+      settleTimerId = window.setTimeout(() => {
+        applyViewportHeight();
+        if (notifyResize) {
+          window.dispatchEvent(new Event("resize"));
+        }
+      }, 180);
+    };
+
+    const handleWindowResize = () => scheduleViewportRecovery(false);
+    const handleOrientationChange = () => scheduleViewportRecovery(true);
+    const handleResume = () => scheduleViewportRecovery(true);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== "visible") return;
+      scheduleViewportRecovery(true);
+    };
+
+    scheduleViewportRecovery(false);
+    const viewport = window.visualViewport;
+    window.addEventListener("resize", handleWindowResize);
+    window.addEventListener("orientationchange", handleOrientationChange);
+    window.addEventListener("focus", handleResume);
+    window.addEventListener("pageshow", handleResume);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    viewport?.addEventListener("resize", handleWindowResize);
+    viewport?.addEventListener("scroll", handleWindowResize);
+
+    return () => {
+      clearScheduled();
+      window.removeEventListener("resize", handleWindowResize);
+      window.removeEventListener("orientationchange", handleOrientationChange);
+      window.removeEventListener("focus", handleResume);
+      window.removeEventListener("pageshow", handleResume);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      viewport?.removeEventListener("resize", handleWindowResize);
+      viewport?.removeEventListener("scroll", handleWindowResize);
+    };
+  }, []);
+
   const startFirstHalfAction = () => {
     const next = startFirstHalf(matchEngineStateRef.current, Date.now());
     matchEngineStateRef.current = next;
@@ -3340,23 +3482,19 @@ export default function StatsModeSurface() {
   };
 
   const shareOrExportMatch = async () => {
-    const homeTeamName = teamNames.HOME.trim() || "Team A";
-    const awayTeamName = teamNames.AWAY.trim() || "Team B";
-    const venueLabel = venueName.trim() || "Unknown venue";
-    const summaryText = [
-      `${homeTeamName} ${formatGaelicScore(homeScore)} (${homeScore.total}) v ${awayTeamName} ${formatGaelicScore(awayScore)} (${awayScore.total})`,
-      `Venue: ${venueLabel}`,
-      `State: ${matchState === "FULL_TIME" ? "Full Time" : matchStateToken}`,
-      `Clock: ${formatMatchClock(matchTimeSeconds)}`,
-      `Events: ${loggedEvents.length}`,
-      `Goals: ${liveCounts.goals}`,
-      `Points: ${liveCounts.points}`,
-      `Shots: ${liveCounts.shots}`,
-      `Wides: ${liveCounts.wides}`,
-      `Turnover Won/Lost: ${liveCounts.turnoverWon}/${liveCounts.turnoverLost}`,
-      `Kickout Won/Lost: ${liveCounts.kickoutWon}/${liveCounts.kickoutLost}`,
-      `Free Won/Conceded: ${liveCounts.freeWon}/${liveCounts.freeConceded}`,
-    ].join("\n");
+    const homeTeamName = safeShareLabel(teamNames.HOME, "Team A");
+    const awayTeamName = safeShareLabel(teamNames.AWAY, "Team B");
+    const summaryText = buildMatchShareSummaryText({
+      homeTeamName,
+      awayTeamName,
+      venueLabel: venueName,
+      stateLabel: matchState === "FULL_TIME" ? "Full Time" : matchStateToken,
+      clockLabel: formatMatchClock(matchTimeSeconds),
+      homeScore,
+      awayScore,
+      eventCount: loggedEvents.length,
+      liveCounts,
+    });
 
     const shareData: ShareData = {
       title: `${homeTeamName} v ${awayTeamName}`,
@@ -4466,7 +4604,7 @@ export default function StatsModeSurface() {
 
   return (
     <>
-      <main className="app-root">
+      <main className="app-root" style={appRootStyle}>
         <style>{PANEL_CSS}</style>
         <div
           className={`stats-stadium-background${isPitchReady ? " stats-stadium-background--ready" : ""}`}
