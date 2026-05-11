@@ -121,12 +121,15 @@ function getReadableTextColors(backgroundColor: number): {
   };
 }
 
+const MICRO_ATHLETE_BODY_WIDTH_SCALE = 0.92;
+const MICRO_ATHLETE_HEAD_SCALE = 0.9;
+const MICRO_ATHLETE_BADGE_SCALE = 0.9;
 const TORSO_TOP_Y = -6.26;
 const TORSO_BOTTOM_Y = -0.45;
-const TORSO_TOP_LEFT_X = -1.58;
-const TORSO_TOP_RIGHT_X = 1.58;
-const TORSO_BOTTOM_LEFT_X = -0.94;
-const TORSO_BOTTOM_RIGHT_X = 0.94;
+const TORSO_TOP_LEFT_X = -1.58 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
+const TORSO_TOP_RIGHT_X = 1.58 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
+const TORSO_BOTTOM_LEFT_X = -0.94 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
+const TORSO_BOTTOM_RIGHT_X = 0.94 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
 
 function torsoEdgeX(y: number, topX: number, bottomX: number): number {
   const t = (y - TORSO_TOP_Y) / (TORSO_BOTTOM_Y - TORSO_TOP_Y);
@@ -328,7 +331,7 @@ export function createMicroAthleteToken({
   token.cursor = "grab";
   token.scale.set(scale ?? 1);
 
-  const badgeRadius = 3.66;
+  const badgeRadius = 3.66 * MICRO_ATHLETE_BADGE_SCALE;
 
   const shadow = new Graphics();
   shadow
@@ -366,10 +369,13 @@ export function createMicroAthleteToken({
     ? Number(kitPatternColor)
     : mixColor(jerseyFill, jerseyFill === 0xffffff ? 0x111827 : 0xffffff, 0.72);
   // Subtle arms (kept slim for small-scale readability)
+  const armWidth = 0.54 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
+  const leftArmX = -2.26 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
+  const rightArmX = 1.72 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
   body
-    .roundRect(-2.26, -5.2, 0.54, 3.34, 0.26)
+    .roundRect(leftArmX, -5.2, armWidth, 3.34, 0.26)
     .fill({ color: mixColor(jerseyFill, 0x000000, 0.08), alpha: 0.94 })
-    .roundRect(1.72, -5.2, 0.54, 3.34, 0.26)
+    .roundRect(rightArmX, -5.2, armWidth, 3.34, 0.26)
     .fill({ color: mixColor(jerseyFill, 0x000000, 0.15), alpha: 0.94 });
 
   // Torso / jersey (lean upright silhouette with gentle taper)
@@ -402,17 +408,18 @@ export function createMicroAthleteToken({
   // Head (small and clean: no facial details).
   const headColor = 0xf2cfad;
   const hairTone = mixColor(headColor, 0x020617, 0.36);
+  const headRadius = 0.9 * MICRO_ATHLETE_HEAD_SCALE;
   body
     // Tiny soft back-hair cue for quick female-identifying read.
-    .ellipse(-0.7, -6.9, 0.26, 0.19)
+    .ellipse(-0.7, -6.9, 0.26 * MICRO_ATHLETE_HEAD_SCALE, 0.19 * MICRO_ATHLETE_HEAD_SCALE)
     .fill({ color: hairTone, alpha: 0.29 })
-    .ellipse(-0.88, -6.74, 0.14, 0.1)
+    .ellipse(-0.88, -6.74, 0.14 * MICRO_ATHLETE_HEAD_SCALE, 0.1 * MICRO_ATHLETE_HEAD_SCALE)
     .fill({ color: hairTone, alpha: 0.24 })
-    .circle(0.03, -7.16, 0.9)
+    .circle(0.03, -7.16, headRadius)
     .fill({ color: headColor })
-    .ellipse(0.03, -7.5, 0.56, 0.22)
+    .ellipse(0.03, -7.5, 0.56 * MICRO_ATHLETE_HEAD_SCALE, 0.22 * MICRO_ATHLETE_HEAD_SCALE)
     .fill({ color: 0x020617, alpha: 0.16 })
-    .ellipse(-0.1, -7.3, 0.5, 0.21)
+    .ellipse(-0.1, -7.3, 0.5 * MICRO_ATHLETE_HEAD_SCALE, 0.21 * MICRO_ATHLETE_HEAD_SCALE)
     .fill({ color: 0xffffff, alpha: 0.12 });
   athlete.addChild(body);
 
@@ -423,7 +430,7 @@ export function createMicroAthleteToken({
     ? "\"Barlow Condensed\", \"Inter Tight\", Inter, system-ui, sans-serif"
     : "Inter, system-ui, sans-serif";
   const labelBaseY = isNumericLabel ? -0.2 : -0.06;
-  const labelFontSize = isNumericLabel ? 4.54 : 3.78;
+  const labelFontSize = isNumericLabel ? 4.3 : 3.6;
   const labelFontWeight = isNumericLabel ? "900" : "800";
   const labelLetterSpacing = isNumericLabel ? 0.03 : 0.12;
   const textResolution =
@@ -455,7 +462,7 @@ export function createMicroAthleteToken({
   if (isNumericLabel) {
     const labelContrastPlate = new Graphics();
     labelContrastPlate
-      .roundRect(-1.42, -1.44, 2.84, 1.94, 0.58)
+      .roundRect(-1.42 * MICRO_ATHLETE_BADGE_SCALE, -1.44 * MICRO_ATHLETE_BADGE_SCALE, 2.84 * MICRO_ATHLETE_BADGE_SCALE, 1.94 * MICRO_ATHLETE_BADGE_SCALE, 0.58 * MICRO_ATHLETE_BADGE_SCALE)
       .fill({ color: labelColors.contrastPlate, alpha: 0.12 });
     labelContrastPlate.position.y = labelBaseY;
     token.addChild(labelContrastPlate);
