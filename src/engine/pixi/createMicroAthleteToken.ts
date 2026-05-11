@@ -135,12 +135,12 @@ function isWarmJerseyTone(color: number): boolean {
 const MICRO_ATHLETE_BODY_WIDTH_SCALE = 0.92;
 const MICRO_ATHLETE_HEAD_SCALE = 0.9;
 const MICRO_ATHLETE_BADGE_SCALE = 0.9;
-const TORSO_TOP_Y = -6.26;
-const TORSO_BOTTOM_Y = -0.45;
-const TORSO_TOP_LEFT_X = -1.58 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
-const TORSO_TOP_RIGHT_X = 1.58 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
-const TORSO_BOTTOM_LEFT_X = -0.94 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
-const TORSO_BOTTOM_RIGHT_X = 0.94 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
+const TORSO_TOP_Y = -6.24;
+const TORSO_BOTTOM_Y = -1.32;
+const TORSO_TOP_LEFT_X = -1.4 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
+const TORSO_TOP_RIGHT_X = 1.4 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
+const TORSO_BOTTOM_LEFT_X = -0.7 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
+const TORSO_BOTTOM_RIGHT_X = 0.7 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
 
 function torsoEdgeX(y: number, topX: number, bottomX: number): number {
   const t = (y - TORSO_TOP_Y) / (TORSO_BOTTOM_Y - TORSO_TOP_Y);
@@ -321,6 +321,7 @@ export function createMicroAthleteToken({
   scale,
   kitPattern = "plain",
   kitPatternColor,
+  nameplateLabel,
   renderVariant = "classic-badge",
 }: {
   label: string;
@@ -329,6 +330,7 @@ export function createMicroAthleteToken({
   scale?: number;
   kitPattern?: MicroAthleteKitPattern;
   kitPatternColor?: number;
+  nameplateLabel?: string;
   renderVariant?: MicroAthleteTokenRenderVariant;
 }): { token: Container; shadow: Graphics } {
   const defaults = DEFAULT_STYLE_BY_TEAM[teamColor];
@@ -348,12 +350,13 @@ export function createMicroAthleteToken({
   const useClassicBadge = renderVariant === "classic-badge";
 
   const shadow = new Graphics();
+  const shadowScale = useClassicBadge ? 1 : 0.78;
   shadow
-    .ellipse(0.54, badgeRadius * 1.28, badgeRadius * 1.72, badgeRadius * 0.72)
+    .ellipse(0.48, badgeRadius * 1.26, badgeRadius * 1.72 * shadowScale, badgeRadius * 0.72 * shadowScale)
     .fill({ color: 0x020617, alpha: 0.05 })
-    .ellipse(0.54, badgeRadius * 1.19, badgeRadius * 1.44, badgeRadius * 0.5)
+    .ellipse(0.48, badgeRadius * 1.17, badgeRadius * 1.44 * shadowScale, badgeRadius * 0.5 * shadowScale)
     .fill({ color: 0x020617, alpha: 0.085 })
-    .ellipse(0.54, badgeRadius * 1.1, badgeRadius * 1.16, badgeRadius * 0.36)
+    .ellipse(0.48, badgeRadius * 1.08, badgeRadius * 1.16 * shadowScale, badgeRadius * 0.36 * shadowScale)
     .fill({ color: 0x020617, alpha: 0.13 });
   token.addChild(shadow);
 
@@ -383,14 +386,14 @@ export function createMicroAthleteToken({
     ? Number(kitPatternColor)
     : mixColor(jerseyFill, jerseyFill === 0xffffff ? 0x111827 : 0xffffff, 0.72);
   // Subtle arms (kept slim for small-scale readability)
-  const armWidth = 0.54 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
-  const leftArmX = -2.26 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
-  const rightArmX = 1.72 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
+  const armWidth = 0.44 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
+  const leftArmX = -1.98 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
+  const rightArmX = 1.56 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
   body
-    .roundRect(leftArmX, -5.2, armWidth, 3.34, 0.26)
-    .fill({ color: mixColor(jerseyFill, 0x000000, 0.08), alpha: 0.94 })
-    .roundRect(rightArmX, -5.2, armWidth, 3.34, 0.26)
-    .fill({ color: mixColor(jerseyFill, 0x000000, 0.15), alpha: 0.94 });
+    .roundRect(leftArmX, -5.16, armWidth, 2.86, 0.23)
+    .fill({ color: mixColor(jerseyFill, 0x000000, 0.12), alpha: 0.95 })
+    .roundRect(rightArmX, -5.16, armWidth, 2.86, 0.23)
+    .fill({ color: mixColor(jerseyFill, 0x000000, 0.18), alpha: 0.95 });
 
   // Torso / jersey (lean upright silhouette with gentle taper)
   drawTorsoPath(body);
@@ -403,21 +406,33 @@ export function createMicroAthleteToken({
 
   // Internal polish without thick cartoon outlines.
   body
-    .ellipse(0.46, -2.64, 0.82, 2.42)
-    .fill({ color: 0x020617, alpha: 0.16 })
-    .ellipse(-0.38, -5.08, 0.74, 0.38)
-    .fill({ color: 0xffffff, alpha: 0.17 })
-    .roundRect(-0.72, -1.1, 1.44, 0.74, 0.34)
-    .fill({ color: 0x020617, alpha: 0.11 });
+    .roundRect(-0.42, -6.56, 0.84, 0.54, 0.18)
+    .fill({ color: mixColor(jerseyFill, 0xffffff, 0.28), alpha: 0.92 })
+    .ellipse(0.34, -3.42, 0.66, 1.84)
+    .fill({ color: 0x020617, alpha: 0.13 })
+    .ellipse(-0.3, -5.0, 0.58, 0.28)
+    .fill({ color: 0xffffff, alpha: 0.16 });
+  body
+    .moveTo(-1.04, -1.74)
+    .lineTo(1.04, -1.74)
+    .stroke({ color: mixColor(jerseyFill, 0x020617, 0.58), width: 0.16, alpha: 0.42 });
 
   // Shorts + subtle legs
   body
-    .roundRect(-0.92, -0.8, 1.84, 0.7, 0.22)
-    .fill({ color: mixColor(jerseyFill, 0x000000, 0.34), alpha: 0.88 })
-    .roundRect(-0.8, -0.1, 0.58, 2.28, 0.26)
-    .fill({ color: 0x334155, alpha: 0.92 })
-    .roundRect(0.22, -0.1, 0.58, 2.28, 0.26)
-    .fill({ color: 0x334155, alpha: 0.92 });
+    .roundRect(-0.98, -1.34, 1.96, 1.32, 0.24)
+    .fill({ color: mixColor(jerseyFill, 0x020617, 0.46), alpha: 0.96 })
+    .roundRect(-0.82, -0.02, 0.56, 2.2, 0.23)
+    .fill({ color: 0x334155, alpha: 0.94 })
+    .roundRect(0.26, -0.02, 0.56, 2.2, 0.23)
+    .fill({ color: 0x334155, alpha: 0.94 })
+    .roundRect(-0.82, 1.44, 0.56, 0.56, 0.16)
+    .fill({ color: 0xe2e8f0, alpha: 0.95 })
+    .roundRect(0.26, 1.44, 0.56, 0.56, 0.16)
+    .fill({ color: 0xe2e8f0, alpha: 0.95 })
+    .roundRect(-0.9, 2, 0.72, 0.22, 0.12)
+    .fill({ color: 0x0f172a, alpha: 0.9 })
+    .roundRect(0.18, 2, 0.72, 0.22, 0.12)
+    .fill({ color: 0x0f172a, alpha: 0.9 });
 
   // Head (small and clean: no facial details).
   const headColor = 0xf2cfad;
@@ -466,7 +481,7 @@ export function createMicroAthleteToken({
   const labelFontFamily = isNumericLabel
     ? "\"Barlow Condensed\", \"Inter Tight\", Inter, system-ui, sans-serif"
     : "Inter, system-ui, sans-serif";
-  const labelBaseY = useClassicBadge ? (isNumericLabel ? -0.2 : -0.06) : (isNumericLabel ? -3.18 : -3.08);
+  const labelBaseY = useClassicBadge ? (isNumericLabel ? -0.2 : -0.06) : (isNumericLabel ? -3.24 : -3.08);
   const labelFontSize = useClassicBadge ? (isNumericLabel ? 4.3 : 3.6) : (isNumericLabel ? 3.44 : 2.72);
   const labelFontWeight = isNumericLabel ? "900" : "800";
   const labelLetterSpacing = useClassicBadge ? (isNumericLabel ? 0.03 : 0.12) : (isNumericLabel ? 0.02 : 0.08);
@@ -584,6 +599,38 @@ export function createMicroAthleteToken({
     labelEmbossHighlight.resolution = textResolution;
     labelEmbossHighlight.roundPixels = true;
     labelContainer.addChild(labelEmbossHighlight);
+  }
+
+  const sanitizedNameplate = typeof nameplateLabel === "string"
+    ? nameplateLabel.trim().toUpperCase().replace(/\s+/g, " ").slice(0, 10)
+    : "";
+  if (!useClassicBadge && sanitizedNameplate.length > 0) {
+    const nameplateWidth = Math.min(5.8, Math.max(2.4, 1.64 + sanitizedNameplate.length * 0.43));
+    const nameplate = new Graphics();
+    nameplate
+      .roundRect(-nameplateWidth * 0.5, 0, nameplateWidth, 0.95, 0.26)
+      .fill({ color: 0x030712, alpha: 0.72 })
+      .stroke({ color: 0xe2e8f0, alpha: 0.14, width: 0.08, join: "round" });
+    nameplate.position.y = 4.08;
+    token.addChild(nameplate);
+
+    const nameplateText = new Text({
+      text: sanitizedNameplate,
+      style: {
+        fill: 0xf8fafc,
+        fontSize: 0.76,
+        fontWeight: "700",
+        fontFamily: "Inter, system-ui, sans-serif",
+        align: "center",
+        letterSpacing: 0.08,
+      },
+    });
+    nameplateText.anchor.set(0.5, 0.5);
+    nameplateText.position.set(0, 4.54);
+    nameplateText.alpha = 0.94;
+    nameplateText.resolution = textResolution;
+    nameplateText.roundPixels = true;
+    token.addChild(nameplateText);
   }
 
   return { token, shadow };

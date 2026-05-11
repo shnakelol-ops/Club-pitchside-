@@ -827,12 +827,13 @@ export async function createTacticalPadLiteSurface(
     return sanitizeKitColor(player.kitPatternColor) ?? defaultKitPatternColor(baseColor);
   }
 
-  function resolvePlayerLabel(player: Pick<TacticalPlayer, "number" | "labelMode" | "initials">): string {
-    const labelMode = sanitizeLabelMode(player.labelMode) ?? "number";
+  function resolvePlayerNameplateLabel(player: Pick<TacticalPlayer, "initials">): string | undefined {
     const initials = sanitizeInitials(player.initials);
-    if (labelMode === "initials" && initials) {
-      return initials;
-    }
+    if (!initials) return undefined;
+    return initials.slice(0, 10);
+  }
+
+  function resolvePlayerNumberLabel(player: Pick<TacticalPlayer, "number">): string {
     return safePlayerNumberLabel(player.number);
   }
 
@@ -850,9 +851,11 @@ export async function createTacticalPadLiteSurface(
     const baseColor = getEffectiveKitBaseColor(player);
     const pattern = getEffectiveKitPattern(player);
     const patternColor = getEffectiveKitPatternColor(player);
-    const label = resolvePlayerLabel(player);
+    const label = resolvePlayerNumberLabel(player);
+    const nameplateLabel = resolvePlayerNameplateLabel(player);
     return createMicroAthleteToken({
       label,
+      nameplateLabel,
       teamColor: player.teamColor,
       scale: (PLAYER_RADIUS / 4.1) * TACTICAL_PLAYER_VISUAL_SCALE,
       renderVariant: microAthleteRenderVariant,
