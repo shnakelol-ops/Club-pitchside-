@@ -60,6 +60,22 @@ type PathSpec = {
   skipLineGlow?: boolean;
 };
 
+type EllipseArcSpec = {
+  kind: "ellipseArc";
+  cx: number;
+  cy: number;
+  rx: number;
+  ry: number;
+  startAngle: number;
+  endAngle: number;
+  anticlockwise?: boolean;
+  stroke: string;
+  strokeWidth: number;
+  opacity?: number;
+  strokeLinecap?: "round" | "butt";
+  skipLineGlow?: boolean;
+};
+
 type TextSpec = {
   kind: "text";
   x: number;
@@ -78,6 +94,7 @@ export type PitchMarking =
   | CircleSpec
   | EllipseSpec
   | PathSpec
+  | EllipseArcSpec
   | TextSpec;
 
 export type PitchConfig = {
@@ -179,18 +196,21 @@ const GAELIC_TWO_POINT_RADIUS_M = 40;
 const GAELIC_PENALTY_SPOT_M = 11;
 
 function buildGaelicFootballLandscapeMarkings(): PitchMarking[] {
-  const playW = 156;
-  const playH = 96;
-  const ix = 2;
-  const iy = 2;
-  const xRight = ix + playW;
-  const yBottom = iy + playH;
+  const pitchLeft = 2;
+  const pitchTop = 2;
+  const pitchWidth = 156;
+  const pitchHeight = 96;
+  const pitchRight = pitchLeft + pitchWidth;
+  const pitchBottom = pitchTop + pitchHeight;
+  const leftGoalLineX = pitchLeft;
+  const rightGoalLineX = pitchRight;
+
   const Lm = GAELIC_LANDSCAPE_LEN_M;
   const t13 = 13 / Lm;
   const t20 = 20 / Lm;
   const t45 = 45 / Lm;
   const t65 = 65 / Lm;
-  const xAt = (lenFrac: number) => ix + lenFrac * playW;
+  const xAt = (lenFrac: number) => pitchLeft + lenFrac * pitchWidth;
 
   const dash13 = "4.2 3.6";
   const wTouch = 0.52;
@@ -204,87 +224,85 @@ function buildGaelicFootballLandscapeMarkings(): PitchMarking[] {
   const wD = 0.48;
   const w2Point = 0.48;
 
-  const cx = ix + 0.5 * playW;
-  const cy = iy + 0.5 * playH;
+  const centreY = pitchTop + 0.5 * pitchHeight;
 
   const x13L = xAt(t13);
   const x13R = xAt(1 - t13);
-  const x20L = xAt(t20);
-  const x20R = xAt(1 - t20);
+  const left20mX = xAt(t20);
+  const right20mX = xAt(1 - t20);
   const x45L = xAt(t45);
   const x45R = xAt(1 - t45);
   const x65L = xAt(t65);
   const x65R = xAt(1 - t65);
   const xMid = xAt(0.5);
 
-  const smallDeep = (GAELIC_SMALL_DEEP_M / GAELIC_LANDSCAPE_LEN_M) * playW;
-  const smallWide = (GAELIC_SMALL_WIDE_M / GAELIC_LANDSCAPE_WID_M) * playH;
-  const largeDeep = (GAELIC_LARGE_DEEP_M / GAELIC_LANDSCAPE_LEN_M) * playW;
-  const largeWide = (GAELIC_LARGE_WIDE_M / GAELIC_LANDSCAPE_WID_M) * playH;
+  const smallDeep = (GAELIC_SMALL_DEEP_M / GAELIC_LANDSCAPE_LEN_M) * pitchWidth;
+  const smallWide = (GAELIC_SMALL_WIDE_M / GAELIC_LANDSCAPE_WID_M) * pitchHeight;
+  const largeDeep = (GAELIC_LARGE_DEEP_M / GAELIC_LANDSCAPE_LEN_M) * pitchWidth;
+  const largeWide = (GAELIC_LARGE_WIDE_M / GAELIC_LANDSCAPE_WID_M) * pitchHeight;
 
-  const ySmallTop = cy - smallWide / 2;
-  const yLargeTop = cy - largeWide / 2;
+  const ySmallTop = centreY - smallWide / 2;
+  const yLargeTop = centreY - largeWide / 2;
 
-  const centreStartLen = (8 / GAELIC_LANDSCAPE_WID_M) * playH;
-  const yCentreTop = cy - centreStartLen / 2;
-  const yCentreBottom = cy + centreStartLen / 2;
+  const centreStartLen = (8 / GAELIC_LANDSCAPE_WID_M) * pitchHeight;
+  const yCentreTop = centreY - centreStartLen / 2;
+  const yCentreBottom = centreY + centreStartLen / 2;
 
   const xPenL = xAt(GAELIC_PENALTY_SPOT_M / GAELIC_LANDSCAPE_LEN_M);
   const xPenR = xAt(1 - GAELIC_PENALTY_SPOT_M / GAELIC_LANDSCAPE_LEN_M);
   const rSpot = 0.36;
 
-  const rxD = (GAELIC_D_FREE_RADIUS_M / GAELIC_LANDSCAPE_LEN_M) * playW;
-  const ryD = (GAELIC_D_FREE_RADIUS_M / GAELIC_LANDSCAPE_WID_M) * playH;
-  const dLeft = `M ${rnd3(x20L)} ${rnd3(cy - ryD)} A ${rnd3(rxD)} ${rnd3(ryD)} 0 1 1 ${rnd3(x20L)} ${rnd3(cy + ryD)}`;
-  const dRight = `M ${rnd3(x20R)} ${rnd3(cy - ryD)} A ${rnd3(rxD)} ${rnd3(ryD)} 0 1 0 ${rnd3(x20R)} ${rnd3(cy + ryD)}`;
+  const rxD = (GAELIC_D_FREE_RADIUS_M / GAELIC_LANDSCAPE_LEN_M) * pitchWidth;
+  const ryD = (GAELIC_D_FREE_RADIUS_M / GAELIC_LANDSCAPE_WID_M) * pitchHeight;
+  const dArcStart = -Math.PI / 2;
+  const dArcEnd = Math.PI / 2;
 
-  const rx40 = (GAELIC_TWO_POINT_RADIUS_M / GAELIC_LANDSCAPE_LEN_M) * playW;
-  const ry40 = (GAELIC_TWO_POINT_RADIUS_M / GAELIC_LANDSCAPE_WID_M) * playH;
-  const sin60 = Math.sin(Math.PI / 3);
-  const yArcLo = cy - ry40 * sin60;
-  const yArcHi = cy + ry40 * sin60;
-  const twoPtLeft = `M ${rnd3(x20L)} ${rnd3(yArcLo)} A ${rnd3(rx40)} ${rnd3(ry40)} 0 0 1 ${rnd3(x20L)} ${rnd3(yArcHi)}`;
-  const twoPtRight = `M ${rnd3(x20R)} ${rnd3(yArcLo)} A ${rnd3(rx40)} ${rnd3(ry40)} 0 0 0 ${rnd3(x20R)} ${rnd3(yArcHi)}`;
+  const rx40 = (GAELIC_TWO_POINT_RADIUS_M / GAELIC_LANDSCAPE_LEN_M) * pitchWidth;
+  const ry40 = (GAELIC_TWO_POINT_RADIUS_M / GAELIC_LANDSCAPE_WID_M) * pitchHeight;
+  const left20mDx = left20mX - leftGoalLineX;
+  const twoPointAnchorCos = Math.max(-1, Math.min(1, left20mDx / rx40));
+  const twoPointAnchorAngle = Math.acos(twoPointAnchorCos);
 
   return [
-    { kind: "rect", x: ix, y: iy, w: playW, h: playH, stroke: Lg.lineGridStrong, strokeWidth: wTouch },
-    { kind: "line", x1: x13L, y1: iy, x2: x13L, y2: yBottom, stroke: Lg.lineGridSoft, strokeWidth: w13, strokeDasharray: dash13 },
-    { kind: "line", x1: x13R, y1: iy, x2: x13R, y2: yBottom, stroke: Lg.lineGridSoft, strokeWidth: w13, strokeDasharray: dash13 },
-    { kind: "line", x1: x20L, y1: iy, x2: x20L, y2: yBottom, stroke: Lg.lineGridMid, strokeWidth: w20 },
-    { kind: "line", x1: x20R, y1: iy, x2: x20R, y2: yBottom, stroke: Lg.lineGridMid, strokeWidth: w20 },
-    { kind: "line", x1: x45L, y1: iy, x2: x45L, y2: yBottom, stroke: Lg.lineGridStrong, strokeWidth: w45 },
-    { kind: "line", x1: x45R, y1: iy, x2: x45R, y2: yBottom, stroke: Lg.lineGridStrong, strokeWidth: w45 },
-    { kind: "line", x1: x65L, y1: iy, x2: x65L, y2: yBottom, stroke: Lg.lineGridStrong, strokeWidth: w65 },
-    { kind: "line", x1: x65R, y1: iy, x2: x65R, y2: yBottom, stroke: Lg.lineGridStrong, strokeWidth: w65 },
+    { kind: "rect", x: pitchLeft, y: pitchTop, w: pitchWidth, h: pitchHeight, stroke: Lg.lineGridStrong, strokeWidth: wTouch },
+    { kind: "line", x1: x13L, y1: pitchTop, x2: x13L, y2: pitchBottom, stroke: Lg.lineGridSoft, strokeWidth: w13, strokeDasharray: dash13 },
+    { kind: "line", x1: x13R, y1: pitchTop, x2: x13R, y2: pitchBottom, stroke: Lg.lineGridSoft, strokeWidth: w13, strokeDasharray: dash13 },
+    { kind: "line", x1: left20mX, y1: pitchTop, x2: left20mX, y2: pitchBottom, stroke: Lg.lineGridMid, strokeWidth: w20 },
+    { kind: "line", x1: right20mX, y1: pitchTop, x2: right20mX, y2: pitchBottom, stroke: Lg.lineGridMid, strokeWidth: w20 },
+    { kind: "line", x1: x45L, y1: pitchTop, x2: x45L, y2: pitchBottom, stroke: Lg.lineGridStrong, strokeWidth: w45 },
+    { kind: "line", x1: x45R, y1: pitchTop, x2: x45R, y2: pitchBottom, stroke: Lg.lineGridStrong, strokeWidth: w45 },
+    { kind: "line", x1: x65L, y1: pitchTop, x2: x65L, y2: pitchBottom, stroke: Lg.lineGridStrong, strokeWidth: w65 },
+    { kind: "line", x1: x65R, y1: pitchTop, x2: x65R, y2: pitchBottom, stroke: Lg.lineGridStrong, strokeWidth: w65 },
     { kind: "line", x1: xMid, y1: yCentreTop, x2: xMid, y2: yCentreBottom, stroke: Lg.lineCentre, strokeWidth: wHalf },
-    { kind: "circle", cx, cy, r: 0.85, fill: Lg.spot },
-    { kind: "circle", cx: xPenL, cy, r: rSpot, fill: Lg.lineGridStrong, stroke: "rgba(0,0,0,0.18)", strokeWidth: 0.06 },
-    { kind: "circle", cx: xPenR, cy, r: rSpot, fill: Lg.lineGridStrong, stroke: "rgba(0,0,0,0.18)", strokeWidth: 0.06 },
-    { kind: "rect", x: ix, y: yLargeTop, w: largeDeep, h: largeWide, stroke: Lg.lineScoringEnd, strokeWidth: wEnd },
-    { kind: "rect", x: xRight - largeDeep, y: yLargeTop, w: largeDeep, h: largeWide, stroke: Lg.lineScoringEnd, strokeWidth: wEnd },
-    { kind: "rect", x: ix, y: ySmallTop, w: smallDeep, h: smallWide, stroke: Lg.lineScoringEnd, strokeWidth: wEndInner },
-    { kind: "rect", x: xRight - smallDeep, y: ySmallTop, w: smallDeep, h: smallWide, stroke: Lg.lineScoringEnd, strokeWidth: wEndInner },
-    { kind: "path", d: twoPtLeft, stroke: Lg.lineGridStrong, strokeWidth: w2Point, strokeLinecap: "round", skipLineGlow: true },
-    { kind: "path", d: twoPtRight, stroke: Lg.lineGridStrong, strokeWidth: w2Point, strokeLinecap: "round", skipLineGlow: true },
-    { kind: "path", d: dLeft, stroke: Lg.lineGridStrong, strokeWidth: wD, strokeLinecap: "round", skipLineGlow: true },
-    { kind: "path", d: dRight, stroke: Lg.lineGridStrong, strokeWidth: wD, strokeLinecap: "round", skipLineGlow: true },
+    { kind: "circle", cx: xMid, cy: centreY, r: 0.85, fill: Lg.spot },
+    { kind: "circle", cx: xPenL, cy: centreY, r: rSpot, fill: Lg.lineGridStrong, stroke: "rgba(0,0,0,0.18)", strokeWidth: 0.06 },
+    { kind: "circle", cx: xPenR, cy: centreY, r: rSpot, fill: Lg.lineGridStrong, stroke: "rgba(0,0,0,0.18)", strokeWidth: 0.06 },
+    { kind: "rect", x: pitchLeft, y: yLargeTop, w: largeDeep, h: largeWide, stroke: Lg.lineScoringEnd, strokeWidth: wEnd },
+    { kind: "rect", x: pitchRight - largeDeep, y: yLargeTop, w: largeDeep, h: largeWide, stroke: Lg.lineScoringEnd, strokeWidth: wEnd },
+    { kind: "rect", x: pitchLeft, y: ySmallTop, w: smallDeep, h: smallWide, stroke: Lg.lineScoringEnd, strokeWidth: wEndInner },
+    { kind: "rect", x: pitchRight - smallDeep, y: ySmallTop, w: smallDeep, h: smallWide, stroke: Lg.lineScoringEnd, strokeWidth: wEndInner },
+    { kind: "ellipseArc", cx: leftGoalLineX, cy: centreY, rx: rx40, ry: ry40, startAngle: -twoPointAnchorAngle, endAngle: twoPointAnchorAngle, stroke: Lg.lineGridStrong, strokeWidth: w2Point, strokeLinecap: "round" },
+    { kind: "ellipseArc", cx: rightGoalLineX, cy: centreY, rx: rx40, ry: ry40, startAngle: Math.PI - twoPointAnchorAngle, endAngle: Math.PI + twoPointAnchorAngle, stroke: Lg.lineGridStrong, strokeWidth: w2Point, strokeLinecap: "round" },
+    { kind: "ellipseArc", cx: left20mX, cy: centreY, rx: rxD, ry: ryD, startAngle: dArcStart, endAngle: dArcEnd, stroke: Lg.lineGridStrong, strokeWidth: wD, strokeLinecap: "butt" },
+    { kind: "ellipseArc", cx: right20mX, cy: centreY, rx: rxD, ry: ryD, startAngle: Math.PI - dArcEnd, endAngle: Math.PI - dArcStart, stroke: Lg.lineGridStrong, strokeWidth: wD, strokeLinecap: "butt" },
   ];
 }
 
 const gaelicLandscapeMarkings = buildGaelicFootballLandscapeMarkings();
 const hurlingCamogieLandscapeMarkings: PitchMarking[] = (() => {
-  const playW = 156;
-  const playH = 96;
-  const ix = 2;
-  const iy = 2;
-  const xRight = ix + playW;
-  const yBottom = iy + playH;
+  const pitchLeft = 2;
+  const pitchTop = 2;
+  const pitchWidth = 156;
+  const pitchHeight = 96;
+  const pitchRight = pitchLeft + pitchWidth;
+  const pitchBottom = pitchTop + pitchHeight;
+
   const Lm = GAELIC_LANDSCAPE_LEN_M;
   const t13 = 13 / Lm;
   const t20 = 20 / Lm;
   const t45 = 45 / Lm;
   const t65 = 65 / Lm;
-  const xAt = (lenFrac: number) => ix + lenFrac * playW;
+  const xAt = (lenFrac: number) => pitchLeft + lenFrac * pitchWidth;
 
   const dash13 = "4.2 3.6";
   const wTouch = 0.52;
@@ -297,61 +315,60 @@ const hurlingCamogieLandscapeMarkings: PitchMarking[] = (() => {
   const wEndInner = 0.42;
   const wD = 0.48;
 
-  const cx = ix + 0.5 * playW;
-  const cy = iy + 0.5 * playH;
+  const centreY = pitchTop + 0.5 * pitchHeight;
 
   const x13L = xAt(t13);
   const x13R = xAt(1 - t13);
-  const x20L = xAt(t20);
-  const x20R = xAt(1 - t20);
+  const left20mX = xAt(t20);
+  const right20mX = xAt(1 - t20);
   const x45L = xAt(t45);
   const x45R = xAt(1 - t45);
   const x65L = xAt(t65);
   const x65R = xAt(1 - t65);
   const xMid = xAt(0.5);
 
-  const smallDeep = (GAELIC_SMALL_DEEP_M / GAELIC_LANDSCAPE_LEN_M) * playW;
-  const smallWide = (GAELIC_SMALL_WIDE_M / GAELIC_LANDSCAPE_WID_M) * playH;
-  const largeDeep = (GAELIC_LARGE_DEEP_M / GAELIC_LANDSCAPE_LEN_M) * playW;
-  const largeWide = (GAELIC_LARGE_WIDE_M / GAELIC_LANDSCAPE_WID_M) * playH;
+  const smallDeep = (GAELIC_SMALL_DEEP_M / GAELIC_LANDSCAPE_LEN_M) * pitchWidth;
+  const smallWide = (GAELIC_SMALL_WIDE_M / GAELIC_LANDSCAPE_WID_M) * pitchHeight;
+  const largeDeep = (GAELIC_LARGE_DEEP_M / GAELIC_LANDSCAPE_LEN_M) * pitchWidth;
+  const largeWide = (GAELIC_LARGE_WIDE_M / GAELIC_LANDSCAPE_WID_M) * pitchHeight;
 
-  const ySmallTop = cy - smallWide / 2;
-  const yLargeTop = cy - largeWide / 2;
+  const ySmallTop = centreY - smallWide / 2;
+  const yLargeTop = centreY - largeWide / 2;
 
-  const centreStartLen = (8 / GAELIC_LANDSCAPE_WID_M) * playH;
-  const yCentreTop = cy - centreStartLen / 2;
-  const yCentreBottom = cy + centreStartLen / 2;
+  const centreStartLen = (8 / GAELIC_LANDSCAPE_WID_M) * pitchHeight;
+  const yCentreTop = centreY - centreStartLen / 2;
+  const yCentreBottom = centreY + centreStartLen / 2;
 
   const xPenL = xAt(GAELIC_PENALTY_SPOT_M / GAELIC_LANDSCAPE_LEN_M);
   const xPenR = xAt(1 - GAELIC_PENALTY_SPOT_M / GAELIC_LANDSCAPE_LEN_M);
   const rSpot = 0.36;
 
-  const rxD = (GAELIC_D_FREE_RADIUS_M / GAELIC_LANDSCAPE_LEN_M) * playW;
-  const ryD = (GAELIC_D_FREE_RADIUS_M / GAELIC_LANDSCAPE_WID_M) * playH;
-  const dLeft = `M ${rnd3(x20L)} ${rnd3(cy - ryD)} A ${rnd3(rxD)} ${rnd3(ryD)} 0 1 1 ${rnd3(x20L)} ${rnd3(cy + ryD)}`;
-  const dRight = `M ${rnd3(x20R)} ${rnd3(cy - ryD)} A ${rnd3(rxD)} ${rnd3(ryD)} 0 1 0 ${rnd3(x20R)} ${rnd3(cy + ryD)}`;
+  const rxD = (GAELIC_D_FREE_RADIUS_M / GAELIC_LANDSCAPE_LEN_M) * pitchWidth;
+  const ryD = (GAELIC_D_FREE_RADIUS_M / GAELIC_LANDSCAPE_WID_M) * pitchHeight;
+  const dArcStart = -Math.PI / 2;
+  const dArcEnd = Math.PI / 2;
 
   return [
-    { kind: "rect", x: ix, y: iy, w: playW, h: playH, stroke: Lg.lineGridStrong, strokeWidth: wTouch },
-    { kind: "line", x1: x13L, y1: iy, x2: x13L, y2: yBottom, stroke: Lg.lineGridSoft, strokeWidth: w13, strokeDasharray: dash13 },
-    { kind: "line", x1: x13R, y1: iy, x2: x13R, y2: yBottom, stroke: Lg.lineGridSoft, strokeWidth: w13, strokeDasharray: dash13 },
-    { kind: "line", x1: x20L, y1: iy, x2: x20L, y2: yBottom, stroke: Lg.lineGridMid, strokeWidth: w20 },
-    { kind: "line", x1: x20R, y1: iy, x2: x20R, y2: yBottom, stroke: Lg.lineGridMid, strokeWidth: w20 },
-    { kind: "line", x1: x45L, y1: iy, x2: x45L, y2: yBottom, stroke: Lg.lineGridStrong, strokeWidth: w45 },
-    { kind: "line", x1: x45R, y1: iy, x2: x45R, y2: yBottom, stroke: Lg.lineGridStrong, strokeWidth: w45 },
-    { kind: "line", x1: x65L, y1: iy, x2: x65L, y2: yBottom, stroke: Lg.lineGridStrong, strokeWidth: w65 },
-    { kind: "line", x1: x65R, y1: iy, x2: x65R, y2: yBottom, stroke: Lg.lineGridStrong, strokeWidth: w65 },
+    { kind: "rect", x: pitchLeft, y: pitchTop, w: pitchWidth, h: pitchHeight, stroke: Lg.lineGridStrong, strokeWidth: wTouch },
+    { kind: "line", x1: x13L, y1: pitchTop, x2: x13L, y2: pitchBottom, stroke: Lg.lineGridSoft, strokeWidth: w13, strokeDasharray: dash13 },
+    { kind: "line", x1: x13R, y1: pitchTop, x2: x13R, y2: pitchBottom, stroke: Lg.lineGridSoft, strokeWidth: w13, strokeDasharray: dash13 },
+    { kind: "line", x1: left20mX, y1: pitchTop, x2: left20mX, y2: pitchBottom, stroke: Lg.lineGridMid, strokeWidth: w20 },
+    { kind: "line", x1: right20mX, y1: pitchTop, x2: right20mX, y2: pitchBottom, stroke: Lg.lineGridMid, strokeWidth: w20 },
+    { kind: "line", x1: x45L, y1: pitchTop, x2: x45L, y2: pitchBottom, stroke: Lg.lineGridStrong, strokeWidth: w45 },
+    { kind: "line", x1: x45R, y1: pitchTop, x2: x45R, y2: pitchBottom, stroke: Lg.lineGridStrong, strokeWidth: w45 },
+    { kind: "line", x1: x65L, y1: pitchTop, x2: x65L, y2: pitchBottom, stroke: Lg.lineGridStrong, strokeWidth: w65 },
+    { kind: "line", x1: x65R, y1: pitchTop, x2: x65R, y2: pitchBottom, stroke: Lg.lineGridStrong, strokeWidth: w65 },
     { kind: "line", x1: xMid, y1: yCentreTop, x2: xMid, y2: yCentreBottom, stroke: Lg.lineCentre, strokeWidth: wHalf },
-    { kind: "circle", cx, cy, r: 0.85, fill: Lg.spot },
-    { kind: "circle", cx: xPenL, cy, r: rSpot, fill: Lg.lineGridStrong, stroke: "rgba(0,0,0,0.18)", strokeWidth: 0.06 },
-    { kind: "circle", cx: xPenR, cy, r: rSpot, fill: Lg.lineGridStrong, stroke: "rgba(0,0,0,0.18)", strokeWidth: 0.06 },
-    { kind: "rect", x: ix, y: yLargeTop, w: largeDeep, h: largeWide, stroke: Lg.lineScoringEnd, strokeWidth: wEnd },
-    { kind: "rect", x: xRight - largeDeep, y: yLargeTop, w: largeDeep, h: largeWide, stroke: Lg.lineScoringEnd, strokeWidth: wEnd },
-    { kind: "rect", x: ix, y: ySmallTop, w: smallDeep, h: smallWide, stroke: Lg.lineScoringEnd, strokeWidth: wEndInner },
-    { kind: "rect", x: xRight - smallDeep, y: ySmallTop, w: smallDeep, h: smallWide, stroke: Lg.lineScoringEnd, strokeWidth: wEndInner },
+    { kind: "circle", cx: xMid, cy: centreY, r: 0.85, fill: Lg.spot },
+    { kind: "circle", cx: xPenL, cy: centreY, r: rSpot, fill: Lg.lineGridStrong, stroke: "rgba(0,0,0,0.18)", strokeWidth: 0.06 },
+    { kind: "circle", cx: xPenR, cy: centreY, r: rSpot, fill: Lg.lineGridStrong, stroke: "rgba(0,0,0,0.18)", strokeWidth: 0.06 },
+    { kind: "rect", x: pitchLeft, y: yLargeTop, w: largeDeep, h: largeWide, stroke: Lg.lineScoringEnd, strokeWidth: wEnd },
+    { kind: "rect", x: pitchRight - largeDeep, y: yLargeTop, w: largeDeep, h: largeWide, stroke: Lg.lineScoringEnd, strokeWidth: wEnd },
+    { kind: "rect", x: pitchLeft, y: ySmallTop, w: smallDeep, h: smallWide, stroke: Lg.lineScoringEnd, strokeWidth: wEndInner },
+    { kind: "rect", x: pitchRight - smallDeep, y: ySmallTop, w: smallDeep, h: smallWide, stroke: Lg.lineScoringEnd, strokeWidth: wEndInner },
     // Hurling/Camogie: no football 2-point arc.
-    { kind: "path", d: dLeft, stroke: Lg.lineGridStrong, strokeWidth: wD, strokeLinecap: "round", skipLineGlow: true },
-    { kind: "path", d: dRight, stroke: Lg.lineGridStrong, strokeWidth: wD, strokeLinecap: "round", skipLineGlow: true },
+    { kind: "ellipseArc", cx: left20mX, cy: centreY, rx: rxD, ry: ryD, startAngle: dArcStart, endAngle: dArcEnd, stroke: Lg.lineGridStrong, strokeWidth: wD, strokeLinecap: "butt" },
+    { kind: "ellipseArc", cx: right20mX, cy: centreY, rx: rxD, ry: ryD, startAngle: Math.PI - dArcEnd, endAngle: Math.PI - dArcStart, stroke: Lg.lineGridStrong, strokeWidth: wD, strokeLinecap: "butt" },
   ];
 })();
 
