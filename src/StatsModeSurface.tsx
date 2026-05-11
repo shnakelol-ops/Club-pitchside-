@@ -2546,10 +2546,11 @@ export default function StatsModeSurface() {
     setVisibleEventLimit: (limit: number | null) => void;
     setEventContext: (context: { half: 1 | 2; timestamp: number; canLog: boolean }) => void;
   } | null>(null);
-  const appRootStyle = useMemo<CSSProperties>(
-    () => ({
-      "--stats-app-height": `${Math.max(0, Math.floor(appViewportHeight))}px`,
-    }),
+  const appRootStyle = useMemo(
+    () =>
+      ({
+        "--stats-app-height": `${Math.max(0, Math.floor(appViewportHeight))}px`,
+      }) as CSSProperties,
     [appViewportHeight],
   );
   const canEditTeamNames = matchState === "PRE_MATCH";
