@@ -363,7 +363,7 @@ export function createMicroAthleteToken({
   token.addChild(shadow);
 
   const athlete = new Container();
-  athlete.rotation = -0.048;
+  athlete.rotation = -0.02;
   athlete.position.set(0.1, -0.08);
   token.addChild(athlete);
 
@@ -442,22 +442,16 @@ export function createMicroAthleteToken({
     .roundRect(0.18, 1.18, 0.72, 0.2, 0.11)
     .fill({ color: 0x0f172a, alpha: 0.9 });
 
-  // Head (small and clean: no facial details).
+  // Simplified head shape for tactical readability (no facial details).
   const headColor = 0xf2cfad;
-  const hairTone = mixColor(headColor, 0x020617, 0.36);
-  const headRadius = 0.9 * MICRO_ATHLETE_HEAD_SCALE;
+  const headRadius = 0.88 * MICRO_ATHLETE_HEAD_SCALE;
   body
-    // Tiny soft back-hair cue for quick female-identifying read.
-    .ellipse(-0.7, -6.9, 0.26 * MICRO_ATHLETE_HEAD_SCALE, 0.19 * MICRO_ATHLETE_HEAD_SCALE)
-    .fill({ color: hairTone, alpha: 0.29 })
-    .ellipse(-0.88, -6.74, 0.14 * MICRO_ATHLETE_HEAD_SCALE, 0.1 * MICRO_ATHLETE_HEAD_SCALE)
-    .fill({ color: hairTone, alpha: 0.24 })
-    .circle(0.03, -7.08, headRadius)
+    .circle(0.03, -7.02, headRadius)
     .fill({ color: headColor })
-    .ellipse(0.03, -7.4, 0.56 * MICRO_ATHLETE_HEAD_SCALE, 0.22 * MICRO_ATHLETE_HEAD_SCALE)
-    .fill({ color: 0x020617, alpha: 0.16 })
-    .ellipse(-0.1, -7.2, 0.5 * MICRO_ATHLETE_HEAD_SCALE, 0.21 * MICRO_ATHLETE_HEAD_SCALE)
-    .fill({ color: 0xffffff, alpha: 0.12 });
+    .roundRect(-0.56, -7.7, 1.18, 0.32, 0.15)
+    .fill({ color: 0x1f2937, alpha: 0.82 })
+    .ellipse(0.03, -7.12, 0.48, 0.15)
+    .fill({ color: 0xffffff, alpha: 0.1 });
   athlete.addChild(body);
 
   const badgeBaseColor = jerseyFill;
@@ -489,7 +483,7 @@ export function createMicroAthleteToken({
   const labelFontFamily = isNumericLabel
     ? "\"Barlow Condensed\", \"Inter Tight\", Inter, system-ui, sans-serif"
     : "Inter, system-ui, sans-serif";
-  const labelBaseY = useClassicBadge ? (isNumericLabel ? -0.2 : -0.06) : (isNumericLabel ? -3.54 : -3.16);
+  const labelBaseY = useClassicBadge ? (isNumericLabel ? -0.2 : -0.06) : (isNumericLabel ? -3.72 : -3.22);
   const labelFontSize = useClassicBadge ? (isNumericLabel ? 4.3 : 3.6) : (isNumericLabel ? 3.66 : 2.8);
   const labelFontWeight = isNumericLabel ? "900" : "800";
   const labelLetterSpacing = useClassicBadge ? (isNumericLabel ? 0.03 : 0.12) : (isNumericLabel ? 0.02 : 0.08);
