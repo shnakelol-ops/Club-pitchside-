@@ -37,7 +37,7 @@ type QuickBrowseId = "systems" | "sessions" | "eight-week-plans" | "season-plans
 const BOTTOM_NAV_ITEMS: ReadonlyArray<BottomNavItem> = [
   { id: "home", label: "Home", short: "H", path: "/board" },
   { id: "flowlab", label: "Vision Board", short: "V", path: "/vision-board" },
-  { id: "flowstats", label: "FlowStats", short: "S", path: "/flowstats" },
+  { id: "flowstats", label: "Vision Stats", short: "S", path: "/flowstats" },
   { id: "notes", label: "Notes", short: "N", path: "/notes" },
 ];
 
