@@ -109,7 +109,7 @@ export function createTacticalDrawingController(options: TacticalDrawingControll
   function appendPointToDraft(worldPoint: { x: number; y: number }): void {
     if (!activeDraft) return;
     const normalized = options.mapperProvider().worldToNormalized(worldPoint);
-    if (activeDraft.kind === "wavy-line" || activeDraft.kind === "curved-arrow") {
+    if (activeDraft.kind === "wavy-line" || activeDraft.kind === "free-pen" || activeDraft.kind === "curved-arrow") {
       activeDraft.points.push(normalized);
       return;
     }

@@ -58,12 +58,14 @@ export function getWavyStyle(width: number): {
 }
 
 export function getPointCleanupDistance(kind: TacticalDrawingKind): number {
+  if (kind === "free-pen") return 0.19;
   if (kind === "wavy-line") return 0.23;
   if (kind === "curved-arrow") return 0.2;
   return 0.16;
 }
 
 export function getSmoothIterations(kind: TacticalDrawingKind): number {
+  if (kind === "free-pen") return 1;
   if (kind === "wavy-line") return 1;
   if (kind === "curved-arrow") return 1;
   return 0;

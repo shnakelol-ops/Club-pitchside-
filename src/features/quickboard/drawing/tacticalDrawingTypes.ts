@@ -9,7 +9,10 @@ export type TacticalDrawingKind =
   | "straight-arrow"
   | "curved-arrow"
   | "dashed-arrow"
-  | "wavy-line";
+  | "wavy-line"
+  | "free-pen"
+  | "rectangle-zone"
+  | "circle-zone";
 
 export type TacticalDrawingTool = "move" | TacticalDrawingKind | "eraser";
 
@@ -20,6 +23,9 @@ export type WhiteboardDrawTool =
   | "curved"
   | "dashed"
   | "wavy"
+  | "freePen"
+  | "rectangleZone"
+  | "circleZone"
   | "pen"
   | "eraser";
 
@@ -42,6 +48,9 @@ const LEGACY_TO_KIND: Record<Exclude<WhiteboardDrawTool, "move" | "eraser">, Tac
   dashed: "dashed-arrow",
   curved: "curved-arrow",
   wavy: "wavy-line",
+  freePen: "free-pen",
+  rectangleZone: "rectangle-zone",
+  circleZone: "circle-zone",
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -55,7 +64,16 @@ function sanitizeNumber(value: unknown, fallback: number, min = 0): number {
 
 export function sanitizeDrawingTool(value: unknown): TacticalDrawingTool | null {
   if (value === "move" || value === "eraser") return value;
-  if (value === "plain-line" || value === "straight-arrow" || value === "curved-arrow" || value === "dashed-arrow" || value === "wavy-line") {
+  if (
+    value === "plain-line" ||
+    value === "straight-arrow" ||
+    value === "curved-arrow" ||
+    value === "dashed-arrow" ||
+    value === "wavy-line" ||
+    value === "free-pen" ||
+    value === "rectangle-zone" ||
+    value === "circle-zone"
+  ) {
     return value;
   }
   if (
@@ -64,7 +82,10 @@ export function sanitizeDrawingTool(value: unknown): TacticalDrawingTool | null 
     value === "curved" ||
     value === "dashed" ||
     value === "wavy" ||
-    value === "pen"
+    value === "pen" ||
+    value === "freePen" ||
+    value === "rectangleZone" ||
+    value === "circleZone"
   ) {
     return LEGACY_TO_KIND[value];
   }
@@ -84,6 +105,12 @@ export function drawingToolToWhiteboardTool(tool: TacticalDrawingTool): Whiteboa
       return "dashed";
     case "wavy-line":
       return "wavy";
+    case "free-pen":
+      return "freePen";
+    case "rectangle-zone":
+      return "rectangleZone";
+    case "circle-zone":
+      return "circleZone";
     default:
       return "line";
   }
@@ -102,7 +129,10 @@ function sanitizeDrawingKind(value: unknown): TacticalDrawingKind | null {
     value === "straight-arrow" ||
     value === "curved-arrow" ||
     value === "dashed-arrow" ||
-    value === "wavy-line"
+    value === "wavy-line" ||
+    value === "free-pen" ||
+    value === "rectangle-zone" ||
+    value === "circle-zone"
   ) {
     return value;
   }
@@ -112,7 +142,10 @@ function sanitizeDrawingKind(value: unknown): TacticalDrawingKind | null {
     value === "curved" ||
     value === "dashed" ||
     value === "wavy" ||
-    value === "pen"
+    value === "pen" ||
+    value === "freePen" ||
+    value === "rectangleZone" ||
+    value === "circleZone"
   ) {
     return LEGACY_TO_KIND[value];
   }
@@ -176,7 +209,7 @@ function sanitizeDrawingIdentity(value: unknown): string | null {
 }
 
 function normalizeKindPoints(kind: TacticalDrawingKind, points: NormalizedPoint[]): NormalizedPoint[] {
-  if (kind === "wavy-line") return points;
+  if (kind === "wavy-line" || kind === "free-pen") return points;
   if (kind === "curved-arrow") {
     if (points.length >= 3) {
       return [points[0]!, points[1]!, points[points.length - 1]!];
@@ -229,7 +262,7 @@ function sanitizeLegacySnapshot(
   const geometry = input.geometry;
   if (!isRecord(geometry)) return null;
   let points: NormalizedPoint[] = [];
-  if (legacyType === "pen") {
+  if (legacyType === "pen" || legacyType === "freePen") {
     points = sanitizeWorldPoints(geometry.points, mapper);
   } else {
     const start = sanitizeWorldPoint(geometry.start, mapper);

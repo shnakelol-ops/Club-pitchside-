@@ -14,6 +14,18 @@ import {
 import type { TacticalDrawingKind, TacticalDrawingRecord } from "./tacticalDrawingTypes";
 
 type WorldPoint = { x: number; y: number };
+type ZoneBounds = {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+  width: number;
+  height: number;
+  centerX: number;
+  centerY: number;
+  radiusX: number;
+  radiusY: number;
+};
 
 function distance(a: { x: number; y: number }, b: { x: number; y: number }): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
@@ -303,6 +315,89 @@ function toArrowShaft(path: readonly WorldPoint[], width: number): WorldPoint[] 
   return output;
 }
 
+function getZoneBounds(path: readonly WorldPoint[]): ZoneBounds | null {
+  if (path.length < 2) return null;
+  const start = path[0]!;
+  const end = path[path.length - 1]!;
+  const centerX = (start.x + end.x) * 0.5;
+  const centerY = (start.y + end.y) * 0.5;
+  const width = Math.max(Math.abs(end.x - start.x), 0.35);
+  const height = Math.max(Math.abs(end.y - start.y), 0.35);
+  const left = centerX - width * 0.5;
+  const top = centerY - height * 0.5;
+  const right = left + width;
+  const bottom = top + height;
+  return {
+    left,
+    top,
+    right,
+    bottom,
+    width,
+    height,
+    centerX,
+    centerY,
+    radiusX: width * 0.5,
+    radiusY: height * 0.5,
+  };
+}
+
+function drawRectangleZone(
+  graphics: Graphics,
+  drawing: TacticalDrawingRecord,
+  bounds: ZoneBounds,
+  isSelected: boolean,
+): void {
+  const strokeStyle = createTacticalStrokeStyle(drawing);
+  const borderStyle = {
+    ...strokeStyle,
+    width: Math.max(0.45, strokeStyle.width * 1.12),
+    alpha: Math.max(0.48, Math.min(1, drawing.opacity * 0.92)),
+  };
+  const fillAlpha = Math.max(0.12, Math.min(0.42, drawing.opacity * 0.3));
+  const cornerRadius = Math.min(2.6, Math.max(0.28, Math.min(bounds.width, bounds.height) * 0.08));
+
+  if (isSelected) {
+    graphics.roundRect(bounds.left, bounds.top, bounds.width, bounds.height, cornerRadius).stroke({
+      ...borderStyle,
+      width: borderStyle.width + 0.8,
+      alpha: Math.min(0.92, borderStyle.alpha * 0.46),
+    });
+  }
+
+  graphics
+    .roundRect(bounds.left, bounds.top, bounds.width, bounds.height, cornerRadius)
+    .fill({ color: drawing.color, alpha: fillAlpha })
+    .stroke(borderStyle);
+}
+
+function drawCircleZone(
+  graphics: Graphics,
+  drawing: TacticalDrawingRecord,
+  bounds: ZoneBounds,
+  isSelected: boolean,
+): void {
+  const strokeStyle = createTacticalStrokeStyle(drawing);
+  const borderStyle = {
+    ...strokeStyle,
+    width: Math.max(0.45, strokeStyle.width * 1.12),
+    alpha: Math.max(0.48, Math.min(1, drawing.opacity * 0.92)),
+  };
+  const fillAlpha = Math.max(0.12, Math.min(0.42, drawing.opacity * 0.3));
+
+  if (isSelected) {
+    graphics.ellipse(bounds.centerX, bounds.centerY, bounds.radiusX, bounds.radiusY).stroke({
+      ...borderStyle,
+      width: borderStyle.width + 0.8,
+      alpha: Math.min(0.92, borderStyle.alpha * 0.46),
+    });
+  }
+
+  graphics
+    .ellipse(bounds.centerX, bounds.centerY, bounds.radiusX, bounds.radiusY)
+    .fill({ color: drawing.color, alpha: fillAlpha })
+    .stroke(borderStyle);
+}
+
 function sampleWavyPath(path: readonly WorldPoint[], width: number): WorldPoint[] {
   if (path.length < 2) return path.slice();
   const style = getWavyStyle(width);
@@ -362,6 +457,9 @@ function getDrawingPathWorld(
   if (drawing.kind === "wavy-line") {
     return sampleWavyPath(worldPoints, drawing.width);
   }
+  if (drawing.kind === "free-pen") {
+    return worldPoints;
+  }
   return [worldPoints[0]!, worldPoints[worldPoints.length - 1]!];
 }
 
@@ -393,6 +491,9 @@ function drawArrowPolyline(
 export function normalizeDraftPoints(kind: TacticalDrawingKind, points: readonly NormalizedPoint[]): NormalizedPoint[] {
   const cleaned = cleanupPoints(points.slice(), getPointCleanupDistance(kind));
   const smoothed = chaikinSmooth(cleaned, getSmoothIterations(kind));
+  if (kind === "free-pen") {
+    return smoothed.length >= 2 ? smoothed : cleaned;
+  }
   if (kind === "wavy-line") {
     return smoothed.length >= 2 ? smoothed : cleaned;
   }
@@ -417,6 +518,18 @@ export function renderTacticalDrawing(
   mapper: Pick<WorldViewportMapper, "normalizedToWorld">,
   isSelected = false,
 ): void {
+  if (drawing.kind === "rectangle-zone" || drawing.kind === "circle-zone") {
+    const zonePath = toWorldPoints(drawing.points, mapper);
+    const zoneBounds = getZoneBounds(zonePath);
+    if (!zoneBounds) return;
+    if (drawing.kind === "rectangle-zone") {
+      drawRectangleZone(graphics, drawing, zoneBounds, isSelected);
+      return;
+    }
+    drawCircleZone(graphics, drawing, zoneBounds, isSelected);
+    return;
+  }
+
   const path = getDrawingPathWorld(drawing, mapper);
   if (path.length < 2) return;
   const strokeStyle = createTacticalStrokeStyle(drawing);
@@ -430,6 +543,8 @@ export function renderTacticalDrawing(
       drawArrowPolyline(graphics, path, selectedStyle, true);
     } else if (drawing.kind === "straight-arrow" || drawing.kind === "curved-arrow") {
       drawArrowPolyline(graphics, path, selectedStyle, false);
+    } else if (drawing.kind === "free-pen") {
+      drawSolidPolyline(graphics, path, selectedStyle);
     } else if (drawing.kind === "wavy-line") {
       drawSolidPolyline(graphics, path, selectedStyle);
     } else {
@@ -445,6 +560,33 @@ export function renderTacticalDrawing(
     return;
   }
   drawSolidPolyline(graphics, path, strokeStyle);
+}
+
+function distanceFromPointToRectangleZone(point: WorldPoint, bounds: ZoneBounds): number {
+  if (point.x >= bounds.left && point.x <= bounds.right && point.y >= bounds.top && point.y <= bounds.bottom) {
+    return 0;
+  }
+  const dx = Math.max(bounds.left - point.x, 0, point.x - bounds.right);
+  const dy = Math.max(bounds.top - point.y, 0, point.y - bounds.bottom);
+  return Math.hypot(dx, dy);
+}
+
+function distanceFromPointToCircleZone(point: WorldPoint, bounds: ZoneBounds): number {
+  if (bounds.radiusX <= 1e-4 || bounds.radiusY <= 1e-4) {
+    return distance(point, { x: bounds.centerX, y: bounds.centerY });
+  }
+  const normalizedX = (point.x - bounds.centerX) / bounds.radiusX;
+  const normalizedY = (point.y - bounds.centerY) / bounds.radiusY;
+  const normalizedDistance = Math.hypot(normalizedX, normalizedY);
+  if (normalizedDistance <= 1) {
+    return 0;
+  }
+  const angle = Math.atan2(normalizedY, normalizedX);
+  const edge = {
+    x: bounds.centerX + Math.cos(angle) * bounds.radiusX,
+    y: bounds.centerY + Math.sin(angle) * bounds.radiusY,
+  };
+  return distance(point, edge);
 }
 
 function distanceFromPointToSegment(point: WorldPoint, start: WorldPoint, end: WorldPoint): number {
@@ -480,9 +622,22 @@ export function findClosestDrawingIdAtWorldPoint(
   let bestDistance = Number.POSITIVE_INFINITY;
   for (let index = drawings.length - 1; index >= 0; index -= 1) {
     const drawing = drawings[index]!;
-    const path = getDrawingPathWorld(drawing, mapper);
-    const candidateDistance = distanceFromPointToPath(worldPoint, path);
-    const hitRadius = getDeleteHitRadius(drawing.width);
+    let candidateDistance = Number.POSITIVE_INFINITY;
+    if (drawing.kind === "rectangle-zone" || drawing.kind === "circle-zone") {
+      const zoneBounds = getZoneBounds(toWorldPoints(drawing.points, mapper));
+      if (!zoneBounds) continue;
+      candidateDistance =
+        drawing.kind === "rectangle-zone"
+          ? distanceFromPointToRectangleZone(worldPoint, zoneBounds)
+          : distanceFromPointToCircleZone(worldPoint, zoneBounds);
+    } else {
+      const path = getDrawingPathWorld(drawing, mapper);
+      candidateDistance = distanceFromPointToPath(worldPoint, path);
+    }
+    const hitRadius =
+      drawing.kind === "rectangle-zone" || drawing.kind === "circle-zone"
+        ? Math.max(2.4, getDeleteHitRadius(drawing.width))
+        : getDeleteHitRadius(drawing.width);
     if (candidateDistance <= hitRadius && candidateDistance < bestDistance) {
       bestDistance = candidateDistance;
       bestId = drawing.id;

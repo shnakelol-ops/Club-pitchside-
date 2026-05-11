@@ -65,7 +65,17 @@ const TACTICAL_ITEM_CHOICES: ReadonlyArray<{ label: string; type: TacticalItem["
   { label: "Football", type: "football" },
   { label: "Sliotar", type: "sliotar" },
 ];
-type WhiteboardToolControl = "move" | "line" | "arrow" | "curved" | "dashed" | "wavy" | "eraser";
+type WhiteboardToolControl =
+  | "move"
+  | "line"
+  | "arrow"
+  | "curved"
+  | "dashed"
+  | "wavy"
+  | "freePen"
+  | "rectangleZone"
+  | "circleZone"
+  | "eraser";
 type WhiteboardToolAction = WhiteboardToolControl;
 const WHITEBOARD_BUBBLE_SIZE = 36;
 const WHITEBOARD_BUBBLE_MARGIN = 12;
@@ -3423,6 +3433,27 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                       </button>
                       <button
                         type="button"
+                        style={tacticalTool === "freePen" ? coachHubToolButtonActiveStyle : coachHubToolButtonStyle}
+                        onClick={() => applyTacticalToolFromMenu("freePen")}
+                      >
+                        Free Pen
+                      </button>
+                      <button
+                        type="button"
+                        style={tacticalTool === "rectangleZone" ? coachHubToolButtonActiveStyle : coachHubToolButtonStyle}
+                        onClick={() => applyTacticalToolFromMenu("rectangleZone")}
+                      >
+                        Rect Zone
+                      </button>
+                      <button
+                        type="button"
+                        style={tacticalTool === "circleZone" ? coachHubToolButtonActiveStyle : coachHubToolButtonStyle}
+                        onClick={() => applyTacticalToolFromMenu("circleZone")}
+                      >
+                        Circle Zone
+                      </button>
+                      <button
+                        type="button"
                         style={tacticalTool === "eraser" ? coachHubToolButtonActiveStyle : coachHubToolButtonStyle}
                         onClick={() => applyTacticalToolFromMenu("eraser")}
                       >
@@ -3634,6 +3665,27 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                     onClick={() => applyTacticalToolFromMenu("wavy")}
                   >
                     Wavy
+                  </button>
+                  <button
+                    type="button"
+                    style={tacticalTool === "freePen" ? coachHubToolButtonActiveStyle : coachHubToolButtonStyle}
+                    onClick={() => applyTacticalToolFromMenu("freePen")}
+                  >
+                    Free Pen
+                  </button>
+                  <button
+                    type="button"
+                    style={tacticalTool === "rectangleZone" ? coachHubToolButtonActiveStyle : coachHubToolButtonStyle}
+                    onClick={() => applyTacticalToolFromMenu("rectangleZone")}
+                  >
+                    Rect Zone
+                  </button>
+                  <button
+                    type="button"
+                    style={tacticalTool === "circleZone" ? coachHubToolButtonActiveStyle : coachHubToolButtonStyle}
+                    onClick={() => applyTacticalToolFromMenu("circleZone")}
+                  >
+                    Circle Zone
                   </button>
                   <button
                     type="button"
