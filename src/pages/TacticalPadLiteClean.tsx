@@ -4160,7 +4160,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
               aria-modal="false"
               aria-label="Quick Share onboarding"
             >
-              <p style={QUICK_SHARE_ONBOARDING_TITLE_STYLE}>PitchFlow Vision Board Share</p>
+              <p style={QUICK_SHARE_ONBOARDING_TITLE_STYLE}>TacaVision Vision Board Share</p>
               <p style={QUICK_SHARE_ONBOARDING_BODY_STYLE}>
                 Use your phone&apos;s screen recorder.
                 <br />
@@ -4179,7 +4179,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         ) : null}
         {!isWhiteboardMode && quickShareOpen ? (
           <div ref={quickSharePopoverRef} style={quickSharePopoverStyle} role="dialog" aria-modal="false" aria-label="Quick Share">
-            <p style={QUICK_SHARE_TITLE_STYLE}>PitchFlow Vision Board Share</p>
+            <p style={QUICK_SHARE_TITLE_STYLE}>TacaVision Vision Board Share</p>
             <button type="button" className="control-button" style={QUICK_SHARE_OPTION_BUTTON_STYLE} onClick={handleQuickShareRecordClip}>
               <span style={QUICK_SHARE_OPTION_TITLE_STYLE}>🎥 Record Coaching Clip</span>
               <span style={QUICK_SHARE_OPTION_SUBTITLE_STYLE}>
