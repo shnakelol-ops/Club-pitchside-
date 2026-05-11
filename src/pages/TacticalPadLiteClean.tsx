@@ -1795,6 +1795,8 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const [quickShareOnboardingEntered, setQuickShareOnboardingEntered] = useState(false);
   const [shareTipMessage, setShareTipMessage] = useState<string | null>(null);
   const [quickBoardFeedback, setQuickBoardFeedback] = useState<string | null>(null);
+  const [lastBoardSavedAtMillis, setLastBoardSavedAtMillis] = useState<number | null>(null);
+  const [loadedBoardName, setLoadedBoardName] = useState<string | null>(null);
   const [controlsOpen, setControlsOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [activeToolsSection, setActiveToolsSection] = useState<"draw" | "teams" | "items" | "board">("draw");
@@ -2440,7 +2442,14 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
       return;
     }
     const now = new Date();
-    const fallbackName = `Board ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
+    const fallbackName = `Board ${now.toLocaleString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    })}`;
     const saved = saveBoard({ name: fallbackName, boardState: snapshot });
     if (!saved) {
       showQuickBoardNotice("Save failed");
@@ -2450,6 +2459,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     const thumbnailSaveToken = latestThumbnailSaveTokenRef.current;
     refreshSavedBoards();
     showQuickBoardNotice("Board saved");
+    setLastBoardSavedAtMillis(saved.updatedAt);
     void generateQuickBoardThumbnail(surface).then((thumbnail) => {
       if (!thumbnail) return;
       if (thumbnailSaveToken !== latestThumbnailSaveTokenRef.current) return;
@@ -2516,7 +2526,10 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     setActionsOpen(false);
     setQuickShareOpen(false);
     showQuickBoardNotice("Board loaded");
+    setLoadedBoardName(saved.name);
   };
+  const lastBoardSavedLabel =
+    lastBoardSavedAtMillis != null ? formatBoardUpdatedAt(lastBoardSavedAtMillis) : null;
   const handleRenameBoard = (boardId: string, currentName: string) => {
     const drafted = window.prompt("Rename board", currentName);
     if (drafted == null) return;
@@ -4189,6 +4202,27 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         {!isWhiteboardMode && quickBoardFeedback ? (
           <div style={{ ...SHARE_TIP_TOAST_STYLE, top: "max(18px, calc(env(safe-area-inset-top, 0px) + 14px))" }} role="status" aria-live="polite">
             <p style={{ ...SHARE_TIP_TEXT_STYLE, whiteSpace: "pre-line" }}>{quickBoardFeedback}</p>
+          </div>
+        ) : null}
+        {!isWhiteboardMode && (lastBoardSavedLabel || loadedBoardName) ? (
+          <div
+            style={{
+              position: "absolute",
+              top: "max(16px, calc(env(safe-area-inset-top, 0px) + 10px))",
+              left: "max(14px, calc(env(safe-area-inset-left, 0px) + 10px))",
+              zIndex: 30,
+              padding: "6px 10px",
+              borderRadius: "10px",
+              background: "rgba(15, 23, 42, 0.62)",
+              color: "rgba(241, 245, 249, 0.92)",
+              fontSize: "11px",
+              lineHeight: 1.25,
+              pointerEvents: "none",
+              maxWidth: "64vw",
+            }}
+          >
+            {lastBoardSavedLabel ? <div>Last saved: {lastBoardSavedLabel}</div> : null}
+            {loadedBoardName ? <div>Loaded: {loadedBoardName}</div> : null}
           </div>
         ) : null}
         {isWhiteboardMode ? (
