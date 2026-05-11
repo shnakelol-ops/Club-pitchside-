@@ -93,6 +93,7 @@ export type TacticalPadLiteSurface = {
   play: () => void;
   pausePlayback: () => void;
   resumePlayback: () => void;
+  setPlaybackSpeedMultiplier: (multiplier: number) => void;
   addTacticalPlayer: (team?: "BLUE" | "RED") => void;
   removeTacticalPlayer: (team?: "BLUE" | "RED") => void;
   getTacticalPlayer: (playerId: string) => TacticalPlayerKitSnapshot | null;
@@ -266,6 +267,9 @@ const TACTICAL_INITIAL_TEAM_COUNTS = {
   blue: 1,
   red: 1,
 } as const;
+const DEFAULT_PLAYBACK_SPEED_MULTIPLIER = 1;
+const MIN_PLAYBACK_SPEED_MULTIPLIER = 0.25;
+const MAX_PLAYBACK_SPEED_MULTIPLIER = 1.5;
 
 function clampWorld(value: number, max: number): number {
   if (!Number.isFinite(value)) return 0;
@@ -277,6 +281,11 @@ function clampWorld(value: number, max: number): number {
 function clampTeamCount(value: number | undefined): number {
   const parsed = Number.isFinite(value) ? Math.floor(value as number) : 1;
   return Math.max(1, Math.min(15, parsed));
+}
+
+function sanitizePlaybackSpeedMultiplier(value: number): number {
+  if (!Number.isFinite(value)) return DEFAULT_PLAYBACK_SPEED_MULTIPLIER;
+  return Math.max(MIN_PLAYBACK_SPEED_MULTIPLIER, Math.min(MAX_PLAYBACK_SPEED_MULTIPLIER, value));
 }
 
 function sanitizeKitColor(value: string | undefined): TacticalKitColor | undefined {
@@ -895,6 +904,7 @@ export async function createTacticalPadLiteSurface(
   const players: TacticalPlayer[] = playerSeeds.map((seed) => createSurfacePlayer(seed));
 
   const PLAY_DURATION_MS = 1200;
+  let playbackSpeedMultiplier = DEFAULT_PLAYBACK_SPEED_MULTIPLIER;
   let isPlaying = false;
   let isPaused = false;
   let playElapsedMs = 0;
@@ -1596,10 +1606,11 @@ export async function createTacticalPadLiteSurface(
         return;
       }
 
-      const stepMs = Math.min(remainingMs, PLAY_DURATION_MS - playElapsedMs);
+      const segmentDurationMs = PLAY_DURATION_MS / playbackSpeedMultiplier;
+      const stepMs = Math.min(remainingMs, Math.max(0, segmentDurationMs - playElapsedMs));
       playElapsedMs += stepMs;
       remainingMs -= stepMs;
-      const progress = Math.max(0, Math.min(1, playElapsedMs / PLAY_DURATION_MS));
+      const progress = Math.max(0, Math.min(1, playElapsedMs / segmentDurationMs));
 
       for (const player of players) {
         const idx = players.indexOf(player);
@@ -2225,6 +2236,21 @@ export async function createTacticalPadLiteSurface(
       isPaused = false;
       isPlaying = true;
       emitPlaybackStateChange();
+    },
+    setPlaybackSpeedMultiplier: (multiplier) => {
+      const sanitizedMultiplier = sanitizePlaybackSpeedMultiplier(multiplier);
+      if (sanitizedMultiplier === playbackSpeedMultiplier) return;
+      const previousMultiplier = playbackSpeedMultiplier;
+      playbackSpeedMultiplier = sanitizedMultiplier;
+      if ((isPlaying || isPaused) && playbackPath.length >= 2) {
+        const previousSegmentDurationMs = PLAY_DURATION_MS / previousMultiplier;
+        const progress =
+          previousSegmentDurationMs > 0
+            ? Math.max(0, Math.min(1, playElapsedMs / previousSegmentDurationMs))
+            : 0;
+        const nextSegmentDurationMs = PLAY_DURATION_MS / playbackSpeedMultiplier;
+        playElapsedMs = Math.max(0, Math.min(nextSegmentDurationMs, progress * nextSegmentDurationMs));
+      }
     },
     addTacticalPlayer,
     removeTacticalPlayer: removeLastTacticalPlayer,
