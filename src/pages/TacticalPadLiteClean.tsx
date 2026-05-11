@@ -350,12 +350,13 @@ const STADIUM_FLOODLIGHT_CSS = `
 }
 
 .tool-bubble-logo {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   object-fit: contain;
   display: block;
   image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
+  filter: drop-shadow(0 4px 10px rgba(2, 8, 15, 0.26));
 }
 
 .control-button {
@@ -543,7 +544,7 @@ const TOOL_BUBBLE_STYLE: CSSProperties = {
   border: "none",
   backdropFilter: "none",
   WebkitBackdropFilter: "none",
-  boxShadow: "0 6px 14px rgba(2, 8, 15, 0.34)",
+  boxShadow: "0 4px 11px rgba(2, 8, 15, 0.24)",
 };
 
 const MOBILE_TOOLS_BUBBLE_STYLE: CSSProperties = {
@@ -555,7 +556,7 @@ const MOBILE_TOOLS_BUBBLE_STYLE: CSSProperties = {
   background: "transparent",
   backdropFilter: "none",
   WebkitBackdropFilter: "none",
-  boxShadow: "0 6px 14px rgba(2, 8, 15, 0.34)",
+  boxShadow: "0 4px 11px rgba(2, 8, 15, 0.24)",
 };
 
 const POPOUT_BASE_STYLE: CSSProperties = {

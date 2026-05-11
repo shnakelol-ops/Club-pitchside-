@@ -115,11 +115,12 @@ const SAVED_SQUADS_STORAGE_KEY = "pitchflow_saved_squads_v1";
 const SAVED_MATCHES_STORAGE_KEY = "pitchflow_matches_v1";
 const MAX_SAVED_MATCHES = 10;
 const EVENT_PICKER_LOGO_STYLE: CSSProperties = {
-  width: "42px",
-  height: "42px",
+  width: "40px",
+  height: "40px",
   objectFit: "contain",
   display: "block",
   imageRendering: "crisp-edges",
+  filter: "drop-shadow(0 4px 10px rgba(2, 8, 15, 0.26))",
 };
 
 function safeReadLocalStorage(key: string): string | null {
@@ -5463,8 +5464,8 @@ export default function StatsModeSurface() {
               border: "none",
               background: "transparent",
               boxShadow: isPickerOpen
-                ? "0 8px 18px rgba(0, 0, 0, 0.4)"
-                : "0 6px 14px rgba(0, 0, 0, 0.32)",
+                ? "0 5px 12px rgba(2, 8, 15, 0.28)"
+                : "0 4px 10px rgba(2, 8, 15, 0.22)",
             }}
           >
             <img src="/icon-tv-3.svg" alt="TacaVision menu" aria-hidden="true" style={EVENT_PICKER_LOGO_STYLE} />
