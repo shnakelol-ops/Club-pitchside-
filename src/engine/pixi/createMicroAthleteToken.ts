@@ -90,25 +90,27 @@ function relativeLuminance(color: number): number {
   return r * 0.2126 + g * 0.7152 + b * 0.0722;
 }
 
+function contrastRatio(foreground: number, background: number): number {
+  const foregroundLum = relativeLuminance(foreground);
+  const backgroundLum = relativeLuminance(background);
+  const lighter = Math.max(foregroundLum, backgroundLum);
+  const darker = Math.min(foregroundLum, backgroundLum);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
 function getReadableTextColors(backgroundColor: number): {
   fill: number;
-  innerStroke: number;
-  outerStroke: number;
-  shadowColor: number;
+  stroke: number;
 } {
-  if (relativeLuminance(backgroundColor) >= 0.6) {
-    return {
-      fill: 0x0f172a,
-      innerStroke: 0xffffff,
-      outerStroke: 0x020617,
-      shadowColor: 0xffffff,
-    };
-  }
+  const lightFill = 0xffffff;
+  const darkFill = 0x0f172a;
+  const fill =
+    contrastRatio(lightFill, backgroundColor) >= contrastRatio(darkFill, backgroundColor)
+      ? lightFill
+      : darkFill;
   return {
-    fill: 0xffffff,
-    innerStroke: 0x0b1220,
-    outerStroke: 0xffffff,
-    shadowColor: 0x020617,
+    fill,
+    stroke: 0x020617,
   };
 }
 
@@ -409,6 +411,7 @@ export function createMicroAthleteToken({
 
   const badgeBaseColor = jerseyFill;
   const labelColors = getReadableTextColors(badgeBaseColor);
+  const isNumericLabel = /^\d+$/.test(label.trim());
   const tokenOuterGlow = new Graphics();
   tokenOuterGlow
     .circle(0, 0, badgeRadius * 1.2)
@@ -433,52 +436,24 @@ export function createMicroAthleteToken({
     .fill({ color: 0xffffff, alpha: 0.09 });
   token.addChild(badge);
 
-  const labelOutlineText = new Text({
-    text: label,
-    style: {
-      fill: labelColors.fill,
-      fontSize: 3.78,
-      fontWeight: "900",
-      fontFamily: "Inter, system-ui, sans-serif",
-      align: "center",
-      letterSpacing: 0.12,
-      stroke: {
-        color: labelColors.outerStroke,
-        width: 0.64,
-        join: "round",
-      },
-    },
-  });
-  labelOutlineText.anchor.set(0.5, 0.53);
-  labelOutlineText.position.y = 0.06;
-  labelOutlineText.alpha = 0.84;
-  token.addChild(labelOutlineText);
-
   const labelText = new Text({
     text: label,
     style: {
       fill: labelColors.fill,
-      fontSize: 3.78,
-      fontWeight: "900",
+      fontSize: isNumericLabel ? 4.54 : 3.78,
+      fontWeight: isNumericLabel ? "900" : "800",
       fontFamily: "Inter, system-ui, sans-serif",
       align: "center",
-      letterSpacing: 0.12,
+      letterSpacing: isNumericLabel ? 0.05 : 0.12,
       stroke: {
-        color: labelColors.innerStroke,
-        width: 0.34,
+        color: labelColors.stroke,
+        width: isNumericLabel ? 0.76 : 0.52,
         join: "round",
-      },
-      dropShadow: {
-        color: labelColors.shadowColor,
-        alpha: 0.28,
-        blur: 1,
-        distance: 0.18,
-        angle: Math.PI / 2,
       },
     },
   });
-  labelText.anchor.set(0.5, 0.53);
-  labelText.position.y = 0.06;
+  labelText.anchor.set(0.5, 0.5);
+  labelText.position.y = isNumericLabel ? -0.2 : -0.06;
   token.addChild(labelText);
 
   return { token, shadow };
