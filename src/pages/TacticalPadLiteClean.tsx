@@ -1035,95 +1035,96 @@ const COACH_HUB_PANEL_STYLE: CSSProperties = {
   ...POPOUT_BASE_STYLE,
   display: "flex",
   flexDirection: "column",
-  gap: "6px",
-  width: "clamp(128px, 15vw, 168px)",
-  maxHeight: "min(60vh, 360px)",
+  gap: "4px",
+  width: "clamp(112px, 13vw, 148px)",
+  maxHeight: "min(54vh, 312px)",
   overflowY: "auto",
   overflowX: "hidden",
   right: "max(6px, calc(env(safe-area-inset-right, 0px) + 4px))",
   bottom: "max(60px, calc(env(safe-area-inset-bottom, 0px) + 58px))",
-  padding: "6px",
-  background: "rgba(10, 19, 24, 0.74)",
-  border: "1px solid rgba(165, 194, 220, 0.26)",
-  backdropFilter: "blur(14px)",
-  WebkitBackdropFilter: "blur(14px)",
-  boxShadow: "0 14px 28px rgba(2, 8, 15, 0.36)",
+  padding: "5px",
+  background: "rgba(9, 17, 24, 0.68)",
+  border: "1px solid rgba(165, 194, 220, 0.2)",
+  backdropFilter: "blur(10px)",
+  WebkitBackdropFilter: "blur(10px)",
+  boxShadow: "0 8px 18px rgba(2, 8, 15, 0.26)",
   zIndex: 20,
 };
 
 const MOBILE_COACH_HUB_OVERLAY_STYLE: CSSProperties = {
   position: "fixed",
   inset: 0,
-  display: "grid",
-  placeItems: "center",
+  display: "flex",
+  justifyContent: "flex-end",
+  alignItems: "flex-end",
   padding:
-    "max(16px, calc(env(safe-area-inset-top, 0px) + 8px)) max(16px, calc(env(safe-area-inset-right, 0px) + 8px)) max(16px, calc(env(safe-area-inset-bottom, 0px) + 8px)) max(16px, calc(env(safe-area-inset-left, 0px) + 8px))",
-  background: "rgba(5, 11, 17, 0.22)",
+    "max(8px, calc(env(safe-area-inset-top, 0px) + 4px)) max(8px, calc(env(safe-area-inset-right, 0px) + 4px)) max(8px, calc(env(safe-area-inset-bottom, 0px) + 4px)) max(8px, calc(env(safe-area-inset-left, 0px) + 4px))",
+  background: "rgba(5, 11, 17, 0.08)",
   zIndex: 24,
 };
 
 const MOBILE_COACH_HUB_PANEL_STYLE: CSSProperties = {
-  width: "min(82vw, 410px)",
-  maxWidth: "calc(100dvw - 32px)",
-  maxHeight: "calc(100dvh - 32px)",
+  width: "min(52vw, 320px)",
+  maxWidth: "calc(100dvw - 16px)",
+  maxHeight: "min(58dvh, calc(100dvh - 18px))",
   overflowY: "auto",
   overflowX: "hidden",
   display: "flex",
   flexDirection: "column",
-  gap: "6px",
-  padding: "10px",
-  borderRadius: "16px",
-  border: "1px solid rgba(116, 148, 133, 0.34)",
-  background: "linear-gradient(180deg, rgba(13, 23, 24, 0.92) 0%, rgba(9, 16, 19, 0.96) 100%)",
-  boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 16px 32px rgba(0, 0, 0, 0.34)",
-  backdropFilter: "blur(12px)",
-  WebkitBackdropFilter: "blur(12px)",
+  gap: "4px",
+  padding: "6px",
+  borderRadius: "11px",
+  border: "1px solid rgba(140, 171, 159, 0.26)",
+  background: "linear-gradient(180deg, rgba(12, 22, 24, 0.82) 0%, rgba(9, 16, 19, 0.88) 100%)",
+  boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 10px 22px rgba(0, 0, 0, 0.26)",
+  backdropFilter: "blur(8px)",
+  WebkitBackdropFilter: "blur(8px)",
 };
 
 const MOBILE_COACH_HUB_HEADER_STYLE: CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: "6px",
-  paddingBottom: "4px",
-  borderBottom: "1px solid rgba(135, 162, 151, 0.18)",
+  gap: "4px",
+  paddingBottom: "2px",
+  borderBottom: "1px solid rgba(135, 162, 151, 0.14)",
 };
 
 const MOBILE_COACH_HUB_TITLE_STYLE: CSSProperties = {
   margin: 0,
   color: "#ecf6ef",
-  fontSize: "12px",
-  fontWeight: 720,
-  letterSpacing: "0.16px",
+  fontSize: "10.5px",
+  fontWeight: 700,
+  letterSpacing: "0.12px",
   fontFamily: "Inter, system-ui, sans-serif",
 };
 
 const MOBILE_COACH_HUB_CLOSE_STYLE: CSSProperties = {
   ...ACTIONS_MENU_BUTTON_STYLE,
   width: "fit-content",
-  minWidth: "56px",
-  height: "26px",
-  fontSize: "9px",
+  minWidth: "46px",
+  height: "22px",
+  fontSize: "8.5px",
   fontWeight: 620,
   textAlign: "center",
   justifyContent: "center",
-  borderRadius: "9px",
-  border: "1px solid rgba(142, 169, 155, 0.34)",
-  background: "rgba(13, 22, 25, 0.9)",
+  borderRadius: "8px",
+  border: "1px solid rgba(142, 169, 155, 0.26)",
+  background: "rgba(13, 22, 25, 0.8)",
 };
 
 const COACH_HUB_SECTION_STYLE: CSSProperties = {
   display: "flex",
   flexDirection: "column",
-  gap: "3px",
+  gap: "2px",
 };
 
 const COACH_HUB_SECTION_TITLE_STYLE: CSSProperties = {
   margin: 0,
   color: "#d7e8f5",
-  fontSize: "9px",
+  fontSize: "8.5px",
   fontWeight: 700,
-  letterSpacing: "0.16px",
+  letterSpacing: "0.12px",
   textTransform: "uppercase",
   fontFamily: "Inter, system-ui, sans-serif",
 };
@@ -1131,25 +1132,25 @@ const COACH_HUB_SECTION_TITLE_STYLE: CSSProperties = {
 const COACH_HUB_TOOL_GRID_STYLE: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-  gap: "4px",
+  gap: "3px",
 };
 
 const COACH_HUB_TOOL_BUTTON_STYLE: CSSProperties = {
-  height: "34px",
+  height: "30px",
   minWidth: "100%",
-  borderRadius: "8px",
-  fontSize: "10.5px",
+  borderRadius: "7px",
+  fontSize: "9.5px",
   fontWeight: 600,
   fontFamily: "Inter, system-ui, sans-serif",
-  letterSpacing: "0.16px",
+  letterSpacing: "0.1px",
   lineHeight: 1,
   whiteSpace: "nowrap",
   overflow: "hidden",
   textOverflow: "ellipsis",
-  padding: "0 3px",
+  padding: "0 2px",
   cursor: "pointer",
-  border: "1px solid rgba(121, 171, 208, 0.28)",
-  background: "rgba(17, 30, 40, 0.64)",
+  border: "1px solid rgba(121, 171, 208, 0.24)",
+  background: "rgba(17, 30, 40, 0.56)",
   color: "#dbecfa",
 };
 
@@ -1163,15 +1164,15 @@ const COACH_HUB_TOOL_BUTTON_ACTIVE_STYLE: CSSProperties = {
 const COACH_HUB_COLOR_GRID_STYLE: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
-  gap: "3px",
+  gap: "2px",
 };
 
 const COACH_HUB_COLOR_BUTTON_STYLE: CSSProperties = {
   width: "100%",
-  height: "24px",
+  height: "20px",
   borderRadius: "999px",
-  border: "1px solid rgba(147, 173, 196, 0.36)",
-  background: "rgba(15, 25, 36, 0.65)",
+  border: "1px solid rgba(147, 173, 196, 0.28)",
+  background: "rgba(15, 25, 36, 0.58)",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
@@ -1180,8 +1181,8 @@ const COACH_HUB_COLOR_BUTTON_STYLE: CSSProperties = {
 };
 
 const COACH_HUB_COLOR_SWATCH_STYLE: CSSProperties = {
-  width: "16px",
-  height: "16px",
+  width: "12px",
+  height: "12px",
   borderRadius: "999px",
   border: "1px solid rgba(255, 255, 255, 0.44)",
 };
@@ -1189,7 +1190,7 @@ const COACH_HUB_COLOR_SWATCH_STYLE: CSSProperties = {
 const COACH_HUB_ACTION_GRID_STYLE: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-  gap: "4px",
+  gap: "3px",
 };
 
 const COACH_HUB_ACTION_BUTTON_STYLE: CSSProperties = {
@@ -1200,14 +1201,14 @@ const COACH_HUB_ACTION_BUTTON_STYLE: CSSProperties = {
 const COACH_HUB_TAB_GRID_STYLE: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-  gap: "4px",
+  gap: "3px",
 };
 
 const COACH_HUB_TAB_BUTTON_STYLE: CSSProperties = {
   ...COACH_HUB_TOOL_BUTTON_STYLE,
-  height: "32px",
-  fontSize: "10px",
-  letterSpacing: "0.18px",
+  height: "26px",
+  fontSize: "9px",
+  letterSpacing: "0.12px",
 };
 
 const COACH_HUB_TAB_BUTTON_ACTIVE_STYLE: CSSProperties = {
@@ -2725,32 +2726,33 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const coachHubSectionTitleStyle = isCompactLandscapeTools
     ? {
         ...COACH_HUB_SECTION_TITLE_STYLE,
-        fontSize: "8.5px",
-        letterSpacing: "0.28px",
+        fontSize: "8px",
+        letterSpacing: "0.2px",
         color: "rgba(202, 222, 213, 0.86)",
-        marginTop: "1px",
+        marginTop: "0px",
       }
     : COACH_HUB_SECTION_TITLE_STYLE;
   const coachHubTabGridStyle = isCompactLandscapeTools
     ? {
         ...COACH_HUB_TAB_GRID_STYLE,
-        gap: "5px",
-        padding: "3px",
-        borderRadius: "12px",
-        border: "1px solid rgba(129, 157, 144, 0.16)",
-        background: "rgba(9, 16, 20, 0.54)",
+        gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+        gap: "2px",
+        padding: "2px",
+        borderRadius: "9px",
+        border: "1px solid rgba(129, 157, 144, 0.12)",
+        background: "rgba(9, 16, 20, 0.44)",
       }
     : COACH_HUB_TAB_GRID_STYLE;
   const coachHubTabButtonStyle = isCompactLandscapeTools
     ? {
         ...COACH_HUB_TAB_BUTTON_STYLE,
-        height: "28px",
+        height: "24px",
         borderRadius: "999px",
-        fontSize: "9.5px",
-        letterSpacing: "0.2px",
-        padding: "0 8px",
-        border: "1px solid rgba(127, 156, 142, 0.28)",
-        background: "rgba(13, 22, 25, 0.8)",
+        fontSize: "8.8px",
+        letterSpacing: "0.14px",
+        padding: "0 4px",
+        border: "1px solid rgba(127, 156, 142, 0.24)",
+        background: "rgba(13, 22, 25, 0.68)",
         color: "rgba(220, 235, 227, 0.9)",
       }
     : COACH_HUB_TAB_BUTTON_STYLE;
@@ -2765,12 +2767,12 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const coachHubToolButtonStyle = isCompactLandscapeTools
     ? {
         ...COACH_HUB_TOOL_BUTTON_STYLE,
-        height: "41px",
-        borderRadius: "10px",
-        fontSize: "10.5px",
-        padding: "0 6px",
-        border: "1px solid rgba(127, 156, 142, 0.26)",
-        background: "rgba(13, 22, 25, 0.82)",
+        height: "30px",
+        borderRadius: "7px",
+        fontSize: "9px",
+        padding: "0 4px",
+        border: "1px solid rgba(127, 156, 142, 0.22)",
+        background: "rgba(13, 22, 25, 0.68)",
         color: "#e6f0ea",
       }
     : COACH_HUB_TOOL_BUTTON_STYLE;
@@ -2785,33 +2787,33 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const coachHubColorGridStyle = isCompactLandscapeTools
     ? {
         ...COACH_HUB_COLOR_GRID_STYLE,
-        gap: "4px",
+        gap: "2px",
       }
     : COACH_HUB_COLOR_GRID_STYLE;
   const coachHubColorButtonStyle = isCompactLandscapeTools
     ? {
         ...COACH_HUB_COLOR_BUTTON_STYLE,
-        height: "22px",
-        border: "1px solid rgba(129, 157, 144, 0.26)",
-        background: "rgba(10, 18, 22, 0.84)",
+        height: "20px",
+        border: "1px solid rgba(129, 157, 144, 0.22)",
+        background: "rgba(10, 18, 22, 0.7)",
       }
     : COACH_HUB_COLOR_BUTTON_STYLE;
   const coachHubColorSwatchStyle = isCompactLandscapeTools
     ? {
         ...COACH_HUB_COLOR_SWATCH_STYLE,
-        width: "14px",
-        height: "14px",
+        width: "11px",
+        height: "11px",
       }
     : COACH_HUB_COLOR_SWATCH_STYLE;
   const coachHubActionButtonStyle = isCompactLandscapeTools
     ? {
         ...COACH_HUB_ACTION_BUTTON_STYLE,
-        height: "41px",
-        borderRadius: "10px",
-        fontSize: "10.5px",
-        padding: "0 6px",
-        border: "1px solid rgba(127, 156, 142, 0.26)",
-        background: "rgba(13, 22, 25, 0.82)",
+        height: "30px",
+        borderRadius: "7px",
+        fontSize: "9px",
+        padding: "0 4px",
+        border: "1px solid rgba(127, 156, 142, 0.22)",
+        background: "rgba(13, 22, 25, 0.68)",
         color: "#e6f0ea",
       }
     : COACH_HUB_ACTION_BUTTON_STYLE;
