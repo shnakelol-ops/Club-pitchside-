@@ -73,10 +73,44 @@ function turfRecipe(sport: PitchSport): TurfRecipe {
       { t: 0.8, c: "#1f5e42" },
       { t: 1, c: "#103629" },
     ],
-    centreWash: "rgba(220, 255, 232, 0.135)",
+    centreWash: "rgba(220, 255, 232, 0.112)",
     verticalBands: 5.2,
-    grain: 0.012,
+    grain: 0.0095,
   };
+}
+
+function createUltraSubtleTurfGrainTexture(): Texture {
+  const W = 192;
+  const H = 120;
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return Texture.WHITE;
+
+  const image = ctx.createImageData(W, H);
+  const data = image.data;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const i = (y * W + x) * 4;
+      const macro = Math.sin((x * 0.21 + y * 0.11) * 1.13) * Math.cos((y * 0.19 - x * 0.08) * 1.07);
+      const micro = Math.sin(x * 2.31 + y * 1.73) * 0.5 + Math.cos(x * 1.61 - y * 2.07) * 0.5;
+      const n = macro * 0.7 + micro * 0.3;
+      const absN = Math.abs(n);
+      if (absN < 0.26) continue;
+      const a = Math.min(0.045, 0.012 + (absN - 0.26) * 0.03);
+      const isBright = n > 0;
+      data[i] = isBright ? 238 : 3;
+      data[i + 1] = isBright ? 252 : 18;
+      data[i + 2] = isBright ? 242 : 12;
+      data[i + 3] = Math.round(a * 255);
+    }
+  }
+  ctx.putImageData(image, 0, 0);
+
+  const tex = Texture.from(canvas);
+  tex.source.style.scaleMode = "linear";
+  return tex;
 }
 
 function bakeTurfWashTexture(sport: PitchSport): Texture {
@@ -99,14 +133,15 @@ function bakeTurfWashTexture(sport: PitchSport): Texture {
   const rad = Math.hypot(W, H) * 0.55;
   const rg = ctx.createRadialGradient(cx, cy, 0, cx, cy, rad);
   rg.addColorStop(0, recipe.centreWash);
-  rg.addColorStop(0.45, "rgba(255,255,255,0.02)");
+  rg.addColorStop(0.32, "rgba(255,255,255,0.026)");
+  rg.addColorStop(0.64, "rgba(255,255,255,0.008)");
   rg.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = rg;
   ctx.fillRect(0, 0, W, H);
 
   const isSoccer = sport === "soccer";
   if (!isSoccer) {
-    for (let p = 0; p < 8; p++) {
+    for (let p = 0; p < 6; p++) {
       const sx = Math.sin((p + 1) * 12.9898) * 43758.5453123;
       const sy = Math.sin((p + 1) * 78.233) * 12345.6789012;
       const rx = sx - Math.floor(sx);
@@ -116,25 +151,13 @@ function bakeTurfWashTexture(sport: PitchSport): Texture {
       const rr = H * (0.15 + ((rx + ry) * 0.5) * 0.18);
       const patch = ctx.createRadialGradient(px, py, 0, px, py, rr);
       if (p % 2 === 0) {
-        patch.addColorStop(0, "rgba(235,255,242,0.032)");
+        patch.addColorStop(0, "rgba(235,255,242,0.024)");
       } else {
-        patch.addColorStop(0, "rgba(0,20,12,0.02)");
+        patch.addColorStop(0, "rgba(0,20,12,0.014)");
       }
       patch.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = patch;
       ctx.fillRect(0, 0, W, H);
-    }
-
-    for (let f = 0; f < 920; f++) {
-      const nx = Math.sin((f + 1) * 91.17) * 43758.5453123;
-      const ny = Math.sin((f + 1) * 17.31) * 24634.6345124;
-      const rx = nx - Math.floor(nx);
-      const ry = ny - Math.floor(ny);
-      const x = Math.floor(rx * W);
-      const y = Math.floor(ry * H);
-      const bright = (f & 3) === 0;
-      ctx.fillStyle = bright ? "rgba(238,255,244,0.02)" : "rgba(0,14,8,0.014)";
-      ctx.fillRect(x, y, 1, (f & 1) + 1);
     }
   }
 
@@ -153,9 +176,8 @@ function bakeTurfWashTexture(sport: PitchSport): Texture {
       } else {
         const mottling = Math.sin(x * 0.014 + y * 0.02) * Math.cos(y * 0.018 - x * 0.011);
         const grain = Math.sin(x * 0.12 + y * 0.07) * Math.cos(x * 0.06 - y * 0.09);
-        const blade = Math.sin(x * 0.03 + y * 0.11) * 0.6 + Math.cos(x * 0.017 - y * 0.095) * 0.4;
-        const fleck = ((x * 29 + y * 31) & 255) === 0 ? 0.9 : 0;
-        const j = (mottling * 13 + grain * 5 + blade * 4 + fleck * 6) * recipe.grain;
+        const weave = Math.sin(x * 0.028 + y * 0.102) * Math.cos(x * 0.019 - y * 0.084);
+        const j = (mottling * 8.4 + grain * 3.8 + weave * 2.6) * recipe.grain;
         d[i] = Math.max(0, Math.min(255, Math.round((d[i] ?? 0) + j)));
         d[i + 1] = Math.max(0, Math.min(255, Math.round((d[i + 1] ?? 0) + j * 0.98)));
         d[i + 2] = Math.max(0, Math.min(255, Math.round((d[i + 2] ?? 0) + j * 0.9)));
@@ -349,6 +371,19 @@ export function createTacticalPitchVisualRoot(
     stripes.zIndex = 1;
     face.addChild(stripes);
 
+    const grainTex = createUltraSubtleTurfGrainTexture();
+    disposers.push(() => grainTex.destroy());
+    const grain = new TilingSprite({
+      texture: grainTex,
+      width: vbW,
+      height: vbH,
+    });
+    grain.tileScale.set(1.08, 1.08);
+    grain.alpha = 1;
+    grain.blendMode = "normal";
+    grain.zIndex = 1.5;
+    face.addChild(grain);
+
     const vignette = new FillGradient({
       type: "radial",
       center: { x: 0.5, y: 0.48 },
@@ -359,11 +394,13 @@ export function createTacticalPitchVisualRoot(
       colorStops: isSoccer
         ? [
             { offset: 0.32, color: "#00000000" },
-            { offset: 0.78, color: "rgba(0, 14, 10, 0.1)" },
+            { offset: 0.64, color: "rgba(0, 14, 10, 0.035)" },
+            { offset: 0.82, color: "rgba(0, 14, 10, 0.1)" },
             { offset: 1, color: "rgba(0, 18, 12, 0.2)" },
           ]
         : [
             { offset: 0.34, color: "#00000000" },
+            { offset: 0.62, color: "rgba(0, 12, 9, 0.028)" },
             { offset: 0.82, color: "rgba(0, 12, 9, 0.075)" },
             { offset: 1, color: "rgba(0, 16, 11, 0.14)" },
           ],
@@ -385,8 +422,10 @@ export function createTacticalPitchVisualRoot(
         outerCenter: { x: 0.5, y: 0.48 },
         textureSpace: "local",
         colorStops: [
-          { offset: 0, color: "rgba(234, 255, 242, 0.13)" },
-          { offset: 0.42, color: "rgba(222, 255, 236, 0.05)" },
+          { offset: 0, color: "rgba(234, 255, 242, 0.115)" },
+          { offset: 0.28, color: "rgba(226, 255, 238, 0.068)" },
+          { offset: 0.56, color: "rgba(222, 255, 236, 0.032)" },
+          { offset: 0.82, color: "rgba(228, 255, 238, 0.01)" },
           { offset: 1, color: "rgba(255, 255, 255, 0)" },
         ],
       });
@@ -395,8 +434,29 @@ export function createTacticalPitchVisualRoot(
       lift.zIndex = 3;
       lift.rect(0, 0, vbW, vbH).fill(centreLift);
       lift.blendMode = "screen";
-      lift.alpha = 0.16;
+      lift.alpha = 0.14;
       face.addChild(lift);
+
+      const playCorridor = new FillGradient({
+        type: "linear",
+        start: { x: 0, y: 0.5 },
+        end: { x: 1, y: 0.5 },
+        textureSpace: "local",
+        colorStops: [
+          { offset: 0, color: "rgba(255, 255, 255, 0)" },
+          { offset: 0.28, color: "rgba(231, 255, 239, 0.018)" },
+          { offset: 0.5, color: "rgba(236, 255, 244, 0.11)" },
+          { offset: 0.72, color: "rgba(231, 255, 239, 0.018)" },
+          { offset: 1, color: "rgba(255, 255, 255, 0)" },
+        ],
+      });
+      disposers.push(() => playCorridor.destroy());
+      const corridorLift = new Graphics();
+      corridorLift.zIndex = 3.2;
+      corridorLift.rect(0, 0, vbW, vbH).fill(playCorridor);
+      corridorLift.blendMode = "screen";
+      corridorLift.alpha = 0.44;
+      face.addChild(corridorLift);
     }
   }
 
