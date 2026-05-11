@@ -37,7 +37,7 @@ type QuickBrowseId = "systems" | "sessions" | "eight-week-plans" | "season-plans
 const BOTTOM_NAV_ITEMS: ReadonlyArray<BottomNavItem> = [
   { id: "home", label: "Home", short: "H", path: "/board" },
   { id: "flowlab", label: "Vision Board", short: "V", path: "/vision-board" },
-  { id: "flowstats", label: "FlowStats", short: "S", path: "/flowstats" },
+  { id: "flowstats", label: "VisionStats", short: "S", path: "/flowstats" },
   { id: "notes", label: "Notes", short: "N", path: "/notes" },
 ];
 
@@ -965,7 +965,7 @@ function BoardPage() {
         <div className="pf-home-primary-wrap">
           <button type="button" className="pf-home-primary-btn" onClick={() => navigateTo("/flowstats")}>
             <span className="pf-home-primary-label">START MATCH</span>
-            <span className="pf-home-primary-sub">Launch FlowStats</span>
+            <span className="pf-home-primary-sub">Launch VisionStats</span>
           </button>
         </div>
       </div>
