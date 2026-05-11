@@ -135,12 +135,12 @@ function isWarmJerseyTone(color: number): boolean {
 const MICRO_ATHLETE_BODY_WIDTH_SCALE = 0.92;
 const MICRO_ATHLETE_HEAD_SCALE = 0.9;
 const MICRO_ATHLETE_BADGE_SCALE = 0.9;
-const TORSO_TOP_Y = -6.18;
-const TORSO_BOTTOM_Y = -1.86;
-const TORSO_TOP_LEFT_X = -1.7 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
-const TORSO_TOP_RIGHT_X = 1.7 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
-const TORSO_BOTTOM_LEFT_X = -0.82 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
-const TORSO_BOTTOM_RIGHT_X = 0.82 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
+const TORSO_TOP_Y = -6.12;
+const TORSO_BOTTOM_Y = -2.14;
+const TORSO_TOP_LEFT_X = -1.64 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
+const TORSO_TOP_RIGHT_X = 1.64 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
+const TORSO_BOTTOM_LEFT_X = -0.74 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
+const TORSO_BOTTOM_RIGHT_X = 0.74 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
 
 function torsoEdgeX(y: number, topX: number, bottomX: number): number {
   const t = (y - TORSO_TOP_Y) / (TORSO_BOTTOM_Y - TORSO_TOP_Y);
@@ -388,18 +388,18 @@ export function createMicroAthleteToken({
     ? Number(kitPatternColor)
     : mixColor(jerseyFill, jerseyFill === 0xffffff ? 0x111827 : 0xffffff, 0.72);
   // Subtle arms (kept slim for small-scale readability)
-  const armWidth = 0.44 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
-  const leftArmX = -2.16 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
-  const rightArmX = 1.72 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
+  const armWidth = 0.38 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
+  const leftArmX = -2.02 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
+  const rightArmX = 1.64 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
   body
-    .roundRect(leftArmX, -5.22, armWidth, 2.44, 0.22)
+    .roundRect(leftArmX, -5.2, armWidth, 2.3, 0.29)
     .fill({ color: mixColor(jerseyFill, 0x000000, 0.1), alpha: 0.95 })
-    .roundRect(rightArmX, -5.22, armWidth, 2.44, 0.22)
+    .roundRect(rightArmX, -5.2, armWidth, 2.3, 0.29)
     .fill({ color: mixColor(jerseyFill, 0x000000, 0.16), alpha: 0.95 })
-    .roundRect(leftArmX + 0.03, -2.86, armWidth - 0.08, 0.33, 0.16)
-    .fill({ color: 0xf1ccb2, alpha: 0.94 })
-    .roundRect(rightArmX + 0.03, -2.86, armWidth - 0.08, 0.33, 0.16)
-    .fill({ color: 0xf1ccb2, alpha: 0.94 });
+    .circle(leftArmX + armWidth * 0.5, -2.8, 0.16)
+    .fill({ color: 0xf1ccb2, alpha: 0.92 })
+    .circle(rightArmX + armWidth * 0.5, -2.8, 0.16)
+    .fill({ color: 0xf1ccb2, alpha: 0.92 });
 
   // Torso / jersey (lean upright silhouette with gentle taper)
   drawTorsoPath(body);
@@ -414,39 +414,39 @@ export function createMicroAthleteToken({
 
   // Internal polish without thick cartoon outlines.
   body
-    .roundRect(-0.37, -6.56, 0.74, 0.48, 0.14)
-    .fill({ color: mixColor(jerseyFill, 0xffffff, 0.2), alpha: 0.9 })
-    .ellipse(0.3, -3.84, 0.58, 1.52)
+    .roundRect(-0.31, -6.48, 0.62, 0.44, 0.14)
+    .fill({ color: mixColor(jerseyFill, 0xffffff, 0.18), alpha: 0.9 })
+    .ellipse(0.3, -3.98, 0.54, 1.34)
     .fill({ color: 0x020617, alpha: 0.13 })
-    .ellipse(-0.26, -5.04, 0.54, 0.26)
+    .ellipse(-0.22, -5.02, 0.48, 0.24)
     .fill({ color: 0xffffff, alpha: 0.13 })
-    .roundRect(-1.44, -6.0, 2.88, 0.22, 0.08)
+    .roundRect(-1.32, -5.96, 2.64, 0.2, 0.08)
     .fill({ color: mixColor(jerseyFill, 0xffffff, 0.3), alpha: 0.26 });
   body
-    .moveTo(-1.14, -2.02)
-    .lineTo(1.14, -2.02)
+    .moveTo(-1.08, -2.16)
+    .lineTo(1.08, -2.16)
     .stroke({ color: mixColor(jerseyFill, 0x020617, 0.72), width: 0.17, alpha: 0.58 });
 
   // Shorts + subtle legs
   body
-    .roundRect(-1.0, -1.9, 2.0, 1.42, 0.26)
-    .fill({ color: mixColor(jerseyFill, 0x020617, 0.56), alpha: 0.97 })
-    .roundRect(-0.96, -1.84, 1.92, 0.16, 0.06)
+    .roundRect(-0.94, -2.02, 1.88, 1.26, 0.3)
+    .fill({ color: mixColor(jerseyFill, 0x020617, 0.58), alpha: 0.97 })
+    .roundRect(-0.9, -1.96, 1.8, 0.14, 0.06)
     .fill({ color: 0xffffff, alpha: 0.08 })
-    .roundRect(-0.82, -0.54, 0.56, 1.88, 0.22)
+    .roundRect(-0.76, -0.78, 0.52, 1.72, 0.24)
     .fill({ color: 0x334155, alpha: 0.95 })
-    .roundRect(0.26, -0.54, 0.56, 1.88, 0.22)
+    .roundRect(0.24, -0.74, 0.52, 1.66, 0.24)
     .fill({ color: 0x334155, alpha: 0.95 })
-    .roundRect(-0.82, 0.66, 0.56, 0.52, 0.15)
+    .roundRect(-0.76, 0.36, 0.52, 0.48, 0.14)
     .fill({ color: 0xe2e8f0, alpha: 0.95 })
-    .roundRect(0.26, 0.66, 0.56, 0.52, 0.15)
+    .roundRect(0.24, 0.32, 0.52, 0.48, 0.14)
     .fill({ color: 0xe2e8f0, alpha: 0.95 })
-    .roundRect(-0.9, 1.18, 0.72, 0.2, 0.11)
+    .roundRect(-0.82, 0.84, 0.66, 0.18, 0.1)
     .fill({ color: 0x0f172a, alpha: 0.9 })
-    .roundRect(0.18, 1.18, 0.72, 0.2, 0.11)
+    .roundRect(0.18, 0.82, 0.66, 0.18, 0.1)
     .fill({ color: 0x0f172a, alpha: 0.9 });
   body
-    .roundRect(-1.0, -1.9, 2.0, 1.42, 0.26)
+    .roundRect(-0.94, -2.02, 1.88, 1.26, 0.3)
     .stroke({ color: 0x020617, width: 0.1, alpha: 0.32, join: "round" });
 
   // Simplified head shape for tactical readability (no facial details).
@@ -492,8 +492,8 @@ export function createMicroAthleteToken({
   const labelFontFamily = isNumericLabel
     ? "\"Barlow Condensed\", \"Inter Tight\", Inter, system-ui, sans-serif"
     : "Inter, system-ui, sans-serif";
-  const labelBaseY = useClassicBadge ? (isNumericLabel ? -0.2 : -0.06) : (isNumericLabel ? -3.24 : -3.14);
-  const labelFontSize = useClassicBadge ? (isNumericLabel ? 4.3 : 3.6) : (isNumericLabel ? 2.26 : 2.7);
+  const labelBaseY = useClassicBadge ? (isNumericLabel ? -0.2 : -0.06) : (isNumericLabel ? -3.34 : -3.18);
+  const labelFontSize = useClassicBadge ? (isNumericLabel ? 4.3 : 3.6) : (isNumericLabel ? 2.14 : 2.66);
   const labelFontWeight = isNumericLabel ? "900" : "800";
   const labelLetterSpacing = useClassicBadge ? (isNumericLabel ? 0.03 : 0.12) : (isNumericLabel ? 0.02 : 0.08);
   const textResolution =
@@ -616,22 +616,26 @@ export function createMicroAthleteToken({
     const floatingNumberPlate = new Graphics();
     const floatingPlateWidth = isDoubleDigitLabel ? 2.18 : 1.8;
     floatingNumberPlate
-      .roundRect(-floatingPlateWidth * 0.5, -0.42, floatingPlateWidth, 0.84, 0.28)
-      .fill({ color: 0x020617, alpha: 0.36 })
+      .ellipse(0, 0.28, floatingPlateWidth * 0.48, 0.22)
+      .fill({ color: 0x020617, alpha: 0.2 })
+      .roundRect(-floatingPlateWidth * 0.5, -0.36, floatingPlateWidth, 0.72, 0.26)
+      .fill({ color: 0x020617, alpha: 0.52 })
       .stroke({
         color: mixColor(labelColorPalette.fill, 0xffffff, 0.1),
-        alpha: 0.22,
+        alpha: 0.18,
         width: 0.08,
         join: "round",
-      });
-    floatingNumberPlate.position.set(0, -8.34);
+      })
+      .roundRect(-floatingPlateWidth * 0.42, -0.22, floatingPlateWidth * 0.84, 0.24, 0.12)
+      .fill({ color: 0xffffff, alpha: 0.1 });
+    floatingNumberPlate.position.set(0, -8.28);
     token.addChild(floatingNumberPlate);
 
     const floatingNumberText = new Text({
       text: label,
       style: {
         fill: 0xf8fafc,
-        fontSize: isDoubleDigitLabel ? 1.72 : 1.82,
+        fontSize: isDoubleDigitLabel ? 1.66 : 1.76,
         fontWeight: "900",
         fontFamily: "\"Barlow Condensed\", \"Inter Tight\", Inter, system-ui, sans-serif",
         align: "center",
@@ -644,7 +648,7 @@ export function createMicroAthleteToken({
       },
     });
     floatingNumberText.anchor.set(0.5, 0.5);
-    floatingNumberText.position.set(0, -8.34);
+    floatingNumberText.position.set(0, -8.28);
     floatingNumberText.resolution = textResolution;
     floatingNumberText.roundPixels = true;
     token.addChild(floatingNumberText);
