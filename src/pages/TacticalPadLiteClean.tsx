@@ -329,11 +329,9 @@ const STADIUM_FLOODLIGHT_CSS = `
 }
 
 .floating-bubble-tool {
-  background: rgba(5, 8, 10, 0.92);
-  border: 2px solid rgba(255, 255, 255, 0.18);
-  box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.55),
-    inset 0 1px 2px rgba(255, 255, 255, 0.18);
+  background: transparent;
+  border: none;
+  box-shadow: none;
   color: rgba(255, 255, 255, 0.96);
 }
 
@@ -347,13 +345,13 @@ const STADIUM_FLOODLIGHT_CSS = `
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 46px;
-  height: 46px;
+  width: 52px;
+  height: 52px;
 }
 
 .tool-bubble-logo {
-  width: auto;
-  height: 46px;
+  width: 44px;
+  height: 44px;
   object-fit: contain;
   display: block;
   image-rendering: -webkit-optimize-contrast;
@@ -541,12 +539,11 @@ const TOOL_BUBBLE_STYLE: CSSProperties = {
   width: "52px",
   height: "52px",
   borderRadius: "16px",
-  background: "rgba(4, 8, 10, 0.9)",
-  border: "1px solid rgba(124, 255, 114, 0.3)",
-  backdropFilter: "blur(10px)",
-  WebkitBackdropFilter: "blur(10px)",
-  boxShadow:
-    "0 10px 22px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(124, 255, 114, 0.1), 0 0 9px rgba(124, 255, 114, 0.12), inset 0 1px 2px rgba(255, 255, 255, 0.14)",
+  background: "transparent",
+  border: "none",
+  backdropFilter: "none",
+  WebkitBackdropFilter: "none",
+  boxShadow: "0 6px 14px rgba(2, 8, 15, 0.34)",
 };
 
 const MOBILE_TOOLS_BUBBLE_STYLE: CSSProperties = {
@@ -554,12 +551,11 @@ const MOBILE_TOOLS_BUBBLE_STYLE: CSSProperties = {
   width: "52px",
   height: "52px",
   borderRadius: "16px",
-  border: "1px solid rgba(124, 255, 114, 0.32)",
-  background: "rgba(5, 10, 12, 0.9)",
-  backdropFilter: "blur(10px)",
-  WebkitBackdropFilter: "blur(10px)",
-  boxShadow:
-    "0 10px 22px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(124, 255, 114, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.08)",
+  border: "none",
+  background: "transparent",
+  backdropFilter: "none",
+  WebkitBackdropFilter: "none",
+  boxShadow: "0 6px 14px rgba(2, 8, 15, 0.34)",
 };
 
 const POPOUT_BASE_STYLE: CSSProperties = {
@@ -3904,7 +3900,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             }
           >
             <span className="tool-bubble-icon" aria-hidden="true">
-              <img className="tool-bubble-logo" src="/tacavision-logo.png" alt="TacaVision menu" />
+              <img className="tool-bubble-logo" src="/icon-tv-3.svg" alt="TacaVision menu" />
             </span>
           </button>
         ) : null}
