@@ -363,8 +363,8 @@ export function createMicroAthleteToken({
   token.addChild(shadow);
 
   const athlete = new Container();
-  athlete.rotation = -0.02;
-  athlete.position.set(0.1, -0.08);
+  athlete.rotation = -0.038;
+  athlete.position.set(0.14, -0.1);
   token.addChild(athlete);
 
   const jerseyFill = resolved.goalkeeper && resolved.secondaryColor != null
@@ -488,11 +488,12 @@ export function createMicroAthleteToken({
         ),
       };
   const isNumericLabel = /^\d+$/.test(label.trim());
+  const isDoubleDigitLabel = /^\d{2,}$/.test(label.trim());
   const labelFontFamily = isNumericLabel
     ? "\"Barlow Condensed\", \"Inter Tight\", Inter, system-ui, sans-serif"
     : "Inter, system-ui, sans-serif";
-  const labelBaseY = useClassicBadge ? (isNumericLabel ? -0.2 : -0.06) : (isNumericLabel ? -3.62 : -3.2);
-  const labelFontSize = useClassicBadge ? (isNumericLabel ? 4.3 : 3.6) : (isNumericLabel ? 3.8 : 2.84);
+  const labelBaseY = useClassicBadge ? (isNumericLabel ? -0.2 : -0.06) : (isNumericLabel ? -3.24 : -3.14);
+  const labelFontSize = useClassicBadge ? (isNumericLabel ? 4.3 : 3.6) : (isNumericLabel ? 2.26 : 2.7);
   const labelFontWeight = isNumericLabel ? "900" : "800";
   const labelLetterSpacing = useClassicBadge ? (isNumericLabel ? 0.03 : 0.12) : (isNumericLabel ? 0.02 : 0.08);
   const textResolution =
@@ -538,12 +539,12 @@ export function createMicroAthleteToken({
         .fill({ color: labelColorPalette.contrastPlate, alpha: 0.12 });
     } else {
       labelContrastPlate
-        .roundRect(-1.14, -0.72, 2.28, 1.44, 0.38)
-        .fill({ color: labelColorPalette.contrastPlate, alpha: noDiscWarmJersey ? 0.54 : 0.45 })
+        .roundRect(-0.86, -0.56, 1.72, 1.12, 0.3)
+        .fill({ color: labelColorPalette.contrastPlate, alpha: noDiscWarmJersey ? 0.42 : 0.34 })
         .stroke({
           color: mixColor(labelSurfaceColor, labelColorPalette.fill === 0xf8fafc ? 0x020617 : 0xffffff, 0.68),
-          alpha: noDiscWarmJersey ? 0.34 : 0.28,
-          width: 0.12,
+          alpha: noDiscWarmJersey ? 0.24 : 0.2,
+          width: 0.09,
           join: "round",
         });
     }
@@ -563,7 +564,7 @@ export function createMicroAthleteToken({
     });
     labelEmbossShadow.anchor.set(0.5, 0.5);
     labelEmbossShadow.position.y = labelBaseY + 0.08;
-    labelEmbossShadow.alpha = useClassicBadge ? 0.2 : 0.36;
+    labelEmbossShadow.alpha = useClassicBadge ? 0.2 : 0.24;
     labelEmbossShadow.resolution = textResolution;
     labelEmbossShadow.roundPixels = true;
     labelContainer.addChild(labelEmbossShadow);
@@ -580,7 +581,7 @@ export function createMicroAthleteToken({
       letterSpacing: labelLetterSpacing,
       stroke: {
         color: labelColorPalette.stroke,
-        width: isNumericLabel ? (useClassicBadge ? 0.56 : 0.82) : (useClassicBadge ? 0.47 : 0.6),
+        width: isNumericLabel ? (useClassicBadge ? 0.56 : 0.5) : (useClassicBadge ? 0.47 : 0.58),
         join: "round",
       },
     },
@@ -609,6 +610,44 @@ export function createMicroAthleteToken({
     labelEmbossHighlight.resolution = textResolution;
     labelEmbossHighlight.roundPixels = true;
     labelContainer.addChild(labelEmbossHighlight);
+  }
+
+  if (!useClassicBadge && isNumericLabel) {
+    const floatingNumberPlate = new Graphics();
+    const floatingPlateWidth = isDoubleDigitLabel ? 2.18 : 1.8;
+    floatingNumberPlate
+      .roundRect(-floatingPlateWidth * 0.5, -0.42, floatingPlateWidth, 0.84, 0.28)
+      .fill({ color: 0x020617, alpha: 0.36 })
+      .stroke({
+        color: mixColor(labelColorPalette.fill, 0xffffff, 0.1),
+        alpha: 0.22,
+        width: 0.08,
+        join: "round",
+      });
+    floatingNumberPlate.position.set(0, -8.34);
+    token.addChild(floatingNumberPlate);
+
+    const floatingNumberText = new Text({
+      text: label,
+      style: {
+        fill: 0xf8fafc,
+        fontSize: isDoubleDigitLabel ? 1.72 : 1.82,
+        fontWeight: "900",
+        fontFamily: "\"Barlow Condensed\", \"Inter Tight\", Inter, system-ui, sans-serif",
+        align: "center",
+        letterSpacing: isDoubleDigitLabel ? 0.01 : 0.03,
+        stroke: {
+          color: 0x111827,
+          width: 0.22,
+          join: "round",
+        },
+      },
+    });
+    floatingNumberText.anchor.set(0.5, 0.5);
+    floatingNumberText.position.set(0, -8.34);
+    floatingNumberText.resolution = textResolution;
+    floatingNumberText.roundPixels = true;
+    token.addChild(floatingNumberText);
   }
 
   const sanitizedNameplate = typeof nameplateLabel === "string"
