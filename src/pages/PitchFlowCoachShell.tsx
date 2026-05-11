@@ -271,24 +271,24 @@ const SHELL_CSS = `
 .pf-wordmark {
   display: inline-grid;
   justify-items: start;
-  gap: 6px;
+  gap: 7px;
 }
 
 .pf-wordmark-brand {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .pf-logo {
-  width: auto;
-  height: 42px;
+  width: 46px;
+  height: 46px;
   object-fit: contain;
   align-self: center;
   display: block;
   image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
-  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.28));
+  filter: drop-shadow(0 4px 10px rgba(2, 8, 15, 0.22));
 }
 
 .pf-home-icon-btn {
@@ -315,7 +315,7 @@ const SHELL_CSS = `
 .pf-title {
   margin: 0;
   font-size: clamp(28px, 7vw, 34px);
-  font-weight: 850;
+  font-weight: 820;
   line-height: 0.98;
   letter-spacing: 0.02em;
   color: #f4f7f5;
@@ -946,7 +946,7 @@ function BoardPage() {
         <div className="pf-header-top">
           <div className="pf-wordmark">
             <div className="pf-wordmark-brand">
-              <img className="pf-logo" src="/tacavision-logo.png" alt="TacaVision logo" />
+              <img className="pf-logo" src="/icon-tv-3.svg" alt="TacaVision symbol" />
               <h1 className="pf-title">TacaVision</h1>
             </div>
             <span className="pf-title-accent" aria-hidden="true" />

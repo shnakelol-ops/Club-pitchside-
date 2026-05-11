@@ -115,11 +115,12 @@ const SAVED_SQUADS_STORAGE_KEY = "pitchflow_saved_squads_v1";
 const SAVED_MATCHES_STORAGE_KEY = "pitchflow_matches_v1";
 const MAX_SAVED_MATCHES = 10;
 const EVENT_PICKER_LOGO_STYLE: CSSProperties = {
-  width: "auto",
-  height: "46px",
+  width: "40px",
+  height: "40px",
   objectFit: "contain",
   display: "block",
   imageRendering: "crisp-edges",
+  filter: "drop-shadow(0 4px 10px rgba(2, 8, 15, 0.26))",
 };
 
 function safeReadLocalStorage(key: string): string | null {
@@ -5460,18 +5461,14 @@ export default function StatsModeSurface() {
             aria-expanded={isPickerOpen}
             className="bubble-btn"
             style={{
-              border: isPickerOpen
-                ? "1px solid rgba(124,255,114,0.52)"
-                : "1px solid rgba(124,255,114,0.32)",
-              background: isPickerOpen
-                ? "linear-gradient(180deg, rgba(17, 31, 49, 0.95) 0%, rgba(8, 15, 28, 0.98) 100%)"
-                : "linear-gradient(180deg, rgba(20, 34, 52, 0.9) 0%, rgba(10, 18, 30, 0.96) 100%)",
+              border: "none",
+              background: "transparent",
               boxShadow: isPickerOpen
-                ? "0 10px 24px rgba(0, 0, 0, 0.44), 0 0 0 1px rgba(124, 255, 114, 0.28), 0 0 12px rgba(124, 255, 114, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.14)"
-                : "0 10px 22px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(124, 255, 114, 0.14), 0 0 9px rgba(124, 255, 114, 0.14), inset 0 1px 1px rgba(255, 255, 255, 0.12)",
+                ? "0 5px 12px rgba(2, 8, 15, 0.28)"
+                : "0 4px 10px rgba(2, 8, 15, 0.22)",
             }}
           >
-            <img src="/tacavision-logo.png" alt="TacaVision menu" aria-hidden="true" style={EVENT_PICKER_LOGO_STYLE} />
+            <img src="/icon-tv-3.svg" alt="TacaVision menu" aria-hidden="true" style={EVENT_PICKER_LOGO_STYLE} />
           </button>
       </div>
         <div
