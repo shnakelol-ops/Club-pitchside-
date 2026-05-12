@@ -8,8 +8,8 @@ import {
   PREMIUM_TOKEN_IDLE_SCALE,
   PREMIUM_TOKEN_IDLE_SHADOW_ALPHA,
   type PremiumPlayerTokenColor,
+  type PremiumTokenAccentPattern,
 } from "./createPremiumPlayerToken";
-import { createMicroAthleteToken, type MicroAthleteKitPattern } from "./createMicroAthleteToken";
 import {
   createTacticalPitchVisualRoot,
   type TacticalPitchTheme,
@@ -28,7 +28,7 @@ import {
   type WhiteboardDrawTool,
 } from "../../features/quickboard/drawing/tacticalDrawingTypes";
 
-export type TacticalKitPattern = MicroAthleteKitPattern;
+export type TacticalKitPattern = PremiumTokenAccentPattern;
 export type TacticalLabelMode = "number" | "initials";
 export type TacticalPlayerKitFields = {
   kitBaseColor?: string;
@@ -831,28 +831,16 @@ export async function createTacticalPadLiteSurface(
     token: Container;
     shadow: Graphics;
   } {
-    if (surfaceVariant !== "tactical") {
-      return createPremiumPlayerToken({
-        color: player.teamColor,
-        number: player.number,
-        radius: PLAYER_RADIUS,
-      });
-    }
-    const baseColor = getEffectiveKitBaseColor(player);
     const pattern = getEffectiveKitPattern(player);
     const patternColor = getEffectiveKitPatternColor(player);
     const label = resolvePlayerLabel(player);
-    return createMicroAthleteToken({
+    return createPremiumPlayerToken({
+      color: player.teamColor,
+      number: player.number,
+      radius: PLAYER_RADIUS * TACTICAL_PLAYER_VISUAL_SCALE,
       label,
-      teamColor: player.teamColor,
-      scale: (PLAYER_RADIUS / 4.1) * TACTICAL_PLAYER_VISUAL_SCALE,
-      style: {
-        primaryColor: KIT_COLOR_NUMERIC[baseColor],
-        secondaryColor: KIT_COLOR_NUMERIC[baseColor],
-        badgeColor: KIT_COLOR_NUMERIC[baseColor],
-      },
-      kitPattern: pattern,
-      kitPatternColor: KIT_COLOR_NUMERIC[patternColor],
+      accentPattern: pattern,
+      accentColor: KIT_COLOR_NUMERIC[patternColor],
     });
   }
 
