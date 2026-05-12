@@ -2,14 +2,13 @@ import { Application, Container, Graphics, Text } from "pixi.js";
 
 import { createWorldViewport } from "./createWorldViewport";
 import {
-  createPremiumPlayerToken,
-  PREMIUM_TOKEN_DRAG_SCALE,
-  PREMIUM_TOKEN_DRAG_SHADOW_ALPHA,
-  PREMIUM_TOKEN_IDLE_SCALE,
-  PREMIUM_TOKEN_IDLE_SHADOW_ALPHA,
-  type PremiumPlayerTokenColor,
-} from "./createPremiumPlayerToken";
-import { createMicroAthleteToken, type MicroAthleteKitPattern } from "./createMicroAthleteToken";
+  GLYPH_TOKEN_DRAG_SCALE,
+  GLYPH_TOKEN_DRAG_SHADOW_ALPHA,
+  GLYPH_TOKEN_IDLE_SCALE,
+  GLYPH_TOKEN_IDLE_SHADOW_ALPHA,
+  createPlayerGlyphRenderer,
+} from "./createPlayerGlyphRenderer";
+import { type MicroAthleteKitPattern } from "./createMicroAthleteToken";
 import {
   createTacticalPitchVisualRoot,
   type TacticalPitchTheme,
@@ -56,7 +55,7 @@ type TacticalPlayer = TacticalPlayerKitFields & {
   dragShadowAlphaTarget: number;
 };
 
-export type WhiteboardTokenColor = PremiumPlayerTokenColor;
+export type WhiteboardTokenColor = "blue" | "red" | "yellow" | "black";
 export type FlowItemType = "cone" | "pole" | "ladder" | "tackleBag" | "football" | "sliotar";
 export type ItemMode = "edit" | "locked";
 export type TacticalItem = {
@@ -147,7 +146,6 @@ type PhaseSnapshot = {
 const WORLD_SIZE = { width: 160, height: 100 } as const;
 const PLAYER_RADIUS = 4.1;
 const PLAYER_TOUCH_HIT_DIAMETER_PX = 48;
-const TACTICAL_PLAYER_VISUAL_SCALE = 0.8;
 const TACTICAL_ITEM_HALF_SIZE = 2.2;
 const TACTICAL_ITEM_DRAG_THRESHOLD_PX = 5;
 const TACTICAL_ITEM_TOUCH_HIT_DIAMETER_PX = 46;
@@ -513,11 +511,6 @@ function buildTeamKitFromPlayerStates(
   };
 }
 
-function safePlayerNumberLabel(value: number): string {
-  if (!Number.isFinite(value)) return "0";
-  return String(Math.max(0, Math.floor(value)));
-}
-
 function createWhiteboardPlayerSeeds(
   counts: TacticalPadLiteSurfaceOptions["whiteboardTeamCounts"],
   colors: TacticalPadLiteSurfaceOptions["whiteboardTeamColors"],
@@ -803,61 +796,22 @@ export async function createTacticalPadLiteSurface(
     return sanitizeKitColor(player.kitBaseColor) ?? fallbackColor;
   }
 
-  function getEffectiveKitPattern(player: Pick<TacticalPlayer, "team" | "kitPattern">): TacticalKitPattern {
-    const fallbackPattern = surfaceVariant === "tactical" ? getTeamKitForTeam(player.team).pattern : "plain";
-    return sanitizeKitPattern(player.kitPattern) ?? fallbackPattern;
-  }
-
-  function getEffectiveKitPatternColor(
-    player: Pick<TacticalPlayer, "team" | "kitPatternColor" | "kitBaseColor" | "teamColor">,
-  ): TacticalKitColor {
-    const baseColor = getEffectiveKitBaseColor(player);
-    if (surfaceVariant === "tactical") {
-      return sanitizeKitColor(player.kitPatternColor) ?? getTeamKitForTeam(player.team).secondaryColor;
-    }
-    return sanitizeKitColor(player.kitPatternColor) ?? defaultKitPatternColor(baseColor);
-  }
-
-  function resolvePlayerLabel(player: Pick<TacticalPlayer, "number" | "labelMode" | "initials">): string {
-    const labelMode = sanitizeLabelMode(player.labelMode) ?? "number";
-    const initials = sanitizeInitials(player.initials);
-    if (labelMode === "initials" && initials) {
-      return initials;
-    }
-    return safePlayerNumberLabel(player.number);
-  }
-
   function createTokenPackForPlayer(player: Pick<TacticalPlayer, "number" | "team" | "teamColor" | "kitBaseColor" | "kitPattern" | "kitPatternColor" | "labelMode" | "initials">): {
     token: Container;
     shadow: Graphics;
   } {
-    if (surfaceVariant !== "tactical") {
-      return createPremiumPlayerToken({
-        color: player.teamColor,
-        number: player.number,
-        radius: PLAYER_RADIUS,
-      });
-    }
     const baseColor = getEffectiveKitBaseColor(player);
-    const pattern = getEffectiveKitPattern(player);
-    const patternColor = getEffectiveKitPatternColor(player);
-    const label = resolvePlayerLabel(player);
-    return createMicroAthleteToken({
-      label,
-      teamColor: player.teamColor,
-      scale: (PLAYER_RADIUS / 4.1) * TACTICAL_PLAYER_VISUAL_SCALE,
-      style: {
-        primaryColor: KIT_COLOR_NUMERIC[baseColor],
-        secondaryColor: KIT_COLOR_NUMERIC[baseColor],
-        badgeColor: KIT_COLOR_NUMERIC[baseColor],
-      },
-      kitPattern: pattern,
-      kitPatternColor: KIT_COLOR_NUMERIC[patternColor],
+    const baseNumericColor = KIT_COLOR_NUMERIC[baseColor];
+    return createPlayerGlyphRenderer({
+      number: player.number,
+      radius: PLAYER_RADIUS,
+      teamColor: baseNumericColor,
+      goalkeeper: player.number === 1,
     });
   }
 
   function createSurfacePlayer(base: PlayerSeed, kitFields?: TacticalPlayerKitFields): TacticalPlayer {
-    const tokenColor: PremiumPlayerTokenColor = base.color;
+    const tokenColor = base.color;
     const canonicalTeamKit = surfaceVariant === "tactical" ? getTeamKitForTeam(base.team) : null;
     const seedKitFields: TacticalPlayerKitFields = {
       kitBaseColor: sanitizeKitColor(base.kitBaseColor),
@@ -892,8 +846,8 @@ export async function createTacticalPadLiteSurface(
       current: { ...base.position },
       token,
       tokenShadow: shadow,
-      dragScaleTarget: PREMIUM_TOKEN_IDLE_SCALE,
-      dragShadowAlphaTarget: PREMIUM_TOKEN_IDLE_SHADOW_ALPHA,
+      dragScaleTarget: GLYPH_TOKEN_IDLE_SCALE,
+      dragShadowAlphaTarget: GLYPH_TOKEN_IDLE_SHADOW_ALPHA,
       kitBaseColor: sanitizeKitColor(nextKitFields.kitBaseColor),
       kitPattern: sanitizeKitPattern(nextKitFields.kitPattern),
       kitPatternColor: sanitizeKitColor(nextKitFields.kitPatternColor),
@@ -1470,10 +1424,10 @@ export async function createTacticalPadLiteSurface(
   }
 
   function setPlayerDragVisualTarget(player: TacticalPlayer, isDragging: boolean): void {
-    player.dragScaleTarget = isDragging ? PREMIUM_TOKEN_DRAG_SCALE : PREMIUM_TOKEN_IDLE_SCALE;
+    player.dragScaleTarget = isDragging ? GLYPH_TOKEN_DRAG_SCALE : GLYPH_TOKEN_IDLE_SCALE;
     player.dragShadowAlphaTarget = isDragging
-      ? PREMIUM_TOKEN_DRAG_SHADOW_ALPHA
-      : PREMIUM_TOKEN_IDLE_SHADOW_ALPHA;
+      ? GLYPH_TOKEN_DRAG_SHADOW_ALPHA
+      : GLYPH_TOKEN_IDLE_SHADOW_ALPHA;
   }
 
   function animatePlayerDragVisuals(deltaMs: number): void {
