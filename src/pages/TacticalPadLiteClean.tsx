@@ -5,6 +5,7 @@ import {
   type ItemMode,
   type TacticalLabelMode,
   type TacticalKitPattern,
+  type TacticalPlayerTokenStyle,
   type TacticalPlayerKitPatch,
   type TacticalPlayerKitSnapshot,
   type TacticalPadLiteSurface,
@@ -133,6 +134,11 @@ const KIT_PATTERN_LABEL: Record<TacticalKitPattern, string> = {
   slash: "Slash",
 };
 const LABEL_MODE_CHOICES: TacticalLabelMode[] = ["number", "initials"];
+const TOKEN_STYLE_CHOICES: ReadonlyArray<{ value: TacticalPlayerTokenStyle; label: string }> = [
+  { value: "classic", label: "Classic" },
+  { value: "premium", label: "Glow" },
+  { value: "torso", label: "Torso" },
+];
 type KitEditorTab = "base" | "pattern" | "label";
 const KIT_EDITOR_TABS: ReadonlyArray<{ id: KitEditorTab; label: string }> = [
   { id: "base", label: "Base" },
@@ -859,6 +865,52 @@ const ACTIONS_MENU_BUTTON_STYLE: CSSProperties = {
   textAlign: "left",
   background: "rgba(15, 24, 31, 0.82)",
   boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.12)",
+};
+
+const TOKEN_STYLE_MENU_SECTION_STYLE: CSSProperties = {
+  borderRadius: "8px",
+  border: "1px solid rgba(224, 236, 248, 0.22)",
+  background: "rgba(12, 21, 27, 0.76)",
+  padding: "5px",
+  display: "grid",
+  gap: "4px",
+};
+
+const TOKEN_STYLE_MENU_LABEL_STYLE: CSSProperties = {
+  margin: 0,
+  color: "rgba(220, 233, 246, 0.9)",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "9px",
+  fontWeight: 650,
+  letterSpacing: "0.18px",
+  textTransform: "uppercase",
+};
+
+const TOKEN_STYLE_MENU_ROW_STYLE: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+  gap: "3px",
+};
+
+const TOKEN_STYLE_MENU_BUTTON_STYLE: CSSProperties = {
+  borderRadius: "7px",
+  border: "1px solid rgba(170, 196, 220, 0.3)",
+  background: "rgba(15, 24, 31, 0.82)",
+  color: "rgba(232, 241, 249, 0.95)",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "9px",
+  fontWeight: 620,
+  letterSpacing: "0.14px",
+  height: "25px",
+  cursor: "pointer",
+  padding: "0 3px",
+};
+
+const TOKEN_STYLE_MENU_BUTTON_ACTIVE_STYLE: CSSProperties = {
+  ...TOKEN_STYLE_MENU_BUTTON_STYLE,
+  border: "1px solid rgba(124, 255, 114, 0.5)",
+  background: "rgba(124, 255, 114, 0.12)",
+  color: "#f3fff1",
 };
 
 const QUICK_SHARE_POPOUT_STYLE: CSSProperties = {
@@ -1783,6 +1835,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const [items, setItems] = useState<TacticalItem[]>([]);
   const [itemMode, setItemMode] = useState<ItemMode>("locked");
   const [phaseCount, setPhaseCount] = useState(0);
+  const [tacticalTokenStyle, setTacticalTokenStyle] = useState<TacticalPlayerTokenStyle>("classic");
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [playbackSpeedMultiplier, setPlaybackSpeedMultiplier] = useState<number>(DEFAULT_PLAYBACK_SPEED_MULTIPLIER);
@@ -1992,6 +2045,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
       whiteboardTeamCounts: isWhiteboardMode ? whiteboardCountsRef.current : undefined,
       whiteboardTeamColors: whiteboardTeamColorsRef.current,
       whiteboardDrawColor: isWhiteboardMode ? whiteboardPenColor : tacticalPenColor,
+      tacticalTokenStyle,
       onPhaseCountChange: (count) => {
         if (!disposed) {
           setPhaseCount(count);
@@ -2102,6 +2156,11 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     if (isStatsMode || isWhiteboardMode) return;
     surfaceRef.current?.setItems(items);
   }, [isStatsMode, isWhiteboardMode, items]);
+
+  useEffect(() => {
+    if (isStatsMode || isWhiteboardMode) return;
+    surfaceRef.current?.setTacticalTokenStyle(tacticalTokenStyle);
+  }, [isStatsMode, isWhiteboardMode, tacticalTokenStyle]);
 
   useEffect(() => {
     if (isStatsMode || isWhiteboardMode || !isPortraitViewingMode) return;
@@ -3992,6 +4051,22 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         ) : null}
         {!isWhiteboardMode && actionsOpen ? (
           <div ref={actionsMenuRef} style={actionsPopoutStyle}>
+            <div style={TOKEN_STYLE_MENU_SECTION_STYLE}>
+              <p style={TOKEN_STYLE_MENU_LABEL_STYLE}>Token Style</p>
+              <div style={TOKEN_STYLE_MENU_ROW_STYLE}>
+                {TOKEN_STYLE_CHOICES.map((choice) => (
+                  <button
+                    key={`token-style-${choice.value}`}
+                    type="button"
+                    className="control-button"
+                    style={tacticalTokenStyle === choice.value ? TOKEN_STYLE_MENU_BUTTON_ACTIVE_STYLE : TOKEN_STYLE_MENU_BUTTON_STYLE}
+                    onClick={() => setTacticalTokenStyle(choice.value)}
+                  >
+                    {choice.label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <button type="button" className="control-button" style={ACTIONS_MENU_BUTTON_STYLE} onClick={openQuickShareEntry}>
               Quick Share (Beta)
             </button>

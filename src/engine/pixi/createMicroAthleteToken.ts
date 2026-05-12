@@ -9,7 +9,7 @@ export type MicroAthleteStyle = {
   goalkeeper?: boolean;
 };
 
-type MicroAthleteTeamColor = "blue" | "red" | "green" | "yellow" | "black" | "white";
+export type MicroAthleteTeamColor = "blue" | "red" | "green" | "yellow" | "black" | "white";
 export type MicroAthleteKitPattern = "plain" | "hoops" | "slash" | "stripes";
 
 const DEFAULT_STYLE_BY_TEAM: Record<MicroAthleteTeamColor, MicroAthleteStyle> = {
@@ -59,8 +59,10 @@ const DEFAULT_STYLE_BY_TEAM: Record<MicroAthleteTeamColor, MicroAthleteStyle> = 
 
 const TOKEN_BASE_COLOR = 0x191919;
 const TOKEN_RADIUS = 3.66;
-const TOKEN_RING_WIDTH = 0.72;
-const TOKEN_IDLE_HALO_ALPHA = 0.26;
+const TOKEN_RING_WIDTH = 1.14;
+const TOKEN_IDLE_HALO_ALPHA = 0.16;
+const TOKEN_OUTLINE_WIDTH = 0.64;
+const TOKEN_PATTERN_CUT_WIDTH = 0.56;
 
 function clampColorChannel(value: number): number {
   return Math.max(0, Math.min(255, Math.round(value)));
@@ -81,31 +83,49 @@ function mixColor(base: number, target: number, amount: number): number {
   return (r << 16) | (g << 8) | b;
 }
 
-function vividGlowColor(color: number): number {
-  const r = (color >> 16) & 0xff;
-  const g = (color >> 8) & 0xff;
-  const b = color & 0xff;
-  const maxChannel = Math.max(r, g, b);
-  const minChannel = Math.min(r, g, b);
-  const chroma = maxChannel - minChannel;
-  if (maxChannel <= 0 || chroma < 20) {
-    return mixColor(color, 0xffffff, 0.14);
-  }
-  const boostScale = 255 / maxChannel;
-  const boostedColor =
-    (clampColorChannel(r * boostScale) << 16) |
-    (clampColorChannel(g * boostScale) << 8) |
-    clampColorChannel(b * boostScale);
-  return mixColor(boostedColor, color, 0.28);
+function lineHalfExtentAtOffset(radius: number, offset: number): number {
+  const inside = radius * radius - offset * offset;
+  if (inside <= 0) return 0;
+  return Math.sqrt(inside);
 }
 
-function drawIntegratedCrownNotch(target: Graphics, ringColor: number, outlineColor: number): void {
-  const notchY = -TOKEN_RADIUS + TOKEN_RING_WIDTH * 0.56;
-  target
-    .roundRect(-0.26, notchY, 0.52, 0.12, 0.06)
-    .fill({ color: mixColor(ringColor, outlineColor, 0.18), alpha: 0.2 })
-    .poly([-0.14, notchY + 0.11, 0, notchY + 0.03, 0.14, notchY + 0.11])
-    .fill({ color: mixColor(ringColor, 0xffffff, 0.08), alpha: 0.18 });
+function drawPatternCuts(
+  target: Graphics,
+  pattern: MicroAthleteKitPattern,
+  baseColor: number,
+  outerRadius: number,
+): void {
+  if (pattern === "plain") return;
+  const clippedOuterRadius = Math.max(0, outerRadius - TOKEN_PATTERN_CUT_WIDTH * 0.5 - 0.04);
+  if (pattern === "hoops") {
+    const yOffset = clippedOuterRadius * 0.36;
+    const halfSpan = lineHalfExtentAtOffset(clippedOuterRadius, yOffset);
+    target
+      .moveTo(-halfSpan, -yOffset)
+      .lineTo(halfSpan, -yOffset)
+      .moveTo(-halfSpan, yOffset)
+      .lineTo(halfSpan, yOffset);
+  } else if (pattern === "stripes") {
+    const xOffset = clippedOuterRadius * 0.36;
+    const halfSpan = lineHalfExtentAtOffset(clippedOuterRadius, xOffset);
+    target
+      .moveTo(-xOffset, -halfSpan)
+      .lineTo(-xOffset, halfSpan)
+      .moveTo(xOffset, -halfSpan)
+      .lineTo(xOffset, halfSpan);
+  } else if (pattern === "slash") {
+    const slashAngle = -Math.PI * 0.22;
+    const dx = Math.cos(slashAngle) * clippedOuterRadius;
+    const dy = Math.sin(slashAngle) * clippedOuterRadius;
+    target.moveTo(-dx, -dy).lineTo(dx, dy);
+  }
+  target.stroke({
+    color: baseColor,
+    width: TOKEN_PATTERN_CUT_WIDTH,
+    alpha: 1,
+    cap: "butt",
+    join: "round",
+  });
 }
 
 export function createMicroAthleteToken({
@@ -136,88 +156,75 @@ export function createMicroAthleteToken({
   token.cursor = "grab";
   token.scale.set(scale ?? 1);
 
-  const patternStrength = kitPattern === "plain" ? 0.07 : 0.11;
-  const teamBaseColor = resolved.goalkeeper && resolved.secondaryColor != null
+  const innerColor = resolved.goalkeeper && resolved.secondaryColor != null
     ? resolved.secondaryColor
     : resolved.primaryColor;
-  const glowColor = vividGlowColor(teamBaseColor);
-  const ringColor = mixColor(glowColor, 0x0f172a, 0.12);
-  const ringInnerShade = mixColor(glowColor, resolved.outlineColor, 0.36);
-  const patternTintSource = Number.isFinite(kitPatternColor)
+  const ringColor = Number.isFinite(kitPatternColor)
     ? Number(kitPatternColor)
-    : glowColor;
-  const innerTintColor = mixColor(glowColor, patternTintSource, patternStrength);
-  const centreColor = mixColor(TOKEN_BASE_COLOR, glowColor, 0.3);
-  const centreHighlightColor = mixColor(centreColor, 0xffffff, 0.32);
-  const centreRimColor = mixColor(glowColor, resolved.outlineColor, 0.3);
+    : (resolved.secondaryColor ?? mixColor(innerColor, 0xffffff, 0.24));
+  const outlineColor = resolved.outlineColor;
+  const innerRadius = TOKEN_RADIUS - TOKEN_RING_WIDTH;
+  const ringOuterRadius = TOKEN_RADIUS - 0.06;
 
   const shadow = new Graphics();
   shadow
-    .circle(0, 0, TOKEN_RADIUS * 1.56)
-    .stroke({ color: glowColor, width: 0.66, alpha: 0.96 })
-    .circle(0, 0, TOKEN_RADIUS * 1.34)
-    .stroke({ color: glowColor, width: 0.34, alpha: 0.9 })
+    .circle(0, 0, TOKEN_RADIUS * 1.26)
+    .fill({ color: 0x020617, alpha: 0.17 })
     .circle(0, 0, TOKEN_RADIUS * 1.16)
-    .fill({ color: glowColor, alpha: 0.18 });
+    .fill({ color: ringColor, alpha: 0.12 });
   shadow.alpha = TOKEN_IDLE_HALO_ALPHA;
   token.addChild(shadow);
 
   const baseShadow = new Graphics();
   baseShadow
-    .ellipse(0.34, TOKEN_RADIUS * 1.08, TOKEN_RADIUS * 1.2, TOKEN_RADIUS * 0.33)
-    .fill({ color: 0x020617, alpha: 0.17 })
-    .ellipse(0.34, TOKEN_RADIUS * 1.02, TOKEN_RADIUS * 1.04, TOKEN_RADIUS * 0.24)
-    .fill({ color: 0x020617, alpha: 0.12 });
+    .ellipse(0.24, TOKEN_RADIUS * 1.06, TOKEN_RADIUS * 1.08, TOKEN_RADIUS * 0.26)
+    .fill({ color: 0x020617, alpha: 0.15 });
   token.addChild(baseShadow);
 
-  const tokenBase = new Graphics();
-  tokenBase
+  const tokenDisc = new Graphics();
+  tokenDisc
     .circle(0, 0, TOKEN_RADIUS)
     .fill({ color: TOKEN_BASE_COLOR })
-    .circle(0, 0, TOKEN_RADIUS - 0.08)
-    .stroke({ color: mixColor(TOKEN_BASE_COLOR, 0x000000, 0.3), width: 0.42, alpha: 0.7 })
-    .circle(0, 0, TOKEN_RADIUS - 0.2)
-    .stroke({ color: ringColor, width: TOKEN_RING_WIDTH, alpha: 0.95 })
-    .circle(0, 0, TOKEN_RADIUS - TOKEN_RING_WIDTH - 0.06)
-    .stroke({ color: ringInnerShade, width: 0.2, alpha: 0.54 });
-  token.addChild(tokenBase);
+    .circle(0, 0, ringOuterRadius)
+    .fill({ color: ringColor });
+  drawPatternCuts(tokenDisc, kitPattern, innerColor, ringOuterRadius);
+  tokenDisc
+    .circle(0, 0, innerRadius)
+    .fill({ color: innerColor })
+    .circle(0, 0, TOKEN_RADIUS)
+    .stroke({
+      color: mixColor(outlineColor, 0x000000, 0.34),
+      width: TOKEN_OUTLINE_WIDTH,
+      alpha: 0.62,
+      alignment: 0.5,
+    })
+    .circle(0, 0, innerRadius)
+    .stroke({
+      color: mixColor(outlineColor, 0x000000, 0.24),
+      width: 0.26,
+      alpha: 0.52,
+      alignment: 0.5,
+    });
+  token.addChild(tokenDisc);
 
-  const centreRadius = TOKEN_RADIUS - TOKEN_RING_WIDTH - 0.18;
-  const centre = new Graphics();
-  centre
-    .circle(0, 0, centreRadius)
-    .fill({ color: centreColor })
-    .circle(0, 0, centreRadius * 0.96)
-    .fill({ color: innerTintColor, alpha: 0.2 })
-    .circle(0, -centreRadius * 0.16, centreRadius * 0.84)
-    .fill({ color: centreHighlightColor, alpha: 0.52 })
-    .circle(0, 0, centreRadius)
-    .stroke({ color: centreRimColor, width: 0.22, alpha: 0.46 })
-    .ellipse(-centreRadius * 0.22, -centreRadius * 0.46, centreRadius * 0.54, centreRadius * 0.2)
-    .fill({ color: 0xffffff, alpha: 0.16 });
-  token.addChild(centre);
-
-  const notch = new Graphics();
-  drawIntegratedCrownNotch(notch, ringColor, resolved.outlineColor);
-  token.addChild(notch);
-
-  const orientationTick = new Graphics();
-  orientationTick
-    .roundRect(-0.09, -TOKEN_RADIUS + TOKEN_RING_WIDTH * 0.44, 0.18, 0.18, 0.08)
-    .fill({ color: mixColor(ringColor, 0xffffff, 0.08), alpha: 0.2 });
-  token.addChild(orientationTick);
+  const innerGloss = new Graphics();
+  innerGloss
+    .ellipse(0, -innerRadius * 0.38, innerRadius * 0.86, innerRadius * 0.33)
+    .fill({ color: 0xffffff, alpha: 0.09 });
+  token.addChild(innerGloss);
 
   const safeLabel = label.trim().slice(0, 3) || "?";
   const isNumericLabel = /^\d+$/.test(safeLabel);
-  const labelBaseY = isNumericLabel ? -0.02 : -0.06;
+  const labelBaseY = isNumericLabel ? 0 : -0.04;
   const labelFontSize = isNumericLabel
     ? safeLabel.length >= 2 ? 4.3 : 4.9
     : 3.4;
   const labelLetterSpacing = isNumericLabel ? 0.04 : 0.1;
+  const labelTextColor = 0xf8fafc;
   const labelPlate = new Graphics();
   labelPlate
-    .roundRect(-centreRadius * 0.9, -1.02, centreRadius * 1.8, 2.04, 0.58)
-    .fill({ color: 0x020617, alpha: 0.24 });
+    .roundRect(-innerRadius * 0.76, -0.94, innerRadius * 1.52, 1.88, 0.5)
+    .fill({ color: 0x020617, alpha: 0.18 });
   labelPlate.position.y = labelBaseY;
   token.addChild(labelPlate);
 
@@ -235,8 +242,8 @@ export function createMicroAthleteToken({
     },
   });
   labelShadow.anchor.set(0.5, 0.5);
-  labelShadow.position.y = labelBaseY + 0.1;
-  labelShadow.alpha = 0.34;
+  labelShadow.position.y = labelBaseY + 0.08;
+  labelShadow.alpha = 0.24;
   labelShadow.resolution = textResolution;
   labelShadow.roundPixels = true;
   token.addChild(labelShadow);
@@ -244,15 +251,15 @@ export function createMicroAthleteToken({
   const labelText = new Text({
     text: safeLabel,
     style: {
-      fill: resolved.textColor,
+      fill: labelTextColor,
       fontSize: labelFontSize,
       fontWeight: "900",
       fontFamily: "\"Barlow Condensed\", \"Inter Tight\", Inter, system-ui, sans-serif",
       align: "center",
       letterSpacing: labelLetterSpacing,
       stroke: {
-        color: mixColor(resolved.outlineColor, 0x000000, 0.22),
-        width: isNumericLabel ? 0.8 : 0.62,
+        color: mixColor(outlineColor, 0x000000, 0.22),
+        width: isNumericLabel ? 0.7 : 0.56,
         join: "round",
       },
     },
