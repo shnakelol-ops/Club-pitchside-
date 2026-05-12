@@ -44,17 +44,21 @@ export function createPlayerGlyphRenderer({ number, radius, teamColor, goalkeepe
 
   const baseY = radius * 0.78;
   const baseFill = 0x1a2436;
-  const baseRim = mixColor(teamColor, goalkeeper ? 0xf8fafc : 0xffffff, goalkeeper ? 0.3 : 0.12);
+  const baseRim = mixColor(teamColor, goalkeeper ? 0xf8fafc : 0xffffff, goalkeeper ? 0.42 : 0.12);
 
   const base = new Graphics();
   base.ellipse(0, baseY, radius * 0.88, radius * 0.33).fill({ color: baseFill, alpha: 0.92 });
   base.ellipse(0, baseY, radius * 0.88, radius * 0.33).stroke({ color: baseRim, width: 0.64, alpha: 0.86 });
   base.ellipse(0, baseY - radius * 0.015, radius * 0.64, radius * 0.15).stroke({ color: 0xffffff, width: 0.26, alpha: 0.14 });
-  base.ellipse(0, baseY + radius * 0.02, radius * 0.95, radius * 0.4).stroke({ color: mixColor(teamColor, 0x38bdf8, 0.18), width: 0.48, alpha: 0.24 });
+  base.ellipse(0, baseY + radius * 0.02, radius * 0.95, radius * 0.4).stroke({ color: mixColor(teamColor, 0x38bdf8, goalkeeper ? 0.28 : 0.18), width: goalkeeper ? 0.56 : 0.48, alpha: goalkeeper ? 0.3 : 0.24 });
   token.addChild(base);
 
   const athlete = new Graphics();
   const jerseyBase = goalkeeper ? mixColor(teamColor, 0xffffff, 0.26) : teamColor;
+  const jerseyTop = mixColor(jerseyBase, 0xffffff, 0.22);
+  const jerseyBottom = mixColor(jerseyBase, 0x0b1220, 0.28);
+  const torsoHalfWidth = goalkeeper ? radius * 0.42 : radius * 0.39;
+  const waistHalfWidth = goalkeeper ? radius * 0.24 : radius * 0.2;
 
   // integrated footing above base so player sits ON the base
   athlete
@@ -64,27 +68,62 @@ export function createPlayerGlyphRenderer({ number, radius, teamColor, goalkeepe
   // mini-athlete shoulders + arms from Cursor-like silhouette proportions
   athlete
     .roundRect(-radius * 0.56, -radius * 0.26, radius * 0.14, radius * 0.5, radius * 0.05)
-    .fill({ color: mixColor(jerseyBase, 0x000000, 0.12), alpha: 0.95 })
+    .fill({ color: mixColor(jerseyBase, 0x0b1220, 0.18), alpha: 0.95 })
     .roundRect(radius * 0.42, -radius * 0.26, radius * 0.14, radius * 0.5, radius * 0.05)
     .fill({ color: mixColor(jerseyBase, 0x000000, 0.18), alpha: 0.95 });
 
   // tapered clean torso
   athlete
-    .moveTo(-radius * 0.39, -radius * 0.5)
-    .lineTo(radius * 0.39, -radius * 0.5)
-    .lineTo(radius * 0.2, radius * 0.4)
-    .lineTo(-radius * 0.22, radius * 0.4)
+        .moveTo(-torsoHalfWidth, -radius * 0.5)
+    .lineTo(torsoHalfWidth, -radius * 0.5)
+    .lineTo(waistHalfWidth, radius * 0.4)
+    .lineTo(-waistHalfWidth * 1.08, radius * 0.4)
     .closePath()
     .fill({ color: jerseyBase, alpha: 1 });
 
   athlete
     .poly([
-      -radius * 0.03, -radius * 0.44,
-      radius * 0.22, -radius * 0.2,
-      radius * 0.13, radius * 0.2,
-      -radius * 0.1, 0,
+      -torsoHalfWidth + radius * 0.04, -radius * 0.46,
+      torsoHalfWidth - radius * 0.04, -radius * 0.46,
+      waistHalfWidth + radius * 0.02, -radius * 0.02,
+      -waistHalfWidth * 0.9, -radius * 0.02,
     ])
-    .fill({ color: mixColor(jerseyBase, 0xffffff, 0.2), alpha: 0.5 });
+    .fill({ color: jerseyTop, alpha: 0.42 });
+
+  athlete
+    .poly([
+      -waistHalfWidth * 1.05, radius * 0.05,
+      waistHalfWidth, radius * 0.05,
+      waistHalfWidth - radius * 0.04, radius * 0.38,
+      -waistHalfWidth, radius * 0.38,
+    ])
+    .fill({ color: jerseyBottom, alpha: 0.36 });
+
+  athlete
+    .poly([
+      -radius * 0.04, -radius * 0.44,
+      radius * 0.18, -radius * 0.24,
+      radius * 0.1, radius * 0.18,
+      -radius * 0.09, -radius * 0.02,
+    ])
+    .fill({ color: mixColor(jerseyTop, 0xffffff, 0.18), alpha: 0.32 });
+
+  
+  athlete
+    .poly([
+      -radius * 0.49, -radius * 0.28,
+      -radius * 0.42, -radius * 0.12,
+      -radius * 0.43, radius * 0.16,
+      -radius * 0.5, radius * 0.04,
+    ])
+    .fill({ color: mixColor(jerseyTop, 0xffffff, 0.12), alpha: 0.24 })
+    .poly([
+      radius * 0.49, -radius * 0.28,
+      radius * 0.42, -radius * 0.12,
+      radius * 0.43, radius * 0.16,
+      radius * 0.5, radius * 0.04,
+    ])
+    .fill({ color: mixColor(jerseyTop, 0xffffff, 0.1), alpha: 0.2 });
 
   // minimal lower body anchor (no full realistic legs)
   athlete
