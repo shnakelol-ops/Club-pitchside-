@@ -10,10 +10,10 @@ import {
   type PremiumPlayerTokenColor,
 } from "./createPremiumPlayerToken";
 import {
-  createPremiumCirclePlayerToken,
-  type PremiumCircleKitPattern,
-  type PremiumCircleTokenController,
-} from "./createPremiumCirclePlayerToken";
+  createVisionPlayerToken,
+  type VisionPlayerTokenController,
+  type VisionTokenRingPattern,
+} from "./createVisionPlayerToken";
 import {
   createTacticalPitchVisualRoot,
   type TacticalPitchTheme,
@@ -32,7 +32,7 @@ import {
   type WhiteboardDrawTool,
 } from "../../features/quickboard/drawing/tacticalDrawingTypes";
 
-export type TacticalKitPattern = PremiumCircleKitPattern;
+export type TacticalKitPattern = VisionTokenRingPattern;
 export type TacticalLabelMode = "number" | "initials";
 export type TacticalPlayerKitFields = {
   kitBaseColor?: string;
@@ -56,11 +56,12 @@ type TacticalPlayer = TacticalPlayerKitFields & {
   current: NormalizedPoint;
   token: Container;
   tokenShadow: Graphics;
-  tokenController: PremiumCircleTokenController | null;
+  tokenController: VisionPlayerTokenController | null;
   headingRadians: number;
-  lastTokenWorldPosition: { x: number; y: number } | null;
   isMoving: boolean;
   hasPossession: boolean;
+  isCaptain: boolean;
+  lastTokenWorldPosition: { x: number; y: number } | null;
   dragScaleTarget: number;
   dragShadowAlphaTarget: number;
 };
@@ -838,7 +839,7 @@ export async function createTacticalPadLiteSurface(
   function createTokenPackForPlayer(player: Pick<TacticalPlayer, "number" | "team" | "teamColor" | "kitBaseColor" | "kitPattern" | "kitPatternColor" | "labelMode" | "initials">): {
     token: Container;
     shadow: Graphics;
-    controller: PremiumCircleTokenController | null;
+    controller: VisionPlayerTokenController | null;
   } {
     if (surfaceVariant !== "tactical") {
       const premiumTokenPack = createPremiumPlayerToken({
@@ -856,13 +857,13 @@ export async function createTacticalPadLiteSurface(
     const pattern = getEffectiveKitPattern(player);
     const patternColor = getEffectiveKitPatternColor(player);
     const label = resolvePlayerLabel(player);
-    return createPremiumCirclePlayerToken({
+    return createVisionPlayerToken({
       label,
       teamColor: player.teamColor,
-      ringColor: KIT_COLOR_NUMERIC[baseColor],
       radius: PLAYER_RADIUS,
-      kitPattern: pattern,
-      kitPatternColor: KIT_COLOR_NUMERIC[patternColor],
+      ringColor: KIT_COLOR_NUMERIC[baseColor],
+      ringPattern: pattern,
+      ringPatternColor: KIT_COLOR_NUMERIC[patternColor],
     });
   }
 
@@ -904,9 +905,10 @@ export async function createTacticalPadLiteSurface(
       tokenShadow: shadow,
       tokenController: tokenPack.controller,
       headingRadians: -Math.PI / 2,
-      lastTokenWorldPosition: null,
       isMoving: false,
       hasPossession: false,
+      isCaptain: base.number === 1,
+      lastTokenWorldPosition: null,
       dragScaleTarget: PREMIUM_TOKEN_IDLE_SCALE,
       dragShadowAlphaTarget: PREMIUM_TOKEN_IDLE_SHADOW_ALPHA,
       kitBaseColor: sanitizeKitColor(nextKitFields.kitBaseColor),
@@ -1089,26 +1091,10 @@ export async function createTacticalPadLiteSurface(
     }
     const nowMs = typeof performance !== "undefined" ? performance.now() : Date.now();
     for (const player of players) {
-      applyPremiumCircleTokenState(player, nowMs);
+      applyVisionTokenState(player, nowMs);
     }
     whiteboardInputLayer.eventMode = isDrawingInteractionActive ? "static" : "none";
     whiteboardInputLayer.cursor = activeWhiteboardTool === "eraser" ? "not-allowed" : "crosshair";
-  }
-
-  function applyPremiumCircleTokenState(player: TacticalPlayer, nowMs: number): void {
-    if (!player.tokenController) return;
-    const isActivePlayer =
-      activeDrag?.type === "player" &&
-      activeDrag.playerId === player.id &&
-      activeDrag.hasCrossedThreshold &&
-      !isPlaybackInputLocked();
-    player.tokenController.applyState({
-      active: isActivePlayer,
-      possession: player.hasPossession,
-      moving: player.isMoving,
-      headingRadians: player.headingRadians,
-      pulseTimeMs: nowMs,
-    });
   }
 
   function updatePossessionVisualState(): void {
@@ -1120,18 +1106,35 @@ export async function createTacticalPadLiteSurface(
     if (!firstBall) return;
     let nearestPlayer: TacticalPlayer | null = null;
     let nearestDistance = Number.POSITIVE_INFINITY;
-    const ballWorld = mapper.normalizedToWorld({ x: firstBall.x, y: firstBall.y });
     for (const player of players) {
       const playerWorld = mapper.normalizedToWorld(player.current);
+      const ballWorld = mapper.normalizedToWorld({ x: firstBall.x, y: firstBall.y });
       const distance = Math.hypot(playerWorld.x - ballWorld.x, playerWorld.y - ballWorld.y);
       if (distance < nearestDistance) {
         nearestDistance = distance;
         nearestPlayer = player;
       }
     }
-    if (nearestPlayer && nearestDistance <= PLAYER_RADIUS * 2.05) {
+    if (nearestPlayer && nearestDistance <= PLAYER_RADIUS * 2.1) {
       nearestPlayer.hasPossession = true;
     }
+  }
+
+  function applyVisionTokenState(player: TacticalPlayer, nowMs: number): void {
+    if (!player.tokenController) return;
+    const isActivePlayer =
+      activeDrag?.type === "player" &&
+      activeDrag.playerId === player.id &&
+      activeDrag.hasCrossedThreshold &&
+      !isPlaybackInputLocked();
+    player.tokenController.applyState({
+      active: isActivePlayer,
+      possession: player.hasPossession,
+      captain: player.isCaptain,
+      moving: player.isMoving,
+      headingRadians: player.headingRadians,
+      pulseTimeMs: nowMs,
+    });
   }
 
   function clearPlayerOriginGraphic(): void {
@@ -1570,7 +1573,7 @@ export async function createTacticalPadLiteSurface(
         player.isMoving = false;
       }
       player.lastTokenWorldPosition = { x: worldX, y: worldY };
-      applyPremiumCircleTokenState(player, nowMs);
+      applyVisionTokenState(player, nowMs);
     }
   }
 
@@ -1779,7 +1782,7 @@ export async function createTacticalPadLiteSurface(
       x: player.token.position.x,
       y: player.token.position.y,
     };
-    applyPremiumCircleTokenState(player, typeof performance !== "undefined" ? performance.now() : Date.now());
+    applyVisionTokenState(player, typeof performance !== "undefined" ? performance.now() : Date.now());
     syncWhiteboardTokenInputMode();
   }
 
@@ -1903,10 +1906,6 @@ export async function createTacticalPadLiteSurface(
         x: player.token.position.x,
         y: player.token.position.y,
       };
-    }
-    const nowMs = typeof performance !== "undefined" ? performance.now() : Date.now();
-    for (const player of players) {
-      applyPremiumCircleTokenState(player, nowMs);
     }
     renderPlayerOriginGraphic();
   }
