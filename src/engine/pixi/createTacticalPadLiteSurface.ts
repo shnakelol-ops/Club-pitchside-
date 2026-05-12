@@ -204,6 +204,19 @@ const KIT_COLOR_NUMERIC: Record<(typeof KIT_COLOR_NAMES)[number], number> = {
   black: 0x111827,
 };
 type TacticalKitColor = (typeof KIT_COLOR_NAMES)[number];
+const GOALKEEPER_KIT_OVERRIDE_BY_TEAM: Record<
+  "BLUE" | "RED",
+  { baseColor: TacticalKitColor; patternColor: TacticalKitColor }
+> = {
+  BLUE: {
+    baseColor: "black",
+    patternColor: "lime",
+  },
+  RED: {
+    baseColor: "navy",
+    patternColor: "cyan",
+  },
+};
 
 type PlayerSeed = {
   id: string;
@@ -813,7 +826,20 @@ export async function createTacticalPadLiteSurface(
     }
   }
 
-  function getEffectiveKitBaseColor(player: Pick<TacticalPlayer, "team" | "teamColor" | "kitBaseColor">): TacticalKitColor {
+  function getGoalkeeperKitOverride(player: Pick<TacticalPlayer, "team" | "number">):
+    | { baseColor: TacticalKitColor; patternColor: TacticalKitColor }
+    | null {
+    if (player.number !== 1) return null;
+    return GOALKEEPER_KIT_OVERRIDE_BY_TEAM[player.team];
+  }
+
+  function getEffectiveKitBaseColor(
+    player: Pick<TacticalPlayer, "team" | "teamColor" | "kitBaseColor" | "number">,
+  ): TacticalKitColor {
+    const goalkeeperOverride = getGoalkeeperKitOverride(player);
+    if (goalkeeperOverride) {
+      return goalkeeperOverride.baseColor;
+    }
     const fallbackColor =
       surfaceVariant === "tactical" ? getTeamKitForTeam(player.team).primaryColor : player.teamColor;
     return sanitizeKitColor(player.kitBaseColor) ?? fallbackColor;
@@ -825,8 +851,12 @@ export async function createTacticalPadLiteSurface(
   }
 
   function getEffectiveKitPatternColor(
-    player: Pick<TacticalPlayer, "team" | "kitPatternColor" | "kitBaseColor" | "teamColor">,
+    player: Pick<TacticalPlayer, "team" | "kitPatternColor" | "kitBaseColor" | "teamColor" | "number">,
   ): TacticalKitColor {
+    const goalkeeperOverride = getGoalkeeperKitOverride(player);
+    if (goalkeeperOverride) {
+      return goalkeeperOverride.patternColor;
+    }
     const baseColor = getEffectiveKitBaseColor(player);
     if (surfaceVariant === "tactical") {
       return sanitizeKitColor(player.kitPatternColor) ?? getTeamKitForTeam(player.team).secondaryColor;
