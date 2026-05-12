@@ -135,8 +135,8 @@ const KIT_PATTERN_LABEL: Record<TacticalKitPattern, string> = {
 };
 const LABEL_MODE_CHOICES: TacticalLabelMode[] = ["number", "initials"];
 const TOKEN_STYLE_CHOICES: ReadonlyArray<{ value: TacticalPlayerTokenStyle; label: string }> = [
-  { value: "classic", label: "Classic Ring" },
-  { value: "premium", label: "Premium Glow" },
+  { value: "classic", label: "Classic" },
+  { value: "premium", label: "Glow" },
   { value: "torso", label: "Torso" },
 ];
 type KitEditorTab = "base" | "pattern" | "label";
@@ -871,9 +871,9 @@ const TOKEN_STYLE_MENU_SECTION_STYLE: CSSProperties = {
   borderRadius: "8px",
   border: "1px solid rgba(224, 236, 248, 0.22)",
   background: "rgba(12, 21, 27, 0.76)",
-  padding: "6px",
+  padding: "5px",
   display: "grid",
-  gap: "5px",
+  gap: "4px",
 };
 
 const TOKEN_STYLE_MENU_LABEL_STYLE: CSSProperties = {
@@ -889,7 +889,7 @@ const TOKEN_STYLE_MENU_LABEL_STYLE: CSSProperties = {
 const TOKEN_STYLE_MENU_ROW_STYLE: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-  gap: "4px",
+  gap: "3px",
 };
 
 const TOKEN_STYLE_MENU_BUTTON_STYLE: CSSProperties = {
@@ -901,9 +901,9 @@ const TOKEN_STYLE_MENU_BUTTON_STYLE: CSSProperties = {
   fontSize: "9px",
   fontWeight: 620,
   letterSpacing: "0.14px",
-  height: "26px",
+  height: "25px",
   cursor: "pointer",
-  padding: "0 4px",
+  padding: "0 3px",
 };
 
 const TOKEN_STYLE_MENU_BUTTON_ACTIVE_STYLE: CSSProperties = {
