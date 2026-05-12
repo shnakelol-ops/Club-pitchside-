@@ -9,7 +9,7 @@ import {
   PREMIUM_TOKEN_IDLE_SHADOW_ALPHA,
   type PremiumPlayerTokenColor,
 } from "./createPremiumPlayerToken";
-import { createMicroAthleteToken, type MicroAthleteKitPattern } from "./createMicroAthleteToken";
+import { renderPlayerToken, type PlayerTokenKitPattern } from "./renderPlayerToken";
 import {
   createTacticalPitchVisualRoot,
   type TacticalPitchTheme,
@@ -28,7 +28,7 @@ import {
   type WhiteboardDrawTool,
 } from "../../features/quickboard/drawing/tacticalDrawingTypes";
 
-export type TacticalKitPattern = MicroAthleteKitPattern;
+export type TacticalKitPattern = PlayerTokenKitPattern;
 export type TacticalLabelMode = "number" | "initials";
 export type TacticalPlayerKitFields = {
   kitBaseColor?: string;
@@ -842,17 +842,14 @@ export async function createTacticalPadLiteSurface(
     const pattern = getEffectiveKitPattern(player);
     const patternColor = getEffectiveKitPatternColor(player);
     const label = resolvePlayerLabel(player);
-    return createMicroAthleteToken({
+    return renderPlayerToken({
       label,
       teamColor: player.teamColor,
+      shirtColor: KIT_COLOR_NUMERIC[baseColor],
       scale: (PLAYER_RADIUS / 4.1) * TACTICAL_PLAYER_VISUAL_SCALE,
-      style: {
-        primaryColor: KIT_COLOR_NUMERIC[baseColor],
-        secondaryColor: KIT_COLOR_NUMERIC[baseColor],
-        badgeColor: KIT_COLOR_NUMERIC[baseColor],
-      },
       kitPattern: pattern,
       kitPatternColor: KIT_COLOR_NUMERIC[patternColor],
+      goalkeeper: player.number === 1,
     });
   }
 
