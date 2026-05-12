@@ -58,8 +58,8 @@ const DEFAULT_STYLE_BY_TEAM: Record<MicroAthleteTeamColor, MicroAthleteStyle> = 
 };
 
 const TOKEN_BASE_COLOR = 0x191919;
-const TOKEN_RADIUS = 3.66;
-const TOKEN_RING_WIDTH = 0.72;
+const TOKEN_RADIUS = 3.52;
+const TOKEN_RING_WIDTH = 0.66;
 const TOKEN_IDLE_HALO_ALPHA = 0.26;
 
 function clampColorChannel(value: number): number {
@@ -81,22 +81,94 @@ function mixColor(base: number, target: number, amount: number): number {
   return (r << 16) | (g << 8) | b;
 }
 
-function vividGlowColor(color: number): number {
+function colorHueDegrees(color: number): number {
+  const r = ((color >> 16) & 0xff) / 255;
+  const g = ((color >> 8) & 0xff) / 255;
+  const b = (color & 0xff) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const delta = max - min;
+  if (delta <= 0.0001) return 0;
+  if (max === r) {
+    return (60 * ((g - b) / delta) + 360) % 360;
+  }
+  if (max === g) {
+    return 60 * ((b - r) / delta) + 120;
+  }
+  return 60 * ((r - g) / delta) + 240;
+}
+
+function colorSaturation(color: number): number {
   const r = (color >> 16) & 0xff;
   const g = (color >> 8) & 0xff;
   const b = color & 0xff;
   const maxChannel = Math.max(r, g, b);
   const minChannel = Math.min(r, g, b);
-  const chroma = maxChannel - minChannel;
-  if (maxChannel <= 0 || chroma < 20) {
-    return mixColor(color, 0xffffff, 0.14);
+  if (maxChannel <= 0) return 0;
+  return (maxChannel - minChannel) / maxChannel;
+}
+
+function resolveBroadcastGlowColor(color: number): number {
+  const saturation = colorSaturation(color);
+  const hue = colorHueDegrees(color);
+  const familyTargetColor =
+    saturation < 0.12
+      ? 0xdbe7f5 // white/silver family
+      : hue >= 45 && hue <= 75
+        ? 0xffc34a // warm gold family
+        : hue > 75 && hue < 170
+          ? 0x2bd886 // emerald family
+          : hue >= 245 && hue <= 315
+            ? 0x9c6bff // purple family
+            : hue >= 170 && hue < 245
+              ? 0x31bbff // blue/cyan family
+              : 0xff4f4a; // warm red family
+  const colourLocked = mixColor(familyTargetColor, color, 0.34);
+  const cooledIfNeeded =
+    saturation < 0.12
+      ? mixColor(colourLocked, 0xffffff, 0.12)
+      : mixColor(colourLocked, 0x0b1220, 0.06);
+  return cooledIfNeeded;
+}
+
+function drawPatternAccent(
+  target: Graphics,
+  pattern: MicroAthleteKitPattern,
+  colour: number,
+  radius: number,
+): void {
+  if (pattern === "plain") return;
+  const alpha = 0.09;
+  if (pattern === "hoops") {
+    target
+      .roundRect(-radius * 0.78, -radius * 0.4, radius * 1.56, radius * 0.16, radius * 0.07)
+      .fill({ color: colour, alpha })
+      .roundRect(-radius * 0.72, -radius * 0.02, radius * 1.44, radius * 0.16, radius * 0.07)
+      .fill({ color: colour, alpha: alpha - 0.01 });
+    return;
   }
-  const boostScale = 255 / maxChannel;
-  const boostedColor =
-    (clampColorChannel(r * boostScale) << 16) |
-    (clampColorChannel(g * boostScale) << 8) |
-    clampColorChannel(b * boostScale);
-  return mixColor(boostedColor, color, 0.28);
+  if (pattern === "stripes") {
+    target
+      .roundRect(-radius * 0.46, -radius * 0.58, radius * 0.16, radius * 1.18, radius * 0.07)
+      .fill({ color: colour, alpha })
+      .roundRect(-radius * 0.06, -radius * 0.58, radius * 0.16, radius * 1.18, radius * 0.07)
+      .fill({ color: colour, alpha: alpha - 0.01 })
+      .roundRect(radius * 0.34, -radius * 0.58, radius * 0.16, radius * 1.18, radius * 0.07)
+      .fill({ color: colour, alpha: alpha - 0.02 });
+    return;
+  }
+  target
+    .poly([
+      -radius * 0.8,
+      -radius * 0.2,
+      -radius * 0.46,
+      -radius * 0.62,
+      radius * 0.74,
+      radius * 0.36,
+      radius * 0.4,
+      radius * 0.74,
+    ])
+    .fill({ color: colour, alpha: alpha + 0.01 });
 }
 
 function drawIntegratedCrownNotch(target: Graphics, ringColor: number, outlineColor: number): void {
@@ -136,37 +208,37 @@ export function createMicroAthleteToken({
   token.cursor = "grab";
   token.scale.set(scale ?? 1);
 
-  const patternStrength = kitPattern === "plain" ? 0.07 : 0.11;
   const teamBaseColor = resolved.goalkeeper && resolved.secondaryColor != null
     ? resolved.secondaryColor
     : resolved.primaryColor;
-  const glowColor = vividGlowColor(teamBaseColor);
-  const ringColor = mixColor(glowColor, 0x0f172a, 0.12);
+  const glowColor = resolveBroadcastGlowColor(teamBaseColor);
+  const ringColor = mixColor(glowColor, 0x0f172a, 0.15);
   const ringInnerShade = mixColor(glowColor, resolved.outlineColor, 0.36);
   const patternTintSource = Number.isFinite(kitPatternColor)
     ? Number(kitPatternColor)
     : glowColor;
-  const innerTintColor = mixColor(glowColor, patternTintSource, patternStrength);
-  const centreColor = mixColor(TOKEN_BASE_COLOR, glowColor, 0.3);
-  const centreHighlightColor = mixColor(centreColor, 0xffffff, 0.32);
+  const patternAccentColor = mixColor(patternTintSource, glowColor, 0.44);
+  const innerTintColor = mixColor(TOKEN_BASE_COLOR, glowColor, 0.3);
+  const centreColor = mixColor(innerTintColor, glowColor, 0.18);
+  const centreHighlightColor = mixColor(centreColor, 0xffffff, 0.31);
   const centreRimColor = mixColor(glowColor, resolved.outlineColor, 0.3);
 
   const shadow = new Graphics();
   shadow
-    .circle(0, 0, TOKEN_RADIUS * 1.56)
-    .stroke({ color: glowColor, width: 0.66, alpha: 0.96 })
-    .circle(0, 0, TOKEN_RADIUS * 1.34)
-    .stroke({ color: glowColor, width: 0.34, alpha: 0.9 })
-    .circle(0, 0, TOKEN_RADIUS * 1.16)
-    .fill({ color: glowColor, alpha: 0.18 });
+    .circle(0, 0, TOKEN_RADIUS * 1.42)
+    .stroke({ color: glowColor, width: 0.58, alpha: 0.93 })
+    .circle(0, 0, TOKEN_RADIUS * 1.24)
+    .stroke({ color: glowColor, width: 0.3, alpha: 0.87 })
+    .circle(0, 0, TOKEN_RADIUS * 1.08)
+    .fill({ color: glowColor, alpha: 0.16 });
   shadow.alpha = TOKEN_IDLE_HALO_ALPHA;
   token.addChild(shadow);
 
   const baseShadow = new Graphics();
   baseShadow
-    .ellipse(0.34, TOKEN_RADIUS * 1.08, TOKEN_RADIUS * 1.2, TOKEN_RADIUS * 0.33)
+    .ellipse(0.3, TOKEN_RADIUS * 1.03, TOKEN_RADIUS * 1.08, TOKEN_RADIUS * 0.29)
     .fill({ color: 0x020617, alpha: 0.17 })
-    .ellipse(0.34, TOKEN_RADIUS * 1.02, TOKEN_RADIUS * 1.04, TOKEN_RADIUS * 0.24)
+    .ellipse(0.3, TOKEN_RADIUS * 0.98, TOKEN_RADIUS * 0.95, TOKEN_RADIUS * 0.21)
     .fill({ color: 0x020617, alpha: 0.12 });
   token.addChild(baseShadow);
 
@@ -195,6 +267,7 @@ export function createMicroAthleteToken({
     .stroke({ color: centreRimColor, width: 0.22, alpha: 0.46 })
     .ellipse(-centreRadius * 0.22, -centreRadius * 0.46, centreRadius * 0.54, centreRadius * 0.2)
     .fill({ color: 0xffffff, alpha: 0.16 });
+  drawPatternAccent(centre, kitPattern, patternAccentColor, centreRadius);
   token.addChild(centre);
 
   const notch = new Graphics();
