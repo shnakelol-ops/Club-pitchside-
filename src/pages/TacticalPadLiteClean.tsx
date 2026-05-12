@@ -1264,22 +1264,20 @@ const MOBILE_COACH_HUB_BODY_STYLE: CSSProperties = {
 
 const IPHONE_LANDSCAPE_TOOLS_OVERLAY_STYLE: CSSProperties = {
   ...MOBILE_COACH_HUB_OVERLAY_STYLE,
-  justifyContent: "stretch",
-  alignItems: "stretch",
-  padding: 0,
+  zIndex: 30,
+  pointerEvents: "auto",
 };
 
 const IPHONE_LANDSCAPE_TOOLS_PANEL_STYLE: CSSProperties = {
   position: "fixed",
-  left: "calc(env(safe-area-inset-left, 0px) + 12px)",
-  right: "calc(env(safe-area-inset-right, 0px) + 12px)",
-  top: "calc(env(safe-area-inset-top, 0px) + 12px)",
-  bottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)",
-  width: "auto",
-  maxWidth: "none",
-  maxHeight: "none",
-  overflow: "hidden",
+  left: "auto",
+  right: "max(10px, calc(env(safe-area-inset-right, 0px) + 8px))",
+  top: "auto",
+  bottom: "max(60px, calc(env(safe-area-inset-bottom, 0px) + 58px))",
+  pointerEvents: "auto",
+  touchAction: "manipulation",
   boxSizing: "border-box",
+  zIndex: 31,
 };
 
 const IPHONE_LANDSCAPE_TOOLS_BODY_STYLE: CSSProperties = {
@@ -3047,6 +3045,12 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         border: "1px solid rgba(127, 156, 142, 0.24)",
         background: "rgba(13, 22, 25, 0.68)",
         color: "rgba(220, 235, 227, 0.9)",
+        ...(isIphoneLandscapeTools
+          ? {
+              pointerEvents: "auto",
+              touchAction: "manipulation",
+            }
+          : null),
       }
     : COACH_HUB_TAB_BUTTON_STYLE;
   const coachHubTabButtonActiveStyle = isCompactLandscapeTools
@@ -3067,6 +3071,12 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         border: "1px solid rgba(127, 156, 142, 0.22)",
         background: "rgba(13, 22, 25, 0.68)",
         color: "#e6f0ea",
+        ...(isIphoneLandscapeTools
+          ? {
+              pointerEvents: "auto",
+              touchAction: "manipulation",
+            }
+          : null),
       }
     : COACH_HUB_TOOL_BUTTON_STYLE;
   const coachHubToolButtonActiveStyle = isCompactLandscapeTools
@@ -3089,6 +3099,12 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         height: isTightCompactLandscapeTools ? "18px" : "20px",
         border: "1px solid rgba(129, 157, 144, 0.22)",
         background: "rgba(10, 18, 22, 0.7)",
+        ...(isIphoneLandscapeTools
+          ? {
+              pointerEvents: "auto",
+              touchAction: "manipulation",
+            }
+          : null),
       }
     : COACH_HUB_COLOR_BUTTON_STYLE;
   const coachHubColorSwatchStyle = isCompactLandscapeTools
@@ -3108,6 +3124,12 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         border: "1px solid rgba(127, 156, 142, 0.22)",
         background: "rgba(13, 22, 25, 0.68)",
         color: "#e6f0ea",
+        ...(isIphoneLandscapeTools
+          ? {
+              pointerEvents: "auto",
+              touchAction: "manipulation",
+            }
+          : null),
       }
     : COACH_HUB_ACTION_BUTTON_STYLE;
 
@@ -3626,7 +3648,17 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
               style={mobileCoachHubOverlayStyle}
               className={isIphoneLandscapeTools ? "isIphoneLandscapeTools" : undefined}
               role="presentation"
-              onClick={() => setToolsOpen(false)}
+              onPointerDown={(event) => {
+                if (!isIphoneLandscapeTools) return;
+                if (event.target === event.currentTarget) {
+                  setToolsOpen(false);
+                }
+              }}
+              onClick={(event) => {
+                if (event.target === event.currentTarget || !isIphoneLandscapeTools) {
+                  setToolsOpen(false);
+                }
+              }}
             >
               <div
                 ref={toolsMenuRef}
@@ -3634,6 +3666,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                 role="dialog"
                 aria-modal="false"
                 aria-label="Vision Board tools"
+                onPointerDown={(event) => event.stopPropagation()}
                 onClick={(event) => event.stopPropagation()}
               >
                 <div style={MOBILE_COACH_HUB_HEADER_STYLE}>
