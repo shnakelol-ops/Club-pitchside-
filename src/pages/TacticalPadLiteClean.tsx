@@ -1206,6 +1206,12 @@ const MOBILE_COACH_HUB_OVERLAY_STYLE: CSSProperties = {
   zIndex: 24,
 };
 
+const IPHONE_LANDSCAPE_DRAW_OVERLAY_STYLE: CSSProperties = {
+  ...MOBILE_COACH_HUB_OVERLAY_STYLE,
+  zIndex: 30,
+  pointerEvents: "auto",
+};
+
 const MOBILE_COACH_HUB_PANEL_STYLE: CSSProperties = {
   width: "min(52vw, 320px)",
   maxWidth: "calc(100dvw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 20px)",
@@ -1265,12 +1271,18 @@ const MOBILE_COACH_HUB_BODY_STYLE: CSSProperties = {
 // iPhone landscape keeps a compact draw drawer instead of full-screen modal stretching.
 const IPHONE_LANDSCAPE_DRAW_DRAWER_STYLE: CSSProperties = {
   position: "fixed",
+  top: "max(12px, calc(env(safe-area-inset-top, 0px) + 10px))",
   right: "max(10px, calc(env(safe-area-inset-right, 0px) + 8px))",
-  bottom: "max(60px, calc(env(safe-area-inset-bottom, 0px) + 58px))",
+  left: "auto",
+  bottom: "auto",
   width: "min(232px, calc(100dvw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 18px))",
-  maxHeight: "min(56dvh, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 22px))",
+  maxHeight: "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 22px)",
   overflowY: "auto",
   overflowX: "hidden",
+  pointerEvents: "auto",
+  touchAction: "manipulation",
+  boxSizing: "border-box",
+  zIndex: 31,
 };
 
 const COACH_HUB_SECTION_STYLE: CSSProperties = {
@@ -2983,7 +2995,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const isIphoneLandscapeTools = isCompactLandscapeTools && isIphoneLandscapeToolsMenu;
   const compactLandscapeViewportWidth = isCompactLandscapeTools ? getViewportRect().width : 0;
   const isTightCompactLandscapeTools = isCompactLandscapeTools && compactLandscapeViewportWidth <= 760;
-  const mobileCoachHubOverlayStyle = MOBILE_COACH_HUB_OVERLAY_STYLE;
+  const mobileCoachHubOverlayStyle = isIphoneLandscapeTools ? IPHONE_LANDSCAPE_DRAW_OVERLAY_STYLE : MOBILE_COACH_HUB_OVERLAY_STYLE;
   const mobileCoachHubPanelStyle = isCompactLandscapeTools
     ? {
         ...MOBILE_COACH_HUB_PANEL_STYLE,
@@ -3607,7 +3619,16 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             <div
               style={mobileCoachHubOverlayStyle}
               role="presentation"
-              onClick={() => setToolsOpen(false)}
+              onPointerDown={(event) => {
+                if (event.target === event.currentTarget) {
+                  setToolsOpen(false);
+                }
+              }}
+              onClick={(event) => {
+                if (event.target === event.currentTarget) {
+                  setToolsOpen(false);
+                }
+              }}
             >
               <div
                 ref={toolsMenuRef}
@@ -3615,6 +3636,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                 role="dialog"
                 aria-modal="false"
                 aria-label="Vision Board tools"
+                onPointerDown={(event) => event.stopPropagation()}
                 onClick={(event) => event.stopPropagation()}
               >
                 <div style={MOBILE_COACH_HUB_HEADER_STYLE}>
