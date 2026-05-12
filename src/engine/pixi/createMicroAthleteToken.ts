@@ -363,8 +363,8 @@ export function createMicroAthleteToken({
   token.addChild(shadow);
 
   const athlete = new Container();
-  athlete.rotation = -0.038;
-  athlete.position.set(0.14, -0.1);
+  athlete.rotation = -0.044;
+  athlete.position.set(0.12, -0.08);
   token.addChild(athlete);
 
   const jerseyFill = resolved.goalkeeper && resolved.secondaryColor != null
@@ -389,17 +389,21 @@ export function createMicroAthleteToken({
     : mixColor(jerseyFill, jerseyFill === 0xffffff ? 0x111827 : 0xffffff, 0.72);
   // Subtle arms (kept slim for small-scale readability)
   const armWidth = 0.38 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
-  const leftArmX = -2.02 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
-  const rightArmX = 1.64 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
+  const leftArmX = -1.96 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
+  const rightArmX = 1.56 * MICRO_ATHLETE_BODY_WIDTH_SCALE;
   body
-    .roundRect(leftArmX, -5.2, armWidth, 2.3, 0.29)
+    .roundRect(leftArmX, -5.14, armWidth, 2.22, 0.31)
     .fill({ color: mixColor(jerseyFill, 0x000000, 0.1), alpha: 0.95 })
-    .roundRect(rightArmX, -5.2, armWidth, 2.3, 0.29)
+    .roundRect(rightArmX, -5.08, armWidth, 2.16, 0.31)
     .fill({ color: mixColor(jerseyFill, 0x000000, 0.16), alpha: 0.95 })
-    .circle(leftArmX + armWidth * 0.5, -2.8, 0.16)
+    .circle(leftArmX + armWidth * 0.48, -2.84, 0.15)
     .fill({ color: 0xf1ccb2, alpha: 0.92 })
-    .circle(rightArmX + armWidth * 0.5, -2.8, 0.16)
-    .fill({ color: 0xf1ccb2, alpha: 0.92 });
+    .circle(rightArmX + armWidth * 0.5, -2.86, 0.15)
+    .fill({ color: 0xf1ccb2, alpha: 0.92 })
+    .circle(-1.32, -5.88, 0.22)
+    .fill({ color: mixColor(jerseyFill, 0xffffff, 0.1), alpha: 0.9 })
+    .circle(1.32, -5.88, 0.22)
+    .fill({ color: mixColor(jerseyFill, 0xffffff, 0.1), alpha: 0.9 });
 
   // Torso / jersey (lean upright silhouette with gentle taper)
   drawTorsoPath(body);
@@ -433,9 +437,9 @@ export function createMicroAthleteToken({
     .fill({ color: mixColor(jerseyFill, 0x020617, 0.58), alpha: 0.97 })
     .roundRect(-0.9, -1.96, 1.8, 0.14, 0.06)
     .fill({ color: 0xffffff, alpha: 0.08 })
-    .roundRect(-0.76, -0.78, 0.52, 1.72, 0.24)
+    .roundRect(-0.76, -0.8, 0.52, 1.68, 0.24)
     .fill({ color: 0x334155, alpha: 0.95 })
-    .roundRect(0.24, -0.74, 0.52, 1.66, 0.24)
+    .roundRect(0.24, -0.7, 0.52, 1.62, 0.24)
     .fill({ color: 0x334155, alpha: 0.95 })
     .roundRect(-0.76, 0.36, 0.52, 0.48, 0.14)
     .fill({ color: 0xe2e8f0, alpha: 0.95 })
@@ -613,48 +617,50 @@ export function createMicroAthleteToken({
   }
 
   if (!useClassicBadge && isNumericLabel) {
-    const markerWidth = isDoubleDigitLabel ? 2.46 : 2.16;
-    const markerY = 1.46;
+    const markerWidth = isDoubleDigitLabel ? 2.62 : 2.34;
+    const markerY = 1.42;
     const footContactShadow = new Graphics();
     footContactShadow
       .ellipse(-0.32, markerY - 0.42, 0.26, 0.08)
-      .fill({ color: 0x020617, alpha: 0.17 })
+      .fill({ color: 0x020617, alpha: 0.22 })
       .ellipse(0.32, markerY - 0.42, 0.26, 0.08)
-      .fill({ color: 0x020617, alpha: 0.17 })
-      .ellipse(0, markerY - 0.32, 0.4, 0.06)
-      .fill({ color: 0x020617, alpha: 0.08 });
+      .fill({ color: 0x020617, alpha: 0.22 })
+      .ellipse(0, markerY - 0.34, 0.44, 0.07)
+      .fill({ color: 0x020617, alpha: 0.11 });
     token.addChild(footContactShadow);
 
     const groundedMarkerShadow = new Graphics();
     groundedMarkerShadow
-      .ellipse(0, markerY + 0.28, markerWidth * 0.56, 0.26)
-      .fill({ color: 0x020617, alpha: 0.22 });
+      .ellipse(0, markerY + 0.34, markerWidth * 0.6, 0.28)
+      .fill({ color: 0x020617, alpha: 0.18 })
+      .ellipse(0, markerY + 0.26, markerWidth * 0.5, 0.2)
+      .fill({ color: 0x020617, alpha: 0.16 });
     token.addChild(groundedMarkerShadow);
 
     const groundedMarker = new Graphics();
     groundedMarker
       .ellipse(0, markerY, markerWidth * 0.5, 0.44)
-      .fill({ color: 0x0f172a, alpha: 0.58 })
+      .fill({ color: 0x0f172a, alpha: 0.66 })
       .ellipse(0, markerY - 0.05, markerWidth * 0.42, 0.32)
-      .fill({ color: 0x1e293b, alpha: 0.34 })
+      .fill({ color: 0x1e293b, alpha: 0.42 })
       .stroke({
         color: 0xf8fafc,
-        alpha: 0.12,
+        alpha: 0.14,
         width: 0.08,
       })
-      .ellipse(0, markerY - 0.18, markerWidth * 0.22, 0.09)
-      .fill({ color: 0xffffff, alpha: 0.1 });
+      .ellipse(0, markerY - 0.18, markerWidth * 0.24, 0.09)
+      .fill({ color: 0xffffff, alpha: 0.12 });
     token.addChild(groundedMarker);
 
     const groundedNumberShadow = new Text({
       text: label,
       style: {
         fill: 0x020617,
-        fontSize: isDoubleDigitLabel ? 1.58 : 1.72,
+        fontSize: isDoubleDigitLabel ? 1.64 : 1.76,
         fontWeight: "900",
         fontFamily: "\"Barlow Condensed\", \"Inter Tight\", Inter, system-ui, sans-serif",
         align: "center",
-        letterSpacing: isDoubleDigitLabel ? 0.015 : 0.025,
+        letterSpacing: isDoubleDigitLabel ? 0.02 : 0.03,
       },
     });
     groundedNumberShadow.anchor.set(0.5, 0.5);
@@ -667,15 +673,15 @@ export function createMicroAthleteToken({
     const groundedNumberText = new Text({
       text: label,
       style: {
-        fill: 0xf8fafc,
-        fontSize: isDoubleDigitLabel ? 1.58 : 1.72,
+        fill: 0xffffff,
+        fontSize: isDoubleDigitLabel ? 1.64 : 1.76,
         fontWeight: "900",
         fontFamily: "\"Barlow Condensed\", \"Inter Tight\", Inter, system-ui, sans-serif",
         align: "center",
-        letterSpacing: isDoubleDigitLabel ? 0.015 : 0.025,
+        letterSpacing: isDoubleDigitLabel ? 0.02 : 0.03,
         stroke: {
           color: 0x020617,
-          width: 0.2,
+          width: 0.24,
           join: "round",
         },
       },
