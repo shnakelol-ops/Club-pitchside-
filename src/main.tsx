@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
+import "./styles/iosSafeArea.css";
 import PitchFlowCoachShell from "./pages/PitchFlowCoachShell";
 import TacticalPadLiteClean from "./pages/TacticalPadLiteClean";
 
@@ -87,6 +88,26 @@ function pickRootComponent() {
   }
   return redirectToBoard();
 }
+
+function isIosDevice(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const platform = navigator.platform ?? "";
+  const ua = navigator.userAgent ?? "";
+  const maxTouchPoints = typeof navigator.maxTouchPoints === "number" ? navigator.maxTouchPoints : 0;
+  if (/iphone|ipad|ipod/i.test(ua) || /iphone|ipad|ipod/i.test(platform)) {
+    return true;
+  }
+  return /mac/i.test(platform) && maxTouchPoints > 1;
+}
+
+function applyIosSafeAreaClass() {
+  if (typeof document === "undefined") return;
+  const isIos = isIosDevice();
+  document.documentElement.classList.toggle("is-ios", isIos);
+  document.body.classList.toggle("is-ios", isIos);
+}
+
+applyIosSafeAreaClass();
 
 const RootComponent = pickRootComponent();
 

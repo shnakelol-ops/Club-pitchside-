@@ -1065,6 +1065,8 @@ const PANEL_CSS = `
   height: var(--stats-app-height, 100dvh);
   min-height: var(--stats-app-height, 100dvh);
   margin: 0;
+  padding: var(--app-safe-top, 0px) var(--app-safe-right, 0px) var(--app-safe-bottom, 0px) var(--app-safe-left, 0px);
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1197,7 +1199,7 @@ const PANEL_CSS = `
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   box-shadow: 0 8px 18px rgba(4, 12, 24, 0.26);
-  width: min(calc(100vw - 32px), 308px);
+  width: min(calc(100dvw - 32px), 308px);
   max-width: 95vw;
 }
 
@@ -1523,11 +1525,11 @@ const PANEL_CSS = `
 }
 
 .review-strip--portrait {
-  top: max(96px, calc(env(safe-area-inset-top) + 92px));
+  top: max(96px, calc(var(--app-safe-top, 0px) + 92px));
 }
 
 .review-strip--landscape {
-  top: max(8px, env(safe-area-inset-top));
+  top: max(8px, var(--app-safe-top, 0px));
 }
 
 .review-strip-chip {
@@ -1565,11 +1567,11 @@ const PANEL_CSS = `
 }
 
 .review-event-card--portrait {
-  top: max(96px, calc(env(safe-area-inset-top) + 92px));
+  top: max(96px, calc(var(--app-safe-top, 0px) + 92px));
 }
 
 .review-event-card--landscape {
-  top: max(48px, calc(env(safe-area-inset-top) + 44px));
+  top: max(48px, calc(var(--app-safe-top, 0px) + 44px));
 }
 
 .review-event-card-head {
@@ -1840,7 +1842,7 @@ const PANEL_CSS = `
   flex-direction: column;
   gap: 5px;
   width: fit-content;
-  max-width: min(620px, calc(100vw - 154px));
+  max-width: min(620px, calc(100dvw - 154px));
   max-height: 120px;
   padding: 6px 8px;
   border-radius: 999px;
@@ -1897,13 +1899,13 @@ const PANEL_CSS = `
 
 .scoreboard-strip {
   position: fixed;
-  top: max(2px, env(safe-area-inset-top));
-  left: max(4px, env(safe-area-inset-left));
+  top: max(2px, var(--app-safe-top, 0px));
+  left: max(4px, var(--app-safe-left, 0px));
   z-index: 19;
   display: flex;
   flex-direction: column;
   gap: 3px;
-  width: min(220px, calc(100vw - 12px));
+  width: min(220px, calc(100dvw - 12px));
   max-width: 220px;
   padding: 4px 6px;
   border-radius: 10px;
@@ -2053,7 +2055,7 @@ const PANEL_CSS = `
 .scoreboard-rail {
   position: fixed;
   top: 50%;
-  left: max(4px, env(safe-area-inset-left));
+  left: max(4px, var(--app-safe-left, 0px));
   transform: translateY(-50%);
   z-index: 19;
   width: clamp(72px, 11vw, 96px);
@@ -2264,8 +2266,8 @@ const PANEL_CSS = `
 
 .match-stopwatch {
   position: fixed;
-  top: 10px;
-  right: 10px;
+  top: calc(var(--app-safe-top, 0px) + 10px);
+  right: calc(var(--app-safe-right, 0px) + 10px);
   z-index: 19;
   display: grid;
   grid-template-columns: auto auto;
@@ -2301,12 +2303,12 @@ const PANEL_CSS = `
 
 @media (orientation: landscape) {
   .scoreboard-rail {
-    left: max(3px, env(safe-area-inset-left));
+    left: max(3px, var(--app-safe-left, 0px));
   }
 
   .match-stopwatch {
-    top: max(2px, env(safe-area-inset-top));
-    right: max(4px, env(safe-area-inset-right));
+    top: max(2px, var(--app-safe-top, 0px));
+    right: max(4px, var(--app-safe-right, 0px));
   }
 
   .utility-bubble-btn {
@@ -4546,20 +4548,20 @@ export default function StatsModeSurface() {
   const activePlayerChipFloatingStyle =
     keyboardInset > 0
       ? { bottom: `${keyboardInset + 18}px` }
-      : { bottom: "max(88px, calc(env(safe-area-inset-bottom) + 84px))" };
+      : { bottom: "max(88px, calc(var(--app-safe-bottom, 0px) + 84px))" };
   const playersPanelStyle = isLandscape
     ? { zIndex: 10001 }
     : keyboardInset > 0
       ? {
           zIndex: 10001,
           left: "14px",
-          top: "max(10px, env(safe-area-inset-top))",
+          top: "max(10px, var(--app-safe-top, 0px))",
           bottom: "auto",
         }
       : {
           zIndex: 10001,
           left: "14px",
-          bottom: "max(142px, calc(env(safe-area-inset-bottom) + 120px))",
+          bottom: "max(142px, calc(var(--app-safe-bottom, 0px) + 120px))",
         };
   const compactOverlayBaseStyle: CSSProperties = {
     position: "fixed",
@@ -4567,7 +4569,7 @@ export default function StatsModeSurface() {
     display: "flex",
     flexDirection: "column",
     gap: "6px",
-    width: "min(240px, calc(100vw - 20px))",
+    width: "min(240px, calc(100dvw - 20px))",
     padding: "8px",
     borderRadius: "10px",
     border: "1px solid rgba(148, 163, 184, 0.34)",
@@ -4579,26 +4581,26 @@ export default function StatsModeSurface() {
   };
   const countsOverlayStyle: CSSProperties = {
     ...compactOverlayBaseStyle,
-    right: "max(10px, calc(env(safe-area-inset-right, 0px) + 8px))",
+    right: "max(10px, calc(var(--app-safe-right, 0px) + 8px))",
     bottom: isLandscape
-      ? "max(80px, calc(env(safe-area-inset-bottom, 0px) + 74px))"
-      : "max(146px, calc(env(safe-area-inset-bottom, 0px) + 132px))",
+      ? "max(80px, calc(var(--app-safe-bottom, 0px) + 74px))"
+      : "max(146px, calc(var(--app-safe-bottom, 0px) + 132px))",
   };
   const fullTimeOverlayStyle: CSSProperties = {
     ...compactOverlayBaseStyle,
-    right: "max(10px, calc(env(safe-area-inset-right, 0px) + 8px))",
+    right: "max(10px, calc(var(--app-safe-right, 0px) + 8px))",
     top: isLandscape
-      ? "max(50px, calc(env(safe-area-inset-top, 0px) + 46px))"
-      : "max(102px, calc(env(safe-area-inset-top, 0px) + 96px))",
-    width: "min(260px, calc(100vw - 18px))",
+      ? "max(50px, calc(var(--app-safe-top, 0px) + 46px))"
+      : "max(102px, calc(var(--app-safe-top, 0px) + 96px))",
+    width: "min(260px, calc(100dvw - 18px))",
   };
   const resetConfirmStyle: CSSProperties = {
     ...compactOverlayBaseStyle,
-    right: "max(10px, calc(env(safe-area-inset-right, 0px) + 8px))",
+    right: "max(10px, calc(var(--app-safe-right, 0px) + 8px))",
     top: isLandscape
-      ? "max(168px, calc(env(safe-area-inset-top, 0px) + 160px))"
-      : "max(230px, calc(env(safe-area-inset-top, 0px) + 220px))",
-    width: "min(250px, calc(100vw - 18px))",
+      ? "max(168px, calc(var(--app-safe-top, 0px) + 160px))"
+      : "max(230px, calc(var(--app-safe-top, 0px) + 220px))",
+    width: "min(250px, calc(100dvw - 18px))",
     border: "1px solid rgba(248, 113, 113, 0.42)",
   };
   const stadiumLightDots = Array.from({ length: 12 }, (_, index) => index);
