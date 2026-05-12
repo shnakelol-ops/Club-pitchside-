@@ -80,44 +80,19 @@ function colorToHexString(color: number): string {
   return `#${color.toString(16).padStart(6, "0")}`;
 }
 
-function relativeLuminance(color: number): number {
-  const srgb = [(color >> 16) & 0xff, (color >> 8) & 0xff, color & 0xff].map((channel) => {
-    const normalized = channel / 255;
-    if (normalized <= 0.03928) return normalized / 12.92;
-    return ((normalized + 0.055) / 1.055) ** 2.4;
-  });
-  const [r = 0, g = 0, b = 0] = srgb;
-  return r * 0.2126 + g * 0.7152 + b * 0.0722;
-}
-
-function contrastRatio(foreground: number, background: number): number {
-  const foregroundLum = relativeLuminance(foreground);
-  const backgroundLum = relativeLuminance(background);
-  const lighter = Math.max(foregroundLum, backgroundLum);
-  const darker = Math.min(foregroundLum, backgroundLum);
-  return (lighter + 0.05) / (darker + 0.05);
-}
-
 function getReadableTextColors(backgroundColor: number): {
   fill: number;
   stroke: number;
-  embossShadow: number;
-  embossHighlight: number;
+  shadow: number;
   contrastPlate: number;
 } {
-  const lightFill = 0xf3f5f8;
-  const darkFill = 0x152033;
-  const fill =
-    contrastRatio(lightFill, backgroundColor) >= contrastRatio(darkFill, backgroundColor)
-      ? lightFill
-      : darkFill;
-  const stroke = mixColor(backgroundColor, 0x020617, fill === lightFill ? 0.66 : 0.54);
+  const fill = 0xf8fafc;
+  const stroke = mixColor(backgroundColor, 0x020617, 0.66);
   return {
     fill,
     stroke,
-    embossShadow: mixColor(stroke, 0x020617, 0.24),
-    embossHighlight: mixColor(fill, 0xffffff, 0.28),
-    contrastPlate: mixColor(backgroundColor, fill === lightFill ? 0xffffff : 0x020617, 0.24),
+    shadow: 0x020617,
+    contrastPlate: mixColor(backgroundColor, 0x020617, 0.28),
   };
 }
 
@@ -470,7 +445,7 @@ export function createTorsoPlayerToken({
     const labelEmbossShadow = new Text({
       text: label,
       style: {
-        fill: labelColors.embossShadow,
+        fill: labelColors.shadow,
         fontSize: labelFontSize,
         fontWeight: labelFontWeight,
         fontFamily: labelFontFamily,
@@ -497,7 +472,7 @@ export function createTorsoPlayerToken({
       letterSpacing: labelLetterSpacing,
       stroke: {
         color: labelColors.stroke,
-        width: isNumericLabel ? 0.56 : 0.47,
+        width: isNumericLabel ? 0.62 : 0.5,
         join: "round",
       },
     },
@@ -507,26 +482,6 @@ export function createTorsoPlayerToken({
   labelText.resolution = textResolution;
   labelText.roundPixels = true;
   token.addChild(labelText);
-
-  if (isNumericLabel) {
-    const labelEmbossHighlight = new Text({
-      text: label,
-      style: {
-        fill: labelColors.embossHighlight,
-        fontSize: labelFontSize,
-        fontWeight: labelFontWeight,
-        fontFamily: labelFontFamily,
-        align: "center",
-        letterSpacing: labelLetterSpacing,
-      },
-    });
-    labelEmbossHighlight.anchor.set(0.5, 0.5);
-    labelEmbossHighlight.position.y = labelBaseY - 0.06;
-    labelEmbossHighlight.alpha = 0.14;
-    labelEmbossHighlight.resolution = textResolution;
-    labelEmbossHighlight.roundPixels = true;
-    token.addChild(labelEmbossHighlight);
-  }
 
   return { token, shadow };
 }
