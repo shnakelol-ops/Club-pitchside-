@@ -8,6 +8,7 @@ import {
   type TacticalPlayerKitPatch,
   type TacticalPlayerKitSnapshot,
   type TacticalPadLiteSurface,
+  type TacticalTokenRenderVariant,
   type TacticalItem,
   type WhiteboardTokenColor,
   sanitizeInitials,
@@ -66,6 +67,8 @@ const PLAYBACK_SPEED_OPTIONS: ReadonlyArray<{ multiplier: number; label: string 
   { multiplier: 1.5, label: "1.5x" },
 ];
 const DEFAULT_PLAYBACK_SPEED_MULTIPLIER = 1.0;
+const EXPERIMENTAL_TACTICAL_TOKEN_VARIANT: TacticalTokenRenderVariant = "no-circle-badge";
+const CLASSIC_TACTICAL_TOKEN_VARIANT: TacticalTokenRenderVariant = "classic";
 const TACTICAL_ITEM_CHOICES: ReadonlyArray<{ label: string; type: TacticalItem["type"] }> = [
   { label: "Cone", type: "cone" },
   { label: "Pole", type: "pole" },
@@ -1987,11 +1990,18 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     let disposed = false;
     let destroySurface: (() => void) | null = null;
 
+    const tokenVariantFromQuery = new URLSearchParams(window.location.search).get("tokenVariant");
+    const tacticalTokenRenderVariant =
+      tokenVariantFromQuery === "classic"
+        ? CLASSIC_TACTICAL_TOKEN_VARIANT
+        : EXPERIMENTAL_TACTICAL_TOKEN_VARIANT;
+
     void createTacticalPadLiteSurface(host, {
       surfaceVariant: isWhiteboardMode ? "whiteboard" : "tactical",
       whiteboardTeamCounts: isWhiteboardMode ? whiteboardCountsRef.current : undefined,
       whiteboardTeamColors: whiteboardTeamColorsRef.current,
       whiteboardDrawColor: isWhiteboardMode ? whiteboardPenColor : tacticalPenColor,
+      tacticalTokenRenderVariant,
       onPhaseCountChange: (count) => {
         if (!disposed) {
           setPhaseCount(count);

@@ -9,7 +9,11 @@ import {
   PREMIUM_TOKEN_IDLE_SHADOW_ALPHA,
   type PremiumPlayerTokenColor,
 } from "./createPremiumPlayerToken";
-import { createMicroAthleteToken, type MicroAthleteKitPattern } from "./createMicroAthleteToken";
+import {
+  createMicroAthleteToken,
+  type MicroAthleteKitPattern,
+  type MicroAthleteTokenRenderVariant,
+} from "./createMicroAthleteToken";
 import {
   createTacticalPitchVisualRoot,
   type TacticalPitchTheme,
@@ -30,6 +34,7 @@ import {
 
 export type TacticalKitPattern = MicroAthleteKitPattern;
 export type TacticalLabelMode = "number" | "initials";
+export type TacticalTokenRenderVariant = "classic" | "no-circle-badge";
 export type TacticalPlayerKitFields = {
   kitBaseColor?: string;
   kitPattern?: TacticalKitPattern;
@@ -130,6 +135,7 @@ type TacticalPadLiteSurfaceOptions = {
     red: WhiteboardTokenColor;
   };
   whiteboardDrawColor?: number;
+  tacticalTokenRenderVariant?: TacticalTokenRenderVariant;
   onItemMove?: (id: string, x: number, y: number) => void;
   onTacticalPlayerDoubleTap?: (payload: { playerId: string; clientX: number; clientY: number }) => void;
 };
@@ -673,6 +679,9 @@ export async function createTacticalPadLiteSurface(
   app.stage.addChild(world);
 
   const surfaceVariant = options.surfaceVariant ?? "tactical";
+  const tacticalTokenRenderVariant = options.tacticalTokenRenderVariant ?? "classic";
+  const microAthleteRenderVariant: MicroAthleteTokenRenderVariant =
+    tacticalTokenRenderVariant === "no-circle-badge" ? "jersey-number-no-disc" : "classic-badge";
   const pitchTheme: TacticalPitchTheme =
     surfaceVariant === "whiteboard" ? "whiteboard" : "default";
   const pitchMount = createTacticalPitchVisualRoot("gaelic", { theme: pitchTheme });
@@ -818,12 +827,15 @@ export async function createTacticalPadLiteSurface(
     return sanitizeKitColor(player.kitPatternColor) ?? defaultKitPatternColor(baseColor);
   }
 
-  function resolvePlayerLabel(player: Pick<TacticalPlayer, "number" | "labelMode" | "initials">): string {
+  function resolvePlayerNameplateLabel(player: Pick<TacticalPlayer, "initials" | "labelMode">): string | undefined {
     const labelMode = sanitizeLabelMode(player.labelMode) ?? "number";
+    if (labelMode !== "initials") return undefined;
     const initials = sanitizeInitials(player.initials);
-    if (labelMode === "initials" && initials) {
-      return initials;
-    }
+    if (!initials) return undefined;
+    return initials.slice(0, 10);
+  }
+
+  function resolvePlayerNumberLabel(player: Pick<TacticalPlayer, "number">): string {
     return safePlayerNumberLabel(player.number);
   }
 
@@ -841,11 +853,16 @@ export async function createTacticalPadLiteSurface(
     const baseColor = getEffectiveKitBaseColor(player);
     const pattern = getEffectiveKitPattern(player);
     const patternColor = getEffectiveKitPatternColor(player);
-    const label = resolvePlayerLabel(player);
+    const label = resolvePlayerNumberLabel(player);
+    const nameplateLabel = resolvePlayerNameplateLabel(player);
+    const showNameplate = nameplateLabel != null;
     return createMicroAthleteToken({
       label,
+      nameplateLabel,
+      showNameplate,
       teamColor: player.teamColor,
       scale: (PLAYER_RADIUS / 4.1) * TACTICAL_PLAYER_VISUAL_SCALE,
+      renderVariant: microAthleteRenderVariant,
       style: {
         primaryColor: KIT_COLOR_NUMERIC[baseColor],
         secondaryColor: KIT_COLOR_NUMERIC[baseColor],
