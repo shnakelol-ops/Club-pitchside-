@@ -990,6 +990,17 @@ function getViewportRect(): ViewportRect {
   };
 }
 
+function isIosDevice(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const platform = navigator.platform ?? "";
+  const ua = navigator.userAgent ?? "";
+  const maxTouchPoints = typeof navigator.maxTouchPoints === "number" ? navigator.maxTouchPoints : 0;
+  if (/iphone|ipad|ipod/i.test(ua) || /iphone|ipad|ipod/i.test(platform)) {
+    return true;
+  }
+  return /mac/i.test(platform) && maxTouchPoints > 1;
+}
+
 function getMobileViewportHeight(): number {
   if (typeof window === "undefined") return 0;
   const viewport = window.visualViewport;
@@ -2291,6 +2302,11 @@ const PANEL_CSS = `
   text-transform: uppercase;
 }
 
+.match-stopwatch--ios {
+  top: max(10px, calc(env(safe-area-inset-top, 0px) + 8px));
+  right: max(10px, calc(env(safe-area-inset-right, 0px) + 8px));
+}
+
 .match-stopwatch-state {
   grid-area: state;
   color: rgba(203, 213, 225, 0.84);
@@ -2307,6 +2323,11 @@ const PANEL_CSS = `
   .match-stopwatch {
     top: max(2px, env(safe-area-inset-top));
     right: max(4px, env(safe-area-inset-right));
+  }
+
+  .match-stopwatch--ios {
+    top: max(8px, calc(env(safe-area-inset-top, 0px) + 6px));
+    right: max(8px, calc(env(safe-area-inset-right, 0px) + 6px));
   }
 
   .utility-bubble-btn {
@@ -2553,6 +2574,7 @@ export default function StatsModeSurface() {
       }) as CSSProperties,
     [appViewportHeight],
   );
+  const isIosSafeAreaLayout = useMemo(() => isIosDevice(), []);
   const canEditTeamNames = matchState === "PRE_MATCH";
   const activeSquad =
     squads.find((squad) => squad.id === activeSquadId) ?? squads[0] ?? createDefaultSquad();
@@ -5319,7 +5341,7 @@ export default function StatsModeSurface() {
           </div>
         </div>
       ) : null}
-      <div className="match-stopwatch" aria-live="polite">
+      <div className={isIosSafeAreaLayout ? "match-stopwatch match-stopwatch--ios" : "match-stopwatch"} aria-live="polite">
         <span className="match-stopwatch-state">{matchStateToken}</span>
         <span className="match-stopwatch-clock">{formatMatchClock(matchTimeSeconds)}</span>
         <div className="match-stopwatch-controls">
