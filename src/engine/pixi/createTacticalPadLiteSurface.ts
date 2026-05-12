@@ -9,7 +9,11 @@ import {
   PREMIUM_TOKEN_IDLE_SHADOW_ALPHA,
   type PremiumPlayerTokenColor,
 } from "./createPremiumPlayerToken";
-import { createMicroAthleteToken, type MicroAthleteKitPattern } from "./createMicroAthleteToken";
+import {
+  createMicroAthleteToken,
+  type MicroAthleteKitPattern,
+  type MicroAthleteTokenRenderVariant,
+} from "./createMicroAthleteToken";
 import {
   createTacticalPitchVisualRoot,
   type TacticalPitchTheme,
@@ -30,6 +34,7 @@ import {
 
 export type TacticalKitPattern = MicroAthleteKitPattern;
 export type TacticalLabelMode = "number" | "initials";
+export type TacticalTokenRenderVariant = "classic" | "no-circle-badge";
 export type TacticalPlayerKitFields = {
   kitBaseColor?: string;
   kitPattern?: TacticalKitPattern;
@@ -130,6 +135,7 @@ type TacticalPadLiteSurfaceOptions = {
     red: WhiteboardTokenColor;
   };
   whiteboardDrawColor?: number;
+  tacticalTokenRenderVariant?: TacticalTokenRenderVariant;
   onItemMove?: (id: string, x: number, y: number) => void;
   onTacticalPlayerDoubleTap?: (payload: { playerId: string; clientX: number; clientY: number }) => void;
 };
@@ -673,6 +679,9 @@ export async function createTacticalPadLiteSurface(
   app.stage.addChild(world);
 
   const surfaceVariant = options.surfaceVariant ?? "tactical";
+  const tacticalTokenRenderVariant = options.tacticalTokenRenderVariant ?? "classic";
+  const microAthleteRenderVariant: MicroAthleteTokenRenderVariant =
+    tacticalTokenRenderVariant === "no-circle-badge" ? "jersey-number-no-disc" : "classic-badge";
   const pitchTheme: TacticalPitchTheme =
     surfaceVariant === "whiteboard" ? "whiteboard" : "default";
   const pitchMount = createTacticalPitchVisualRoot("gaelic", { theme: pitchTheme });
@@ -846,6 +855,7 @@ export async function createTacticalPadLiteSurface(
       label,
       teamColor: player.teamColor,
       scale: (PLAYER_RADIUS / 4.1) * TACTICAL_PLAYER_VISUAL_SCALE,
+      renderVariant: microAthleteRenderVariant,
       style: {
         primaryColor: KIT_COLOR_NUMERIC[baseColor],
         secondaryColor: KIT_COLOR_NUMERIC[baseColor],
