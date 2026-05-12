@@ -24,6 +24,14 @@ type VisionTokenPalette = {
   notch: number;
 };
 
+type VisionCoreTone = {
+  inner: number;
+  mid: number;
+  edge: number;
+  rim: number;
+  centerLift: number;
+};
+
 const PALETTE_BY_TEAM_COLOR: Record<PremiumPlayerTokenColor, VisionTokenPalette> = {
   blue: {
     halo: 0x66c9ff,
@@ -68,6 +76,80 @@ function mixColor(base: number, target: number, amount: number): number {
   const b = clampColorChannel(baseB + (targetB - baseB) * amount);
 
   return (r << 16) | (g << 8) | b;
+}
+
+function colorToHsl(color: number): { h: number; s: number; l: number } {
+  const r = ((color >> 16) & 0xff) / 255;
+  const g = ((color >> 8) & 0xff) / 255;
+  const b = (color & 0xff) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const delta = max - min;
+  let h = 0;
+  const l = (max + min) * 0.5;
+
+  if (delta > 1e-6) {
+    if (max === r) h = ((g - b) / delta) % 6;
+    else if (max === g) h = (b - r) / delta + 2;
+    else h = (r - g) / delta + 4;
+    h *= 60;
+    if (h < 0) h += 360;
+  }
+
+  const s = delta <= 1e-6 ? 0 : delta / (1 - Math.abs(2 * l - 1));
+  return { h, s, l };
+}
+
+function hslToColor(h: number, s: number, l: number): number {
+  const normalizedHue = ((h % 360) + 360) % 360;
+  const clampedS = Math.max(0, Math.min(1, s));
+  const clampedL = Math.max(0, Math.min(1, l));
+  const c = (1 - Math.abs(2 * clampedL - 1)) * clampedS;
+  const x = c * (1 - Math.abs(((normalizedHue / 60) % 2) - 1));
+  const m = clampedL - c / 2;
+  let rp = 0;
+  let gp = 0;
+  let bp = 0;
+
+  if (normalizedHue < 60) {
+    rp = c;
+    gp = x;
+  } else if (normalizedHue < 120) {
+    rp = x;
+    gp = c;
+  } else if (normalizedHue < 180) {
+    gp = c;
+    bp = x;
+  } else if (normalizedHue < 240) {
+    gp = x;
+    bp = c;
+  } else if (normalizedHue < 300) {
+    rp = x;
+    bp = c;
+  } else {
+    rp = c;
+    bp = x;
+  }
+
+  const r = clampColorChannel((rp + m) * 255);
+  const g = clampColorChannel((gp + m) * 255);
+  const b = clampColorChannel((bp + m) * 255);
+  return (r << 16) | (g << 8) | b;
+}
+
+function createCoreTone(ringColor: number): VisionCoreTone {
+  const { h, s } = colorToHsl(ringColor);
+  const tonalS = Math.max(0.38, Math.min(0.92, s * 0.9 + 0.08));
+  const inner = hslToColor(h, tonalS, 0.33);
+  const mid = hslToColor(h, tonalS * 0.92, 0.24);
+  const edge = hslToColor(h, tonalS * 0.88, 0.15);
+  return {
+    inner,
+    mid,
+    edge,
+    rim: mixColor(inner, 0xffffff, 0.24),
+    centerLift: mixColor(inner, 0xffffff, 0.42),
+  };
 }
 
 function drawRingPattern(
@@ -135,6 +217,7 @@ export function createVisionPlayerToken({
   const teamPalette = PALETTE_BY_TEAM_COLOR[teamColor];
   const primaryRingColor = ringColor ?? teamPalette.ring;
   const patternColor = ringPatternColor ?? mixColor(primaryRingColor, 0xffffff, 0.35);
+  const coreTone = createCoreTone(primaryRingColor);
   const ringWidth = radius * 0.24;
   const outerRingRadius = radius * 0.96;
   const coreRadius = radius * 0.7;
@@ -201,25 +284,31 @@ export function createVisionPlayerToken({
     outerCenter: { x: 0.5, y: 0.5 },
     textureSpace: "local",
     colorStops: [
-      { offset: 0, color: "rgba(33, 50, 74, 1)" },
-      { offset: 0.58, color: "rgba(15, 27, 45, 1)" },
-      { offset: 1, color: "rgba(3, 10, 21, 1)" },
+      { offset: 0, color: `#${coreTone.inner.toString(16).padStart(6, "0")}` },
+      { offset: 0.56, color: `#${coreTone.mid.toString(16).padStart(6, "0")}` },
+      { offset: 1, color: `#${coreTone.edge.toString(16).padStart(6, "0")}` },
     ],
   });
   const core = new Graphics();
   core
     .circle(0, 0, coreRadius)
     .fill(coreGradient)
+    .circle(-radius * 0.09, -radius * 0.12, coreRadius * 0.52)
+    .fill({ color: coreTone.centerLift, alpha: 0.09 })
     .circle(0, 0, coreRadius)
-    .stroke({ color: mixColor(primaryRingColor, 0xffffff, 0.15), width: radius * 0.06, alpha: 0.33 });
+    .stroke({ color: coreTone.rim, width: radius * 0.06, alpha: 0.26 });
   token.addChild(core);
 
   const specular = new Graphics();
   specular
-    .ellipse(-radius * 0.18, -radius * 0.24, radius * 0.31, radius * 0.12)
+    .ellipse(-radius * 0.22, -radius * 0.27, radius * 0.25, radius * 0.1)
+    .fill({ color: 0xffffff, alpha: 0.15 })
+    .circle(-radius * 0.05, -radius * 0.03, radius * 0.065)
     .fill({ color: 0xffffff, alpha: 0.22 })
-    .ellipse(radius * 0.18, radius * 0.18, radius * 0.27, radius * 0.11)
-    .fill({ color: 0xffffff, alpha: 0.05 });
+    .circle(-radius * 0.05, -radius * 0.03, radius * 0.11)
+    .fill({ color: 0xffffff, alpha: 0.06 })
+    .ellipse(radius * 0.19, radius * 0.19, radius * 0.22, radius * 0.09)
+    .fill({ color: 0xffffff, alpha: 0.035 });
   token.addChild(specular);
 
   const movementIndicator = new Graphics();
