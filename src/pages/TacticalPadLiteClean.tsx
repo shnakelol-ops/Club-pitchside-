@@ -40,7 +40,7 @@ const VIEWPORT_HEIGHT_UNIT = CAN_USE_CSS_SUPPORTS && window.CSS.supports("height
 const VIEWPORT_WIDTH_UNIT = CAN_USE_CSS_SUPPORTS && window.CSS.supports("width: 100dvw") ? "100dvw" : "100vw";
 
 const CONTENT_WIDTH_EXPR =
-  `min(calc(${VIEWPORT_WIDTH_UNIT} - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), calc((${VIEWPORT_HEIGHT_UNIT} - 10px) * 1.6), 1360px)`;
+  `min(calc(${VIEWPORT_WIDTH_UNIT} - 24px - var(--app-safe-left, 0px) - var(--app-safe-right, 0px)), calc((${VIEWPORT_HEIGHT_UNIT} - 10px) * 1.6), 1360px)`;
 const WHITEBOARD_PLAYER_COLOR_CHOICES: ReadonlyArray<{
   value: WhiteboardTokenColor;
   css: string;
@@ -218,16 +218,17 @@ function shouldUseCompactLandscapeToolsMenu(viewport: ViewportRect): boolean {
 const ROOT_STYLE: CSSProperties = {
   position: "fixed",
   inset: 0,
-  width: "100vw",
+  width: VIEWPORT_WIDTH_UNIT,
   height: VIEWPORT_HEIGHT_UNIT,
   minHeight: VIEWPORT_HEIGHT_UNIT,
   background:
     "linear-gradient(135deg, rgba(220, 238, 242, 1) 0%, rgba(180, 210, 220, 1) 45%, rgba(120, 170, 195, 1) 100%)",
   margin: 0,
-  paddingTop: "max(4px, calc(env(safe-area-inset-top, 0px) + 2px))",
-  paddingRight: "max(4px, calc(env(safe-area-inset-right, 0px) + 2px))",
-  paddingBottom: "max(4px, calc(env(safe-area-inset-bottom, 0px) + 2px))",
-  paddingLeft: "max(4px, calc(env(safe-area-inset-left, 0px) + 2px))",
+  // iOS-only safe-area shell vars are provided by main.tsx + iosSafeArea.css.
+  paddingTop: "max(4px, calc(var(--app-safe-top, 0px) + 2px))",
+  paddingRight: "max(4px, calc(var(--app-safe-right, 0px) + 2px))",
+  paddingBottom: "max(4px, calc(var(--app-safe-bottom, 0px) + 2px))",
+  paddingLeft: "max(4px, calc(var(--app-safe-left, 0px) + 2px))",
   boxSizing: "border-box",
   display: "flex",
   alignItems: "center",
@@ -239,10 +240,10 @@ const ROOT_WHITEBOARD_STYLE: CSSProperties = {
   ...ROOT_STYLE,
   background:
     "linear-gradient(165deg, rgba(245, 248, 251, 1) 0%, rgba(236, 241, 246, 1) 52%, rgba(228, 235, 242, 1) 100%)",
-  paddingTop: "max(8px, calc(env(safe-area-inset-top, 0px) + 6px))",
-  paddingBottom: "max(8px, calc(env(safe-area-inset-bottom, 0px) + 6px))",
-  paddingLeft: "max(12px, calc(env(safe-area-inset-left, 0px) + 8px))",
-  paddingRight: "max(12px, calc(env(safe-area-inset-right, 0px) + 8px))",
+  paddingTop: "max(8px, calc(var(--app-safe-top, 0px) + 6px))",
+  paddingBottom: "max(8px, calc(var(--app-safe-bottom, 0px) + 6px))",
+  paddingLeft: "max(12px, calc(var(--app-safe-left, 0px) + 8px))",
+  paddingRight: "max(12px, calc(var(--app-safe-right, 0px) + 8px))",
 };
 
 const BACKGROUND_LAYER_STYLE: CSSProperties = {
@@ -589,13 +590,13 @@ const BUBBLE_BASE_STYLE: CSSProperties = {
 
 const LEFT_BUBBLE_STYLE: CSSProperties = {
   ...BUBBLE_BASE_STYLE,
-  left: "max(12px, calc(env(safe-area-inset-left, 0px) + 10px))",
-  bottom: "max(12px, calc(env(safe-area-inset-bottom, 0px) + 10px))",
+  left: "max(12px, calc(var(--app-safe-left, 0px) + 10px))",
+  bottom: "max(12px, calc(var(--app-safe-bottom, 0px) + 10px))",
 };
 
 const ACTIONS_BUBBLE_STYLE: CSSProperties = {
   ...BUBBLE_BASE_STYLE,
-  left: "max(12px, calc(env(safe-area-inset-left, 0px) + 10px))",
+  left: "max(12px, calc(var(--app-safe-left, 0px) + 10px))",
   top: "50%",
   transform: "translateY(-50%)",
   background: "rgba(32, 40, 50, 0.74)",
@@ -607,16 +608,16 @@ const ACTIONS_BUBBLE_STYLE: CSSProperties = {
 const PORTRAIT_ACTIONS_BUBBLE_STYLE: CSSProperties = {
   ...ACTIONS_BUBBLE_STYLE,
   left: "auto",
-  right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
+  right: "max(12px, calc(var(--app-safe-right, 0px) + 10px))",
   top: "auto",
-  bottom: "max(12px, calc(env(safe-area-inset-bottom, 0px) + 10px))",
+  bottom: "max(12px, calc(var(--app-safe-bottom, 0px) + 10px))",
   transform: "none",
 };
 
 const RIGHT_BUBBLE_STYLE: CSSProperties = {
   ...BUBBLE_BASE_STYLE,
-  right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
-  bottom: "max(12px, calc(env(safe-area-inset-bottom, 0px) + 10px))",
+  right: "max(12px, calc(var(--app-safe-right, 0px) + 10px))",
+  bottom: "max(12px, calc(var(--app-safe-bottom, 0px) + 10px))",
 };
 
 const TOOL_BUBBLE_STYLE: CSSProperties = {
@@ -801,7 +802,7 @@ const CONTROLS_POPOUT_STYLE: CSSProperties = {
   ...POPOUT_BASE_STYLE,
   left: "50%",
   transform: "translateX(-50%)",
-  bottom: "max(12px, calc(env(safe-area-inset-bottom, 0px) + 10px))",
+  bottom: "max(12px, calc(var(--app-safe-bottom, 0px) + 10px))",
   width: "fit-content",
   maxWidth: "calc(100vw - 128px)",
   overflowX: "auto",
@@ -814,7 +815,7 @@ const CONTROLS_POPOUT_STYLE: CSSProperties = {
 
 const ACTIONS_POPOUT_STYLE: CSSProperties = {
   ...POPOUT_BASE_STYLE,
-  left: "max(58px, calc(env(safe-area-inset-left, 0px) + 56px))",
+  left: "max(58px, calc(var(--app-safe-left, 0px) + 56px))",
   top: "50%",
   transform: "translateY(-50%)",
   flexDirection: "column",
@@ -832,7 +833,7 @@ const PORTRAIT_POPOUT_BASE_STYLE: CSSProperties = {
   left: "16px",
   right: "16px",
   top: "auto",
-  bottom: "max(64px, calc(env(safe-area-inset-bottom, 0px) + 62px))",
+  bottom: "max(64px, calc(var(--app-safe-bottom, 0px) + 62px))",
   transform: "none",
   width: "calc(100vw - 32px)",
   maxWidth: "calc(100vw - 32px)",
@@ -915,7 +916,7 @@ const TOKEN_STYLE_MENU_BUTTON_ACTIVE_STYLE: CSSProperties = {
 
 const QUICK_SHARE_POPOUT_STYLE: CSSProperties = {
   ...POPOUT_BASE_STYLE,
-  left: "max(194px, calc(env(safe-area-inset-left, 0px) + 192px))",
+  left: "max(194px, calc(var(--app-safe-left, 0px) + 192px))",
   top: "50%",
   transform: "translateY(-50%)",
   flexDirection: "column",
@@ -980,7 +981,7 @@ const QUICK_SHARE_ONBOARDING_OVERLAY_STYLE: CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  padding: "max(16px, calc(env(safe-area-inset-top, 0px) + 10px)) max(16px, calc(env(safe-area-inset-right, 0px) + 8px)) max(16px, calc(env(safe-area-inset-bottom, 0px) + 10px)) max(16px, calc(env(safe-area-inset-left, 0px) + 8px))",
+  padding: "max(16px, calc(var(--app-safe-top, 0px) + 10px)) max(16px, calc(var(--app-safe-right, 0px) + 8px)) max(16px, calc(var(--app-safe-bottom, 0px) + 10px)) max(16px, calc(var(--app-safe-left, 0px) + 8px))",
   background: "rgba(5, 11, 17, 0.36)",
   transition: "opacity 180ms ease-out",
   zIndex: 22,
@@ -1052,7 +1053,7 @@ function safeWriteLocalStorageFlag(key: string, value: boolean): void {
 
 const MY_BOARDS_POPOUT_STYLE: CSSProperties = {
   ...POPOUT_BASE_STYLE,
-  left: "max(194px, calc(env(safe-area-inset-left, 0px) + 192px))",
+  left: "max(194px, calc(var(--app-safe-left, 0px) + 192px))",
   top: "50%",
   transform: "translateY(-50%)",
   flexDirection: "column",
@@ -1167,12 +1168,12 @@ const COACH_HUB_PANEL_STYLE: CSSProperties = {
   flexDirection: "column",
   gap: "4px",
   width: "clamp(112px, 13vw, 148px)",
-  maxWidth: "calc(100dvw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 12px)",
-  maxHeight: "min(54vh, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 72px))",
+  maxWidth: "calc(100dvw - var(--app-safe-left, 0px) - var(--app-safe-right, 0px) - 12px)",
+  maxHeight: "min(54vh, calc(100dvh - var(--app-safe-top, 0px) - var(--app-safe-bottom, 0px) - 72px))",
   overflowY: "auto",
   overflowX: "hidden",
-  right: "max(10px, calc(env(safe-area-inset-right, 0px) + 8px))",
-  bottom: "max(60px, calc(env(safe-area-inset-bottom, 0px) + 58px))",
+  right: "max(10px, calc(var(--app-safe-right, 0px) + 8px))",
+  bottom: "max(60px, calc(var(--app-safe-bottom, 0px) + 58px))",
   padding: "5px",
   background: "rgba(9, 17, 24, 0.68)",
   border: "1px solid rgba(165, 194, 220, 0.2)",
@@ -1189,15 +1190,15 @@ const MOBILE_COACH_HUB_OVERLAY_STYLE: CSSProperties = {
   justifyContent: "flex-end",
   alignItems: "flex-end",
   padding:
-    "max(8px, calc(env(safe-area-inset-top, 0px) + 4px)) max(10px, calc(env(safe-area-inset-right, 0px) + 10px)) max(8px, calc(env(safe-area-inset-bottom, 0px) + 8px)) max(10px, calc(env(safe-area-inset-left, 0px) + 10px))",
+    "max(8px, calc(var(--app-safe-top, 0px) + 4px)) max(10px, calc(var(--app-safe-right, 0px) + 10px)) max(8px, calc(var(--app-safe-bottom, 0px) + 8px)) max(10px, calc(var(--app-safe-left, 0px) + 10px))",
   background: "rgba(5, 11, 17, 0.08)",
   zIndex: 24,
 };
 
 const MOBILE_COACH_HUB_PANEL_STYLE: CSSProperties = {
   width: "min(52vw, 320px)",
-  maxWidth: "calc(100dvw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 20px)",
-  maxHeight: "min(58dvh, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 18px))",
+  maxWidth: "calc(100dvw - var(--app-safe-left, 0px) - var(--app-safe-right, 0px) - 20px)",
+  maxHeight: "min(58dvh, calc(100dvh - var(--app-safe-top, 0px) - var(--app-safe-bottom, 0px) - 18px))",
   overflowY: "auto",
   overflowX: "hidden",
   display: "flex",
@@ -1458,7 +1459,7 @@ const PLAYBACK_SPEED_SLIDER_STYLE: CSSProperties = {
 
 const SHARE_TIP_TOAST_STYLE: CSSProperties = {
   position: "fixed",
-  left: "max(62px, calc(env(safe-area-inset-left, 0px) + 60px))",
+  left: "max(62px, calc(var(--app-safe-left, 0px) + 60px))",
   top: "calc(50% + 98px)",
   width: "min(286px, calc(100vw - 72px))",
   display: "flex",
@@ -1520,8 +1521,8 @@ const WHITEBOARD_TOOLS_BUTTON_ACTIVE_STYLE: CSSProperties = {
 
 const PHASES_CHIP_STYLE: CSSProperties = {
   position: "fixed",
-  left: "max(12px, calc(env(safe-area-inset-left, 0px) + 10px))",
-  top: "max(12px, calc(env(safe-area-inset-top, 0px) + 10px))",
+  left: "max(12px, calc(var(--app-safe-left, 0px) + 10px))",
+  top: "max(12px, calc(var(--app-safe-top, 0px) + 10px))",
   height: "32px",
   borderRadius: "10px",
   border: "1px solid rgba(226, 236, 232, 0.22)",
@@ -1539,8 +1540,8 @@ const PHASES_CHIP_STYLE: CSSProperties = {
 
 const PHASES_TRAY_STYLE: CSSProperties = {
   position: "fixed",
-  left: "max(12px, calc(env(safe-area-inset-left, 0px) + 10px))",
-  top: "max(48px, calc(env(safe-area-inset-top, 0px) + 46px))",
+  left: "max(12px, calc(var(--app-safe-left, 0px) + 10px))",
+  top: "max(48px, calc(var(--app-safe-top, 0px) + 46px))",
   width: "126px",
   maxHeight: "156px",
   overflowY: "auto",
@@ -1595,8 +1596,8 @@ const WHITEBOARD_HEAD_BUTTON_BASE_STYLE: CSSProperties = {
 
 const WHITEBOARD_COUNT_SELECTOR_STYLE: CSSProperties = {
   position: "fixed",
-  right: "max(8px, calc(env(safe-area-inset-right, 0px) + 6px))",
-  top: "max(16px, env(safe-area-inset-top, 0px))",
+  right: "max(8px, calc(var(--app-safe-right, 0px) + 6px))",
+  top: "max(16px, var(--app-safe-top, 0px))",
   bottom: "auto",
   zIndex: 22,
   width: "clamp(148px, 23vw, 176px)",
@@ -1720,15 +1721,15 @@ const WHITEBOARD_TOKEN_COLOR_SWATCH_STYLE: CSSProperties = {
 const WHITEBOARD_HOME_BUTTON_STYLE: CSSProperties = {
   ...HOME_MENU_ICON_BUTTON_STYLE,
   position: "fixed",
-  top: "max(12px, calc(env(safe-area-inset-top, 0px) + 10px))",
-  right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
+  top: "max(12px, calc(var(--app-safe-top, 0px) + 10px))",
+  right: "max(12px, calc(var(--app-safe-right, 0px) + 10px))",
   zIndex: 23,
 };
 
 const WHITEBOARD_HOME_CONFIRM_STYLE: CSSProperties = {
   position: "fixed",
-  top: "max(54px, calc(env(safe-area-inset-top, 0px) + 50px))",
-  right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
+  top: "max(54px, calc(var(--app-safe-top, 0px) + 50px))",
+  right: "max(12px, calc(var(--app-safe-right, 0px) + 10px))",
   width: "min(244px, calc(100vw - 24px))",
   display: "flex",
   flexDirection: "column",
@@ -3228,8 +3229,8 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
               style={{
                 ...WHITEBOARD_HEAD_BUTTON_BASE_STYLE,
                 position: "fixed",
-                left: "max(12px, calc(env(safe-area-inset-left, 0px) + 10px))",
-                top: "max(12px, calc(env(safe-area-inset-top, 0px) + 10px))",
+                left: "max(12px, calc(var(--app-safe-left, 0px) + 10px))",
+                top: "max(12px, calc(var(--app-safe-top, 0px) + 10px))",
                 zIndex: 23,
                 ...(whiteboardBubbleStyle ?? {}),
               }}
@@ -4275,7 +4276,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
           </div>
         ) : null}
         {!isWhiteboardMode && quickBoardFeedback ? (
-          <div style={{ ...SHARE_TIP_TOAST_STYLE, top: "max(18px, calc(env(safe-area-inset-top, 0px) + 14px))" }} role="status" aria-live="polite">
+          <div style={{ ...SHARE_TIP_TOAST_STYLE, top: "max(18px, calc(var(--app-safe-top, 0px) + 14px))" }} role="status" aria-live="polite">
             <p style={{ ...SHARE_TIP_TEXT_STYLE, whiteSpace: "pre-line" }}>{quickBoardFeedback}</p>
           </div>
         ) : null}
@@ -4283,8 +4284,8 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
           <div
             style={{
               position: "absolute",
-              top: "max(16px, calc(env(safe-area-inset-top, 0px) + 10px))",
-              left: "max(14px, calc(env(safe-area-inset-left, 0px) + 10px))",
+              top: "max(16px, calc(var(--app-safe-top, 0px) + 10px))",
+              left: "max(14px, calc(var(--app-safe-left, 0px) + 10px))",
               zIndex: 30,
               padding: "6px 10px",
               borderRadius: "10px",
