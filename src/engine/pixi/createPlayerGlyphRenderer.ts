@@ -39,97 +39,58 @@ export function createPlayerGlyphRenderer({ number, radius, teamColor, goalkeepe
   token.scale.set(GLYPH_TOKEN_IDLE_SCALE, GLYPH_TOKEN_IDLE_SCALE);
 
   const bodyShadow = new Graphics();
-  bodyShadow
-    .ellipse(radius * 0.05, radius * 0.6, radius * 0.52, radius * 0.2)
-    .fill({ color: 0x020617, alpha: 0.2 });
+  bodyShadow.ellipse(0, radius * 0.6, radius * 0.46, radius * 0.17).fill({ color: 0x020617, alpha: 0.16 });
   token.addChild(bodyShadow);
 
   const shadow = new Graphics();
-  shadow
-    .ellipse(0.4, radius * 0.95, radius * 0.98, radius * 0.36)
-    .fill({ color: 0x020617, alpha: GLYPH_TOKEN_IDLE_SHADOW_ALPHA * 0.7 });
+  shadow.ellipse(0, radius * 0.95, radius * 0.94, radius * 0.34).fill({ color: 0x020617, alpha: GLYPH_TOKEN_IDLE_SHADOW_ALPHA * 0.66 });
   token.addChild(shadow);
 
   const baseY = radius * 0.78;
-  const baseFill = 0x101a2a;
-  const baseRim = mixColor(teamColor, goalkeeper ? 0xf8fafc : 0xffffff, goalkeeper ? 0.38 : 0.1);
+  const baseFill = 0x131c2d;
+  const baseRim = mixColor(teamColor, 0xffffff, goalkeeper ? 0.34 : 0.12);
 
   const base = new Graphics();
-  base.ellipse(0, baseY, radius * 0.86, radius * 0.3).fill({ color: baseFill, alpha: 0.94 });
-  base.ellipse(0, baseY + radius * 0.02, radius * 0.72, radius * 0.2).fill({ color: 0x0a1220, alpha: 0.5 });
-  base.ellipse(0, baseY, radius * 0.86, radius * 0.3).stroke({ color: baseRim, width: 0.56, alpha: 0.8 });
-  base.ellipse(0, baseY - radius * 0.015, radius * 0.62, radius * 0.12).stroke({ color: 0xffffff, width: 0.24, alpha: 0.14 });
-  base.ellipse(0, baseY + radius * 0.02, radius * 0.92, radius * 0.35).stroke({
-    color: mixColor(teamColor, 0x38bdf8, goalkeeper ? 0.26 : 0.14),
-    width: goalkeeper ? 0.52 : 0.42,
-    alpha: goalkeeper ? 0.28 : 0.2,
+  base.ellipse(0, baseY, radius * 0.84, radius * 0.28).fill({ color: baseFill, alpha: 0.95 });
+  base.ellipse(0, baseY + radius * 0.015, radius * 0.66, radius * 0.16).fill({ color: 0x0c1424, alpha: 0.54 });
+  base.ellipse(0, baseY, radius * 0.84, radius * 0.28).stroke({ color: baseRim, width: 0.52, alpha: 0.8 });
+  base.ellipse(0, baseY + radius * 0.02, radius * 0.9, radius * 0.32).stroke({
+    color: mixColor(teamColor, 0x38bdf8, goalkeeper ? 0.24 : 0.14),
+    width: goalkeeper ? 0.48 : 0.38,
+    alpha: goalkeeper ? 0.24 : 0.17,
   });
   token.addChild(base);
 
   const athlete = new Graphics();
-  const jerseyBase = goalkeeper ? mixColor(teamColor, 0xffffff, 0.22) : teamColor;
-  const jerseyTop = mixColor(jerseyBase, 0xffffff, 0.2);
-  const jerseyBottom = mixColor(jerseyBase, 0x0b1220, 0.3);
-  const torsoHalfWidth = goalkeeper ? radius * 0.41 : radius * 0.38;
-  const waistHalfWidth = goalkeeper ? radius * 0.24 : radius * 0.21;
+  const jerseyColor = goalkeeper ? mixColor(teamColor, 0xffffff, 0.22) : teamColor;
+  const jerseyShade = mixColor(jerseyColor, 0x0f172a, 0.25);
+  const shortsColor = mixColor(jerseyColor, 0x0b1220, 0.44);
+  const skinColor = 0xf0c9a8;
+  const hairColor = mixColor(skinColor, 0x1f2937, 0.54);
 
-  athlete.roundRect(-radius * 0.2, radius * 0.43, radius * 0.4, radius * 0.14, radius * 0.05).fill({
-    color: mixColor(jerseyBase, 0x0b1220, 0.34),
-    alpha: 1,
-  });
+  // small lower body / shorts hint, anchored just above pill
+  athlete.roundRect(-radius * 0.18, radius * 0.24, radius * 0.36, radius * 0.2, radius * 0.06).fill({ color: shortsColor, alpha: 0.92 });
+  athlete.roundRect(-radius * 0.15, radius * 0.4, radius * 0.11, radius * 0.16, radius * 0.05).fill({ color: mixColor(shortsColor, 0x000000, 0.16), alpha: 0.88 });
+  athlete.roundRect(radius * 0.04, radius * 0.4, radius * 0.11, radius * 0.16, radius * 0.05).fill({ color: mixColor(shortsColor, 0x000000, 0.16), alpha: 0.88 });
 
-  athlete.roundRect(-radius * 0.54, -radius * 0.26, radius * 0.13, radius * 0.48, radius * 0.06).fill({
-    color: mixColor(jerseyBase, 0x0b1220, 0.16),
-    alpha: 0.92,
-  });
-  athlete.roundRect(radius * 0.41, -radius * 0.26, radius * 0.13, radius * 0.48, radius * 0.06).fill({
-    color: mixColor(jerseyBase, 0x0b1220, 0.18),
-    alpha: 0.92,
-  });
+  // torso + shoulders (human mini-athlete proportions)
+  athlete.roundRect(-radius * 0.34, -radius * 0.5, radius * 0.68, radius * 0.78, radius * 0.2).fill({ color: jerseyColor, alpha: 1 });
+  athlete.roundRect(-radius * 0.29, -radius * 0.44, radius * 0.58, radius * 0.38, radius * 0.16).fill({ color: mixColor(jerseyColor, 0xffffff, 0.18), alpha: 0.34 });
+  athlete.roundRect(-radius * 0.27, -radius * 0.02, radius * 0.54, radius * 0.28, radius * 0.12).fill({ color: jerseyShade, alpha: 0.24 });
 
-  athlete
-    .moveTo(-torsoHalfWidth, -radius * 0.5)
-    .bezierCurveTo(-radius * 0.24, -radius * 0.72, radius * 0.24, -radius * 0.72, torsoHalfWidth, -radius * 0.5)
-    .lineTo(waistHalfWidth, radius * 0.38)
-    .bezierCurveTo(radius * 0.09, radius * 0.48, -radius * 0.1, radius * 0.48, -waistHalfWidth, radius * 0.38)
-    .closePath()
-    .fill({ color: jerseyBase, alpha: 1 });
+  // sleeves + simple arms
+  athlete.roundRect(-radius * 0.5, -radius * 0.34, radius * 0.16, radius * 0.34, radius * 0.07).fill({ color: jerseyShade, alpha: 0.95 });
+  athlete.roundRect(radius * 0.34, -radius * 0.34, radius * 0.16, radius * 0.34, radius * 0.07).fill({ color: jerseyShade, alpha: 0.95 });
+  athlete.roundRect(-radius * 0.49, -radius * 0.04, radius * 0.14, radius * 0.18, radius * 0.07).fill({ color: skinColor, alpha: 0.95 });
+  athlete.roundRect(radius * 0.35, -radius * 0.04, radius * 0.14, radius * 0.18, radius * 0.07).fill({ color: skinColor, alpha: 0.95 });
 
-  athlete
-    .poly([
-      -torsoHalfWidth + radius * 0.04, -radius * 0.46,
-      torsoHalfWidth - radius * 0.04, -radius * 0.46,
-      waistHalfWidth, -radius * 0.02,
-      -waistHalfWidth * 0.86, -radius * 0.02,
-    ])
-    .fill({ color: jerseyTop, alpha: 0.38 });
+  // neck + head + hair cap
+  athlete.roundRect(-radius * 0.065, -radius * 0.68, radius * 0.13, radius * 0.08, radius * 0.03).fill({ color: skinColor, alpha: 0.96 });
+  athlete.circle(0, -radius * 0.84, radius * 0.17).fill({ color: skinColor, alpha: 1 });
+  athlete.ellipse(0, -radius * 0.92, radius * 0.145, radius * 0.07).fill({ color: hairColor, alpha: 0.92 });
+  athlete.ellipse(-radius * 0.04, -radius * 0.83, radius * 0.09, radius * 0.04).fill({ color: 0xffffff, alpha: 0.18 });
 
-  athlete
-    .poly([
-      -waistHalfWidth, radius * 0.04,
-      waistHalfWidth * 0.96, radius * 0.04,
-      waistHalfWidth - radius * 0.04, radius * 0.36,
-      -waistHalfWidth + radius * 0.03, radius * 0.36,
-    ])
-    .fill({ color: jerseyBottom, alpha: 0.34 });
-
-  athlete.ellipse(radius * 0.06, -radius * 0.18, radius * 0.14, radius * 0.3).fill({ color: 0xffffff, alpha: 0.08 });
-
-  athlete.roundRect(-radius * 0.17, radius * 0.2, radius * 0.13, radius * 0.24, radius * 0.05).fill({
-    color: mixColor(jerseyBase, 0x0f172a, 0.42),
-    alpha: 0.88,
-  });
-  athlete.roundRect(radius * 0.04, radius * 0.2, radius * 0.13, radius * 0.24, radius * 0.05).fill({
-    color: mixColor(jerseyBase, 0x0f172a, 0.42),
-    alpha: 0.88,
-  });
-
-  athlete.circle(0.02, -radius * 0.84, radius * 0.17).fill({ color: goalkeeper ? 0xf8fafc : 0xe2e8f0, alpha: 1 });
-  athlete.ellipse(0.02, -radius * 0.92, radius * 0.14, radius * 0.06).fill({ color: mixColor(jerseyBase, 0x0f172a, 0.2), alpha: 0.28 });
-  athlete.ellipse(-radius * 0.02, -radius * 0.81, radius * 0.1, radius * 0.04).fill({ color: 0xffffff, alpha: 0.2 });
-
-  athlete.rotation = -0.03;
-  athlete.position.x = radius * 0.03;
+  athlete.rotation = -0.02;
   token.addChild(athlete);
 
   const textResolution = typeof window !== "undefined" ? Math.max(2, Math.min(3, window.devicePixelRatio || 1)) : 2;
@@ -137,8 +98,8 @@ export function createPlayerGlyphRenderer({ number, radius, teamColor, goalkeepe
   const numberInset = new Text({
     text: String(number),
     style: {
-      fill: 0x8da1bf,
-      fontSize: number > 9 ? 3.35 : 3.68,
+      fill: 0x8b9bb6,
+      fontSize: number > 9 ? 3.32 : 3.65,
       fontWeight: "900",
       align: "center",
       fontFamily: '"Barlow Condensed", "Inter Tight", Inter, system-ui, sans-serif',
@@ -146,7 +107,7 @@ export function createPlayerGlyphRenderer({ number, radius, teamColor, goalkeepe
     },
   });
   numberInset.anchor.set(0.5, 0.5);
-  numberInset.position.set(0, baseY - radius * 0.015);
+  numberInset.position.set(0, baseY - radius * 0.014);
   numberInset.alpha = 0.22;
   numberInset.roundPixels = true;
   numberInset.resolution = textResolution;
@@ -156,17 +117,17 @@ export function createPlayerGlyphRenderer({ number, radius, teamColor, goalkeepe
     text: String(number),
     style: {
       fill: 0xffffff,
-      fontSize: number > 9 ? 3.35 : 3.68,
+      fontSize: number > 9 ? 3.32 : 3.65,
       fontWeight: "900",
       align: "center",
       fontFamily: '"Barlow Condensed", "Inter Tight", Inter, system-ui, sans-serif',
-      stroke: { color: 0x020617, width: 0.42, join: "round" },
+      stroke: { color: 0x020617, width: 0.4, join: "round" },
       letterSpacing: number > 9 ? 0.03 : 0.01,
     },
   });
   numberText.anchor.set(0.5, 0.5);
-  numberText.position.set(0, baseY - radius * 0.028);
-  numberText.alpha = 0.93;
+  numberText.position.set(0, baseY - radius * 0.026);
+  numberText.alpha = 0.94;
   numberText.roundPixels = true;
   numberText.resolution = textResolution;
   token.addChild(numberText);
