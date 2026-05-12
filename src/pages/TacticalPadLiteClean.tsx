@@ -1289,6 +1289,11 @@ const IPHONE_LANDSCAPE_TOOLS_BODY_STYLE: CSSProperties = {
   paddingRight: "1px",
 };
 
+const IPHONE_COMPACT_TOOLS_BUTTON_INTERACTION_STYLE: CSSProperties = {
+  pointerEvents: "auto",
+  touchAction: "manipulation",
+};
+
 const COACH_HUB_SECTION_STYLE: CSSProperties = {
   display: "flex",
   flexDirection: "column",
@@ -3045,12 +3050,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         border: "1px solid rgba(127, 156, 142, 0.24)",
         background: "rgba(13, 22, 25, 0.68)",
         color: "rgba(220, 235, 227, 0.9)",
-        ...(isIphoneLandscapeTools
-          ? {
-              pointerEvents: "auto",
-              touchAction: "manipulation",
-            }
-          : null),
+        ...(isIphoneLandscapeTools ? IPHONE_COMPACT_TOOLS_BUTTON_INTERACTION_STYLE : null),
       }
     : COACH_HUB_TAB_BUTTON_STYLE;
   const coachHubTabButtonActiveStyle = isCompactLandscapeTools
@@ -3071,12 +3071,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         border: "1px solid rgba(127, 156, 142, 0.22)",
         background: "rgba(13, 22, 25, 0.68)",
         color: "#e6f0ea",
-        ...(isIphoneLandscapeTools
-          ? {
-              pointerEvents: "auto",
-              touchAction: "manipulation",
-            }
-          : null),
+        ...(isIphoneLandscapeTools ? IPHONE_COMPACT_TOOLS_BUTTON_INTERACTION_STYLE : null),
       }
     : COACH_HUB_TOOL_BUTTON_STYLE;
   const coachHubToolButtonActiveStyle = isCompactLandscapeTools
@@ -3099,12 +3094,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         height: isTightCompactLandscapeTools ? "18px" : "20px",
         border: "1px solid rgba(129, 157, 144, 0.22)",
         background: "rgba(10, 18, 22, 0.7)",
-        ...(isIphoneLandscapeTools
-          ? {
-              pointerEvents: "auto",
-              touchAction: "manipulation",
-            }
-          : null),
+        ...(isIphoneLandscapeTools ? IPHONE_COMPACT_TOOLS_BUTTON_INTERACTION_STYLE : null),
       }
     : COACH_HUB_COLOR_BUTTON_STYLE;
   const coachHubColorSwatchStyle = isCompactLandscapeTools
@@ -3124,12 +3114,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         border: "1px solid rgba(127, 156, 142, 0.22)",
         background: "rgba(13, 22, 25, 0.68)",
         color: "#e6f0ea",
-        ...(isIphoneLandscapeTools
-          ? {
-              pointerEvents: "auto",
-              touchAction: "manipulation",
-            }
-          : null),
+        ...(isIphoneLandscapeTools ? IPHONE_COMPACT_TOOLS_BUTTON_INTERACTION_STYLE : null),
       }
     : COACH_HUB_ACTION_BUTTON_STYLE;
 
