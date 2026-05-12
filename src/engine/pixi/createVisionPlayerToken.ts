@@ -139,10 +139,10 @@ function hslToColor(h: number, s: number, l: number): number {
 
 function createCoreTone(ringColor: number): VisionCoreTone {
   const { h, s } = colorToHsl(ringColor);
-  const tonalS = Math.max(0.34, Math.min(0.9, s * 0.84 + 0.1));
-  const inner = hslToColor(h, tonalS, 0.4);
-  const mid = hslToColor(h, tonalS * 0.9, 0.31);
-  const edge = hslToColor(h, tonalS * 0.84, 0.22);
+  const tonalS = Math.max(0.34, Math.min(0.88, s * 0.82 + 0.1));
+  const inner = hslToColor(h, tonalS, 0.43);
+  const mid = hslToColor(h, tonalS * 0.9, 0.34);
+  const edge = hslToColor(h, tonalS * 0.84, 0.26);
   return {
     inner,
     mid,
@@ -272,7 +272,12 @@ export function createVisionPlayerToken({
   const possessionGlow = new Graphics();
   possessionGlow
     .circle(0, 0, radius * 1.06)
-    .stroke({ color: 0xffc857, width: radius * 0.1, alpha: 0.66, alignment: 0.5 });
+    .stroke({
+      color: mixColor(teamPalette.halo, 0xffffff, 0.18),
+      width: radius * 0.095,
+      alpha: 0.62,
+      alignment: 0.5,
+    });
   possessionGlow.alpha = 0;
   token.addChild(possessionGlow);
 
@@ -321,21 +326,67 @@ export function createVisionPlayerToken({
   token.addChild(movementIndicator);
 
   const directionMarker = new Container();
-  const directionBridge = new Graphics();
-  directionBridge
+
+  const tacticalCrown = new Graphics();
+  tacticalCrown
     .arc(0, 0, outerRingRadius + ringWidth * 0.06, -Math.PI * 0.58, -Math.PI * 0.42)
     .stroke({
       color: mixColor(teamPalette.notch, primaryRingColor, 0.35),
       width: ringWidth * 0.28,
       cap: "round",
       alignment: 0.5,
-    });
-  directionMarker.addChild(directionBridge);
-  const notch = new Graphics();
-  notch
-    .poly([0, -radius * 1.04, radius * 0.08, -radius * 0.9, -radius * 0.08, -radius * 0.9])
-    .fill({ color: teamPalette.notch, alpha: 0.84 });
-  directionMarker.addChild(notch);
+    })
+    .poly([
+      -radius * 0.2,
+      -radius * 0.91,
+      -radius * 0.08,
+      -radius * 0.93,
+      -radius * 0.04,
+      -radius * 0.84,
+      -radius * 0.15,
+      -radius * 0.82,
+    ])
+    .fill({ color: mixColor(primaryRingColor, 0xffffff, 0.14), alpha: 0.64 })
+    .poly([
+      radius * 0.2,
+      -radius * 0.91,
+      radius * 0.08,
+      -radius * 0.93,
+      radius * 0.04,
+      -radius * 0.84,
+      radius * 0.15,
+      -radius * 0.82,
+    ])
+    .fill({ color: mixColor(primaryRingColor, 0xffffff, 0.14), alpha: 0.64 });
+  directionMarker.addChild(tacticalCrown);
+
+  const directionalBezel = new Graphics();
+  directionalBezel
+    .poly([
+      0,
+      -radius * 1.045,
+      radius * 0.08,
+      -radius * 0.9,
+      -radius * 0.08,
+      -radius * 0.9,
+    ])
+    .fill({ color: teamPalette.notch, alpha: 0.86 })
+    .poly([
+      0,
+      -radius * 1.01,
+      radius * 0.032,
+      -radius * 0.92,
+      -radius * 0.032,
+      -radius * 0.92,
+    ])
+    .fill({ color: 0xffffff, alpha: 0.24 });
+  directionMarker.addChild(directionalBezel);
+
+  const orientationDot = new Graphics();
+  orientationDot
+    .circle(0, -radius * 0.92, radius * 0.034)
+    .fill({ color: mixColor(primaryRingColor, 0xffffff, 0.2), alpha: 0.62 });
+  directionMarker.addChild(orientationDot);
   token.addChild(directionMarker);
 
   const textResolution =
@@ -363,14 +414,14 @@ export function createVisionPlayerToken({
     text: label,
     style: {
       fill: 0xf8fbff,
-      fontSize: numericLabel && label.length >= 2 ? radius * 0.62 : radius * 0.68,
+      fontSize: numericLabel && label.length >= 2 ? radius * 0.66 : radius * 0.72,
       fontWeight: "900",
       fontFamily: "\"Barlow Condensed\", \"Inter Tight\", Inter, system-ui, sans-serif",
       align: "center",
       letterSpacing: numericLabel && label.length >= 2 ? 0.04 : 0.08,
       stroke: {
         color: 0x020617,
-        width: numericLabel && label.length >= 2 ? 0.72 : 0.62,
+        width: numericLabel && label.length >= 2 ? 0.74 : 0.66,
         join: "round",
       },
     },
@@ -385,7 +436,7 @@ export function createVisionPlayerToken({
     text: label,
     style: {
       fill: 0xffffff,
-      fontSize: numericLabel && label.length >= 2 ? radius * 0.62 : radius * 0.68,
+      fontSize: numericLabel && label.length >= 2 ? radius * 0.66 : radius * 0.72,
       fontWeight: "900",
       fontFamily: "\"Barlow Condensed\", \"Inter Tight\", Inter, system-ui, sans-serif",
       align: "center",
@@ -409,13 +460,15 @@ export function createVisionPlayerToken({
       pulseTimeMs = 0,
     }) => {
       const pulse = active ? (Math.sin(pulseTimeMs / 220) + 1) * 0.5 : 0;
-      ambientHalo.alpha = active ? 1 : possession ? 0.96 : 0.86;
+      ambientHalo.alpha = active ? 1 : possession ? 0.94 : 0.84;
       activeHalo.alpha = active ? 0.26 + pulse * 0.12 : 0;
       const activeScale = active ? 1 + pulse * 0.05 : 1;
       activeHalo.scale.set(activeScale, activeScale);
       possessionGlow.alpha = possession ? 0.62 : 0;
       captainRing.alpha = captain ? 0.72 : 0;
       movementIndicator.alpha = moving ? 0.66 : 0;
+      directionMarker.position.y = moving ? -radius * 0.006 : 0;
+      directionMarker.scale.set(moving ? 1.01 : 1, moving ? 1.01 : 1);
       if (typeof headingRadians === "number" && Number.isFinite(headingRadians)) {
         directionMarker.rotation = headingRadians + Math.PI / 2;
       }
