@@ -59,10 +59,10 @@ const DEFAULT_STYLE_BY_TEAM: Record<MicroAthleteTeamColor, MicroAthleteStyle> = 
 
 const TOKEN_BASE_COLOR = 0x191919;
 const TOKEN_RADIUS = 3.66;
-const TOKEN_RING_WIDTH = 0.96;
+const TOKEN_RING_WIDTH = 1.14;
 const TOKEN_IDLE_HALO_ALPHA = 0.16;
 const TOKEN_OUTLINE_WIDTH = 0.64;
-const TOKEN_PATTERN_CUT_WIDTH = 0.58;
+const TOKEN_PATTERN_CUT_WIDTH = 0.56;
 
 function clampColorChannel(value: number): number {
   return Math.max(0, Math.min(255, Math.round(value)));
@@ -83,42 +83,47 @@ function mixColor(base: number, target: number, amount: number): number {
   return (r << 16) | (g << 8) | b;
 }
 
-function relativeLuminance(color: number): number {
-  const r = ((color >> 16) & 0xff) / 255;
-  const g = ((color >> 8) & 0xff) / 255;
-  const b = (color & 0xff) / 255;
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+function lineHalfExtentAtOffset(radius: number, offset: number): number {
+  const inside = radius * radius - offset * offset;
+  if (inside <= 0) return 0;
+  return Math.sqrt(inside);
 }
 
 function drawPatternCuts(
   target: Graphics,
   pattern: MicroAthleteKitPattern,
   baseColor: number,
+  outerRadius: number,
 ): void {
   if (pattern === "plain") return;
-  const extent = TOKEN_RADIUS * 1.42;
+  const clippedOuterRadius = Math.max(0, outerRadius - TOKEN_PATTERN_CUT_WIDTH * 0.5 - 0.04);
   if (pattern === "hoops") {
-    const yOffset = TOKEN_RADIUS * 0.33;
+    const yOffset = clippedOuterRadius * 0.36;
+    const halfSpan = lineHalfExtentAtOffset(clippedOuterRadius, yOffset);
     target
-      .moveTo(-extent, -yOffset)
-      .lineTo(extent, -yOffset)
-      .moveTo(-extent, yOffset)
-      .lineTo(extent, yOffset);
+      .moveTo(-halfSpan, -yOffset)
+      .lineTo(halfSpan, -yOffset)
+      .moveTo(-halfSpan, yOffset)
+      .lineTo(halfSpan, yOffset);
   } else if (pattern === "stripes") {
-    const xOffset = TOKEN_RADIUS * 0.33;
+    const xOffset = clippedOuterRadius * 0.36;
+    const halfSpan = lineHalfExtentAtOffset(clippedOuterRadius, xOffset);
     target
-      .moveTo(-xOffset, -extent)
-      .lineTo(-xOffset, extent)
-      .moveTo(xOffset, -extent)
-      .lineTo(xOffset, extent);
+      .moveTo(-xOffset, -halfSpan)
+      .lineTo(-xOffset, halfSpan)
+      .moveTo(xOffset, -halfSpan)
+      .lineTo(xOffset, halfSpan);
   } else if (pattern === "slash") {
-    target.moveTo(-extent, extent * 0.72).lineTo(extent, -extent * 0.72);
+    const slashAngle = -Math.PI * 0.22;
+    const dx = Math.cos(slashAngle) * clippedOuterRadius;
+    const dy = Math.sin(slashAngle) * clippedOuterRadius;
+    target.moveTo(-dx, -dy).lineTo(dx, dy);
   }
   target.stroke({
     color: baseColor,
     width: TOKEN_PATTERN_CUT_WIDTH,
     alpha: 1,
-    cap: "round",
+    cap: "butt",
     join: "round",
   });
 }
@@ -159,6 +164,7 @@ export function createMicroAthleteToken({
     : (resolved.secondaryColor ?? mixColor(innerColor, 0xffffff, 0.24));
   const outlineColor = resolved.outlineColor;
   const innerRadius = TOKEN_RADIUS - TOKEN_RING_WIDTH;
+  const ringOuterRadius = TOKEN_RADIUS - 0.06;
 
   const shadow = new Graphics();
   shadow
@@ -179,9 +185,9 @@ export function createMicroAthleteToken({
   tokenDisc
     .circle(0, 0, TOKEN_RADIUS)
     .fill({ color: TOKEN_BASE_COLOR })
-    .circle(0, 0, TOKEN_RADIUS - 0.06)
+    .circle(0, 0, ringOuterRadius)
     .fill({ color: ringColor });
-  drawPatternCuts(tokenDisc, kitPattern, innerColor);
+  drawPatternCuts(tokenDisc, kitPattern, innerColor, ringOuterRadius);
   tokenDisc
     .circle(0, 0, innerRadius)
     .fill({ color: innerColor })
@@ -201,6 +207,12 @@ export function createMicroAthleteToken({
     });
   token.addChild(tokenDisc);
 
+  const innerGloss = new Graphics();
+  innerGloss
+    .ellipse(0, -innerRadius * 0.38, innerRadius * 0.86, innerRadius * 0.33)
+    .fill({ color: 0xffffff, alpha: 0.09 });
+  token.addChild(innerGloss);
+
   const safeLabel = label.trim().slice(0, 3) || "?";
   const isNumericLabel = /^\d+$/.test(safeLabel);
   const labelBaseY = isNumericLabel ? 0 : -0.04;
@@ -208,11 +220,11 @@ export function createMicroAthleteToken({
     ? safeLabel.length >= 2 ? 4.3 : 4.9
     : 3.4;
   const labelLetterSpacing = isNumericLabel ? 0.04 : 0.1;
-  const labelTextColor = relativeLuminance(innerColor) > 0.7 ? 0x0f172a : resolved.textColor;
+  const labelTextColor = 0xf8fafc;
   const labelPlate = new Graphics();
   labelPlate
-    .roundRect(-innerRadius * 0.82, -1.02, innerRadius * 1.64, 2.04, 0.56)
-    .fill({ color: 0x020617, alpha: 0.24 });
+    .roundRect(-innerRadius * 0.76, -0.94, innerRadius * 1.52, 1.88, 0.5)
+    .fill({ color: 0x020617, alpha: 0.18 });
   labelPlate.position.y = labelBaseY;
   token.addChild(labelPlate);
 
@@ -230,8 +242,8 @@ export function createMicroAthleteToken({
     },
   });
   labelShadow.anchor.set(0.5, 0.5);
-  labelShadow.position.y = labelBaseY + 0.1;
-  labelShadow.alpha = 0.34;
+  labelShadow.position.y = labelBaseY + 0.08;
+  labelShadow.alpha = 0.24;
   labelShadow.resolution = textResolution;
   labelShadow.roundPixels = true;
   token.addChild(labelShadow);
@@ -247,7 +259,7 @@ export function createMicroAthleteToken({
       letterSpacing: labelLetterSpacing,
       stroke: {
         color: mixColor(outlineColor, 0x000000, 0.22),
-        width: isNumericLabel ? 0.8 : 0.62,
+        width: isNumericLabel ? 0.7 : 0.56,
         join: "round",
       },
     },
