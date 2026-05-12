@@ -655,6 +655,12 @@ const MOBILE_TOOLS_BUBBLE_STYLE: CSSProperties = {
   boxShadow: "0 4px 11px rgba(2, 8, 15, 0.24)",
 };
 
+const IPHONE_LANDSCAPE_TOOLS_BUBBLE_STYLE: CSSProperties = {
+  ...MOBILE_TOOLS_BUBBLE_STYLE,
+  left: "max(58px, calc(env(safe-area-inset-left, 0px) + 56px))",
+  right: "auto",
+};
+
 const POPOUT_BASE_STYLE: CSSProperties = {
   position: "fixed",
   display: "flex",
@@ -1271,10 +1277,10 @@ const MOBILE_COACH_HUB_BODY_STYLE: CSSProperties = {
 // iPhone landscape keeps a compact draw drawer instead of full-screen modal stretching.
 const IPHONE_LANDSCAPE_DRAW_DRAWER_STYLE: CSSProperties = {
   position: "fixed",
-  top: "max(12px, calc(env(safe-area-inset-top, 0px) + 10px))",
-  right: "max(10px, calc(env(safe-area-inset-right, 0px) + 8px))",
-  left: "auto",
-  bottom: "auto",
+  top: "auto",
+  right: "auto",
+  left: "max(58px, calc(env(safe-area-inset-left, 0px) + 56px))",
+  bottom: "max(72px, calc(env(safe-area-inset-bottom, 0px) + 68px))",
   width: "min(232px, calc(100dvw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 18px))",
   maxHeight: "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 22px)",
   overflowY: "auto",
@@ -1578,6 +1584,12 @@ const PHASES_CHIP_STYLE: CSSProperties = {
   zIndex: 20,
 };
 
+const IPHONE_LANDSCAPE_PHASES_CHIP_STYLE: CSSProperties = {
+  ...PHASES_CHIP_STYLE,
+  left: "auto",
+  right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
+};
+
 const PHASES_TRAY_STYLE: CSSProperties = {
   position: "fixed",
   left: "max(12px, calc(env(safe-area-inset-left, 0px) + 10px))",
@@ -1594,6 +1606,12 @@ const PHASES_TRAY_STYLE: CSSProperties = {
   WebkitBackdropFilter: "blur(10px)",
   boxShadow: "0 10px 24px rgba(0, 0, 0, 0.2)",
   zIndex: 19,
+};
+
+const IPHONE_LANDSCAPE_PHASES_TRAY_STYLE: CSSProperties = {
+  ...PHASES_TRAY_STYLE,
+  left: "auto",
+  right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
 };
 
 const PHASE_ITEM_STYLE: CSSProperties = {
@@ -2995,6 +3013,13 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const isIphoneLandscapeTools = isCompactLandscapeTools && isIphoneLandscapeToolsMenu;
   const compactLandscapeViewportWidth = isCompactLandscapeTools ? getViewportRect().width : 0;
   const isTightCompactLandscapeTools = isCompactLandscapeTools && compactLandscapeViewportWidth <= 760;
+  const toolsBubbleStyle = isIphoneLandscapeTools
+    ? IPHONE_LANDSCAPE_TOOLS_BUBBLE_STYLE
+    : isCompactLandscapeTools
+      ? MOBILE_TOOLS_BUBBLE_STYLE
+      : TOOL_BUBBLE_STYLE;
+  const phasesChipStyle = isIphoneLandscapeTools ? IPHONE_LANDSCAPE_PHASES_CHIP_STYLE : PHASES_CHIP_STYLE;
+  const phasesTrayStyle = isIphoneLandscapeTools ? IPHONE_LANDSCAPE_PHASES_TRAY_STYLE : PHASES_TRAY_STYLE;
   const mobileCoachHubOverlayStyle = isIphoneLandscapeTools ? IPHONE_LANDSCAPE_DRAW_OVERLAY_STYLE : MOBILE_COACH_HUB_OVERLAY_STYLE;
   const mobileCoachHubPanelStyle = isCompactLandscapeTools
     ? {
@@ -3502,7 +3527,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         {!isWhiteboardMode ? (
           <button
             type="button"
-            style={PHASES_CHIP_STYLE}
+            style={phasesChipStyle}
             aria-label="Toggle phases tray"
             onClick={() => setPhasesOpen((open) => !open)}
           >
@@ -3510,7 +3535,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
           </button>
         ) : null}
         {!isWhiteboardMode && phasesOpen ? (
-          <div style={PHASES_TRAY_STYLE}>
+          <div style={phasesTrayStyle}>
             {phaseItems.length > 0 ? (
               phaseItems.map((phase) => (
                 <div key={phase} style={PHASE_ITEM_STYLE}>
@@ -4263,7 +4288,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             ref={toolsBubbleButtonRef}
             type="button"
             className={isCompactLandscapeTools ? "floating-bubble" : "floating-bubble floating-bubble-tool"}
-            style={isCompactLandscapeTools ? MOBILE_TOOLS_BUBBLE_STYLE : TOOL_BUBBLE_STYLE}
+            style={toolsBubbleStyle}
             aria-label={toolsOpen ? "Close tools" : "Open tools"}
             aria-expanded={toolsOpen}
             onClick={() =>
