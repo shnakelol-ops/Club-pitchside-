@@ -58,8 +58,8 @@ const DEFAULT_STYLE_BY_TEAM: Record<MicroAthleteTeamColor, MicroAthleteStyle> = 
 };
 
 const TOKEN_BASE_COLOR = 0x191919;
-const TOKEN_RADIUS = 3.66;
-const TOKEN_RING_WIDTH = 0.72;
+const TOKEN_RADIUS = 3.52;
+const TOKEN_RING_WIDTH = 0.66;
 const TOKEN_IDLE_HALO_ALPHA = 0.26;
 
 function clampColorChannel(value: number): number {
@@ -225,20 +225,20 @@ export function createMicroAthleteToken({
 
   const shadow = new Graphics();
   shadow
-    .circle(0, 0, TOKEN_RADIUS * 1.56)
-    .stroke({ color: glowColor, width: 0.66, alpha: 0.94 })
-    .circle(0, 0, TOKEN_RADIUS * 1.34)
-    .stroke({ color: glowColor, width: 0.34, alpha: 0.88 })
-    .circle(0, 0, TOKEN_RADIUS * 1.16)
-    .fill({ color: glowColor, alpha: 0.19 });
+    .circle(0, 0, TOKEN_RADIUS * 1.42)
+    .stroke({ color: glowColor, width: 0.58, alpha: 0.93 })
+    .circle(0, 0, TOKEN_RADIUS * 1.24)
+    .stroke({ color: glowColor, width: 0.3, alpha: 0.87 })
+    .circle(0, 0, TOKEN_RADIUS * 1.08)
+    .fill({ color: glowColor, alpha: 0.16 });
   shadow.alpha = TOKEN_IDLE_HALO_ALPHA;
   token.addChild(shadow);
 
   const baseShadow = new Graphics();
   baseShadow
-    .ellipse(0.34, TOKEN_RADIUS * 1.08, TOKEN_RADIUS * 1.2, TOKEN_RADIUS * 0.33)
+    .ellipse(0.3, TOKEN_RADIUS * 1.03, TOKEN_RADIUS * 1.08, TOKEN_RADIUS * 0.29)
     .fill({ color: 0x020617, alpha: 0.17 })
-    .ellipse(0.34, TOKEN_RADIUS * 1.02, TOKEN_RADIUS * 1.04, TOKEN_RADIUS * 0.24)
+    .ellipse(0.3, TOKEN_RADIUS * 0.98, TOKEN_RADIUS * 0.95, TOKEN_RADIUS * 0.21)
     .fill({ color: 0x020617, alpha: 0.12 });
   token.addChild(baseShadow);
 
