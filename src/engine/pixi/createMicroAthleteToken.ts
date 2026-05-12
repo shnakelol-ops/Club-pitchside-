@@ -133,42 +133,70 @@ function resolveBroadcastGlowColor(color: number): number {
 
 function drawPatternAccent(
   target: Graphics,
-  pattern: MicroAthleteKitPattern,
-  colour: number,
+  pattern: MicroAthleteKitPattern | "split",
+  accentColour: number,
+  ringColour: number,
+  ringRadius: number,
   radius: number,
 ): void {
   if (pattern === "plain") return;
-  const alpha = 0.09;
   if (pattern === "hoops") {
     target
-      .roundRect(-radius * 0.78, -radius * 0.4, radius * 1.56, radius * 0.16, radius * 0.07)
-      .fill({ color: colour, alpha })
-      .roundRect(-radius * 0.72, -radius * 0.02, radius * 1.44, radius * 0.16, radius * 0.07)
-      .fill({ color: colour, alpha: alpha - 0.01 });
+      .circle(0, 0, ringRadius * 0.98)
+      .stroke({ color: accentColour, width: 0.15, alpha: 0.3 })
+      .circle(0, 0, ringRadius * 0.84)
+      .stroke({ color: mixColor(accentColour, ringColour, 0.28), width: 0.12, alpha: 0.22 });
     return;
   }
   if (pattern === "stripes") {
     target
-      .roundRect(-radius * 0.46, -radius * 0.58, radius * 0.16, radius * 1.18, radius * 0.07)
-      .fill({ color: colour, alpha })
-      .roundRect(-radius * 0.06, -radius * 0.58, radius * 0.16, radius * 1.18, radius * 0.07)
-      .fill({ color: colour, alpha: alpha - 0.01 })
-      .roundRect(radius * 0.34, -radius * 0.58, radius * 0.16, radius * 1.18, radius * 0.07)
-      .fill({ color: colour, alpha: alpha - 0.02 });
+      .circle(0, -ringRadius * 0.98, 0.13)
+      .fill({ color: accentColour, alpha: 0.27 })
+      .circle(0, ringRadius * 0.98, 0.13)
+      .fill({ color: accentColour, alpha: 0.27 })
+      .roundRect(-0.07, -radius * 0.68, 0.14, radius * 1.36, 0.08)
+      .fill({ color: accentColour, alpha: 0.19 });
     return;
   }
+  if (pattern === "slash") {
+    target
+      .poly([
+        -radius * 0.82,
+        -radius * 0.22,
+        -radius * 0.52,
+        -radius * 0.62,
+        radius * 0.74,
+        radius * 0.34,
+        radius * 0.44,
+        radius * 0.72,
+      ])
+      .fill({ color: accentColour, alpha: 0.17 })
+      .poly([
+        -radius * 0.7,
+        -radius * 0.14,
+        -radius * 0.5,
+        -radius * 0.42,
+        radius * 0.56,
+        radius * 0.44,
+        radius * 0.36,
+        radius * 0.62,
+      ])
+      .fill({ color: mixColor(accentColour, 0xffffff, 0.16), alpha: 0.08 });
+    return;
+  }
+  // Optional future "split" variant support (not currently exposed in UI).
   target
     .poly([
-      -radius * 0.8,
-      -radius * 0.2,
-      -radius * 0.46,
-      -radius * 0.62,
-      radius * 0.74,
-      radius * 0.36,
-      radius * 0.4,
-      radius * 0.74,
+      -radius * 0.9,
+      -radius * 0.26,
+      -radius * 0.08,
+      -radius * 0.7,
+      -radius * 0.08,
+      radius * 0.7,
+      -radius * 0.9,
+      radius * 0.26,
     ])
-    .fill({ color: colour, alpha: alpha + 0.01 });
+    .fill({ color: accentColour, alpha: 0.13 });
 }
 
 function drawIntegratedCrownNotch(target: Graphics, ringColor: number, outlineColor: number): void {
@@ -211,17 +239,22 @@ export function createMicroAthleteToken({
   const teamBaseColor = resolved.goalkeeper && resolved.secondaryColor != null
     ? resolved.secondaryColor
     : resolved.primaryColor;
-  const glowColor = resolveBroadcastGlowColor(teamBaseColor);
-  const ringColor = mixColor(glowColor, 0x0f172a, 0.15);
-  const ringInnerShade = mixColor(glowColor, resolved.outlineColor, 0.36);
+  const baseGlowColor = resolveBroadcastGlowColor(teamBaseColor);
   const patternTintSource = Number.isFinite(kitPatternColor)
     ? Number(kitPatternColor)
-    : glowColor;
-  const patternAccentColor = mixColor(patternTintSource, glowColor, 0.44);
-  const innerTintColor = mixColor(TOKEN_BASE_COLOR, glowColor, 0.3);
-  const centreColor = mixColor(innerTintColor, glowColor, 0.18);
+    : mixColor(teamBaseColor, teamBaseColor === 0xffffff ? 0x16a34a : 0xffffff, 0.66);
+  const patternGlowColor = resolveBroadcastGlowColor(patternTintSource);
+  const usesPatternIdentity = kitPattern !== "plain";
+  const glowColor = usesPatternIdentity
+    ? mixColor(patternGlowColor, baseGlowColor, 0.14)
+    : baseGlowColor;
+  const ringColor = mixColor(teamBaseColor, 0x0f172a, 0.16);
+  const ringInnerShade = mixColor(teamBaseColor, resolved.outlineColor, 0.34);
+  const patternAccentColor = mixColor(patternGlowColor, patternTintSource, 0.22);
+  const innerTintColor = mixColor(TOKEN_BASE_COLOR, teamBaseColor, 0.31);
+  const centreColor = mixColor(innerTintColor, teamBaseColor, 0.2);
   const centreHighlightColor = mixColor(centreColor, 0xffffff, 0.31);
-  const centreRimColor = mixColor(glowColor, resolved.outlineColor, 0.3);
+  const centreRimColor = mixColor(teamBaseColor, resolved.outlineColor, 0.29);
 
   const shadow = new Graphics();
   shadow
@@ -255,6 +288,7 @@ export function createMicroAthleteToken({
   token.addChild(tokenBase);
 
   const centreRadius = TOKEN_RADIUS - TOKEN_RING_WIDTH - 0.18;
+  const ringRadius = TOKEN_RADIUS - TOKEN_RING_WIDTH * 0.52;
   const centre = new Graphics();
   centre
     .circle(0, 0, centreRadius)
@@ -267,8 +301,16 @@ export function createMicroAthleteToken({
     .stroke({ color: centreRimColor, width: 0.22, alpha: 0.46 })
     .ellipse(-centreRadius * 0.22, -centreRadius * 0.46, centreRadius * 0.54, centreRadius * 0.2)
     .fill({ color: 0xffffff, alpha: 0.16 });
-  drawPatternAccent(centre, kitPattern, patternAccentColor, centreRadius);
   token.addChild(centre);
+
+  const accentLayer = new Graphics();
+  if (usesPatternIdentity) {
+    accentLayer
+      .circle(0, 0, ringRadius)
+      .stroke({ color: mixColor(patternAccentColor, ringColor, 0.22), width: 0.18, alpha: 0.28 });
+  }
+  drawPatternAccent(accentLayer, kitPattern, patternAccentColor, ringColor, ringRadius, centreRadius);
+  token.addChild(accentLayer);
 
   const notch = new Graphics();
   drawIntegratedCrownNotch(notch, ringColor, resolved.outlineColor);
