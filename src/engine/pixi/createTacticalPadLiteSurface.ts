@@ -60,6 +60,7 @@ type TacticalPlayer = TacticalPlayerKitFields & {
   headingRadians: number;
   lastTokenWorldPosition: { x: number; y: number } | null;
   isMoving: boolean;
+  hasPossession: boolean;
   dragScaleTarget: number;
   dragShadowAlphaTarget: number;
 };
@@ -905,6 +906,7 @@ export async function createTacticalPadLiteSurface(
       headingRadians: -Math.PI / 2,
       lastTokenWorldPosition: null,
       isMoving: false,
+      hasPossession: false,
       dragScaleTarget: PREMIUM_TOKEN_IDLE_SCALE,
       dragShadowAlphaTarget: PREMIUM_TOKEN_IDLE_SHADOW_ALPHA,
       kitBaseColor: sanitizeKitColor(nextKitFields.kitBaseColor),
@@ -1102,10 +1104,34 @@ export async function createTacticalPadLiteSurface(
       !isPlaybackInputLocked();
     player.tokenController.applyState({
       active: isActivePlayer,
+      possession: player.hasPossession,
       moving: player.isMoving,
       headingRadians: player.headingRadians,
       pulseTimeMs: nowMs,
     });
+  }
+
+  function updatePossessionVisualState(): void {
+    for (const player of players) {
+      player.hasPossession = false;
+    }
+    if (surfaceVariant !== "tactical") return;
+    const firstBall = tacticalItems.find((item) => isBallItem(item));
+    if (!firstBall) return;
+    let nearestPlayer: TacticalPlayer | null = null;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+    const ballWorld = mapper.normalizedToWorld({ x: firstBall.x, y: firstBall.y });
+    for (const player of players) {
+      const playerWorld = mapper.normalizedToWorld(player.current);
+      const distance = Math.hypot(playerWorld.x - ballWorld.x, playerWorld.y - ballWorld.y);
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestPlayer = player;
+      }
+    }
+    if (nearestPlayer && nearestDistance <= PLAYER_RADIUS * 2.05) {
+      nearestPlayer.hasPossession = true;
+    }
   }
 
   function clearPlayerOriginGraphic(): void {
@@ -1517,6 +1543,7 @@ export async function createTacticalPadLiteSurface(
 
   function animatePlayerDragVisuals(deltaMs: number): void {
     const blend = Math.min(1, Math.max(0.16, deltaMs / 72));
+    updatePossessionVisualState();
     const nowMs = typeof performance !== "undefined" ? performance.now() : Date.now();
     for (const player of players) {
       const currentScale = player.token.scale.x;

@@ -6,6 +6,7 @@ export type PremiumCircleKitPattern = "plain" | "hoops" | "slash" | "stripes";
 
 export type PremiumCircleTokenState = {
   active?: boolean;
+  possession?: boolean;
   moving?: boolean;
   headingRadians?: number;
   pulseTimeMs?: number;
@@ -131,19 +132,22 @@ export function createPremiumCirclePlayerToken({
   token.scale.set(1, 1);
 
   const glowTone = glowToneForTeamColor(teamColor, ringColor);
-  const ringOuterColor = mixColor(ringColor, 0xffffff, 0.04);
-  const bodyTop = mixColor(ringColor, 0xffffff, 0.72);
-  const bodyMid = mixColor(ringColor, 0xffffff, 0.58);
-  const bodyEdge = mixColor(ringColor, 0xffffff, 0.43);
+  const ringOuterColor = mixColor(ringColor, 0xffffff, 0.06);
+  const bodyTop = mixColor(ringColor, 0xffffff, 0.8);
+  const bodyMid = mixColor(ringColor, 0xffffff, 0.68);
+  const bodyEdge = mixColor(ringColor, 0xffffff, 0.56);
+  const bodyTransitionShade = mixColor(ringColor, 0xffffff, 0.46);
   const patternTone = kitPatternColor ?? mixColor(ringColor, 0xffffff, 0.24);
   const textStroke = mixColor(ringColor, 0x0b1220, 0.74);
 
   const shadow = new Graphics();
   shadow
-    .ellipse(0.36, radius * 1.02, radius * 0.86, radius * 0.28)
-    .fill({ color: 0x020617, alpha: 0.2 })
-    .ellipse(0.36, radius * 1.06, radius * 0.64, radius * 0.18)
-    .fill({ color: 0x020617, alpha: 0.08 });
+    .ellipse(0.34, radius * 1.05, radius * 0.92, radius * 0.3)
+    .fill({ color: 0x020617, alpha: 0.13 })
+    .ellipse(0.34, radius * 1.08, radius * 0.72, radius * 0.2)
+    .fill({ color: 0x020617, alpha: 0.06 })
+    .ellipse(0.34, radius * 1.12, radius * 0.52, radius * 0.14)
+    .fill({ color: 0x020617, alpha: 0.035 });
   token.addChild(shadow);
 
   const visualRoot = new Container();
@@ -152,15 +156,15 @@ export function createPremiumCirclePlayerToken({
   const ambientGlow = new Graphics();
   ambientGlow
     .circle(0, 0, radius * 1.24)
-    .fill({ color: glowTone, alpha: 0.11 })
+    .fill({ color: glowTone, alpha: 0.09 })
     .circle(0, 0, radius * 1.08)
-    .fill({ color: glowTone, alpha: 0.085 });
+    .fill({ color: glowTone, alpha: 0.072 });
   visualRoot.addChild(ambientGlow);
 
   const activeGlow = new Graphics();
   activeGlow
     .circle(0, 0, radius * 1.38)
-    .fill({ color: glowTone, alpha: 0.22 })
+    .fill({ color: glowTone, alpha: 0.2 })
     .circle(0, 0, radius * 1.18)
     .fill({ color: mixColor(glowTone, 0xffffff, 0.24), alpha: 0.15 });
   activeGlow.alpha = 0;
@@ -178,6 +182,18 @@ export function createPremiumCirclePlayerToken({
       join: "round",
     });
   visualRoot.addChild(mainRing);
+
+  const possessionRim = new Graphics();
+  possessionRim
+    .circle(0, 0, ringRadius + ringWidth * 0.02)
+    .stroke({
+      color: mixColor(glowTone, 0xffffff, 0.28),
+      alpha: 0.88,
+      width: Math.max(0.12, ringWidth * 0.12),
+      alignment: 0.5,
+    });
+  possessionRim.alpha = 0;
+  visualRoot.addChild(possessionRim);
 
   const bodyRadius = radius * 0.72;
   const bodyGradient = new FillGradient({
@@ -198,6 +214,15 @@ export function createPremiumCirclePlayerToken({
   innerBody
     .circle(0, 0, bodyRadius)
     .fill(bodyGradient)
+    .circle(0, 0, bodyRadius * 0.9)
+    .fill({ color: bodyTop, alpha: 0.08 })
+    .circle(0, 0, bodyRadius)
+    .stroke({
+      color: bodyTransitionShade,
+      alpha: 0.22,
+      width: radius * 0.08,
+      alignment: 0,
+    })
     .circle(0, 0, bodyRadius)
     .stroke({
       color: mixColor(ringColor, 0xffffff, 0.3),
@@ -208,25 +233,30 @@ export function createPremiumCirclePlayerToken({
   drawInnerPatternOverlay(innerBody, kitPattern, bodyRadius * 0.96, patternTone);
   innerBody
     .ellipse(-radius * 0.2, -radius * 0.24, radius * 0.26, radius * 0.11)
-    .fill({ color: 0xffffff, alpha: 0.12 });
+    .fill({ color: 0xffffff, alpha: 0.11 })
+    .ellipse(radius * 0.16, radius * 0.16, radius * 0.18, radius * 0.08)
+    .fill({ color: 0xffffff, alpha: 0.03 });
   visualRoot.addChild(innerBody);
 
   const directionBezel = new Container();
   const bezelGraphic = new Graphics();
   bezelGraphic
+    .arc(0, 0, ringRadius + ringWidth * 0.08, -Math.PI * 0.58, -Math.PI * 0.42)
+    .stroke({
+      color: mixColor(ringColor, 0xffffff, 0.2),
+      width: ringWidth * 0.34,
+      cap: "round",
+      alignment: 0.5,
+    })
     .poly([
       0,
-      -radius * 1.09,
-      radius * 0.14,
-      -radius * 0.83,
-      0,
-      -radius * 0.91,
-      -radius * 0.14,
-      -radius * 0.83,
+      -radius * 1.05,
+      radius * 0.08,
+      -radius * 0.9,
+      -radius * 0.08,
+      -radius * 0.9,
     ])
-    .fill({ color: mixColor(ringColor, 0xffffff, 0.22), alpha: 0.98 })
-    .circle(0, -radius * 0.9, radius * 0.055)
-    .fill({ color: mixColor(ringColor, 0xffffff, 0.12), alpha: 0.68 });
+    .fill({ color: mixColor(ringColor, 0xffffff, 0.18), alpha: 0.96 });
   directionBezel.addChild(bezelGraphic);
   visualRoot.addChild(directionBezel);
 
@@ -277,13 +307,14 @@ export function createPremiumCirclePlayerToken({
   visualRoot.addChild(numberText);
 
   const controller: PremiumCircleTokenController = {
-    applyState: ({ active = false, moving = false, headingRadians, pulseTimeMs = 0 }) => {
+    applyState: ({ active = false, possession = false, moving = false, headingRadians, pulseTimeMs = 0 }) => {
       const pulse = active ? (Math.sin(pulseTimeMs / 220) + 1) * 0.5 : 0;
-      activeGlow.alpha = active ? 0.24 + pulse * 0.18 : 0;
+      activeGlow.alpha = active ? 0.24 + pulse * 0.14 : 0;
       const activeScale = active ? 1.03 + pulse * 0.02 : 1;
       visualRoot.scale.set(activeScale, activeScale);
-      ambientGlow.alpha = active ? 1 : 0.86;
-      directionBezel.alpha = moving ? 0.98 : 0.86;
+      ambientGlow.alpha = possession ? 1.08 : active ? 1 : 0.84;
+      possessionRim.alpha = possession ? 0.62 : 0;
+      directionBezel.alpha = moving ? 0.96 : 0.8;
       if (typeof headingRadians === "number" && Number.isFinite(headingRadians)) {
         directionBezel.rotation = headingRadians + Math.PI / 2;
       }
@@ -292,6 +323,7 @@ export function createPremiumCirclePlayerToken({
 
   controller.applyState({
     active: false,
+    possession: false,
     moving: false,
     headingRadians: -Math.PI / 2,
     pulseTimeMs: 0,
