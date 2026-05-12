@@ -9,7 +9,7 @@ export type MicroAthleteStyle = {
   goalkeeper?: boolean;
 };
 
-type MicroAthleteTeamColor = "blue" | "red" | "green" | "yellow" | "black" | "white";
+export type MicroAthleteTeamColor = "blue" | "red" | "green" | "yellow" | "black" | "white";
 export type MicroAthleteKitPattern = "plain" | "hoops" | "slash" | "stripes";
 
 const DEFAULT_STYLE_BY_TEAM: Record<MicroAthleteTeamColor, MicroAthleteStyle> = {

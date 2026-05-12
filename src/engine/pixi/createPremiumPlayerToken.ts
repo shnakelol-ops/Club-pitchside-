@@ -48,10 +48,12 @@ const PALETTE_BY_COLOR: Record<
 export function createPremiumPlayerToken({
   color,
   number,
+  label,
   radius,
 }: {
   color: PremiumPlayerTokenColor;
   number: number;
+  label?: string;
   radius: number;
 }): { token: Container; shadow: Graphics } {
   const palette = PALETTE_BY_COLOR[color];
@@ -116,15 +118,19 @@ export function createPremiumPlayerToken({
 
   const textResolution =
     typeof window !== "undefined" ? Math.max(2, Math.min(3, window.devicePixelRatio || 1)) : 2;
+  const safeLabel = (label?.trim().slice(0, 3) ?? "") || String(number);
+  const isNumericLabel = /^\d+$/.test(safeLabel);
   const numberLabel = new Text({
-    text: String(number),
+    text: safeLabel,
     style: {
       fill: 0xffffff,
-      fontSize: number >= 10 ? radius * 0.5 : radius * 0.58,
+      fontSize: isNumericLabel
+        ? safeLabel.length >= 2 ? radius * 0.5 : radius * 0.58
+        : radius * 0.42,
       fontWeight: "900",
       align: "center",
       fontFamily: '"Barlow Condensed", "Inter Tight", Inter, system-ui, sans-serif',
-      letterSpacing: number >= 10 ? 0 : 0.1,
+      letterSpacing: isNumericLabel && safeLabel.length >= 2 ? 0 : 0.1,
       stroke: { color: 0x000000, width: 0.52, join: "round" },
     },
   });

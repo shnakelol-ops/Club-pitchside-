@@ -9,7 +9,12 @@ import {
   PREMIUM_TOKEN_IDLE_SHADOW_ALPHA,
   type PremiumPlayerTokenColor,
 } from "./createPremiumPlayerToken";
-import { createMicroAthleteToken, type MicroAthleteKitPattern } from "./createMicroAthleteToken";
+import type { MicroAthleteKitPattern } from "./createMicroAthleteToken";
+import {
+  resolvePlayerTokenRenderer,
+  sanitizePlayerTokenStyle,
+  type PlayerTokenStyle,
+} from "./playerTokenRenderer";
 import {
   createTacticalPitchVisualRoot,
   type TacticalPitchTheme,
@@ -30,6 +35,7 @@ import {
 
 export type TacticalKitPattern = MicroAthleteKitPattern;
 export type TacticalLabelMode = "number" | "initials";
+export type TacticalPlayerTokenStyle = PlayerTokenStyle;
 export type TacticalPlayerKitFields = {
   kitBaseColor?: string;
   kitPattern?: TacticalKitPattern;
@@ -106,6 +112,7 @@ export type TacticalPadLiteSurface = {
     counts: { blue: number; red: number };
     colors: { blue: WhiteboardTokenColor; red: WhiteboardTokenColor };
   }) => void;
+  setTacticalTokenStyle: (style: TacticalPlayerTokenStyle) => void;
   setWhiteboardDrawTool: (tool: WhiteboardDrawTool) => void;
   setWhiteboardDrawColor: (color: number) => void;
   eraseWhiteboardPenStroke: () => void;
@@ -130,6 +137,7 @@ type TacticalPadLiteSurfaceOptions = {
     red: WhiteboardTokenColor;
   };
   whiteboardDrawColor?: number;
+  tacticalTokenStyle?: TacticalPlayerTokenStyle;
   onItemMove?: (id: string, x: number, y: number) => void;
   onTacticalPlayerDoubleTap?: (payload: { playerId: string; clientX: number; clientY: number }) => void;
 };
@@ -747,6 +755,7 @@ export async function createTacticalPadLiteSurface(
     red: options.whiteboardTeamColors?.red ?? "red",
   };
   let tacticalTeamKits: TacticalBoardTeamKitsState = createDefaultTacticalTeamKits(tacticalTeamColors);
+  let tacticalTokenStyle: TacticalPlayerTokenStyle = sanitizePlayerTokenStyle(options.tacticalTokenStyle);
 
   const playerSeeds =
     surfaceVariant === "whiteboard"
@@ -797,6 +806,13 @@ export async function createTacticalPadLiteSurface(
     }
   }
 
+  function rerenderAllTacticalPlayers(): void {
+    if (surfaceVariant !== "tactical") return;
+    for (const tacticalPlayer of players) {
+      rerenderTacticalPlayerToken(tacticalPlayer);
+    }
+  }
+
   function getEffectiveKitBaseColor(player: Pick<TacticalPlayer, "team" | "teamColor" | "kitBaseColor">): TacticalKitColor {
     const fallbackColor =
       surfaceVariant === "tactical" ? getTeamKitForTeam(player.team).primaryColor : player.teamColor;
@@ -842,9 +858,12 @@ export async function createTacticalPadLiteSurface(
     const pattern = getEffectiveKitPattern(player);
     const patternColor = getEffectiveKitPatternColor(player);
     const label = resolvePlayerLabel(player);
-    return createMicroAthleteToken({
+    const renderToken = resolvePlayerTokenRenderer(tacticalTokenStyle);
+    return renderToken({
       label,
+      number: player.number,
       teamColor: player.teamColor,
+      radius: PLAYER_RADIUS * TACTICAL_PLAYER_VISUAL_SCALE,
       scale: (PLAYER_RADIUS / 4.1) * TACTICAL_PLAYER_VISUAL_SCALE,
       style: {
         primaryColor: KIT_COLOR_NUMERIC[baseColor],
@@ -2289,6 +2308,13 @@ export async function createTacticalPadLiteSurface(
         red: config.colors.red,
       };
       rebuildTacticalPlayersWithColors();
+    },
+    setTacticalTokenStyle: (style) => {
+      if (surfaceVariant !== "tactical") return;
+      const nextStyle = sanitizePlayerTokenStyle(style);
+      if (nextStyle === tacticalTokenStyle) return;
+      tacticalTokenStyle = nextStyle;
+      rerenderAllTacticalPlayers();
     },
     setWhiteboardDrawTool: (tool) => {
       if (!isDrawingEnabledSurface) return;
