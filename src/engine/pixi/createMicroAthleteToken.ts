@@ -131,6 +131,16 @@ function resolveBroadcastGlowColor(color: number): number {
   return cooledIfNeeded;
 }
 
+function resolveGlowDensityFactor(color: number): number {
+  const hue = colorHueDegrees(color);
+  const saturation = colorSaturation(color);
+  if (saturation < 0.12) return 0.92;
+  const isRedFamily = hue < 24 || hue >= 336;
+  const isGreenFamily = hue >= 92 && hue <= 152;
+  if (isRedFamily || isGreenFamily) return 0.84;
+  return 0.9;
+}
+
 function drawPatternAccent(
   target: Graphics,
   pattern: MicroAthleteKitPattern | "split",
@@ -255,15 +265,18 @@ export function createMicroAthleteToken({
   const centreColor = mixColor(innerTintColor, teamBaseColor, 0.2);
   const centreHighlightColor = mixColor(centreColor, 0xffffff, 0.31);
   const centreRimColor = mixColor(teamBaseColor, resolved.outlineColor, 0.29);
+  const glowDensityFactor = resolveGlowDensityFactor(glowColor);
 
   const shadow = new Graphics();
   shadow
-    .circle(0, 0, TOKEN_RADIUS * 1.42)
-    .stroke({ color: glowColor, width: 0.58, alpha: 0.93 })
     .circle(0, 0, TOKEN_RADIUS * 1.24)
-    .stroke({ color: glowColor, width: 0.3, alpha: 0.87 })
-    .circle(0, 0, TOKEN_RADIUS * 1.08)
-    .fill({ color: glowColor, alpha: 0.16 });
+    .stroke({ color: glowColor, width: 0.52, alpha: 0.78 * glowDensityFactor })
+    .circle(0, 0, TOKEN_RADIUS * 1.12)
+    .stroke({ color: glowColor, width: 0.24, alpha: 0.7 * glowDensityFactor })
+    .circle(0, 0, TOKEN_RADIUS * 1.0)
+    .fill({ color: glowColor, alpha: 0.11 * glowDensityFactor })
+    .circle(0, 0, TOKEN_RADIUS * 0.86)
+    .fill({ color: glowColor, alpha: 0.07 * glowDensityFactor });
   shadow.alpha = TOKEN_IDLE_HALO_ALPHA;
   token.addChild(shadow);
 
