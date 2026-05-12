@@ -135,8 +135,8 @@ const KIT_PATTERN_LABEL: Record<TacticalKitPattern, string> = {
 };
 const LABEL_MODE_CHOICES: TacticalLabelMode[] = ["number", "initials"];
 const TOKEN_STYLE_CHOICES: ReadonlyArray<{ value: TacticalPlayerTokenStyle; label: string }> = [
-  { value: "classic", label: "Classic" },
-  { value: "premium", label: "Premium" },
+  { value: "classic", label: "Classic Ring" },
+  { value: "premium", label: "Premium Glow" },
   { value: "torso", label: "Torso" },
 ];
 type KitEditorTab = "base" | "pattern" | "label";

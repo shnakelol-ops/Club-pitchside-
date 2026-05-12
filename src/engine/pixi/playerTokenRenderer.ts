@@ -2,7 +2,8 @@ import type { Container, Graphics } from "pixi.js";
 
 import { createMicroAthleteToken, type MicroAthleteKitPattern, type MicroAthleteStyle } from "./createMicroAthleteToken";
 import { createPremiumGlowPlayerToken } from "./createPremiumGlowPlayerToken";
-import { createPremiumPlayerToken, type PremiumPlayerTokenColor } from "./createPremiumPlayerToken";
+import { createTorsoPlayerToken } from "./createTorsoPlayerToken";
+import type { PremiumPlayerTokenColor } from "./createPremiumPlayerToken";
 
 export type PlayerTokenStyle = "classic" | "premium" | "torso";
 
@@ -58,12 +59,21 @@ export const PremiumGlowRenderer: PlayerTokenRenderer = ({
     kitPatternColor,
   });
 
-export const TorsoRenderer: PlayerTokenRenderer = ({ label, number, teamColor, radius }) =>
-  createPremiumPlayerToken({
-    color: teamColor,
-    number,
+export const TorsoRenderer: PlayerTokenRenderer = ({
+  label,
+  teamColor,
+  scale,
+  style,
+  kitPattern,
+  kitPatternColor,
+}) =>
+  createTorsoPlayerToken({
     label,
-    radius,
+    teamColor,
+    scale,
+    style,
+    kitPattern,
+    kitPatternColor,
   });
 
 export function resolvePlayerTokenRenderer(style: PlayerTokenStyle): PlayerTokenRenderer {
