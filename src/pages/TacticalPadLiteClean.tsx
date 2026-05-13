@@ -1212,6 +1212,7 @@ const TOOLS_PORTAL_BACKDROP_STYLE: CSSProperties = {
   position: "fixed",
   inset: 0,
   background: "transparent",
+  pointerEvents: "auto",
   zIndex: 24,
 };
 
@@ -3007,6 +3008,20 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         ...(isIphoneLandscapeTools ? IPHONE_LANDSCAPE_TOOLS_PANEL_STYLE : null),
       }
     : MOBILE_COACH_HUB_PANEL_STYLE;
+  const toolsPortalOverlayStyle: CSSProperties = {
+    ...mobileCoachHubOverlayStyle,
+    pointerEvents: "auto",
+  };
+  const toolsPortalCompactPanelStyle: CSSProperties = {
+    ...mobileCoachHubPanelStyle,
+    pointerEvents: "auto",
+    zIndex: 25,
+  };
+  const toolsPortalPanelStyle: CSSProperties = {
+    ...COACH_HUB_PANEL_STYLE,
+    pointerEvents: "auto",
+    zIndex: 25,
+  };
   const mobileCoachHubBodyStyle = isIphoneLandscapeTools ? IPHONE_LANDSCAPE_TOOLS_BODY_STYLE : MOBILE_COACH_HUB_BODY_STYLE;
   const coachHubSectionTitleStyle = isCompactLandscapeTools
     ? {
@@ -3625,14 +3640,14 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
           ? createPortal(
               isCompactLandscapeTools ? (
             <div
-              style={mobileCoachHubOverlayStyle}
+              style={toolsPortalOverlayStyle}
               className={isIphoneLandscapeTools ? "isIphoneLandscapeTools" : undefined}
               role="presentation"
               onPointerDown={handleToolsBackdropPointerDown}
             >
               <div
                 ref={toolsMenuRef}
-                style={mobileCoachHubPanelStyle}
+                style={toolsPortalCompactPanelStyle}
                 role="dialog"
                 aria-modal="false"
                 aria-label="Vision Board tools"
@@ -3884,7 +3899,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             <div style={TOOLS_PORTAL_BACKDROP_STYLE} role="presentation" onPointerDown={handleToolsBackdropPointerDown}>
               <div
                 ref={toolsMenuRef}
-                style={COACH_HUB_PANEL_STYLE}
+                style={toolsPortalPanelStyle}
                 role="dialog"
                 aria-modal="false"
                 aria-label="Vision Board tools"
