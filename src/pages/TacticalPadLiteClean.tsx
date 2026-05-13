@@ -215,18 +215,6 @@ function shouldUseCompactLandscapeToolsMenu(viewport: ViewportRect): boolean {
   return viewport.width > viewport.height && viewport.width <= COMPACT_LANDSCAPE_TOOLS_MAX_WIDTH;
 }
 
-function isIphoneDevice(): boolean {
-  if (typeof navigator === "undefined") return false;
-  const ua = navigator.userAgent ?? "";
-  const platform = navigator.platform ?? "";
-  const uaPlatform = (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData?.platform ?? "";
-  return /iphone/i.test(ua) || /iphone/i.test(platform) || /iphone/i.test(uaPlatform);
-}
-
-function shouldUseIphoneLandscapeToolsOverride(viewport: ViewportRect): boolean {
-  return isIphoneDevice() && viewport.width > viewport.height;
-}
-
 const ROOT_STYLE: CSSProperties = {
   position: "fixed",
   inset: 0,
@@ -1256,41 +1244,6 @@ const MOBILE_COACH_HUB_CLOSE_STYLE: CSSProperties = {
   background: "rgba(13, 22, 25, 0.8)",
 };
 
-const MOBILE_COACH_HUB_BODY_STYLE: CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  gap: "4px",
-};
-
-const IPHONE_LANDSCAPE_TOOLS_OVERLAY_STYLE: CSSProperties = {
-  ...MOBILE_COACH_HUB_OVERLAY_STYLE,
-  justifyContent: "stretch",
-  alignItems: "stretch",
-  padding: 0,
-};
-
-const IPHONE_LANDSCAPE_TOOLS_PANEL_STYLE: CSSProperties = {
-  position: "fixed",
-  left: "calc(env(safe-area-inset-left, 0px) + 12px)",
-  right: "calc(env(safe-area-inset-right, 0px) + 12px)",
-  top: "calc(env(safe-area-inset-top, 0px) + 12px)",
-  bottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)",
-  width: "auto",
-  maxWidth: "none",
-  maxHeight: "none",
-  overflow: "hidden",
-  boxSizing: "border-box",
-};
-
-const IPHONE_LANDSCAPE_TOOLS_BODY_STYLE: CSSProperties = {
-  ...MOBILE_COACH_HUB_BODY_STYLE,
-  flex: "1 1 auto",
-  minHeight: 0,
-  overflowY: "auto",
-  overflowX: "hidden",
-  paddingRight: "1px",
-};
-
 const COACH_HUB_SECTION_STYLE: CSSProperties = {
   display: "flex",
   flexDirection: "column",
@@ -1904,10 +1857,6 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     if (typeof window === "undefined") return false;
     return shouldUseCompactLandscapeToolsMenu(getViewportRect());
   });
-  const [isIphoneLandscapeToolsMenu, setIsIphoneLandscapeToolsMenu] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return shouldUseIphoneLandscapeToolsOverride(getViewportRect());
-  });
   const [phasesOpen, setPhasesOpen] = useState(false);
   const [kitEditorState, setKitEditorState] = useState<KitEditorState | null>(null);
   const [kitEditorTab, setKitEditorTab] = useState<KitEditorTab>("base");
@@ -1951,9 +1900,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   useEffect(() => {
     if (typeof window === "undefined") return;
     const syncCompactLandscapeState = () => {
-      const viewport = getViewportRect();
-      setIsCompactLandscapeToolsMenu(shouldUseCompactLandscapeToolsMenu(viewport));
-      setIsIphoneLandscapeToolsMenu(shouldUseIphoneLandscapeToolsOverride(viewport));
+      setIsCompactLandscapeToolsMenu(shouldUseCompactLandscapeToolsMenu(getViewportRect()));
     };
     syncCompactLandscapeState();
     window.addEventListener("resize", syncCompactLandscapeState);
@@ -2998,10 +2945,8 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const quickSharePopoverStyle = isPortraitViewingMode ? PORTRAIT_QUICK_SHARE_POPOUT_STYLE : QUICK_SHARE_POPOUT_STYLE;
   const myBoardsPopoverStyle = isPortraitViewingMode ? PORTRAIT_MY_BOARDS_POPOUT_STYLE : MY_BOARDS_POPOUT_STYLE;
   const isCompactLandscapeTools = !isWhiteboardMode && !isPortraitViewingMode && isCompactLandscapeToolsMenu;
-  const isIphoneLandscapeTools = isCompactLandscapeTools && isIphoneLandscapeToolsMenu;
   const compactLandscapeViewportWidth = isCompactLandscapeTools ? getViewportRect().width : 0;
   const isTightCompactLandscapeTools = isCompactLandscapeTools && compactLandscapeViewportWidth <= 760;
-  const mobileCoachHubOverlayStyle = isIphoneLandscapeTools ? IPHONE_LANDSCAPE_TOOLS_OVERLAY_STYLE : MOBILE_COACH_HUB_OVERLAY_STYLE;
   const mobileCoachHubPanelStyle = isCompactLandscapeTools
     ? {
         ...MOBILE_COACH_HUB_PANEL_STYLE,
@@ -3012,10 +2957,8 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
               padding: "5px",
             }
           : null),
-        ...(isIphoneLandscapeTools ? IPHONE_LANDSCAPE_TOOLS_PANEL_STYLE : null),
       }
     : MOBILE_COACH_HUB_PANEL_STYLE;
-  const mobileCoachHubBodyStyle = isIphoneLandscapeTools ? IPHONE_LANDSCAPE_TOOLS_BODY_STYLE : MOBILE_COACH_HUB_BODY_STYLE;
   const coachHubSectionTitleStyle = isCompactLandscapeTools
     ? {
         ...COACH_HUB_SECTION_TITLE_STYLE,
@@ -3622,12 +3565,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         ) : null}
         {!isWhiteboardMode && !isPortraitViewingMode && toolsOpen ? (
           isCompactLandscapeTools ? (
-            <div
-              style={mobileCoachHubOverlayStyle}
-              className={isIphoneLandscapeTools ? "isIphoneLandscapeTools" : undefined}
-              role="presentation"
-              onClick={() => setToolsOpen(false)}
-            >
+            <div style={MOBILE_COACH_HUB_OVERLAY_STYLE} role="presentation" onClick={() => setToolsOpen(false)}>
               <div
                 ref={toolsMenuRef}
                 style={mobileCoachHubPanelStyle}
@@ -3642,239 +3580,237 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                     Close
                   </button>
                 </div>
-                <div style={mobileCoachHubBodyStyle}>
-                  <div style={coachHubTabGridStyle}>
-                    <button
-                      type="button"
-                      style={activeToolsSection === "draw" ? coachHubTabButtonActiveStyle : coachHubTabButtonStyle}
-                      onClick={() => setActiveToolsSection("draw")}
-                    >
-                      Draw
-                    </button>
-                    <button
-                      type="button"
-                      style={activeToolsSection === "teams" ? coachHubTabButtonActiveStyle : coachHubTabButtonStyle}
-                      onClick={() => setActiveToolsSection("teams")}
-                    >
-                      Teams
-                    </button>
-                    <button
-                      type="button"
-                      style={activeToolsSection === "items" ? coachHubTabButtonActiveStyle : coachHubTabButtonStyle}
-                      onClick={() => setActiveToolsSection("items")}
-                    >
-                      Items
-                    </button>
-                    <button
-                      type="button"
-                      style={activeToolsSection === "board" ? coachHubTabButtonActiveStyle : coachHubTabButtonStyle}
-                      onClick={() => setActiveToolsSection("board")}
-                    >
-                      Board
-                    </button>
-                  </div>
-
-                  {activeToolsSection === "draw" ? (
-                    <div style={COACH_HUB_SECTION_STYLE}>
-                      <p style={coachHubSectionTitleStyle}>Draw</p>
-                      <div className="coach-hub-tool-grid" style={COACH_HUB_TOOL_GRID_STYLE}>
-                        <button
-                          type="button"
-                          style={tacticalTool === "move" ? coachHubToolButtonActiveStyle : coachHubToolButtonStyle}
-                          onClick={() => applyTacticalToolFromMenu("move")}
-                        >
-                          Move
-                        </button>
-                        <button
-                          type="button"
-                          style={tacticalTool === "line" ? coachHubToolButtonActiveStyle : coachHubToolButtonStyle}
-                          onClick={() => applyTacticalToolFromMenu("line")}
-                        >
-                          Line
-                        </button>
-                        <button
-                          type="button"
-                          style={tacticalTool === "arrow" ? coachHubToolButtonActiveStyle : coachHubToolButtonStyle}
-                          onClick={() => applyTacticalToolFromMenu("arrow")}
-                        >
-                          Arrow
-                        </button>
-                        <button
-                          type="button"
-                          style={tacticalTool === "curved" ? coachHubToolButtonActiveStyle : coachHubToolButtonStyle}
-                          onClick={() => applyTacticalToolFromMenu("curved")}
-                        >
-                          Curved
-                        </button>
-                        <button
-                          type="button"
-                          style={tacticalTool === "dashed" ? coachHubToolButtonActiveStyle : coachHubToolButtonStyle}
-                          onClick={() => applyTacticalToolFromMenu("dashed")}
-                        >
-                          Dash
-                        </button>
-                        <button
-                          type="button"
-                          style={tacticalTool === "wavy" ? coachHubToolButtonActiveStyle : coachHubToolButtonStyle}
-                          onClick={() => applyTacticalToolFromMenu("wavy")}
-                        >
-                          Pen
-                        </button>
-                        <button
-                          type="button"
-                          style={tacticalTool === "freePen" ? coachHubToolButtonActiveStyle : coachHubToolButtonStyle}
-                          onClick={() => applyTacticalToolFromMenu("freePen")}
-                        >
-                          Free Pen
-                        </button>
-                        <button
-                          type="button"
-                          style={tacticalTool === "rectangleZone" ? coachHubToolButtonActiveStyle : coachHubToolButtonStyle}
-                          onClick={() => applyTacticalToolFromMenu("rectangleZone")}
-                        >
-                          Rect Zone
-                        </button>
-                        <button
-                          type="button"
-                          style={tacticalTool === "circleZone" ? coachHubToolButtonActiveStyle : coachHubToolButtonStyle}
-                          onClick={() => applyTacticalToolFromMenu("circleZone")}
-                        >
-                          Circle Zone
-                        </button>
-                        <button
-                          type="button"
-                          style={tacticalTool === "eraser" ? coachHubToolButtonActiveStyle : coachHubToolButtonStyle}
-                          onClick={() => applyTacticalToolFromMenu("eraser")}
-                        >
-                          Eraser
-                        </button>
-                      </div>
-                      {isCompactLandscapeTools ? <p style={coachHubSectionTitleStyle}>Colour</p> : null}
-                      <div style={coachHubColorGridStyle}>
-                        {WHITEBOARD_PEN_COLOR_CHOICES.map((choice) => {
-                          const isActive = activeTacticalPenColor === choice.value;
-                          return (
-                            <button
-                              key={`tactical-color-${choice.label.toLowerCase()}`}
-                              type="button"
-                              aria-label={`Set tactical drawing colour ${choice.label}`}
-                              style={{
-                                ...coachHubColorButtonStyle,
-                                ...(isActive
-                                  ? {
-                                      boxShadow: "0 0 0 2px rgba(125, 211, 252, 0.88)",
-                                      border: "1px solid rgba(125, 211, 252, 0.8)",
-                                    }
-                                  : null),
-                              }}
-                              onClick={() => applyTacticalPenColor(choice.value)}
-                            >
-                              <span style={{ ...coachHubColorSwatchStyle, background: choice.css }} />
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {activeToolsSection === "teams" ? (
-                    <div style={COACH_HUB_SECTION_STYLE}>
-                      <p style={coachHubSectionTitleStyle}>{isCompactLandscapeTools ? "Players" : "Teams"}</p>
-                      <div style={COACH_HUB_ACTION_GRID_STYLE}>
-                        <button
-                          type="button"
-                          style={coachHubActionButtonStyle}
-                          disabled={isPlaybackLocked}
-                          onClick={() => addTacticalPlayer("BLUE")}
-                        >
-                          + Team A
-                        </button>
-                        <button
-                          type="button"
-                          style={coachHubActionButtonStyle}
-                          disabled={isPlaybackLocked}
-                          onClick={() => removeTacticalPlayer("BLUE")}
-                        >
-                          - Team A
-                        </button>
-                        <button
-                          type="button"
-                          style={coachHubActionButtonStyle}
-                          disabled={isPlaybackLocked}
-                          onClick={() => addTacticalPlayer("RED")}
-                        >
-                          + Team B
-                        </button>
-                        <button
-                          type="button"
-                          style={coachHubActionButtonStyle}
-                          disabled={isPlaybackLocked}
-                          onClick={() => removeTacticalPlayer("RED")}
-                        >
-                          - Team B
-                        </button>
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {activeToolsSection === "items" ? (
-                    <div style={COACH_HUB_SECTION_STYLE}>
-                      <p style={coachHubSectionTitleStyle}>Items</p>
-                      <div style={COACH_HUB_ACTION_GRID_STYLE}>
-                        <button
-                          type="button"
-                          style={{ ...coachHubActionButtonStyle, gridColumn: "1 / -1" }}
-                          disabled={isPlaybackLocked}
-                          onClick={() => setItemMode((previous) => (previous === "edit" ? "locked" : "edit"))}
-                        >
-                          {effectiveItemMode === "edit" ? "Lock Items" : "Edit Items"}
-                        </button>
-                        {TACTICAL_ITEM_CHOICES.map((choice) => (
-                          <button
-                            key={`item-${choice.type}`}
-                            type="button"
-                            style={coachHubActionButtonStyle}
-                            disabled={isPlaybackLocked}
-                            onClick={() => addItem(choice.type)}
-                          >
-                            + {choice.label}
-                          </button>
-                        ))}
-                        <button
-                          type="button"
-                          style={{ ...coachHubActionButtonStyle, gridColumn: "1 / -1" }}
-                          disabled={isPlaybackLocked}
-                          onClick={clearItems}
-                        >
-                          Clear Items
-                        </button>
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {activeToolsSection === "board" ? (
-                    <div style={COACH_HUB_SECTION_STYLE}>
-                      <p style={coachHubSectionTitleStyle}>Board</p>
-                      <div style={COACH_HUB_ACTION_GRID_STYLE}>
-                        <button type="button" style={coachHubActionButtonStyle} onClick={handleNewBoard}>
-                          New Board
-                        </button>
-                        <button type="button" style={coachHubActionButtonStyle} onClick={clearTacticalDrawings}>
-                          Clear Drawings
-                        </button>
-                        <button type="button" style={coachHubActionButtonStyle} onClick={resetBoardFromTools}>
-                          Reset Board
-                        </button>
-                        <button type="button" style={coachHubActionButtonStyle} onClick={goHome}>
-                          Home
-                        </button>
-                        <button type="button" style={coachHubActionButtonStyle} onClick={openMenuFromTools}>
-                          Menu
-                        </button>
-                      </div>
-                    </div>
-                  ) : null}
+                <div style={coachHubTabGridStyle}>
+                  <button
+                    type="button"
+                    style={activeToolsSection === "draw" ? coachHubTabButtonActiveStyle : coachHubTabButtonStyle}
+                    onClick={() => setActiveToolsSection("draw")}
+                  >
+                    Draw
+                  </button>
+                  <button
+                    type="button"
+                    style={activeToolsSection === "teams" ? coachHubTabButtonActiveStyle : coachHubTabButtonStyle}
+                    onClick={() => setActiveToolsSection("teams")}
+                  >
+                    Teams
+                  </button>
+                  <button
+                    type="button"
+                    style={activeToolsSection === "items" ? coachHubTabButtonActiveStyle : coachHubTabButtonStyle}
+                    onClick={() => setActiveToolsSection("items")}
+                  >
+                    Items
+                  </button>
+                  <button
+                    type="button"
+                    style={activeToolsSection === "board" ? coachHubTabButtonActiveStyle : coachHubTabButtonStyle}
+                    onClick={() => setActiveToolsSection("board")}
+                  >
+                    Board
+                  </button>
                 </div>
+
+                {activeToolsSection === "draw" ? (
+                  <div style={COACH_HUB_SECTION_STYLE}>
+                    <p style={coachHubSectionTitleStyle}>Draw</p>
+                    <div className="coach-hub-tool-grid" style={COACH_HUB_TOOL_GRID_STYLE}>
+                      <button
+                        type="button"
+                        style={tacticalTool === "move" ? coachHubToolButtonActiveStyle : coachHubToolButtonStyle}
+                        onClick={() => applyTacticalToolFromMenu("move")}
+                      >
+                        Move
+                      </button>
+                      <button
+                        type="button"
+                        style={tacticalTool === "line" ? coachHubToolButtonActiveStyle : coachHubToolButtonStyle}
+                        onClick={() => applyTacticalToolFromMenu("line")}
+                      >
+                        Line
+                      </button>
+                      <button
+                        type="button"
+                        style={tacticalTool === "arrow" ? coachHubToolButtonActiveStyle : coachHubToolButtonStyle}
+                        onClick={() => applyTacticalToolFromMenu("arrow")}
+                      >
+                        Arrow
+                      </button>
+                      <button
+                        type="button"
+                        style={tacticalTool === "curved" ? coachHubToolButtonActiveStyle : coachHubToolButtonStyle}
+                        onClick={() => applyTacticalToolFromMenu("curved")}
+                      >
+                        Curved
+                      </button>
+                      <button
+                        type="button"
+                        style={tacticalTool === "dashed" ? coachHubToolButtonActiveStyle : coachHubToolButtonStyle}
+                        onClick={() => applyTacticalToolFromMenu("dashed")}
+                      >
+                        Dash
+                      </button>
+                      <button
+                        type="button"
+                        style={tacticalTool === "wavy" ? coachHubToolButtonActiveStyle : coachHubToolButtonStyle}
+                        onClick={() => applyTacticalToolFromMenu("wavy")}
+                      >
+                        Pen
+                      </button>
+                      <button
+                        type="button"
+                        style={tacticalTool === "freePen" ? coachHubToolButtonActiveStyle : coachHubToolButtonStyle}
+                        onClick={() => applyTacticalToolFromMenu("freePen")}
+                      >
+                        Free Pen
+                      </button>
+                      <button
+                        type="button"
+                        style={tacticalTool === "rectangleZone" ? coachHubToolButtonActiveStyle : coachHubToolButtonStyle}
+                        onClick={() => applyTacticalToolFromMenu("rectangleZone")}
+                      >
+                        Rect Zone
+                      </button>
+                      <button
+                        type="button"
+                        style={tacticalTool === "circleZone" ? coachHubToolButtonActiveStyle : coachHubToolButtonStyle}
+                        onClick={() => applyTacticalToolFromMenu("circleZone")}
+                      >
+                        Circle Zone
+                      </button>
+                      <button
+                        type="button"
+                        style={tacticalTool === "eraser" ? coachHubToolButtonActiveStyle : coachHubToolButtonStyle}
+                        onClick={() => applyTacticalToolFromMenu("eraser")}
+                      >
+                        Eraser
+                      </button>
+                    </div>
+                    {isCompactLandscapeTools ? <p style={coachHubSectionTitleStyle}>Colour</p> : null}
+                    <div style={coachHubColorGridStyle}>
+                      {WHITEBOARD_PEN_COLOR_CHOICES.map((choice) => {
+                        const isActive = activeTacticalPenColor === choice.value;
+                        return (
+                          <button
+                            key={`tactical-color-${choice.label.toLowerCase()}`}
+                            type="button"
+                            aria-label={`Set tactical drawing colour ${choice.label}`}
+                            style={{
+                              ...coachHubColorButtonStyle,
+                              ...(isActive
+                                ? {
+                                    boxShadow: "0 0 0 2px rgba(125, 211, 252, 0.88)",
+                                    border: "1px solid rgba(125, 211, 252, 0.8)",
+                                  }
+                                : null),
+                            }}
+                            onClick={() => applyTacticalPenColor(choice.value)}
+                          >
+                            <span style={{ ...coachHubColorSwatchStyle, background: choice.css }} />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+
+                {activeToolsSection === "teams" ? (
+                  <div style={COACH_HUB_SECTION_STYLE}>
+                    <p style={coachHubSectionTitleStyle}>{isCompactLandscapeTools ? "Players" : "Teams"}</p>
+                    <div style={COACH_HUB_ACTION_GRID_STYLE}>
+                      <button
+                        type="button"
+                        style={coachHubActionButtonStyle}
+                        disabled={isPlaybackLocked}
+                        onClick={() => addTacticalPlayer("BLUE")}
+                      >
+                        + Team A
+                      </button>
+                      <button
+                        type="button"
+                        style={coachHubActionButtonStyle}
+                        disabled={isPlaybackLocked}
+                        onClick={() => removeTacticalPlayer("BLUE")}
+                      >
+                        - Team A
+                      </button>
+                      <button
+                        type="button"
+                        style={coachHubActionButtonStyle}
+                        disabled={isPlaybackLocked}
+                        onClick={() => addTacticalPlayer("RED")}
+                      >
+                        + Team B
+                      </button>
+                      <button
+                        type="button"
+                        style={coachHubActionButtonStyle}
+                        disabled={isPlaybackLocked}
+                        onClick={() => removeTacticalPlayer("RED")}
+                      >
+                        - Team B
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+
+                {activeToolsSection === "items" ? (
+                  <div style={COACH_HUB_SECTION_STYLE}>
+                    <p style={coachHubSectionTitleStyle}>Items</p>
+                    <div style={COACH_HUB_ACTION_GRID_STYLE}>
+                      <button
+                        type="button"
+                        style={{ ...coachHubActionButtonStyle, gridColumn: "1 / -1" }}
+                        disabled={isPlaybackLocked}
+                        onClick={() => setItemMode((previous) => (previous === "edit" ? "locked" : "edit"))}
+                      >
+                        {effectiveItemMode === "edit" ? "Lock Items" : "Edit Items"}
+                      </button>
+                      {TACTICAL_ITEM_CHOICES.map((choice) => (
+                        <button
+                          key={`item-${choice.type}`}
+                          type="button"
+                          style={coachHubActionButtonStyle}
+                          disabled={isPlaybackLocked}
+                          onClick={() => addItem(choice.type)}
+                        >
+                          + {choice.label}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        style={{ ...coachHubActionButtonStyle, gridColumn: "1 / -1" }}
+                        disabled={isPlaybackLocked}
+                        onClick={clearItems}
+                      >
+                        Clear Items
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+
+                {activeToolsSection === "board" ? (
+                  <div style={COACH_HUB_SECTION_STYLE}>
+                    <p style={coachHubSectionTitleStyle}>Board</p>
+                    <div style={COACH_HUB_ACTION_GRID_STYLE}>
+                      <button type="button" style={coachHubActionButtonStyle} onClick={handleNewBoard}>
+                        New Board
+                      </button>
+                      <button type="button" style={coachHubActionButtonStyle} onClick={clearTacticalDrawings}>
+                        Clear Drawings
+                      </button>
+                      <button type="button" style={coachHubActionButtonStyle} onClick={resetBoardFromTools}>
+                        Reset Board
+                      </button>
+                      <button type="button" style={coachHubActionButtonStyle} onClick={goHome}>
+                        Home
+                      </button>
+                      <button type="button" style={coachHubActionButtonStyle} onClick={openMenuFromTools}>
+                        Menu
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </div>
           ) : (
