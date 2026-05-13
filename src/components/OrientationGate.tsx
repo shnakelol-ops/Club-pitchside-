@@ -1,9 +1,19 @@
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 
 type OrientationGateProps = {
   modeLabel?: string;
   children: ReactNode;
 };
+
+const ORIENTATION_SETTLE_DEBOUNCE_MS = 140;
+
+function isIphoneViewportDevice(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent ?? "";
+  const platform = navigator.platform ?? "";
+  const uaPlatform = (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData?.platform ?? "";
+  return /iphone/i.test(ua) || /iphone/i.test(platform) || /iphone/i.test(uaPlatform);
+}
 
 const ROOT_STYLE: CSSProperties = {
   position: "fixed",
@@ -55,26 +65,51 @@ export function usePortraitOrientation(): boolean {
     if (typeof window === "undefined") return false;
     return getValue();
   });
+  const settleTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     const media = window.matchMedia("(orientation: portrait)");
-    const update = () => setIsPortrait(getValue());
-    update();
+    const settleMs = isIphoneViewportDevice() ? ORIENTATION_SETTLE_DEBOUNCE_MS : 0;
+    const applyUpdate = () => setIsPortrait(getValue());
+    const scheduleUpdate = () => {
+      if (settleTimerRef.current != null) {
+        window.clearTimeout(settleTimerRef.current);
+        settleTimerRef.current = null;
+      }
+      if (settleMs <= 0) {
+        applyUpdate();
+        return;
+      }
+      settleTimerRef.current = window.setTimeout(() => {
+        settleTimerRef.current = null;
+        applyUpdate();
+      }, settleMs);
+    };
+    applyUpdate();
 
     if (typeof media.addEventListener === "function") {
-      media.addEventListener("change", update);
+      media.addEventListener("change", scheduleUpdate);
     } else {
-      media.addListener(update);
+      media.addListener(scheduleUpdate);
     }
-    window.addEventListener("resize", update);
+    window.addEventListener("resize", scheduleUpdate);
+    window.addEventListener("orientationchange", scheduleUpdate);
+    const viewport = window.visualViewport;
+    viewport?.addEventListener("resize", scheduleUpdate);
 
     return () => {
       if (typeof media.removeEventListener === "function") {
-        media.removeEventListener("change", update);
+        media.removeEventListener("change", scheduleUpdate);
       } else {
-        media.removeListener(update);
+        media.removeListener(scheduleUpdate);
       }
-      window.removeEventListener("resize", update);
+      if (settleTimerRef.current != null) {
+        window.clearTimeout(settleTimerRef.current);
+        settleTimerRef.current = null;
+      }
+      window.removeEventListener("resize", scheduleUpdate);
+      window.removeEventListener("orientationchange", scheduleUpdate);
+      viewport?.removeEventListener("resize", scheduleUpdate);
     };
   }, []);
 

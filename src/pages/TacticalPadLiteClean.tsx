@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type ChangeEvent, type PointerEvent as ReactPointerEvent } from "react";
+import { createPortal } from "react-dom";
 
 import {
   createTacticalPadLiteSurface,
@@ -29,6 +30,7 @@ import {
   setBoardThumbnail,
 } from "../features/quickboard/storage/quickboard-storage";
 import { MAX_QUICKBOARD_SAVES, sanitizeBoardName, type SavedQuickBoard } from "../features/quickboard/storage/quickboard-types";
+import { useOverlayPortalRoot } from "../overlay/OverlayPortalContext";
 
 type PadMode = "tactical" | "stats" | "whiteboard";
 type TacticalPadLiteCleanProps = {
@@ -75,6 +77,7 @@ const TACTICAL_ITEM_CHOICES: ReadonlyArray<{ label: string; type: TacticalItem["
   { label: "Football", type: "football" },
   { label: "Sliotar", type: "sliotar" },
 ];
+const ORIENTATION_SETTLE_DEBOUNCE_MS = 140;
 type WhiteboardToolControl =
   | "move"
   | "line"
@@ -1206,12 +1209,20 @@ const MOBILE_COACH_HUB_OVERLAY_STYLE: CSSProperties = {
   zIndex: 24,
 };
 
+const TOOLS_PORTAL_BACKDROP_STYLE: CSSProperties = {
+  position: "fixed",
+  inset: 0,
+  background: "transparent",
+  pointerEvents: "auto",
+  zIndex: 24,
+};
+
 const MOBILE_COACH_HUB_PANEL_STYLE: CSSProperties = {
   width: "min(52vw, 320px)",
   maxWidth: "calc(100dvw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 20px)",
   maxHeight: "min(58dvh, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 18px))",
-  overflowY: "auto",
-  overflowX: "hidden",
+  overflow: "hidden",
+  overscrollBehavior: "contain",
   display: "flex",
   flexDirection: "column",
   gap: "4px",
@@ -1260,35 +1271,37 @@ const MOBILE_COACH_HUB_BODY_STYLE: CSSProperties = {
   display: "flex",
   flexDirection: "column",
   gap: "4px",
+  flex: "1 1 auto",
+  minHeight: 0,
+  overflowY: "auto",
+  overflowX: "hidden",
+  overscrollBehavior: "contain",
+  paddingRight: "1px",
 };
 
 const IPHONE_LANDSCAPE_TOOLS_OVERLAY_STYLE: CSSProperties = {
   ...MOBILE_COACH_HUB_OVERLAY_STYLE,
-  justifyContent: "stretch",
-  alignItems: "stretch",
-  padding: 0,
+  justifyContent: "flex-end",
+  alignItems: "flex-end",
 };
 
 const IPHONE_LANDSCAPE_TOOLS_PANEL_STYLE: CSSProperties = {
-  position: "fixed",
-  left: "calc(env(safe-area-inset-left, 0px) + 12px)",
-  right: "calc(env(safe-area-inset-right, 0px) + 12px)",
-  top: "calc(env(safe-area-inset-top, 0px) + 12px)",
-  bottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)",
-  width: "auto",
-  maxWidth: "none",
-  maxHeight: "none",
+  position: "relative",
+  left: "auto",
+  right: "auto",
+  top: "auto",
+  bottom: "auto",
+  width: "min(320px, calc(100dvw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 20px))",
+  maxWidth: "calc(100dvw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 20px)",
+  maxHeight: "min(58dvh, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 18px))",
+  height: "auto",
   overflow: "hidden",
   boxSizing: "border-box",
 };
 
 const IPHONE_LANDSCAPE_TOOLS_BODY_STYLE: CSSProperties = {
   ...MOBILE_COACH_HUB_BODY_STYLE,
-  flex: "1 1 auto",
-  minHeight: 0,
-  overflowY: "auto",
-  overflowX: "hidden",
-  paddingRight: "1px",
+  maxHeight: "100%",
 };
 
 const COACH_HUB_SECTION_STYLE: CSSProperties = {
@@ -1827,6 +1840,7 @@ const WHITEBOARD_HOME_CONFIRM_GO_BUTTON_STYLE: CSSProperties = {
 };
 
 export default function TacticalPadLiteClean({ initialMode = "tactical" }: TacticalPadLiteCleanProps) {
+  const overlayPortalRoot = useOverlayPortalRoot();
   const hostRef = useRef<HTMLDivElement | null>(null);
   const surfaceRef = useRef<TacticalPadLiteSurface | null>(null);
   const latestThumbnailSaveTokenRef = useRef(0);
@@ -1950,18 +1964,46 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const syncCompactLandscapeState = () => {
+    const settleMs = isIphoneDevice() ? ORIENTATION_SETTLE_DEBOUNCE_MS : 0;
+    let settleTimer: number | null = null;
+    let settleRaf = 0;
+    const applyCompactLandscapeState = () => {
+      settleRaf = 0;
       const viewport = getViewportRect();
       setIsCompactLandscapeToolsMenu(shouldUseCompactLandscapeToolsMenu(viewport));
       setIsIphoneLandscapeToolsMenu(shouldUseIphoneLandscapeToolsOverride(viewport));
     };
-    syncCompactLandscapeState();
+    const syncCompactLandscapeState = () => {
+      if (settleTimer != null) {
+        window.clearTimeout(settleTimer);
+        settleTimer = null;
+      }
+      if (settleRaf) {
+        window.cancelAnimationFrame(settleRaf);
+        settleRaf = 0;
+      }
+      if (settleMs <= 0) {
+        settleRaf = window.requestAnimationFrame(applyCompactLandscapeState);
+        return;
+      }
+      settleTimer = window.setTimeout(() => {
+        settleTimer = null;
+        settleRaf = window.requestAnimationFrame(applyCompactLandscapeState);
+      }, settleMs);
+    };
+    applyCompactLandscapeState();
     window.addEventListener("resize", syncCompactLandscapeState);
     window.addEventListener("orientationchange", syncCompactLandscapeState);
     const viewport = window.visualViewport;
     viewport?.addEventListener("resize", syncCompactLandscapeState);
     viewport?.addEventListener("scroll", syncCompactLandscapeState);
     return () => {
+      if (settleTimer != null) {
+        window.clearTimeout(settleTimer);
+      }
+      if (settleRaf) {
+        window.cancelAnimationFrame(settleRaf);
+      }
       window.removeEventListener("resize", syncCompactLandscapeState);
       window.removeEventListener("orientationchange", syncCompactLandscapeState);
       viewport?.removeEventListener("resize", syncCompactLandscapeState);
@@ -2020,8 +2062,10 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
 
   useEffect(() => {
     const media = window.matchMedia("(orientation: landscape)");
+    const settleMs = isIphoneDevice() ? ORIENTATION_SETTLE_DEBOUNCE_MS : 0;
     let rafA = 0;
     let rafB = 0;
+    let settleTimer: number | null = null;
 
     const runDoubleRafReflow = () => {
       rafA = window.requestAnimationFrame(() => {
@@ -2031,8 +2075,25 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
       });
     };
 
+    const scheduleReflow = () => {
+      if (settleTimer != null) {
+        window.clearTimeout(settleTimer);
+        settleTimer = null;
+      }
+      window.cancelAnimationFrame(rafA);
+      window.cancelAnimationFrame(rafB);
+      if (settleMs <= 0) {
+        runDoubleRafReflow();
+        return;
+      }
+      settleTimer = window.setTimeout(() => {
+        settleTimer = null;
+        runDoubleRafReflow();
+      }, settleMs);
+    };
+
     const handleViewportChange = () => {
-      runDoubleRafReflow();
+      scheduleReflow();
     };
 
     if (typeof media.addEventListener === "function") {
@@ -2042,8 +2103,13 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     }
     window.addEventListener("orientationchange", handleViewportChange);
     window.addEventListener("resize", handleViewportChange);
+    const viewport = window.visualViewport;
+    viewport?.addEventListener("resize", handleViewportChange);
 
     return () => {
+      if (settleTimer != null) {
+        window.clearTimeout(settleTimer);
+      }
       window.cancelAnimationFrame(rafA);
       window.cancelAnimationFrame(rafB);
       if (typeof media.removeEventListener === "function") {
@@ -2053,6 +2119,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
       }
       window.removeEventListener("orientationchange", handleViewportChange);
       window.removeEventListener("resize", handleViewportChange);
+      viewport?.removeEventListener("resize", handleViewportChange);
     };
   }, []);
 
@@ -2420,30 +2487,6 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   }, [isWhiteboardMode, actionsOpen]);
 
   useEffect(() => {
-    if (isWhiteboardMode || !toolsOpen || !isCompactLandscapeToolsMenu) return;
-
-    const handlePointerDownOutside = (event: PointerEvent) => {
-      const target = event.target as Node | null;
-      if (!target) return;
-      if (toolsBubbleButtonRef.current?.contains(target)) return;
-      if (toolsMenuRef.current?.contains(target)) return;
-      setToolsOpen(false);
-    };
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
-      setToolsOpen(false);
-    };
-
-    document.addEventListener("pointerdown", handlePointerDownOutside);
-    window.addEventListener("keydown", handleEscape);
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDownOutside);
-      window.removeEventListener("keydown", handleEscape);
-    };
-  }, [isWhiteboardMode, toolsOpen, isCompactLandscapeToolsMenu]);
-
-  useEffect(() => {
     if (!isWhiteboardMode || !whiteboardBubbleOpen) return;
 
     const handlePointerDownOutside = (event: PointerEvent) => {
@@ -2473,6 +2516,11 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const handlePausePress = () => {
     surfaceRef.current?.pausePlayback();
     setControlsOpen(false);
+  };
+
+  const handleToolsBackdropPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.target !== event.currentTarget) return;
+    setToolsOpen(false);
   };
 
   const handlePlaybackSpeedChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -2997,6 +3045,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const actionsPopoutStyle = isPortraitViewingMode ? PORTRAIT_ACTIONS_POPOUT_STYLE : ACTIONS_POPOUT_STYLE;
   const quickSharePopoverStyle = isPortraitViewingMode ? PORTRAIT_QUICK_SHARE_POPOUT_STYLE : QUICK_SHARE_POPOUT_STYLE;
   const myBoardsPopoverStyle = isPortraitViewingMode ? PORTRAIT_MY_BOARDS_POPOUT_STYLE : MY_BOARDS_POPOUT_STYLE;
+  const isToolsOverlayOpen = !isWhiteboardMode && !isPortraitViewingMode && toolsOpen;
   const isCompactLandscapeTools = !isWhiteboardMode && !isPortraitViewingMode && isCompactLandscapeToolsMenu;
   const isIphoneLandscapeTools = isCompactLandscapeTools && isIphoneLandscapeToolsMenu;
   const compactLandscapeViewportWidth = isCompactLandscapeTools ? getViewportRect().width : 0;
@@ -3015,6 +3064,20 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         ...(isIphoneLandscapeTools ? IPHONE_LANDSCAPE_TOOLS_PANEL_STYLE : null),
       }
     : MOBILE_COACH_HUB_PANEL_STYLE;
+  const toolsPortalOverlayStyle: CSSProperties = {
+    ...mobileCoachHubOverlayStyle,
+    pointerEvents: "auto",
+  };
+  const toolsPortalCompactPanelStyle: CSSProperties = {
+    ...mobileCoachHubPanelStyle,
+    pointerEvents: "auto",
+    zIndex: 25,
+  };
+  const toolsPortalPanelStyle: CSSProperties = {
+    ...COACH_HUB_PANEL_STYLE,
+    pointerEvents: "auto",
+    zIndex: 25,
+  };
   const mobileCoachHubBodyStyle = isIphoneLandscapeTools ? IPHONE_LANDSCAPE_TOOLS_BODY_STYLE : MOBILE_COACH_HUB_BODY_STYLE;
   const coachHubSectionTitleStyle = isCompactLandscapeTools
     ? {
@@ -3031,6 +3094,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
         gap: isTightCompactLandscapeTools ? "1px" : "2px",
         padding: isTightCompactLandscapeTools ? "1px" : "2px",
+        alignItems: "stretch",
         borderRadius: "9px",
         border: "1px solid rgba(129, 157, 144, 0.12)",
         background: "rgba(9, 16, 20, 0.44)",
@@ -3044,6 +3108,9 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         fontSize: isTightCompactLandscapeTools ? "8.4px" : "8.8px",
         letterSpacing: "0.14px",
         padding: isTightCompactLandscapeTools ? "0 3px" : "0 4px",
+        minWidth: 0,
+        width: "100%",
+        maxWidth: "100%",
         border: "1px solid rgba(127, 156, 142, 0.24)",
         background: "rgba(13, 22, 25, 0.68)",
         color: "rgba(220, 235, 227, 0.9)",
@@ -3064,6 +3131,9 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         borderRadius: "7px",
         fontSize: isTightCompactLandscapeTools ? "8.8px" : "9px",
         padding: isTightCompactLandscapeTools ? "0 3px" : "0 4px",
+        minWidth: 0,
+        width: "100%",
+        maxWidth: "100%",
         border: "1px solid rgba(127, 156, 142, 0.22)",
         background: "rgba(13, 22, 25, 0.68)",
         color: "#e6f0ea",
@@ -3105,11 +3175,23 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         borderRadius: "7px",
         fontSize: isTightCompactLandscapeTools ? "8.8px" : "9px",
         padding: isTightCompactLandscapeTools ? "0 3px" : "0 4px",
+        minWidth: 0,
+        width: "100%",
+        maxWidth: "100%",
         border: "1px solid rgba(127, 156, 142, 0.22)",
         background: "rgba(13, 22, 25, 0.68)",
         color: "#e6f0ea",
       }
     : COACH_HUB_ACTION_BUTTON_STYLE;
+  const pitchSurfaceStyle: CSSProperties =
+    !isWhiteboardMode && toolsOpen
+      ? {
+          ...PITCH_STYLE,
+          pointerEvents: "none" as const,
+        }
+      : isWhiteboardMode
+        ? PITCH_WHITEBOARD_STYLE
+        : PITCH_STYLE;
 
   if (isStatsMode) {
     return (
@@ -3145,7 +3227,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
           </div>
         ) : null}
         <div style={isWhiteboardMode ? WHITEBOARD_CONTENT_STYLE : CONTENT_STYLE}>
-          <div ref={hostRef} style={isWhiteboardMode ? PITCH_WHITEBOARD_STYLE : PITCH_STYLE} />
+          <div ref={hostRef} style={pitchSurfaceStyle} />
           {!isWhiteboardMode && isPortraitViewingMode ? <div style={PORTRAIT_INTERACTION_SHIELD_STYLE} aria-hidden="true" /> : null}
         </div>
         {!isWhiteboardMode && !isPortraitViewingMode && kitEditorState && activeKitPlayer && kitEditorPosition ? (
@@ -3620,20 +3702,22 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             </button>
           </div>
         ) : null}
-        {!isWhiteboardMode && !isPortraitViewingMode && toolsOpen ? (
-          isCompactLandscapeTools ? (
+        {isToolsOverlayOpen && overlayPortalRoot
+          ? createPortal(
+              isCompactLandscapeTools ? (
             <div
-              style={mobileCoachHubOverlayStyle}
+              style={toolsPortalOverlayStyle}
               className={isIphoneLandscapeTools ? "isIphoneLandscapeTools" : undefined}
               role="presentation"
-              onClick={() => setToolsOpen(false)}
+              onPointerDown={handleToolsBackdropPointerDown}
             >
               <div
                 ref={toolsMenuRef}
-                style={mobileCoachHubPanelStyle}
+                style={toolsPortalCompactPanelStyle}
                 role="dialog"
                 aria-modal="false"
                 aria-label="Vision Board tools"
+                onPointerDown={(event) => event.stopPropagation()}
                 onClick={(event) => event.stopPropagation()}
               >
                 <div style={MOBILE_COACH_HUB_HEADER_STYLE}>
@@ -3877,8 +3961,17 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                 </div>
               </div>
             </div>
-          ) : (
-          <div ref={toolsMenuRef} style={COACH_HUB_PANEL_STYLE}>
+              ) : (
+            <div style={TOOLS_PORTAL_BACKDROP_STYLE} role="presentation" onPointerDown={handleToolsBackdropPointerDown}>
+              <div
+                ref={toolsMenuRef}
+                style={toolsPortalPanelStyle}
+                role="dialog"
+                aria-modal="false"
+                aria-label="Vision Board tools"
+                onPointerDown={(event) => event.stopPropagation()}
+                onClick={(event) => event.stopPropagation()}
+              >
             <div style={coachHubTabGridStyle}>
               <button
                 type="button"
@@ -4110,9 +4203,12 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                 </div>
               </div>
             ) : null}
-          </div>
+              </div>
+            </div>
+              ),
+            overlayPortalRoot,
           )
-        ) : null}
+          : null}
         {!isWhiteboardMode && actionsOpen ? (
           <div ref={actionsMenuRef} style={actionsPopoutStyle}>
             <div style={TOKEN_STYLE_MENU_SECTION_STYLE}>
