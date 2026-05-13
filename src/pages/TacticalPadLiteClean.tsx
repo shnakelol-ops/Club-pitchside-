@@ -655,6 +655,12 @@ const MOBILE_TOOLS_BUBBLE_STYLE: CSSProperties = {
   boxShadow: "0 4px 11px rgba(2, 8, 15, 0.24)",
 };
 
+const IPHONE_LANDSCAPE_TOOLS_BUBBLE_STYLE: CSSProperties = {
+  ...MOBILE_TOOLS_BUBBLE_STYLE,
+  left: "max(58px, calc(env(safe-area-inset-left, 0px) + 56px))",
+  right: "auto",
+};
+
 const POPOUT_BASE_STYLE: CSSProperties = {
   position: "fixed",
   display: "flex",
@@ -1206,6 +1212,12 @@ const MOBILE_COACH_HUB_OVERLAY_STYLE: CSSProperties = {
   zIndex: 24,
 };
 
+const IPHONE_LANDSCAPE_DRAW_OVERLAY_STYLE: CSSProperties = {
+  ...MOBILE_COACH_HUB_OVERLAY_STYLE,
+  zIndex: 30,
+  pointerEvents: "auto",
+};
+
 const MOBILE_COACH_HUB_PANEL_STYLE: CSSProperties = {
   width: "min(52vw, 320px)",
   maxWidth: "calc(100dvw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 20px)",
@@ -1262,33 +1274,21 @@ const MOBILE_COACH_HUB_BODY_STYLE: CSSProperties = {
   gap: "4px",
 };
 
-const IPHONE_LANDSCAPE_TOOLS_OVERLAY_STYLE: CSSProperties = {
-  ...MOBILE_COACH_HUB_OVERLAY_STYLE,
-  justifyContent: "stretch",
-  alignItems: "stretch",
-  padding: 0,
-};
-
-const IPHONE_LANDSCAPE_TOOLS_PANEL_STYLE: CSSProperties = {
+// iPhone landscape keeps a compact draw drawer instead of full-screen modal stretching.
+const IPHONE_LANDSCAPE_DRAW_DRAWER_STYLE: CSSProperties = {
   position: "fixed",
-  left: "calc(env(safe-area-inset-left, 0px) + 12px)",
-  right: "calc(env(safe-area-inset-right, 0px) + 12px)",
-  top: "calc(env(safe-area-inset-top, 0px) + 12px)",
-  bottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)",
-  width: "auto",
-  maxWidth: "none",
-  maxHeight: "none",
-  overflow: "hidden",
-  boxSizing: "border-box",
-};
-
-const IPHONE_LANDSCAPE_TOOLS_BODY_STYLE: CSSProperties = {
-  ...MOBILE_COACH_HUB_BODY_STYLE,
-  flex: "1 1 auto",
-  minHeight: 0,
+  top: "auto",
+  right: "auto",
+  left: "max(58px, calc(env(safe-area-inset-left, 0px) + 56px))",
+  bottom: "max(72px, calc(env(safe-area-inset-bottom, 0px) + 68px))",
+  width: "min(232px, calc(100dvw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 18px))",
+  maxHeight: "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 22px)",
   overflowY: "auto",
   overflowX: "hidden",
-  paddingRight: "1px",
+  pointerEvents: "auto",
+  touchAction: "manipulation",
+  boxSizing: "border-box",
+  zIndex: 31,
 };
 
 const COACH_HUB_SECTION_STYLE: CSSProperties = {
@@ -1584,6 +1584,12 @@ const PHASES_CHIP_STYLE: CSSProperties = {
   zIndex: 20,
 };
 
+const IPHONE_LANDSCAPE_PHASES_CHIP_STYLE: CSSProperties = {
+  ...PHASES_CHIP_STYLE,
+  left: "auto",
+  right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
+};
+
 const PHASES_TRAY_STYLE: CSSProperties = {
   position: "fixed",
   left: "max(12px, calc(env(safe-area-inset-left, 0px) + 10px))",
@@ -1600,6 +1606,12 @@ const PHASES_TRAY_STYLE: CSSProperties = {
   WebkitBackdropFilter: "blur(10px)",
   boxShadow: "0 10px 24px rgba(0, 0, 0, 0.2)",
   zIndex: 19,
+};
+
+const IPHONE_LANDSCAPE_PHASES_TRAY_STYLE: CSSProperties = {
+  ...PHASES_TRAY_STYLE,
+  left: "auto",
+  right: "max(12px, calc(env(safe-area-inset-right, 0px) + 10px))",
 };
 
 const PHASE_ITEM_STYLE: CSSProperties = {
@@ -3001,7 +3013,14 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const isIphoneLandscapeTools = isCompactLandscapeTools && isIphoneLandscapeToolsMenu;
   const compactLandscapeViewportWidth = isCompactLandscapeTools ? getViewportRect().width : 0;
   const isTightCompactLandscapeTools = isCompactLandscapeTools && compactLandscapeViewportWidth <= 760;
-  const mobileCoachHubOverlayStyle = isIphoneLandscapeTools ? IPHONE_LANDSCAPE_TOOLS_OVERLAY_STYLE : MOBILE_COACH_HUB_OVERLAY_STYLE;
+  const toolsBubbleStyle = isIphoneLandscapeTools
+    ? IPHONE_LANDSCAPE_TOOLS_BUBBLE_STYLE
+    : isCompactLandscapeTools
+      ? MOBILE_TOOLS_BUBBLE_STYLE
+      : TOOL_BUBBLE_STYLE;
+  const phasesChipStyle = isIphoneLandscapeTools ? IPHONE_LANDSCAPE_PHASES_CHIP_STYLE : PHASES_CHIP_STYLE;
+  const phasesTrayStyle = isIphoneLandscapeTools ? IPHONE_LANDSCAPE_PHASES_TRAY_STYLE : PHASES_TRAY_STYLE;
+  const mobileCoachHubOverlayStyle = isIphoneLandscapeTools ? IPHONE_LANDSCAPE_DRAW_OVERLAY_STYLE : MOBILE_COACH_HUB_OVERLAY_STYLE;
   const mobileCoachHubPanelStyle = isCompactLandscapeTools
     ? {
         ...MOBILE_COACH_HUB_PANEL_STYLE,
@@ -3012,10 +3031,10 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
               padding: "5px",
             }
           : null),
-        ...(isIphoneLandscapeTools ? IPHONE_LANDSCAPE_TOOLS_PANEL_STYLE : null),
+        ...(isIphoneLandscapeTools ? IPHONE_LANDSCAPE_DRAW_DRAWER_STYLE : null),
       }
     : MOBILE_COACH_HUB_PANEL_STYLE;
-  const mobileCoachHubBodyStyle = isIphoneLandscapeTools ? IPHONE_LANDSCAPE_TOOLS_BODY_STYLE : MOBILE_COACH_HUB_BODY_STYLE;
+  const mobileCoachHubBodyStyle = MOBILE_COACH_HUB_BODY_STYLE;
   const coachHubSectionTitleStyle = isCompactLandscapeTools
     ? {
         ...COACH_HUB_SECTION_TITLE_STYLE,
@@ -3508,7 +3527,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         {!isWhiteboardMode ? (
           <button
             type="button"
-            style={PHASES_CHIP_STYLE}
+            style={phasesChipStyle}
             aria-label="Toggle phases tray"
             onClick={() => setPhasesOpen((open) => !open)}
           >
@@ -3516,7 +3535,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
           </button>
         ) : null}
         {!isWhiteboardMode && phasesOpen ? (
-          <div style={PHASES_TRAY_STYLE}>
+          <div style={phasesTrayStyle}>
             {phaseItems.length > 0 ? (
               phaseItems.map((phase) => (
                 <div key={phase} style={PHASE_ITEM_STYLE}>
@@ -3624,9 +3643,17 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
           isCompactLandscapeTools ? (
             <div
               style={mobileCoachHubOverlayStyle}
-              className={isIphoneLandscapeTools ? "isIphoneLandscapeTools" : undefined}
               role="presentation"
-              onClick={() => setToolsOpen(false)}
+              onPointerDown={(event) => {
+                if (event.target === event.currentTarget) {
+                  setToolsOpen(false);
+                }
+              }}
+              onClick={(event) => {
+                if (event.target === event.currentTarget) {
+                  setToolsOpen(false);
+                }
+              }}
             >
               <div
                 ref={toolsMenuRef}
@@ -3634,47 +3661,50 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                 role="dialog"
                 aria-modal="false"
                 aria-label="Vision Board tools"
+                onPointerDown={(event) => event.stopPropagation()}
                 onClick={(event) => event.stopPropagation()}
               >
                 <div style={MOBILE_COACH_HUB_HEADER_STYLE}>
-                  <p style={MOBILE_COACH_HUB_TITLE_STYLE}>Vision Board Tools</p>
+                  <p style={MOBILE_COACH_HUB_TITLE_STYLE}>{isIphoneLandscapeTools ? "Draw" : "Vision Board Tools"}</p>
                   <button type="button" className="control-button" style={MOBILE_COACH_HUB_CLOSE_STYLE} onClick={() => setToolsOpen(false)}>
                     Close
                   </button>
                 </div>
                 <div style={mobileCoachHubBodyStyle}>
-                  <div style={coachHubTabGridStyle}>
-                    <button
-                      type="button"
-                      style={activeToolsSection === "draw" ? coachHubTabButtonActiveStyle : coachHubTabButtonStyle}
-                      onClick={() => setActiveToolsSection("draw")}
-                    >
-                      Draw
-                    </button>
-                    <button
-                      type="button"
-                      style={activeToolsSection === "teams" ? coachHubTabButtonActiveStyle : coachHubTabButtonStyle}
-                      onClick={() => setActiveToolsSection("teams")}
-                    >
-                      Teams
-                    </button>
-                    <button
-                      type="button"
-                      style={activeToolsSection === "items" ? coachHubTabButtonActiveStyle : coachHubTabButtonStyle}
-                      onClick={() => setActiveToolsSection("items")}
-                    >
-                      Items
-                    </button>
-                    <button
-                      type="button"
-                      style={activeToolsSection === "board" ? coachHubTabButtonActiveStyle : coachHubTabButtonStyle}
-                      onClick={() => setActiveToolsSection("board")}
-                    >
-                      Board
-                    </button>
-                  </div>
+                  {!isIphoneLandscapeTools ? (
+                    <div style={coachHubTabGridStyle}>
+                      <button
+                        type="button"
+                        style={activeToolsSection === "draw" ? coachHubTabButtonActiveStyle : coachHubTabButtonStyle}
+                        onClick={() => setActiveToolsSection("draw")}
+                      >
+                        Draw
+                      </button>
+                      <button
+                        type="button"
+                        style={activeToolsSection === "teams" ? coachHubTabButtonActiveStyle : coachHubTabButtonStyle}
+                        onClick={() => setActiveToolsSection("teams")}
+                      >
+                        Teams
+                      </button>
+                      <button
+                        type="button"
+                        style={activeToolsSection === "items" ? coachHubTabButtonActiveStyle : coachHubTabButtonStyle}
+                        onClick={() => setActiveToolsSection("items")}
+                      >
+                        Items
+                      </button>
+                      <button
+                        type="button"
+                        style={activeToolsSection === "board" ? coachHubTabButtonActiveStyle : coachHubTabButtonStyle}
+                        onClick={() => setActiveToolsSection("board")}
+                      >
+                        Board
+                      </button>
+                    </div>
+                  ) : null}
 
-                  {activeToolsSection === "draw" ? (
+                  {isIphoneLandscapeTools || activeToolsSection === "draw" ? (
                     <div style={COACH_HUB_SECTION_STYLE}>
                       <p style={coachHubSectionTitleStyle}>Draw</p>
                       <div className="coach-hub-tool-grid" style={COACH_HUB_TOOL_GRID_STYLE}>
@@ -3777,7 +3807,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                     </div>
                   ) : null}
 
-                  {activeToolsSection === "teams" ? (
+                  {!isIphoneLandscapeTools && activeToolsSection === "teams" ? (
                     <div style={COACH_HUB_SECTION_STYLE}>
                       <p style={coachHubSectionTitleStyle}>{isCompactLandscapeTools ? "Players" : "Teams"}</p>
                       <div style={COACH_HUB_ACTION_GRID_STYLE}>
@@ -3817,7 +3847,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                     </div>
                   ) : null}
 
-                  {activeToolsSection === "items" ? (
+                  {!isIphoneLandscapeTools && activeToolsSection === "items" ? (
                     <div style={COACH_HUB_SECTION_STYLE}>
                       <p style={coachHubSectionTitleStyle}>Items</p>
                       <div style={COACH_HUB_ACTION_GRID_STYLE}>
@@ -3852,7 +3882,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                     </div>
                   ) : null}
 
-                  {activeToolsSection === "board" ? (
+                  {!isIphoneLandscapeTools && activeToolsSection === "board" ? (
                     <div style={COACH_HUB_SECTION_STYLE}>
                       <p style={coachHubSectionTitleStyle}>Board</p>
                       <div style={COACH_HUB_ACTION_GRID_STYLE}>
@@ -4258,7 +4288,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             ref={toolsBubbleButtonRef}
             type="button"
             className={isCompactLandscapeTools ? "floating-bubble" : "floating-bubble floating-bubble-tool"}
-            style={isCompactLandscapeTools ? MOBILE_TOOLS_BUBBLE_STYLE : TOOL_BUBBLE_STYLE}
+            style={toolsBubbleStyle}
             aria-label={toolsOpen ? "Close tools" : "Open tools"}
             aria-expanded={toolsOpen}
             onClick={() =>
