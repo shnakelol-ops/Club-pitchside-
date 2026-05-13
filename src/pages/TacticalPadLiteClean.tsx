@@ -1220,8 +1220,8 @@ const MOBILE_COACH_HUB_PANEL_STYLE: CSSProperties = {
   width: "min(52vw, 320px)",
   maxWidth: "calc(100dvw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 20px)",
   maxHeight: "min(58dvh, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 18px))",
-  overflowY: "auto",
-  overflowX: "hidden",
+  overflow: "hidden",
+  overscrollBehavior: "contain",
   display: "flex",
   flexDirection: "column",
   gap: "4px",
@@ -1270,6 +1270,12 @@ const MOBILE_COACH_HUB_BODY_STYLE: CSSProperties = {
   display: "flex",
   flexDirection: "column",
   gap: "4px",
+  flex: "1 1 auto",
+  minHeight: 0,
+  overflowY: "auto",
+  overflowX: "hidden",
+  overscrollBehavior: "contain",
+  paddingRight: "1px",
 };
 
 const IPHONE_LANDSCAPE_TOOLS_OVERLAY_STYLE: CSSProperties = {
@@ -1287,6 +1293,7 @@ const IPHONE_LANDSCAPE_TOOLS_PANEL_STYLE: CSSProperties = {
   width: "min(320px, calc(100dvw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 20px))",
   maxWidth: "calc(100dvw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 20px)",
   maxHeight: "min(58dvh, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 18px))",
+  height: "auto",
   overflow: "hidden",
   boxSizing: "border-box",
 };
@@ -1294,9 +1301,6 @@ const IPHONE_LANDSCAPE_TOOLS_PANEL_STYLE: CSSProperties = {
 const IPHONE_LANDSCAPE_TOOLS_BODY_STYLE: CSSProperties = {
   ...MOBILE_COACH_HUB_BODY_STYLE,
   maxHeight: "100%",
-  overflowY: "auto",
-  overflowX: "hidden",
-  paddingRight: "1px",
 };
 
 const COACH_HUB_SECTION_STYLE: CSSProperties = {
