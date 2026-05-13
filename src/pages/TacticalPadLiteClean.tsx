@@ -138,6 +138,7 @@ const KIT_PATTERN_LABEL: Record<TacticalKitPattern, string> = {
 };
 const LABEL_MODE_CHOICES: TacticalLabelMode[] = ["number", "initials"];
 const TOKEN_STYLE_CHOICES: ReadonlyArray<{ value: TacticalPlayerTokenStyle; label: string }> = [
+  { value: "vision-v3", label: "Vision V3" },
   { value: "classic", label: "Classic" },
   { value: "premium", label: "Glow" },
   { value: "torso", label: "Torso" },
@@ -1896,7 +1897,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const [items, setItems] = useState<TacticalItem[]>([]);
   const [itemMode, setItemMode] = useState<ItemMode>("locked");
   const [phaseCount, setPhaseCount] = useState(0);
-  const [tacticalTokenStyle, setTacticalTokenStyle] = useState<TacticalPlayerTokenStyle>("classic");
+  const [tacticalTokenStyle, setTacticalTokenStyle] = useState<TacticalPlayerTokenStyle>("vision-v3");
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [playbackSpeedMultiplier, setPlaybackSpeedMultiplier] = useState<number>(DEFAULT_PLAYBACK_SPEED_MULTIPLIER);
