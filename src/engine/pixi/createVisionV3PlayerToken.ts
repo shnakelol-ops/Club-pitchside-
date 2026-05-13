@@ -93,36 +93,38 @@ function drawPatternAccent(
   lodTier: VisionV3LodTier,
 ): void {
   if (pattern === "plain") return;
-  const alpha = lodTier === "tiny" ? 0.14 : lodTier === "small" ? 0.17 : 0.2;
-  const lineWidth = Math.max(0.22, innerRadius * (lodTier === "tiny" ? 0.14 : 0.17));
+  const alpha = lodTier === "tiny" ? 0.26 : lodTier === "small" ? 0.24 : 0.22;
+  const lineWidth = Math.max(0.28, innerRadius * (lodTier === "tiny" ? 0.2 : 0.18));
   if (pattern === "hoops") {
-    const y1 = lodTier === "tiny" ? 0 : -innerRadius * 0.3;
-    const y2 = innerRadius * 0.3;
+    const yOffset = lodTier === "tiny" ? innerRadius * 0.38 : innerRadius * 0.32;
     target
-      .moveTo(-innerRadius * 0.68, y1)
-      .lineTo(innerRadius * 0.68, y1);
-    if (lodTier !== "tiny") {
-      target.moveTo(-innerRadius * 0.68, y2).lineTo(innerRadius * 0.68, y2);
-    }
+      .moveTo(-innerRadius * 0.68, -yOffset)
+      .lineTo(innerRadius * 0.68, -yOffset)
+      .moveTo(-innerRadius * 0.68, yOffset)
+      .lineTo(innerRadius * 0.68, yOffset);
     target.stroke({ color: accentColor, width: lineWidth, alpha, cap: "round", join: "round" });
     return;
   }
   if (pattern === "stripes") {
-    const x1 = lodTier === "tiny" ? 0 : -innerRadius * 0.28;
-    const x2 = innerRadius * 0.28;
+    const xOffset = lodTier === "tiny" ? innerRadius * 0.38 : innerRadius * 0.31;
     target
-      .moveTo(x1, -innerRadius * 0.68)
-      .lineTo(x1, innerRadius * 0.68);
-    if (lodTier !== "tiny") {
-      target.moveTo(x2, -innerRadius * 0.68).lineTo(x2, innerRadius * 0.68);
-    }
+      .moveTo(-xOffset, -innerRadius * 0.68)
+      .lineTo(-xOffset, innerRadius * 0.68)
+      .moveTo(xOffset, -innerRadius * 0.68)
+      .lineTo(xOffset, innerRadius * 0.68);
     target.stroke({ color: accentColor, width: lineWidth, alpha, cap: "round", join: "round" });
     return;
   }
-  target
-    .moveTo(-innerRadius * 0.62, innerRadius * 0.48)
-    .lineTo(innerRadius * 0.62, -innerRadius * 0.48)
-    .stroke({ color: accentColor, width: Math.max(0.25, lineWidth), alpha, cap: "round", join: "round" });
+  target.moveTo(-innerRadius * 0.62, innerRadius * 0.48).lineTo(-innerRadius * 0.14, innerRadius * 0.1);
+  target.moveTo(innerRadius * 0.14, -innerRadius * 0.1).lineTo(innerRadius * 0.62, -innerRadius * 0.48);
+  if (lodTier !== "tiny") {
+    target
+      .moveTo(-innerRadius * 0.56, innerRadius * 0.62)
+      .lineTo(-innerRadius * 0.1, innerRadius * 0.24)
+      .moveTo(innerRadius * 0.1, 0)
+      .lineTo(innerRadius * 0.56, -innerRadius * 0.38);
+  }
+  target.stroke({ color: accentColor, width: Math.max(0.3, lineWidth), alpha, cap: "round", join: "round" });
 }
 
 function drawShirtGlyph(target: Graphics, centerY: number, size: number, color: number): void {
@@ -222,6 +224,8 @@ export function createVisionV3PlayerToken({
   const coreShadeColor = mixColor(coreColor, 0x020617, 0.2);
   const highlightColor = mixColor(coreColor, 0xffffff, 0.22);
   const edgeColor = mixColor(resolved.outlineColor, 0x000000, 0.24);
+  const patternContrastTarget = luminance(coreColor) < 132 ? 0xffffff : 0x0f172a;
+  const patternInkColor = mixColor(accentColor, patternContrastTarget, lodTier === "tiny" ? 0.44 : 0.34);
 
   const shadow = new Graphics();
   const shadowHaloAlpha = lodTier === "tiny" ? 0.06 : lodTier === "small" ? 0.085 : 0.11;
@@ -253,7 +257,7 @@ export function createVisionV3PlayerToken({
   drawPatternAccent(
     disc,
     kitPattern,
-    mixColor(accentColor, 0xffffff, lodTier === "tiny" ? 0.06 : 0.1),
+    patternInkColor,
     innerRadius * 0.9,
     lodTier,
   );
@@ -311,16 +315,17 @@ export function createVisionV3PlayerToken({
 
   const safeLabel = label.trim().slice(0, 3) || "?";
   const isNumericLabel = /^\d+$/.test(safeLabel);
-  const highContrastText = luminance(coreColor) < 132 ? 0xf8fafc : 0x0f172a;
-  const labelColor = isNumericLabel ? highContrastText : resolved.textColor;
+  const isDoubleDigitNumeric = isNumericLabel && safeLabel.length >= 2;
+  const numericTextColor = luminance(coreColor) < 170 ? 0xffffff : 0x0f172a;
+  const labelColor = isNumericLabel ? numericTextColor : resolved.textColor;
   const labelStroke = luminance(labelColor) > 140 ? 0x0b1220 : 0xffffff;
   const labelFontSize = isNumericLabel
-    ? safeLabel.length >= 2
-      ? innerRadius * (lodTier === "tiny" ? 1.16 : 1.1)
+    ? isDoubleDigitNumeric
+      ? innerRadius * (lodTier === "tiny" ? 1.08 : 1.02)
       : innerRadius * (lodTier === "tiny" ? 1.3 : 1.24)
     : innerRadius * 0.84;
-  const labelBaseY = isNumericLabel ? (safeLabel.length >= 2 ? innerRadius * 0.015 : innerRadius * 0.02) : 0;
-  const labelLetterSpacing = isNumericLabel && safeLabel.length >= 2 ? -0.02 : 0.03;
+  const labelBaseY = isNumericLabel ? (isDoubleDigitNumeric ? 0 : innerRadius * 0.015) : 0;
+  const labelLetterSpacing = isDoubleDigitNumeric ? 0.01 : 0.03;
   const textResolution =
     typeof window !== "undefined" ? Math.max(2.4, Math.min(3.2, window.devicePixelRatio || 1.5)) : 2.6;
 
@@ -335,7 +340,7 @@ export function createVisionV3PlayerToken({
     )
     .fill({
       color: mixColor(coreColor, 0x020617, 0.5),
-      alpha: lodTier === "tiny" ? 0.31 : 0.26,
+      alpha: isDoubleDigitNumeric ? (lodTier === "tiny" ? 0.38 : 0.34) : lodTier === "tiny" ? 0.31 : 0.26,
     });
   labelPlate.position.y = labelBaseY;
   token.addChild(labelPlate);
@@ -353,7 +358,7 @@ export function createVisionV3PlayerToken({
   });
   labelShadow.anchor.set(0.5, 0.52);
   labelShadow.position.y = labelBaseY + 0.07;
-  labelShadow.alpha = lodTier === "tiny" ? 0.34 : 0.3;
+  labelShadow.alpha = isDoubleDigitNumeric ? (lodTier === "tiny" ? 0.42 : 0.36) : lodTier === "tiny" ? 0.34 : 0.3;
   labelShadow.resolution = textResolution;
   labelShadow.roundPixels = true;
   token.addChild(labelShadow);
@@ -370,13 +375,15 @@ export function createVisionV3PlayerToken({
       stroke: {
         color: labelStroke,
         width: isNumericLabel
-          ? Math.max(0.5, innerRadius * (lodTier === "tiny" ? 0.24 : 0.21))
+          ? isDoubleDigitNumeric
+            ? Math.max(0.56, innerRadius * (lodTier === "tiny" ? 0.28 : 0.24))
+            : Math.max(0.5, innerRadius * (lodTier === "tiny" ? 0.24 : 0.21))
           : Math.max(0.35, innerRadius * 0.15),
         join: "round",
       },
     },
   });
-  labelText.anchor.set(0.5, 0.52);
+  labelText.anchor.set(0.5, 0.5);
   labelText.position.y = labelBaseY;
   labelText.resolution = textResolution;
   labelText.roundPixels = true;
