@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type ChangeEvent, type PointerEvent as ReactPointerEvent } from "react";
+import { createPortal } from "react-dom";
 
 import {
   createTacticalPadLiteSurface,
@@ -29,6 +30,7 @@ import {
   setBoardThumbnail,
 } from "../features/quickboard/storage/quickboard-storage";
 import { MAX_QUICKBOARD_SAVES, sanitizeBoardName, type SavedQuickBoard } from "../features/quickboard/storage/quickboard-types";
+import { useOverlayPortalRoot } from "../overlay/OverlayPortalContext";
 
 type PadMode = "tactical" | "stats" | "whiteboard";
 type TacticalPadLiteCleanProps = {
@@ -1206,6 +1208,13 @@ const MOBILE_COACH_HUB_OVERLAY_STYLE: CSSProperties = {
   zIndex: 24,
 };
 
+const TOOLS_PORTAL_BACKDROP_STYLE: CSSProperties = {
+  position: "fixed",
+  inset: 0,
+  background: "transparent",
+  zIndex: 24,
+};
+
 const MOBILE_COACH_HUB_PANEL_STYLE: CSSProperties = {
   width: "min(52vw, 320px)",
   maxWidth: "calc(100dvw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 20px)",
@@ -1827,6 +1836,7 @@ const WHITEBOARD_HOME_CONFIRM_GO_BUTTON_STYLE: CSSProperties = {
 };
 
 export default function TacticalPadLiteClean({ initialMode = "tactical" }: TacticalPadLiteCleanProps) {
+  const overlayPortalRoot = useOverlayPortalRoot();
   const hostRef = useRef<HTMLDivElement | null>(null);
   const surfaceRef = useRef<TacticalPadLiteSurface | null>(null);
   const latestThumbnailSaveTokenRef = useRef(0);
@@ -2420,30 +2430,6 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   }, [isWhiteboardMode, actionsOpen]);
 
   useEffect(() => {
-    if (isWhiteboardMode || !toolsOpen || !isCompactLandscapeToolsMenu) return;
-
-    const handlePointerDownOutside = (event: PointerEvent) => {
-      const target = event.target as Node | null;
-      if (!target) return;
-      if (toolsBubbleButtonRef.current?.contains(target)) return;
-      if (toolsMenuRef.current?.contains(target)) return;
-      setToolsOpen(false);
-    };
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
-      setToolsOpen(false);
-    };
-
-    document.addEventListener("pointerdown", handlePointerDownOutside);
-    window.addEventListener("keydown", handleEscape);
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDownOutside);
-      window.removeEventListener("keydown", handleEscape);
-    };
-  }, [isWhiteboardMode, toolsOpen, isCompactLandscapeToolsMenu]);
-
-  useEffect(() => {
     if (!isWhiteboardMode || !whiteboardBubbleOpen) return;
 
     const handlePointerDownOutside = (event: PointerEvent) => {
@@ -2473,6 +2459,11 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const handlePausePress = () => {
     surfaceRef.current?.pausePlayback();
     setControlsOpen(false);
+  };
+
+  const handleToolsBackdropPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.target !== event.currentTarget) return;
+    setToolsOpen(false);
   };
 
   const handlePlaybackSpeedChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -2997,6 +2988,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const actionsPopoutStyle = isPortraitViewingMode ? PORTRAIT_ACTIONS_POPOUT_STYLE : ACTIONS_POPOUT_STYLE;
   const quickSharePopoverStyle = isPortraitViewingMode ? PORTRAIT_QUICK_SHARE_POPOUT_STYLE : QUICK_SHARE_POPOUT_STYLE;
   const myBoardsPopoverStyle = isPortraitViewingMode ? PORTRAIT_MY_BOARDS_POPOUT_STYLE : MY_BOARDS_POPOUT_STYLE;
+  const isToolsOverlayOpen = !isWhiteboardMode && !isPortraitViewingMode && toolsOpen;
   const isCompactLandscapeTools = !isWhiteboardMode && !isPortraitViewingMode && isCompactLandscapeToolsMenu;
   const isIphoneLandscapeTools = isCompactLandscapeTools && isIphoneLandscapeToolsMenu;
   const compactLandscapeViewportWidth = isCompactLandscapeTools ? getViewportRect().width : 0;
@@ -3110,6 +3102,15 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         color: "#e6f0ea",
       }
     : COACH_HUB_ACTION_BUTTON_STYLE;
+  const pitchSurfaceStyle: CSSProperties =
+    !isWhiteboardMode && toolsOpen
+      ? {
+          ...PITCH_STYLE,
+          pointerEvents: "none" as const,
+        }
+      : isWhiteboardMode
+        ? PITCH_WHITEBOARD_STYLE
+        : PITCH_STYLE;
 
   if (isStatsMode) {
     return (
@@ -3145,7 +3146,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
           </div>
         ) : null}
         <div style={isWhiteboardMode ? WHITEBOARD_CONTENT_STYLE : CONTENT_STYLE}>
-          <div ref={hostRef} style={isWhiteboardMode ? PITCH_WHITEBOARD_STYLE : PITCH_STYLE} />
+          <div ref={hostRef} style={pitchSurfaceStyle} />
           {!isWhiteboardMode && isPortraitViewingMode ? <div style={PORTRAIT_INTERACTION_SHIELD_STYLE} aria-hidden="true" /> : null}
         </div>
         {!isWhiteboardMode && !isPortraitViewingMode && kitEditorState && activeKitPlayer && kitEditorPosition ? (
@@ -3620,13 +3621,14 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             </button>
           </div>
         ) : null}
-        {!isWhiteboardMode && !isPortraitViewingMode && toolsOpen ? (
-          isCompactLandscapeTools ? (
+        {isToolsOverlayOpen && overlayPortalRoot
+          ? createPortal(
+              isCompactLandscapeTools ? (
             <div
               style={mobileCoachHubOverlayStyle}
               className={isIphoneLandscapeTools ? "isIphoneLandscapeTools" : undefined}
               role="presentation"
-              onClick={() => setToolsOpen(false)}
+              onPointerDown={handleToolsBackdropPointerDown}
             >
               <div
                 ref={toolsMenuRef}
@@ -3634,6 +3636,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                 role="dialog"
                 aria-modal="false"
                 aria-label="Vision Board tools"
+                onPointerDown={(event) => event.stopPropagation()}
                 onClick={(event) => event.stopPropagation()}
               >
                 <div style={MOBILE_COACH_HUB_HEADER_STYLE}>
@@ -3877,8 +3880,17 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                 </div>
               </div>
             </div>
-          ) : (
-          <div ref={toolsMenuRef} style={COACH_HUB_PANEL_STYLE}>
+              ) : (
+            <div style={TOOLS_PORTAL_BACKDROP_STYLE} role="presentation" onPointerDown={handleToolsBackdropPointerDown}>
+              <div
+                ref={toolsMenuRef}
+                style={COACH_HUB_PANEL_STYLE}
+                role="dialog"
+                aria-modal="false"
+                aria-label="Vision Board tools"
+                onPointerDown={(event) => event.stopPropagation()}
+                onClick={(event) => event.stopPropagation()}
+              >
             <div style={coachHubTabGridStyle}>
               <button
                 type="button"
@@ -4110,9 +4122,12 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                 </div>
               </div>
             ) : null}
-          </div>
+              </div>
+            </div>
+              ),
+            overlayPortalRoot,
           )
-        ) : null}
+          : null}
         {!isWhiteboardMode && actionsOpen ? (
           <div ref={actionsMenuRef} style={actionsPopoutStyle}>
             <div style={TOKEN_STYLE_MENU_SECTION_STYLE}>
