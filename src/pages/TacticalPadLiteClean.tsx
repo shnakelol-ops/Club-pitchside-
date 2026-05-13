@@ -1279,12 +1279,6 @@ const MOBILE_COACH_HUB_BODY_STYLE: CSSProperties = {
   paddingRight: "1px",
 };
 
-const IPHONE_LANDSCAPE_TOOLS_OVERLAY_STYLE: CSSProperties = {
-  ...MOBILE_COACH_HUB_OVERLAY_STYLE,
-  justifyContent: "flex-end",
-  alignItems: "flex-end",
-};
-
 const IPHONE_LANDSCAPE_TOOLS_PANEL_STYLE: CSSProperties = {
   position: "relative",
   left: "auto",
@@ -1297,11 +1291,6 @@ const IPHONE_LANDSCAPE_TOOLS_PANEL_STYLE: CSSProperties = {
   height: "auto",
   overflow: "hidden",
   boxSizing: "border-box",
-};
-
-const IPHONE_LANDSCAPE_TOOLS_BODY_STYLE: CSSProperties = {
-  ...MOBILE_COACH_HUB_BODY_STYLE,
-  maxHeight: "100%",
 };
 
 const COACH_HUB_SECTION_STYLE: CSSProperties = {
@@ -3050,7 +3039,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const isIphoneLandscapeTools = isCompactLandscapeTools && isIphoneLandscapeToolsMenu;
   const compactLandscapeViewportWidth = isCompactLandscapeTools ? getViewportRect().width : 0;
   const isTightCompactLandscapeTools = isCompactLandscapeTools && compactLandscapeViewportWidth <= 760;
-  const mobileCoachHubOverlayStyle = isIphoneLandscapeTools ? IPHONE_LANDSCAPE_TOOLS_OVERLAY_STYLE : MOBILE_COACH_HUB_OVERLAY_STYLE;
+  const mobileCoachHubOverlayStyle = MOBILE_COACH_HUB_OVERLAY_STYLE;
   const mobileCoachHubPanelStyle = isCompactLandscapeTools
     ? {
         ...MOBILE_COACH_HUB_PANEL_STYLE,
@@ -3078,7 +3067,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     pointerEvents: "auto",
     zIndex: 25,
   };
-  const mobileCoachHubBodyStyle = isIphoneLandscapeTools ? IPHONE_LANDSCAPE_TOOLS_BODY_STYLE : MOBILE_COACH_HUB_BODY_STYLE;
+  const mobileCoachHubBodyStyle = MOBILE_COACH_HUB_BODY_STYLE;
   const coachHubSectionTitleStyle = isCompactLandscapeTools
     ? {
         ...COACH_HUB_SECTION_TITLE_STYLE,
@@ -3707,7 +3696,6 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
               isCompactLandscapeTools ? (
             <div
               style={toolsPortalOverlayStyle}
-              className={isIphoneLandscapeTools ? "isIphoneLandscapeTools" : undefined}
               role="presentation"
               onPointerDown={handleToolsBackdropPointerDown}
             >
