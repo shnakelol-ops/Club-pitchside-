@@ -34,10 +34,7 @@ import {
 import {
   DEFAULT_PLAYBACK_SPEED_MULTIPLIER,
   DOUBLE_TAP_WINDOW_MS,
-  KIT_COLOR_NAMES,
   KIT_COLOR_NUMERIC,
-  MAX_PLAYBACK_SPEED_MULTIPLIER,
-  MIN_PLAYBACK_SPEED_MULTIPLIER,
   PLAYER_RADIUS,
   PLAYER_TOUCH_HIT_DIAMETER_PX,
   TACTICAL_INITIAL_TEAM_COUNTS,
@@ -332,7 +329,7 @@ function sanitizePhaseSnapshot(input: unknown): PhaseSnapshot | null {
 
 function sanitizeBoardDrawingSnapshot(
   input: unknown,
-  drawingMapper: Pick<ReturnType<typeof createWorldViewport>, "worldToNormalized">,
+  drawingMapper: Pick<WorldViewportMapper, "worldToNormalized">,
 ): TacticalBoardDrawingSnapshot | null {
   return sanitizeDrawingSnapshot(input, drawingMapper);
 }
@@ -1145,7 +1142,7 @@ export async function createTacticalPadLiteSurface(
 
   function setItemWorldPosition(
     item: Pick<TacticalSurfaceItem, "x" | "y" | "rotation" | "scale" | "graphic" | "selectionGraphic">,
-    itemMapper: ReturnType<typeof createWorldViewport>,
+    itemMapper: WorldViewportMapper,
   ): void {
     const worldPoint = itemMapper.normalizedToWorld({ x: item.x, y: item.y });
     item.graphic.position.set(worldPoint.x, worldPoint.y);
