@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
+import { OverlayPortalProvider } from "./overlay/OverlayPortalContext";
 import PitchFlowCoachShell from "./pages/PitchFlowCoachShell";
 import TacticalPadLiteClean from "./pages/TacticalPadLiteClean";
 
@@ -92,7 +93,9 @@ const RootComponent = pickRootComponent();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <RootComponent />
+    <OverlayPortalProvider>
+      <RootComponent />
+    </OverlayPortalProvider>
   </StrictMode>,
 );
 
