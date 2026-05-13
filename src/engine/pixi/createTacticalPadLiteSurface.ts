@@ -1,6 +1,5 @@
 import { Application, Container, Graphics, Text } from "pixi.js";
 
-import { createWorldViewport } from "./createWorldViewport";
 import {
   createPremiumPlayerToken,
   PREMIUM_TOKEN_DRAG_SCALE,
@@ -32,6 +31,40 @@ import {
   type TacticalDrawingSnapshot,
   type WhiteboardDrawTool,
 } from "../../features/quickboard/drawing/tacticalDrawingTypes";
+import {
+  DEFAULT_PLAYBACK_SPEED_MULTIPLIER,
+  DOUBLE_TAP_WINDOW_MS,
+  KIT_COLOR_NUMERIC,
+  PLAYER_RADIUS,
+  PLAYER_TOUCH_HIT_DIAMETER_PX,
+  TACTICAL_INITIAL_TEAM_COUNTS,
+  TACTICAL_ITEM_DRAG_THRESHOLD_PX,
+  TACTICAL_ITEM_HALF_SIZE,
+  TACTICAL_ITEM_TOUCH_HIT_DIAMETER_PX,
+  TACTICAL_PLAYER_VISUAL_SCALE,
+  WHITEBOARD_BLUE_START_X,
+  WHITEBOARD_DEFAULT_STROKE_COLOR,
+  WHITEBOARD_RED_START_X,
+  WORLD_SIZE,
+  type TacticalKitColor,
+} from "../tactical-surface/constants/tacticalSurfaceConstants";
+import {
+  clampNormalizedValue,
+  clampTeamCount,
+  clampWorld,
+  cloneSnapshot,
+  sanitizeKitColor,
+  sanitizeKitPattern,
+  sanitizeLabelMode,
+  sanitizePlaybackSpeedMultiplier,
+  type PhaseSnapshot,
+} from "../tactical-surface/utils/tacticalSurfacePureUtils";
+import { createViewportMapper, type WorldViewportMapper } from "../../renderer/pixi/surface/viewport-mapper";
+import {
+  createCircularHitArea,
+  resolveItemTouchRadiusWorld,
+  resolvePlayerTouchRadiusWorld,
+} from "../../interaction/hit-testing";
 
 export type TacticalKitPattern = MicroAthleteKitPattern;
 export type TacticalLabelMode = "number" | "initials";
@@ -147,63 +180,12 @@ type PhaseBallSnapshot = {
   x: number;
   y: number;
 };
-type PhaseSnapshot = {
-  players: NormalizedPoint[];
-  football: PhaseBallSnapshot[];
-};
-
-const WORLD_SIZE = { width: 160, height: 100 } as const;
-const PLAYER_RADIUS = 4.1;
-const PLAYER_TOUCH_HIT_DIAMETER_PX = 48;
-const TACTICAL_PLAYER_VISUAL_SCALE = 0.8;
-const TACTICAL_ITEM_HALF_SIZE = 2.2;
-const TACTICAL_ITEM_DRAG_THRESHOLD_PX = 5;
-const TACTICAL_ITEM_TOUCH_HIT_DIAMETER_PX = 46;
-const WHITEBOARD_DEFAULT_STROKE_COLOR = 0x111111;
-const WHITEBOARD_BLUE_START_X = 30;
-const WHITEBOARD_RED_START_X = 70;
-const DOUBLE_TAP_WINDOW_MS = 300;
 const PLAYER_ORIGIN_LINE_COLOR_BY_TEAM: Record<WhiteboardTokenColor, number> = {
   blue: 0x60a5fa,
   red: 0xf87171,
   yellow: 0xfacc15,
   black: 0x94a3b8,
 };
-const KIT_COLOR_NAMES = [
-  "navy",
-  "blue",
-  "sky",
-  "cyan",
-  "green",
-  "lime",
-  "yellow",
-  "orange",
-  "red",
-  "maroon",
-  "purple",
-  "pink",
-  "white",
-  "grey",
-  "black",
-] as const;
-const KIT_COLOR_NUMERIC: Record<(typeof KIT_COLOR_NAMES)[number], number> = {
-  navy: 0x1e3a8a,
-  blue: 0x2563eb,
-  sky: 0x0ea5e9,
-  cyan: 0x06b6d4,
-  green: 0x16a34a,
-  lime: 0x84cc16,
-  red: 0xdc2626,
-  orange: 0xf97316,
-  maroon: 0x7f1d1d,
-  purple: 0x7c3aed,
-  pink: 0xec4899,
-  yellow: 0xfacc15,
-  white: 0xffffff,
-  grey: 0x6b7280,
-  black: 0x111827,
-};
-type TacticalKitColor = (typeof KIT_COLOR_NAMES)[number];
 const GOALKEEPER_KIT_OVERRIDE_BY_TEAM: Record<
   "BLUE" | "RED",
   { baseColor: TacticalKitColor; patternColor: TacticalKitColor }
@@ -285,50 +267,6 @@ type TacticalBoardTeamKitsState = {
   B: TacticalTeamKitState;
 };
 
-const TACTICAL_INITIAL_TEAM_COUNTS = {
-  blue: 1,
-  red: 1,
-} as const;
-const DEFAULT_PLAYBACK_SPEED_MULTIPLIER = 1;
-const MIN_PLAYBACK_SPEED_MULTIPLIER = 0.25;
-const MAX_PLAYBACK_SPEED_MULTIPLIER = 1.5;
-
-function clampWorld(value: number, max: number): number {
-  if (!Number.isFinite(value)) return 0;
-  if (value < 0) return 0;
-  if (value > max) return max;
-  return value;
-}
-
-function clampTeamCount(value: number | undefined): number {
-  const parsed = Number.isFinite(value) ? Math.floor(value as number) : 1;
-  return Math.max(1, Math.min(15, parsed));
-}
-
-function sanitizePlaybackSpeedMultiplier(value: number): number {
-  if (!Number.isFinite(value)) return DEFAULT_PLAYBACK_SPEED_MULTIPLIER;
-  return Math.max(MIN_PLAYBACK_SPEED_MULTIPLIER, Math.min(MAX_PLAYBACK_SPEED_MULTIPLIER, value));
-}
-
-function sanitizeKitColor(value: string | undefined): TacticalKitColor | undefined {
-  if (typeof value !== "string") return undefined;
-  const normalized = value.trim().toLowerCase();
-  if ((KIT_COLOR_NAMES as readonly string[]).includes(normalized)) {
-    return normalized as TacticalKitColor;
-  }
-  return undefined;
-}
-
-function sanitizeKitPattern(value: TacticalKitPattern | undefined): TacticalKitPattern | undefined {
-  if (!value) return undefined;
-  if (value === "plain" || value === "hoops" || value === "slash" || value === "stripes") return value;
-  return undefined;
-}
-
-function sanitizeLabelMode(value: TacticalLabelMode | undefined): TacticalLabelMode | undefined {
-  if (value === "number" || value === "initials") return value;
-  return undefined;
-}
 
 export function sanitizeInitials(value: string | undefined): string | undefined {
   if (typeof value !== "string") return undefined;
@@ -391,7 +329,7 @@ function sanitizePhaseSnapshot(input: unknown): PhaseSnapshot | null {
 
 function sanitizeBoardDrawingSnapshot(
   input: unknown,
-  drawingMapper: Pick<ReturnType<typeof createWorldViewport>, "worldToNormalized">,
+  drawingMapper: Pick<WorldViewportMapper, "worldToNormalized">,
 ): TacticalBoardDrawingSnapshot | null {
   return sanitizeDrawingSnapshot(input, drawingMapper);
 }
@@ -593,20 +531,16 @@ function teamColor(
 
 function setPlayerTouchHitArea(
   player: TacticalPlayer,
-  mapper: ReturnType<typeof createWorldViewport>,
+  mapper: WorldViewportMapper,
 ): void {
-  const touchRadiusInWorld = (PLAYER_TOUCH_HIT_DIAMETER_PX * 0.5) / mapper.transform.scale;
-  const hitRadius = Math.max(PLAYER_RADIUS, touchRadiusInWorld);
-  const hitRadiusSquared = hitRadius * hitRadius;
-  player.token.hitArea = {
-    contains: (x: number, y: number) => x * x + y * y <= hitRadiusSquared,
-  };
+  const hitRadius = resolvePlayerTouchRadiusWorld(mapper, PLAYER_RADIUS, PLAYER_TOUCH_HIT_DIAMETER_PX);
+  player.token.hitArea = createCircularHitArea(hitRadius);
 }
 
 function setTokenWorldPositionForPoint(
   player: TacticalPlayer,
   point: NormalizedPoint,
-  mapper: ReturnType<typeof createWorldViewport>,
+  mapper: WorldViewportMapper,
 ): void {
   const world = mapper.normalizedToWorld(point);
   player.token.position.set(world.x, world.y);
@@ -614,20 +548,14 @@ function setTokenWorldPositionForPoint(
 
 function setItemTouchHitArea(
   item: Pick<TacticalSurfaceItem, "graphic">,
-  mapper: ReturnType<typeof createWorldViewport>,
+  mapper: WorldViewportMapper,
 ): void {
-  const touchRadiusInWorld = (TACTICAL_ITEM_TOUCH_HIT_DIAMETER_PX * 0.5) / mapper.transform.scale;
-  const itemVisualRadius = TACTICAL_ITEM_HALF_SIZE * 1.35;
-  const hitRadius = Math.max(itemVisualRadius, touchRadiusInWorld);
-  const hitRadiusSquared = hitRadius * hitRadius;
-  item.graphic.hitArea = {
-    contains: (x: number, y: number) => x * x + y * y <= hitRadiusSquared,
-  };
-}
-
-function clampNormalizedValue(value: number): number {
-  if (!Number.isFinite(value)) return NORMALIZED_MIN;
-  return Math.max(NORMALIZED_MIN, Math.min(NORMALIZED_MAX, value));
+  const hitRadius = resolveItemTouchRadiusWorld(
+    mapper,
+    TACTICAL_ITEM_HALF_SIZE,
+    TACTICAL_ITEM_TOUCH_HIT_DIAMETER_PX,
+  );
+  item.graphic.hitArea = createCircularHitArea(hitRadius);
 }
 
 function normalizeTacticalItem(item: TacticalItem): TacticalItem {
@@ -758,7 +686,7 @@ export async function createTacticalPadLiteSurface(
   };
   world.addChild(whiteboardInputLayer);
 
-  let mapper = createWorldViewport(
+  let mapper = createViewportMapper(
     WORLD_SIZE,
     { width: host.clientWidth || 800, height: host.clientHeight || 520 },
   );
@@ -1029,7 +957,7 @@ export async function createTacticalPadLiteSurface(
     app.renderer.resolution = Math.min(2, window.devicePixelRatio || 1);
     app.renderer.resize(width, height);
 
-    mapper = createWorldViewport(WORLD_SIZE, { width, height });
+    mapper = createViewportMapper(WORLD_SIZE, { width, height });
     world.scale.set(mapper.transform.scale, mapper.transform.scale);
     world.position.set(mapper.transform.offsetX, mapper.transform.offsetY);
 
@@ -1214,7 +1142,7 @@ export async function createTacticalPadLiteSurface(
 
   function setItemWorldPosition(
     item: Pick<TacticalSurfaceItem, "x" | "y" | "rotation" | "scale" | "graphic" | "selectionGraphic">,
-    itemMapper: ReturnType<typeof createWorldViewport>,
+    itemMapper: WorldViewportMapper,
   ): void {
     const worldPoint = itemMapper.normalizedToWorld({ x: item.x, y: item.y });
     item.graphic.position.set(worldPoint.x, worldPoint.y);
@@ -1536,13 +1464,6 @@ export async function createTacticalPadLiteSurface(
       player.tokenShadow.alpha =
         currentShadow + (player.dragShadowAlphaTarget - currentShadow) * blend;
     }
-  }
-
-  function cloneSnapshot(snapshot: PhaseSnapshot): PhaseSnapshot {
-    return {
-      players: snapshot.players.map((point) => ({ x: point.x, y: point.y })),
-      football: snapshot.football.map((point) => ({ id: point.id, x: point.x, y: point.y })),
-    };
   }
 
   function normalizePhaseForPlayerCount(snapshot: PhaseSnapshot, playerCount: number): PhaseSnapshot {
