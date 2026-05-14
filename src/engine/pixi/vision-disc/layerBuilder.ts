@@ -34,11 +34,14 @@ function resolveLabelFontSize(label: string, geometry: VisionDiscGeometry): numb
   const base = !isNumeric
     ? geometry.initialsFont
     : label.length >= 2 ? geometry.numberFontMulti : geometry.numberFontSingle;
-  // Keep small tokens legible without changing geometric contracts.
-  if (geometry.outerRadius <= 20) {
-    return base * (isNumeric ? 1.06 : 1.04);
+  if (!isNumeric) {
+    if (geometry.outerRadius <= 20) return base * 1.04;
+    return base;
   }
-  return base;
+  if (geometry.outerRadius <= 14) return base * 1.18;
+  if (geometry.outerRadius <= 20) return base * 1.15;
+  if (geometry.outerRadius <= 28) return base * 1.12;
+  return base * 1.08;
 }
 
 function drawGlyph(graphics: Graphics, geometry: VisionDiscGeometry, color: number, alpha: number): void {
@@ -123,8 +126,8 @@ export function buildVisionDiscLayers(
     layers.disc
       .circle(0, 0, geometry.innerRadius)
       .fill(gradient)
-      .ellipse(0, -geometry.innerRadius * 0.28, geometry.innerRadius * 0.68, geometry.innerRadius * 0.11)
-      .fill({ color: style.colors.discHighlightColor, alpha: style.alpha.discHighlightColor * 0.2 })
+      .ellipse(0, -geometry.innerRadius * 0.36, geometry.innerRadius * 0.62, geometry.innerRadius * 0.08)
+      .fill({ color: style.colors.discHighlightColor, alpha: style.alpha.discHighlightColor * 0.12 })
       .circle(0, 0, geometry.innerRadius)
       .stroke({
         color: style.colors.discEdgeColor,
@@ -136,8 +139,8 @@ export function buildVisionDiscLayers(
     layers.disc
       .circle(0, 0, geometry.innerRadius)
       .fill({ color: style.colors.discBaseColor, alpha: style.alpha.discBaseColor })
-      .ellipse(0, -geometry.innerRadius * 0.27, geometry.innerRadius * 0.66, geometry.innerRadius * 0.12)
-      .fill({ color: style.colors.discHighlightColor, alpha: style.alpha.discHighlightColor * 0.24 })
+      .ellipse(0, -geometry.innerRadius * 0.35, geometry.innerRadius * 0.6, geometry.innerRadius * 0.085)
+      .fill({ color: style.colors.discHighlightColor, alpha: style.alpha.discHighlightColor * 0.12 })
       .circle(0, 0, geometry.innerRadius)
       .stroke({
         color: style.colors.discEdgeColor,
@@ -164,29 +167,30 @@ export function buildVisionDiscLayers(
   const labelY = geometry.innerRadius * 0.4 + compactLabelNudge;
   layers.labelPlate
     .roundRect(
-      -geometry.innerRadius * 0.9,
-      -geometry.innerRadius * 0.44,
-      geometry.innerRadius * 1.8,
-      geometry.innerRadius * 0.88,
-      geometry.innerRadius * 0.3,
+      -geometry.innerRadius * 0.82,
+      -geometry.innerRadius * 0.4,
+      geometry.innerRadius * 1.64,
+      geometry.innerRadius * 0.8,
+      geometry.innerRadius * 0.24,
     )
     .fill({
       color: style.colors.labelPlateColor,
-      alpha: style.alpha.labelPlateColor * 0.9,
+      alpha: style.alpha.labelPlateColor * 0.86,
     });
   layers.labelPlate.position.y = labelY;
   token.addChild(layers.labelPlate);
 
   const label = resolveLabel(input);
+  const isNumericLabel = /^\d+$/.test(label);
   const labelFontSize = resolveLabelFontSize(label, geometry);
   const labelStrokeWidth = Math.max(
-    0.9,
-    geometry.outerRadius * 0.082 * (geometry.outerRadius <= 20 ? 1.1 : 1),
+    1,
+    geometry.outerRadius * 0.09 * (geometry.outerRadius <= 20 ? 1.14 : 1.02),
   );
   layers.labelText = new Text({
     text: label,
     style: {
-      fill: style.colors.labelColor,
+      fill: isNumericLabel ? 0xffffff : style.colors.labelColor,
       fontSize: labelFontSize,
       fontWeight: "900",
       fontFamily: "\"Barlow Condensed\", \"Inter Tight\", Inter, system-ui, sans-serif",
@@ -194,9 +198,9 @@ export function buildVisionDiscLayers(
       stroke: {
         color: style.colors.labelStrokeColor,
         width: labelStrokeWidth,
-        join: "round",
+        join: "miter",
       },
-      letterSpacing: label.length > 1 ? 0 : 0.1,
+      letterSpacing: isNumericLabel ? 0 : 0.08,
     },
   });
   layers.labelText.anchor.set(0.5);

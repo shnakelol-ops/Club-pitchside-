@@ -180,6 +180,11 @@ function HtmlVisionDiscToken(props: {
   const diameter = size * 2;
   const innerDiameter = diameter * 0.84;
   const ringThickness = diameter * 0.08;
+  const isNumeric = /^\d+$/.test(label);
+  const numericScale = size <= 14 ? 1.18 : size <= 20 ? 1.15 : size <= 28 ? 1.12 : 1.08;
+  const labelSize = isNumeric
+    ? Math.max(9, size * (label.length <= 1 ? 0.56 : 0.48) * numericScale)
+    : Math.max(9, size * 0.36 * 1.04);
   return (
     <div
       style={{
@@ -221,13 +226,13 @@ function HtmlVisionDiscToken(props: {
         <div
           style={{
             position: "absolute",
-            left: "15%",
-            top: "12%",
-            width: "70%",
-            height: "26%",
+            left: "19%",
+            top: "8%",
+            width: "62%",
+            height: "16%",
             borderRadius: "999px",
             background: "var(--vd-disc-highlight-color)",
-            opacity: 0.64,
+            opacity: 0.12,
           }}
         />
       </div>
@@ -262,21 +267,21 @@ function HtmlVisionDiscToken(props: {
           left: "50%",
           top: `${size * 1.2}px`,
           transform: "translateX(-50%)",
-          minWidth: `${size * 1.14}px`,
-          padding: `0 ${Math.max(2, size * 0.08)}px`,
-          height: `${size * 0.52}px`,
-          borderRadius: `${size * 0.18}px`,
+          minWidth: `${size * 1.02}px`,
+          padding: `0 ${Math.max(2, size * 0.05)}px`,
+          height: `${size * 0.46}px`,
+          borderRadius: `${size * 0.14}px`,
           display: "grid",
           placeItems: "center",
           background: "var(--vd-label-plate-color)",
-          color: "var(--vd-label-color)",
+          color: "#ffffff",
           fontWeight: 900,
           fontFamily: "\"Barlow Condensed\", \"Inter Tight\", Inter, system-ui, sans-serif",
-          fontSize: `${Math.max(9, size * (label.length <= 1 ? 0.56 : 0.48))}px`,
+          fontSize: `${labelSize}px`,
           lineHeight: 1,
-          letterSpacing: "0.2px",
+          letterSpacing: isNumeric ? "0px" : "0.08px",
           textShadow:
-            "-1px 0 var(--vd-label-stroke-color), 1px 0 var(--vd-label-stroke-color), 0 -1px var(--vd-label-stroke-color), 0 1px var(--vd-label-stroke-color)",
+            "-1px 0 var(--vd-label-stroke-color), 1px 0 var(--vd-label-stroke-color), 0 -1px var(--vd-label-stroke-color), 0 1px var(--vd-label-stroke-color), 0 1px 0 rgba(2,6,23,0.24)",
         }}
       >
         {label}

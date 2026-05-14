@@ -63,13 +63,6 @@ function colorToRgba(color: number, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${Math.max(0, Math.min(1, alpha))})`;
 }
 
-function luminance(color: number): number {
-  const r = (color >> 16) & 0xff;
-  const g = (color >> 8) & 0xff;
-  const b = color & 0xff;
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
-
 function mapKitPatternToVisionPattern(pattern: MicroAthleteKitPattern): VisionDiscPattern {
   if (pattern === "plain") return "solid";
   return pattern;
@@ -91,8 +84,8 @@ function buildVisionDiscTokens({
   const discBaseColor = mixColor(baseColor, 0xffffff, 0.05);
   const discHighlightColor = mixColor(baseColor, 0xffffff, 0.16);
   const discEdgeColor = mixColor(baseColor, 0x0f172a, 0.14);
-  const labelColor = luminance(discBaseColor) > 150 ? 0x0f172a : 0xf8fafc;
-  const labelStrokeColor = luminance(labelColor) > 140 ? 0x0f172a : 0xf8fafc;
+  const labelColor = 0xffffff;
+  const labelStrokeColor = mixColor(discBaseColor, 0x020617, 0.76);
   const haloColor = mixColor(accentColor, 0xf8fafc, 0.12);
   const shadowColor = mixColor(ringColor, 0x020617, 0.52);
 
