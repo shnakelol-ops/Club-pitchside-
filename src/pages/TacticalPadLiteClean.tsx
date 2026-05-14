@@ -130,7 +130,7 @@ const KIT_COLOR_CSS: Record<(typeof KIT_COLOR_CHOICES)[number], string> = {
   black: "#111827",
 };
 const KIT_PATTERN_CHOICES: TacticalKitPattern[] = ["plain", "hoops", "stripes", "slash"];
-const KIT_PATTERN_LABEL: Record<TacticalKitPattern, string> = {
+const KIT_PATTERN_LABEL: Record<Exclude<TacticalKitPattern, "chestDash" | "gradient">, string> = {
   plain: "Plain",
   hoops: "Hoops",
   stripes: "Stripes",
