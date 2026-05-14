@@ -51,16 +51,17 @@ export function drawVisionDiscPattern(
   }
 
   if (pattern === "stripes") {
-    const x1 = -radius * 0.3;
-    const x2 = radius * 0.3;
-    const h1 = halfSpanAtOffset(radius, x1);
-    const h2 = halfSpanAtOffset(radius, x2);
-    graphics
-      .moveTo(x1, -h1)
-      .lineTo(x1, h1)
-      .moveTo(x2, -h2)
-      .lineTo(x2, h2);
-    strokePattern(graphics, color, alpha, width);
+    const stripeWidth = Math.max(1, width * 1.2);
+    const stripeOffsets = geometry.outerRadius <= 20
+      ? [0]
+      : [-radius * 0.38, radius * 0.38];
+    for (const stripeX of stripeOffsets) {
+      const halfSpan = halfSpanAtOffset(radius, stripeX);
+      graphics
+        .moveTo(stripeX, -halfSpan)
+        .lineTo(stripeX, halfSpan);
+    }
+    strokePattern(graphics, color, alpha, stripeWidth);
     return;
   }
 

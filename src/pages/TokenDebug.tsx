@@ -111,17 +111,18 @@ function patternOverlay(pattern: VisionDiscPattern, size: number): ReactElement 
     );
   }
   if (pattern === "stripes") {
+    const stripeOffsets = size <= 20 ? [0] : [-0.38, 0.38];
     return (
       <>
-        {[-0.3, 0.3].map((offset) => (
+        {stripeOffsets.map((offset) => (
           <div
             key={`stripe-${offset}`}
             style={{
               position: "absolute",
               top: `${size * 0.21}px`,
               bottom: `${size * 0.21}px`,
-              left: `${size + size * offset - size * 0.06}px`,
-              width: `${size * 0.12}px`,
+              left: `${size + size * offset - size * 0.072}px`,
+              width: `${size * 0.144}px`,
               borderRadius: "999px",
               background: "var(--vd-pattern-color)",
               opacity: 0.9,
