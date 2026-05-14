@@ -1,3 +1,4 @@
+import "../features/player-performance-tracker/playerPerformanceTracker.css";
 import { useEffect, useMemo, useState } from "react";
 import SetupScreen from "../features/player-performance-tracker/components/SetupScreen";
 import TrackerScreen from "../features/player-performance-tracker/components/TrackerScreen";
@@ -25,9 +26,9 @@ export default function PlayerPerformanceTracker(){
    onStart={()=>setState((s)=>({...s,hasStarted:true,activeTab:"tracker"}))}
   />;
 
-  return <div className="min-h-dvh bg-[#07131c] text-white">
-    <div className="mx-auto w-full max-w-md bg-[#0b1824] pb-24">
-      <header className="border-b border-slate-800/70 px-4 py-4">
+  return <div className="ppt-shell">
+    <div className="ppt-container">
+      <header className="ppt-header">
         <h1 className="text-xl font-semibold">Vision Training</h1>
         <p className="text-sm text-slate-300">Player Performance Tracker</p>
       </header>
@@ -42,14 +43,13 @@ export default function PlayerPerformanceTracker(){
       lastDeleted={state.lastDeleted}
     /> : <RatingsScreen players={state.players} logs={state.logs} ratings={ratings} />}
     </div>
-    <nav className="fixed inset-x-0 bottom-0 border-t border-slate-800 bg-[#0d1d2d]/95 backdrop-blur">
-      <div className="mx-auto grid w-full max-w-md grid-cols-2 gap-2 px-4 py-3">
+    <nav className="ppt-nav">
+      <div className="ppt-nav-inner">
         <button
           type="button"
           onClick={()=>setState((s)=>({...s,activeTab:'tracker'}))}
           className={[
-            "rounded-xl px-4 py-2 text-sm font-semibold",
-            state.activeTab==='tracker' ? "bg-slate-100 text-slate-900" : "bg-slate-800/60 text-slate-300",
+            "ppt-btn",state.activeTab==='tracker' ? "active" : "inactive",
           ].join(" ")}
         >
           Tracker
@@ -58,8 +58,7 @@ export default function PlayerPerformanceTracker(){
           type="button"
           onClick={()=>setState((s)=>({...s,activeTab:'ratings'}))}
           className={[
-            "rounded-xl px-4 py-2 text-sm font-semibold",
-            state.activeTab==='ratings' ? "bg-slate-100 text-slate-900" : "bg-slate-800/60 text-slate-300",
+            "ppt-btn",state.activeTab==='ratings' ? "active" : "inactive",
           ].join(" ")}
         >
           Ratings
