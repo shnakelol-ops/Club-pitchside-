@@ -4,7 +4,7 @@ import { type TrainingEventDef, type TrainingEventKey } from "../model/trainingT
 type Props = { activeEventKey: TrainingEventKey | null; onSelectEvent: (eventKey: TrainingEventKey) => void; showShots: boolean; onToggleShots: () => void; };
 const topRow: TrainingEventKey[] = ["goal", "point", "two-pt"];
 const pointsClass=(p:number)=>p>0?"pos":p<0?"neg":"";
-const tone=(e:TrainingEventDef)=>e.key.startsWith("shot-")?"ppt-shotneg":e.color==="blue"?"ppt-blue":e.color==="orange"?"ppt-orange":e.color==="purple"?"ppt-purple":e.color==="green"?"ppt-green":"ppt-red";
+const tone=(e:TrainingEventDef)=>e.key==="repeated-mistake"?"ppt-red-heavy":e.key.startsWith("shot-")?"ppt-shotneg":e.color==="blue"?"ppt-blue":e.color==="orange"?"ppt-orange":e.color==="purple"?"ppt-purple":e.color==="green"?"ppt-green":"ppt-red";
 const label=(e:TrainingEventDef)=>e.key.startsWith("shot-")?e.label.replace("Shot — ",""):e.label;
 const EBtn=({event,active,onClick}:{event:TrainingEventDef;active:boolean;onClick:()=>void})=><button type="button" onClick={onClick} className={`ppt-event ${tone(event)} ${active?"active":""}`}><div className="ppt-event-label small">{label(event)}</div><div className={`ppt-points ${pointsClass(event.points)}`}>{event.points>0?`+${event.points}`:event.points}</div></button>;
 

@@ -1,8 +1,8 @@
 import { ratingColor } from "../model/trainingScoring";
 import { type EventCategory, type TrainingLogEntry, type TrainingPlayer } from "../model/trainingTypes";
 
-const cats: EventCategory[] = ["score","shots","wides","turnovers","kickouts","frees","decisions","passes"];
-const labels: Record<EventCategory,string> = { score:"Score", shots:"Shots", wides:"Wides", turnovers:"TO", kickouts:"KO", frees:"FR", decisions:"Dec", passes:"Pass" };
+const cats: EventCategory[] = ["score","shots","wides","turnovers","kickouts","frees","decisions","passes","workrate"];
+const labels: Record<EventCategory,string> = { score:"Score", shots:"Shots", wides:"Wides", turnovers:"TO", kickouts:"KO", frees:"FR", decisions:"Dec", passes:"Pass", workrate:"WR" };
 
 export default function RatingsScreen({ players, logs, ratings }: {players: TrainingPlayer[]; logs: TrainingLogEntry[]; ratings: Record<string, number>}) {
   const sorted = [...players].sort((a,b)=>(ratings[b.id]??0)-(ratings[a.id]??0));
