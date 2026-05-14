@@ -17,8 +17,8 @@ export type TacticalPlayerKitSnapshotStorage = {
   kitBaseColor?: string;
   kitPattern?: QuickBoardKitPattern;
   kitPatternColor?: string;
-  ring?: "auto" | "none" | "thin" | "strong";
-  numberColor?: "auto" | "light" | "dark" | "white" | "black" | "team";
+  ring?: string;
+  numberColor?: string;
   glowOnSelect?: boolean;
   labelMode?: "number" | "initials";
   initials?: string;
