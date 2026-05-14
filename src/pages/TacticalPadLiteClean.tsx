@@ -129,8 +129,8 @@ const KIT_COLOR_CSS: Record<(typeof KIT_COLOR_CHOICES)[number], string> = {
   grey: "#6b7280",
   black: "#111827",
 };
-const KIT_PATTERN_CHOICES: TacticalKitPattern[] = ["plain", "hoops", "stripes", "slash"];
-const KIT_PATTERN_LABEL: Record<TacticalKitPattern, string> = {
+const KIT_PATTERN_CHOICES = ["plain", "hoops", "stripes", "slash"] as const satisfies ReadonlyArray<TacticalKitPattern>;
+const KIT_PATTERN_LABEL: Record<(typeof KIT_PATTERN_CHOICES)[number], string> = {
   plain: "Plain",
   hoops: "Hoops",
   stripes: "Stripes",

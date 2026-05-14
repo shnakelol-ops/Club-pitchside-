@@ -10,7 +10,14 @@ export type MicroAthleteStyle = {
 };
 
 export type MicroAthleteTeamColor = "blue" | "red" | "green" | "yellow" | "black" | "white";
-export type MicroAthleteKitPattern = "plain" | "hoops" | "slash" | "stripes";
+export type MicroAthleteKitPattern =
+  | "plain"
+  | "solid"
+  | "gradient"
+  | "hoops"
+  | "slash"
+  | "stripes"
+  | "chestDash";
 
 const DEFAULT_STYLE_BY_TEAM: Record<MicroAthleteTeamColor, MicroAthleteStyle> = {
   blue: {
@@ -94,7 +101,7 @@ function drawPatternAccent(
   accentColor: number,
   innerRadius: number,
 ): void {
-  if (pattern === "plain") return;
+  if (pattern === "plain" || pattern === "solid" || pattern === "gradient") return;
   const clippedInnerRadius = Math.max(0, innerRadius - 0.12);
   const accentWidth = 0.38;
   if (pattern === "hoops") {
@@ -118,6 +125,11 @@ function drawPatternAccent(
     const dx = Math.cos(slashAngle) * clippedInnerRadius;
     const dy = Math.sin(slashAngle) * clippedInnerRadius;
     target.moveTo(-dx, -dy).lineTo(dx, dy);
+  } else if (pattern === "chestDash") {
+    target.moveTo(-clippedInnerRadius * 0.66, clippedInnerRadius * 0.08).lineTo(
+      clippedInnerRadius * 0.66,
+      clippedInnerRadius * 0.08,
+    );
   }
   target.stroke({
     color: accentColor,

@@ -10,7 +10,14 @@ export type MicroAthleteStyle = {
 };
 
 type MicroAthleteTeamColor = "blue" | "red" | "green" | "yellow" | "black" | "white";
-export type MicroAthleteKitPattern = "plain" | "hoops" | "slash" | "stripes";
+export type MicroAthleteKitPattern =
+  | "plain"
+  | "solid"
+  | "gradient"
+  | "hoops"
+  | "slash"
+  | "stripes"
+  | "chestDash";
 
 const DEFAULT_STYLE_BY_TEAM: Record<MicroAthleteTeamColor, MicroAthleteStyle> = {
   blue: {
@@ -130,7 +137,7 @@ function drawTorsoPath(target: Graphics): void {
 }
 
 function drawJerseyPattern(body: Graphics, pattern: MicroAthleteKitPattern, color: number): void {
-  if (pattern === "plain") return;
+  if (pattern === "plain" || pattern === "solid" || pattern === "gradient") return;
   const alpha = 0.54;
   const top = TORSO_TOP_Y + 0.22;
   const bottom = TORSO_BOTTOM_Y - 0.12;
@@ -175,6 +182,19 @@ function drawJerseyPattern(body: Graphics, pattern: MicroAthleteKitPattern, colo
     }
     return;
   }
+  if (pattern === "chestDash") {
+    body
+      .roundRect(
+        TORSO_TOP_LEFT_X + 0.12,
+        (TORSO_TOP_Y + TORSO_BOTTOM_Y) * 0.5 - 0.34,
+        TORSO_TOP_RIGHT_X - TORSO_TOP_LEFT_X - 0.24,
+        0.68,
+        0.22,
+      )
+      .fill({ color, alpha: alpha + 0.08 });
+    return;
+  }
+
   body
     .poly([
       TORSO_TOP_LEFT_X + 0.26,
@@ -206,7 +226,7 @@ function drawBadgePattern(
   color: number,
   radius: number,
 ): void {
-  if (pattern === "plain") return;
+  if (pattern === "plain" || pattern === "solid" || pattern === "gradient") return;
   const alpha = 0.62;
 
   if (pattern === "hoops") {
@@ -250,6 +270,13 @@ function drawBadgePattern(
         ])
         .fill({ color, alpha });
     }
+    return;
+  }
+
+  if (pattern === "chestDash") {
+    target
+      .roundRect(-radius * 0.86, -radius * 0.2, radius * 1.72, radius * 0.42, radius * 0.18)
+      .fill({ color, alpha: alpha + 0.08 });
     return;
   }
 

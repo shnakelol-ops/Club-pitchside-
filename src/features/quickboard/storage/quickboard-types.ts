@@ -2,6 +2,27 @@ export const QUICKBOARD_STORAGE_KEY = "pitchflow_quickboard_boards_v1";
 const MAX_BOARD_NAME_LENGTH = 48;
 export const MAX_QUICKBOARD_SAVES = 100;
 
+export const QUICKBOARD_KIT_PATTERN_WHITELIST = [
+  "plain",
+  "solid",
+  "hoops",
+  "stripes",
+  "slash",
+  "chestDash",
+  "gradient",
+] as const;
+
+export type QuickBoardKitPattern = (typeof QUICKBOARD_KIT_PATTERN_WHITELIST)[number];
+
+export function sanitizeQuickBoardKitPattern(value: unknown): QuickBoardKitPattern | undefined {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim();
+  if ((QUICKBOARD_KIT_PATTERN_WHITELIST as readonly string[]).includes(normalized)) {
+    return normalized as QuickBoardKitPattern;
+  }
+  return undefined;
+}
+
 export type QuickBoardBoardState = {
   players: unknown[];
   items: unknown[];
