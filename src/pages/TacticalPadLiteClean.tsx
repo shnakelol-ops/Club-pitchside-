@@ -129,19 +129,18 @@ const KIT_COLOR_CSS: Record<(typeof KIT_COLOR_CHOICES)[number], string> = {
   grey: "#6b7280",
   black: "#111827",
 };
-const KIT_PATTERN_CHOICES: TacticalKitPattern[] = ["plain", "hoops", "stripes", "slash"];
+const KIT_PATTERN_CHOICES: TacticalKitPattern[] = ["plain", "hoops", "stripes", "slash", "chestDash"];
 const KIT_PATTERN_LABEL: Record<TacticalKitPattern, string> = {
   plain: "Plain",
   hoops: "Hoops",
   stripes: "Stripes",
   slash: "Slash",
+  chestDash: "Chest Dash",
 };
 const LABEL_MODE_CHOICES: TacticalLabelMode[] = ["number", "initials"];
 const TOKEN_STYLE_CHOICES: ReadonlyArray<{ value: TacticalPlayerTokenStyle; label: string }> = [
-  { value: "vision-v3", label: "Vision V3" },
-  { value: "classic", label: "Classic" },
-  { value: "premium", label: "Glow" },
-  { value: "torso", label: "Torso" },
+  { value: "pixi", label: "Pixi" },
+  { value: "phosphor", label: "Phosphor" },
 ];
 type KitEditorTab = "base" | "pattern" | "label";
 const KIT_EDITOR_TABS: ReadonlyArray<{ id: KitEditorTab; label: string }> = [
@@ -1897,7 +1896,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const [items, setItems] = useState<TacticalItem[]>([]);
   const [itemMode, setItemMode] = useState<ItemMode>("locked");
   const [phaseCount, setPhaseCount] = useState(0);
-  const [tacticalTokenStyle, setTacticalTokenStyle] = useState<TacticalPlayerTokenStyle>("vision-v3");
+  const [tacticalTokenStyle, setTacticalTokenStyle] = useState<TacticalPlayerTokenStyle>("pixi");
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [playbackSpeedMultiplier, setPlaybackSpeedMultiplier] = useState<number>(DEFAULT_PLAYBACK_SPEED_MULTIPLIER);
