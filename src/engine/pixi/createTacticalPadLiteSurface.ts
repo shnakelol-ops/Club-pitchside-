@@ -670,6 +670,12 @@ export async function createTacticalPadLiteSurface(
   host: HTMLElement,
   options: TacticalPadLiteSurfaceOptions = {},
 ): Promise<TacticalPadLiteSurface> {
+  const tokenLodBucketForScale = (scale: number): "tiny" | "small" | "regular" => {
+    if (scale < 4.4) return "tiny";
+    if (scale < 5.8) return "small";
+    return "regular";
+  };
+
   const app = new Application();
   await app.init({
     width: host.clientWidth || 800,
@@ -762,6 +768,7 @@ export async function createTacticalPadLiteSurface(
     WORLD_SIZE,
     { width: host.clientWidth || 800, height: host.clientHeight || 520 },
   );
+  let tacticalTokenLodBucket = tokenLodBucketForScale(mapper.transform.scale);
 
   let tacticalTeamColors: TacticalPadLiteSurfaceOptions["whiteboardTeamColors"] = {
     blue: options.whiteboardTeamColors?.blue ?? "blue",
@@ -873,6 +880,12 @@ export async function createTacticalPadLiteSurface(
     return safePlayerNumberLabel(player.number);
   }
 
+  function isCaptainToken(player: Pick<TacticalPlayer, "initials" | "number">): boolean {
+    if (player.number === 1) return false;
+    const initials = sanitizeInitials(player.initials);
+    return initials === "C";
+  }
+
   function createTokenPackForPlayer(player: Pick<TacticalPlayer, "number" | "team" | "teamColor" | "kitBaseColor" | "kitPattern" | "kitPatternColor" | "labelMode" | "initials">): {
     token: Container;
     shadow: Graphics;
@@ -888,17 +901,22 @@ export async function createTacticalPadLiteSurface(
     const pattern = getEffectiveKitPattern(player);
     const patternColor = getEffectiveKitPatternColor(player);
     const label = resolvePlayerLabel(player);
+    const goalkeeper = player.number === 1;
+    const captain = isCaptainToken(player);
     const renderToken = resolvePlayerTokenRenderer(tacticalTokenStyle);
     return renderToken({
       label,
       number: player.number,
+      captain,
       teamColor: player.teamColor,
       radius: PLAYER_RADIUS * TACTICAL_PLAYER_VISUAL_SCALE,
       scale: (PLAYER_RADIUS / 4.1) * TACTICAL_PLAYER_VISUAL_SCALE,
+      lodScale: mapper.transform.scale,
       style: {
         primaryColor: KIT_COLOR_NUMERIC[baseColor],
-        secondaryColor: KIT_COLOR_NUMERIC[baseColor],
+        secondaryColor: KIT_COLOR_NUMERIC[patternColor],
         badgeColor: KIT_COLOR_NUMERIC[baseColor],
+        goalkeeper,
       },
       kitPattern: pattern,
       kitPatternColor: KIT_COLOR_NUMERIC[patternColor],
@@ -1030,6 +1048,10 @@ export async function createTacticalPadLiteSurface(
     app.renderer.resize(width, height);
 
     mapper = createWorldViewport(WORLD_SIZE, { width, height });
+    const nextTokenLodBucket = tokenLodBucketForScale(mapper.transform.scale);
+    const shouldRerenderTokensForLod =
+      surfaceVariant === "tactical" && nextTokenLodBucket !== tacticalTokenLodBucket;
+    tacticalTokenLodBucket = nextTokenLodBucket;
     world.scale.set(mapper.transform.scale, mapper.transform.scale);
     world.position.set(mapper.transform.offsetX, mapper.transform.offsetY);
 
@@ -1043,6 +1065,9 @@ export async function createTacticalPadLiteSurface(
     renderTacticalItems();
     renderAllWhiteboardDrawings();
     renderPlayerOriginGraphic();
+    if (shouldRerenderTokensForLod) {
+      rerenderAllTacticalPlayers();
+    }
   }
 
   function isItemInteractionEnabled(): boolean {
