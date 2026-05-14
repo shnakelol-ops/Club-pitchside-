@@ -25,8 +25,12 @@ export default function PlayerPerformanceTracker(){
    onStart={()=>setState((s)=>({...s,hasStarted:true,activeTab:"tracker"}))}
   />;
 
-  return <div style={{background:'#0b1118',color:'#eaf1f8',minHeight:'100dvh',padding:12}}>
-    <h1 style={{margin:0}}>Vision Training</h1><div>Player Performance Tracker</div>
+  return <div className="min-h-dvh bg-[#07131c] text-white">
+    <div className="mx-auto w-full max-w-md bg-[#0b1824] pb-24">
+      <header className="border-b border-slate-800/70 px-4 py-4">
+        <h1 className="text-xl font-semibold">Vision Training</h1>
+        <p className="text-sm text-slate-300">Player Performance Tracker</p>
+      </header>
     {state.activeTab==='tracker' ? <TrackerScreen players={state.players} logs={state.logs} elapsedSeconds={state.elapsedSeconds} isRunning={state.isRunning} period={state.period} activeEventKey={state.activeEventKey}
       onToggleTimer={()=>setState((s)=>({...s,isRunning:!s.isRunning}))}
       onReset={()=>{if(window.confirm('Reset session timer and logs?')) setState((s)=>({...s,elapsedSeconds:0,logs:[],isRunning:false,lastDeleted:null}));}}
@@ -37,6 +41,30 @@ export default function PlayerPerformanceTracker(){
       onUndo={()=>setState((s)=>s.lastDeleted?{...s,logs:[...s.logs,s.lastDeleted],lastDeleted:null}:s)}
       lastDeleted={state.lastDeleted}
     /> : <RatingsScreen players={state.players} logs={state.logs} ratings={ratings} />}
-    <div style={{position:'fixed',bottom:0,left:0,right:0,display:'grid',gridTemplateColumns:'1fr 1fr'}}><button onClick={()=>setState((s)=>({...s,activeTab:'tracker'}))}>Tracker</button><button onClick={()=>setState((s)=>({...s,activeTab:'ratings'}))}>Ratings</button></div>
+    </div>
+    <nav className="fixed inset-x-0 bottom-0 border-t border-slate-800 bg-[#0d1d2d]/95 backdrop-blur">
+      <div className="mx-auto grid w-full max-w-md grid-cols-2 gap-2 px-4 py-3">
+        <button
+          type="button"
+          onClick={()=>setState((s)=>({...s,activeTab:'tracker'}))}
+          className={[
+            "rounded-xl px-4 py-2 text-sm font-semibold",
+            state.activeTab==='tracker' ? "bg-slate-100 text-slate-900" : "bg-slate-800/60 text-slate-300",
+          ].join(" ")}
+        >
+          Tracker
+        </button>
+        <button
+          type="button"
+          onClick={()=>setState((s)=>({...s,activeTab:'ratings'}))}
+          className={[
+            "rounded-xl px-4 py-2 text-sm font-semibold",
+            state.activeTab==='ratings' ? "bg-slate-100 text-slate-900" : "bg-slate-800/60 text-slate-300",
+          ].join(" ")}
+        >
+          Ratings
+        </button>
+      </div>
+    </nav>
   </div>;
 }

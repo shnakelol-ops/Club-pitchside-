@@ -21,16 +21,16 @@ function toneClass(event: TrainingEventDef): string {
 
   switch (event.color) {
     case "blue":
-      return "bg-blue-950/55 border-blue-800/60 text-blue-50";
+      return "bg-blue-600 border-blue-400 text-white";
     case "orange":
-      return "bg-orange-950/55 border-orange-800/60 text-orange-50";
+      return "bg-orange-600 border-orange-400 text-white";
     case "purple":
-      return "bg-purple-950/55 border-purple-800/60 text-purple-50";
+      return "bg-purple-600 border-purple-400 text-white";
     case "green":
-      return "bg-emerald-950/55 border-emerald-800/60 text-emerald-50";
+      return "bg-emerald-700 border-emerald-500 text-white";
     case "darkred":
     default:
-      return "bg-red-950/65 border-red-800/60 text-red-50";
+      return "bg-red-700 border-red-500 text-white";
   }
 }
 
@@ -48,13 +48,13 @@ function EventButton({ event, active, onClick }: { event: TrainingEventDef; acti
       type="button"
       onClick={onClick}
       className={[
-        "rounded-xl border px-2 py-3 text-left min-h-[70px] transition",
+        "rounded-xl border px-2 py-3 text-left min-h-[82px] transition shadow-lg",
         toneClass(event),
         active ? `ring-2 ${activeRingClass(event)}` : "",
       ].join(" ")}
     >
-      <div className="text-sm font-semibold leading-tight">{displayLabel(event)}</div>
-      <div className={`mt-1 text-xs font-semibold ${pointsClass(event.points)}`}>
+      <div className="text-lg font-bold uppercase leading-tight">{displayLabel(event)}</div>
+      <div className={`mt-1 text-sm font-bold ${pointsClass(event.points)}`}>
         {event.points > 0 ? `+${event.points}` : event.points}
       </div>
     </button>
@@ -79,12 +79,12 @@ export default function EventGrid({ activeEventKey, onSelectEvent, showShots, on
           onClick={onToggleShots}
           className={[
             "rounded-xl border px-2 py-3 text-left min-h-[70px] transition",
-            "bg-slate-900 border-slate-700 text-slate-100",
+            "bg-blue-600 border-blue-400 text-white",
             shotActive ? "ring-2 ring-cyan-300 shadow-[0_0_18px_rgba(34,211,238,0.45)]" : "",
           ].join(" ")}
         >
-          <div className="text-sm font-semibold">Shot</div>
-          <div className="mt-1 text-xs text-slate-300">Outcomes {showShots ? "▲" : "▼"}</div>
+          <div className="text-lg font-bold uppercase">Shot</div>
+          <div className="mt-1 text-sm font-bold text-slate-100">Outcomes {showShots ? "▲" : "▼"}</div>
         </button>
       </div>
 
