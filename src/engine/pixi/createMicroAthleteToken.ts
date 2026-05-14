@@ -10,7 +10,7 @@ export type MicroAthleteStyle = {
 };
 
 export type MicroAthleteTeamColor = "blue" | "red" | "green" | "yellow" | "black" | "white";
-export type MicroAthleteKitPattern = "plain" | "hoops" | "slash" | "stripes";
+export type MicroAthleteKitPattern = "plain" | "hoops" | "slash" | "stripes" | "chestDash" | "gradient";
 
 const DEFAULT_STYLE_BY_TEAM: Record<MicroAthleteTeamColor, MicroAthleteStyle> = {
   blue: {
