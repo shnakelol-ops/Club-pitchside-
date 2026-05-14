@@ -20,7 +20,10 @@ export type TrainingEventKey =
   | "shot-blocked"
   | "shot-bad-decision"
   | "shot-outside-box-miss"
-  | "shot-wide";
+  | "shot-wide"
+  | "work-rate-plus"
+  | "work-rate-minus"
+  | "repeated-mistake";
 
 export type TrainingPlayer = {
   id: string;
@@ -28,7 +31,7 @@ export type TrainingPlayer = {
   name: string;
 };
 
-export type EventCategory = "score" | "shots" | "wides" | "turnovers" | "kickouts" | "frees" | "decisions" | "passes";
+export type EventCategory = "score" | "shots" | "wides" | "turnovers" | "kickouts" | "frees" | "decisions" | "passes" | "workrate";
 
 export type TrainingEventDef = {
   key: TrainingEventKey;

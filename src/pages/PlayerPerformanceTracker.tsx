@@ -49,19 +49,21 @@ export default function PlayerPerformanceTracker(){
           type="button"
           onClick={()=>setState((s)=>({...s,activeTab:'tracker'}))}
           className={[
-            "ppt-btn",state.activeTab==='tracker' ? "active" : "inactive",
+            "ppt-nav-item",state.activeTab==='tracker' ? "active" : "inactive",
           ].join(" ")}
         >
-          Tracker
+          <svg viewBox="0 0 24 24" aria-hidden="true" className="ppt-nav-icon"><path d="M2 13h4l3-8 4 14 3-8h6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          <span>Tracker</span>
         </button>
         <button
           type="button"
           onClick={()=>setState((s)=>({...s,activeTab:'ratings'}))}
           className={[
-            "ppt-btn",state.activeTab==='ratings' ? "active" : "inactive",
+            "ppt-nav-item",state.activeTab==='ratings' ? "active" : "inactive",
           ].join(" ")}
         >
-          Ratings
+          <svg viewBox="0 0 24 24" aria-hidden="true" className="ppt-nav-icon"><path d="M4 20V10m6 10V4m6 16v-7m4 7H2" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+          <span>Ratings</span>
         </button>
       </div>
     </nav>

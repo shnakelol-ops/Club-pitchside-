@@ -3,8 +3,11 @@
 .ppt-header{border-bottom:1px solid #183044;padding:14px 16px}
 .ppt-sub{color:#93a7bd;font-size:14px}
 .ppt-nav{position:fixed;left:0;right:0;bottom:0;background:#0d1d2d;border-top:1px solid #183044;z-index:50}
-.ppt-nav-inner{max-width:430px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px 14px}
-.ppt-tab{border:1px solid #2a3f54;border-radius:12px;padding:10px 12px;background:#17293b;color:#96a8bc;font-weight:700}.ppt-tab.active{background:#f1f5f9;color:#0b1824}
+.ppt-nav-inner{max-width:430px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 14px calc(14px + env(safe-area-inset-bottom,0px))}
+.ppt-nav-item{border:0;background:transparent;border-radius:14px;min-height:70px;padding:8px 10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:#8497ad;font-weight:600;font-size:16px}
+.ppt-nav-item .ppt-nav-icon{width:28px;height:28px}
+.ppt-nav-item.active{color:#fff;background:rgba(23,41,59,.55);box-shadow:0 0 0 1px rgba(148,163,184,.22),0 0 18px rgba(148,163,184,.18)}
+.ppt-nav-item.inactive{color:#7d90a7}
 .ppt-wrap{padding:12px 14px;display:grid;gap:10px}.ppt-panel{border:1px solid #17324a;border-radius:16px;background:#0a2134;padding:14px}.ppt-center{text-align:center}
 .ppt-eyebrow{font-size:12px;letter-spacing:.25em;color:#8fa3b8;font-weight:700}.ppt-timer{font-size:64px;font-weight:700;line-height:1}.ppt-row{display:flex;gap:8px;justify-content:center;margin-top:10px}
 .ppt-control{border:0;border-radius:12px;color:white;font-weight:700;padding:10px 16px}.ppt-start{background:#0a9349}.ppt-reset{background:#9b1c1c}
@@ -14,7 +17,7 @@
 .ppt-event{border:1px solid;border-radius:14px;min-height:86px;padding:9px 8px;text-align:left;color:#fff;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,.28)}
 .ppt-event-label{font-size:30px;line-height:1.05;font-weight:800}.ppt-event-label.small{font-size:14px;text-transform:uppercase}
 .ppt-points{margin-top:4px;font-size:28px}.ppt-points.pos{color:#4ade80}.ppt-points.neg{color:#fca5a5}
-.ppt-blue{background:#2563eb;border-color:#3b82f6}.ppt-orange{background:#f05907;border-color:#fb923c}.ppt-purple{background:#9810fa;border-color:#c084fc}.ppt-green{background:#068a44;border-color:#34d399}.ppt-red{background:#b50020;border-color:#ef4444}.ppt-shotneg{background:#450a0a;border-color:#991b1b}
+.ppt-blue{background:#2563eb;border-color:#3b82f6}.ppt-orange{background:#f05907;border-color:#fb923c}.ppt-purple{background:#9810fa;border-color:#c084fc}.ppt-green{background:#068a44;border-color:#34d399}.ppt-red{background:#b50020;border-color:#ef4444}.ppt-red-heavy{background:#7f0015;border-color:#dc2626}.ppt-shotneg{background:#450a0a;border-color:#991b1b}
 .ppt-event.active{outline:2px solid #a5f3fc}
 .ppt-players{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.ppt-player{display:flex;align-items:center;justify-content:space-between;border:1px solid #17324a;background:#0b1f31;color:#fff;border-radius:14px;padding:12px}.ppt-player-name{font-size:18px;font-weight:700}
 .ppt-chip{background:#facc15;border-radius:10px;padding:4px 10px;font-size:24px;font-weight:800;min-width:44px;text-align:center}
@@ -24,5 +27,5 @@
 .ppt-undo{position:fixed;right:16px;bottom:98px;border:0;border-radius:999px;background:#1c3149;color:#fff;padding:18px 20px;font-size:24px}
 .ppt-setup h1{margin:0}.ppt-input,.ppt-number{width:100%;border:1px solid #28445d;background:#0a2236;color:#fff;border-radius:10px;padding:10px}.ppt-setup-row{display:grid;grid-template-columns:80px 1fr;gap:8px;margin-top:8px}
 .ppt-action{width:100%;border:1px solid #28445d;background:#0a2236;color:#fff;border-radius:12px;padding:12px;font-weight:700}.ppt-action.primary{background:#0a9349;border-color:#16a34a}
-.ppt-ratings-title{font-size:48px;font-weight:700;margin:0 0 8px}.ppt-rating-card{border:1px solid #17324a;background:#0b1f31;border-radius:16px;padding:14px}.ppt-rating-card.top{border-color:#a16207;background:rgba(113,63,18,.18)}.ppt-rating-card.low{border-color:#b91c1c;background:rgba(127,29,29,.16)}
-.ppt-rating-head{display:flex;justify-content:space-between;align-items:center}.ppt-rating-name{font-size:48px;font-weight:700}.ppt-rating-score{font-size:56px;font-weight:800}.ppt-break{margin-top:10px;color:#a7b8c8;font-size:14px;display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.ppt-ratings-title{font-size:34px;font-weight:700;margin:0 0 8px}.ppt-rating-card{border:1px solid #17324a;background:#0b1f31;border-radius:14px;padding:10px}.ppt-rating-card.top{border-color:#a16207;background:rgba(113,63,18,.18)}.ppt-rating-card.low{border-color:#b91c1c;background:rgba(127,29,29,.16)}
+.ppt-rating-card.compact{min-height:76px}.ppt-rating-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}.ppt-rating-name{font-size:24px;font-weight:700;line-height:1.1}.ppt-rating-name.compact{font-size:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ppt-rating-score{font-size:34px;font-weight:800;line-height:1}.ppt-rating-score.compact{font-size:34px;min-width:36px;text-align:right}.ppt-break{margin-top:6px;color:#a7b8c8;font-size:12px;display:flex;flex-wrap:wrap;gap:8px}.ppt-break.compact span{white-space:nowrap}
