@@ -1,4 +1,9 @@
 import { Container, Graphics, Text } from "pixi.js";
+import {
+  resolvePatternDetailTier,
+  resolvePatternMarkColor,
+  type TokenPatternDetailTier,
+} from "./tokenPatternContrast";
 
 export type MicroAthleteStyle = {
   primaryColor: number;
@@ -93,26 +98,34 @@ function drawPatternAccent(
   pattern: MicroAthleteKitPattern,
   accentColor: number,
   innerRadius: number,
+  detailTier: TokenPatternDetailTier,
 ): void {
   if (pattern === "plain") return;
   const clippedInnerRadius = Math.max(0, innerRadius - 0.12);
-  const accentWidth = 0.38;
+  const accentWidth = Math.max(
+    0.42,
+    clippedInnerRadius * (detailTier === "tiny" ? 0.24 : detailTier === "small" ? 0.2 : 0.17),
+  );
+  const accentAlpha = detailTier === "tiny" ? 0.66 : detailTier === "small" ? 0.6 : 0.54;
   if (pattern === "hoops") {
-    const yOffset = clippedInnerRadius * 0.34;
-    const halfSpan = lineHalfExtentAtOffset(clippedInnerRadius, yOffset);
+    const topY = -clippedInnerRadius * 0.3;
+    const bottomY = clippedInnerRadius * 0.3;
+    const topSpan = lineHalfExtentAtOffset(clippedInnerRadius, topY);
+    const bottomSpan = lineHalfExtentAtOffset(clippedInnerRadius, bottomY);
     target
-      .moveTo(-halfSpan, -yOffset)
-      .lineTo(halfSpan, -yOffset)
-      .moveTo(-halfSpan, yOffset)
-      .lineTo(halfSpan, yOffset);
+      .moveTo(-topSpan, topY)
+      .lineTo(topSpan, topY)
+      .moveTo(-bottomSpan, bottomY)
+      .lineTo(bottomSpan, bottomY);
   } else if (pattern === "stripes") {
-    const xOffset = clippedInnerRadius * 0.34;
-    const halfSpan = lineHalfExtentAtOffset(clippedInnerRadius, xOffset);
-    target
-      .moveTo(-xOffset, -halfSpan)
-      .lineTo(-xOffset, halfSpan)
-      .moveTo(xOffset, -halfSpan)
-      .lineTo(xOffset, halfSpan);
+    const stripeOffsets =
+      detailTier === "tiny"
+        ? [-clippedInnerRadius * 0.28, clippedInnerRadius * 0.28]
+        : [-clippedInnerRadius * 0.4, 0, clippedInnerRadius * 0.4];
+    for (const xOffset of stripeOffsets) {
+      const halfSpan = lineHalfExtentAtOffset(clippedInnerRadius, xOffset);
+      target.moveTo(xOffset, -halfSpan).lineTo(xOffset, halfSpan);
+    }
   } else if (pattern === "slash") {
     const slashAngle = -Math.PI * 0.22;
     const dx = Math.cos(slashAngle) * clippedInnerRadius;
@@ -122,7 +135,7 @@ function drawPatternAccent(
   target.stroke({
     color: accentColor,
     width: accentWidth,
-    alpha: 0.24,
+    alpha: accentAlpha,
     cap: "round",
     join: "round",
   });
@@ -133,6 +146,7 @@ export function createMicroAthleteToken({
   teamColor,
   style,
   scale,
+  lodScale = 5,
   kitPattern = "plain",
   kitPatternColor,
 }: {
@@ -140,6 +154,7 @@ export function createMicroAthleteToken({
   teamColor: MicroAthleteTeamColor;
   style?: Partial<MicroAthleteStyle>;
   scale?: number;
+  lodScale?: number;
   kitPattern?: MicroAthleteKitPattern;
   kitPatternColor?: number;
 }): { token: Container; shadow: Graphics } {
@@ -154,7 +169,8 @@ export function createMicroAthleteToken({
   const token = new Container();
   token.eventMode = "static";
   token.cursor = "grab";
-  token.scale.set(scale ?? 1);
+  const tokenScale = scale ?? 1;
+  token.scale.set(tokenScale);
 
   const innerColor = resolved.goalkeeper && resolved.secondaryColor != null
     ? resolved.secondaryColor
@@ -169,6 +185,8 @@ export function createMicroAthleteToken({
   const outlineColor = resolved.outlineColor;
   const innerRadius = TOKEN_RADIUS - TOKEN_RING_WIDTH;
   const ringOuterRadius = TOKEN_RADIUS - 0.08;
+  const detailTier = resolvePatternDetailTier(TOKEN_RADIUS, tokenScale, lodScale);
+  const patternMarkColor = resolvePatternMarkColor(bodyColor, patternAccentColor, 2.35);
 
   const shadow = new Graphics();
   shadow
@@ -198,8 +216,9 @@ export function createMicroAthleteToken({
   drawPatternAccent(
     tokenDisc,
     kitPattern,
-    mixColor(patternAccentColor, 0xffffff, 0.16),
+    patternMarkColor,
     innerRadius * 0.88,
+    detailTier,
   );
   tokenDisc
     .circle(0, 0, TOKEN_RADIUS)

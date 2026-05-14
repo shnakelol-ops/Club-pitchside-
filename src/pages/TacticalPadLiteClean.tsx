@@ -139,6 +139,7 @@ const KIT_PATTERN_LABEL: Record<TacticalKitPattern, string> = {
 const LABEL_MODE_CHOICES: TacticalLabelMode[] = ["number", "initials"];
 const TOKEN_STYLE_CHOICES: ReadonlyArray<{ value: TacticalPlayerTokenStyle; label: string }> = [
   { value: "vision-v3", label: "Vision V3" },
+  { value: "shirt-preview", label: "Shirt Preview" },
   { value: "classic", label: "Classic" },
   { value: "premium", label: "Glow" },
   { value: "torso", label: "Torso" },

@@ -2,17 +2,20 @@ import type { Container, Graphics } from "pixi.js";
 
 import { createMicroAthleteToken, type MicroAthleteKitPattern, type MicroAthleteStyle } from "./createMicroAthleteToken";
 import { createPremiumGlowPlayerToken } from "./createPremiumGlowPlayerToken";
+import { createShirtPreviewPlayerToken } from "./createShirtPreviewPlayerToken";
 import { createTorsoPlayerToken } from "./createTorsoPlayerToken";
 import { createVisionV3PlayerToken } from "./createVisionV3PlayerToken";
 import type { PremiumPlayerTokenColor } from "./createPremiumPlayerToken";
 
-export type PlayerTokenStyle = "vision-v3" | "classic" | "premium" | "torso";
+export type PlayerTokenStyle = "vision-v3" | "shirt-preview" | "classic" | "premium" | "torso";
 
 export type PlayerTokenRendererInput = {
   label: string;
   number: number;
+  captain?: boolean;
   teamColor: PremiumPlayerTokenColor;
   scale: number;
+  lodScale?: number;
   style: Partial<MicroAthleteStyle>;
   kitPattern: MicroAthleteKitPattern;
   kitPatternColor: number;
@@ -30,6 +33,7 @@ export const ClassicRingRenderer: PlayerTokenRenderer = ({
   label,
   teamColor,
   scale,
+  lodScale,
   style,
   kitPattern,
   kitPatternColor,
@@ -38,6 +42,7 @@ export const ClassicRingRenderer: PlayerTokenRenderer = ({
     label,
     teamColor,
     scale,
+    lodScale,
     style,
     kitPattern,
     kitPatternColor,
@@ -47,6 +52,8 @@ export const PremiumGlowRenderer: PlayerTokenRenderer = ({
   label,
   teamColor,
   scale,
+  radius,
+  lodScale,
   style,
   kitPattern,
   kitPatternColor,
@@ -55,6 +62,8 @@ export const PremiumGlowRenderer: PlayerTokenRenderer = ({
     label,
     teamColor,
     scale,
+    radius,
+    lodScale,
     style,
     kitPattern,
     kitPatternColor,
@@ -64,6 +73,7 @@ export const TorsoRenderer: PlayerTokenRenderer = ({
   label,
   teamColor,
   scale,
+  lodScale,
   style,
   kitPattern,
   kitPatternColor,
@@ -72,6 +82,7 @@ export const TorsoRenderer: PlayerTokenRenderer = ({
     label,
     teamColor,
     scale,
+    lodScale,
     style,
     kitPattern,
     kitPatternColor,
@@ -85,12 +96,37 @@ export const VisionV3Renderer: PlayerTokenRenderer = ({
   kitPattern,
   kitPatternColor,
   radius,
+  captain,
+  lodScale,
 }) =>
   createVisionV3PlayerToken({
     label,
     teamColor,
     radius,
     scale,
+    captain,
+    lodScale,
+    style,
+    kitPattern,
+    kitPatternColor,
+  });
+
+export const ShirtPreviewRenderer: PlayerTokenRenderer = ({
+  label,
+  teamColor,
+  scale,
+  style,
+  kitPattern,
+  kitPatternColor,
+  radius,
+  lodScale,
+}) =>
+  createShirtPreviewPlayerToken({
+    label,
+    teamColor,
+    radius,
+    scale,
+    lodScale,
     style,
     kitPattern,
     kitPatternColor,
@@ -98,12 +134,21 @@ export const VisionV3Renderer: PlayerTokenRenderer = ({
 
 export function resolvePlayerTokenRenderer(style: PlayerTokenStyle): PlayerTokenRenderer {
   if (style === "vision-v3") return VisionV3Renderer;
+  if (style === "shirt-preview") return ShirtPreviewRenderer;
   if (style === "premium") return PremiumGlowRenderer;
   if (style === "torso") return TorsoRenderer;
   return ClassicRingRenderer;
 }
 
 export function sanitizePlayerTokenStyle(value: unknown): PlayerTokenStyle {
-  if (value === "vision-v3" || value === "classic" || value === "premium" || value === "torso") return value;
+  if (
+    value === "vision-v3" ||
+    value === "shirt-preview" ||
+    value === "classic" ||
+    value === "premium" ||
+    value === "torso"
+  ) {
+    return value;
+  }
   return "vision-v3";
 }
