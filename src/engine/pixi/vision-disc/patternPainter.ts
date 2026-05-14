@@ -33,12 +33,12 @@ export function drawVisionDiscPattern(
   geometry: VisionDiscGeometry,
 ): void {
   const radius = geometry.innerRadius * 0.98;
-  const width = Math.max(1, geometry.patternStroke * 1.45);
+  const width = Math.max(1, geometry.patternStroke * 1.92);
   if (pattern === "solid" || pattern === "gradient") return;
 
   if (pattern === "hoops") {
-    const y1 = -radius * 0.3;
-    const y2 = radius * 0.3;
+    const y1 = -radius * 0.28;
+    const y2 = radius * 0.28;
     const h1 = halfSpanAtOffset(radius, y1);
     const h2 = halfSpanAtOffset(radius, y2);
     graphics
@@ -46,12 +46,12 @@ export function drawVisionDiscPattern(
       .lineTo(h1, y1)
       .moveTo(-h2, y2)
       .lineTo(h2, y2);
-    strokePattern(graphics, color, alpha, width);
+    strokePattern(graphics, color, Math.min(1, alpha * 1.05), width);
     return;
   }
 
   if (pattern === "stripes") {
-    const stripeWidth = Math.max(1, width * 1.2);
+    const stripeWidth = Math.max(1, width * 1.22);
     const stripeOffsets = geometry.outerRadius <= 20
       ? [0]
       : [-radius * 0.38, radius * 0.38];
@@ -61,7 +61,7 @@ export function drawVisionDiscPattern(
         .moveTo(stripeX, -halfSpan)
         .lineTo(stripeX, halfSpan);
     }
-    strokePattern(graphics, color, alpha, stripeWidth);
+    strokePattern(graphics, color, Math.min(1, alpha * 1.05), stripeWidth);
     return;
   }
 
@@ -69,16 +69,16 @@ export function drawVisionDiscPattern(
     graphics
       .moveTo(-radius * 0.62, radius * 0.48)
       .lineTo(radius * 0.62, -radius * 0.48);
-    strokePattern(graphics, color, alpha * 0.96, width * 1.05);
+    strokePattern(graphics, color, Math.min(1, alpha * 1.08), width * 1.12);
     return;
   }
 
   const y = -radius * 0.18;
-  const bibBandHeight = Math.max(1, width * 1.34);
+  const bibBandHeight = Math.max(1, width * 1.46);
   const bibBandWidth = radius * 1.34;
   graphics
     .rect(-bibBandWidth * 0.5, y - bibBandHeight * 0.5, bibBandWidth, bibBandHeight)
-    .fill({ color, alpha: alpha * 0.18 });
+    .fill({ color, alpha: alpha * 0.24 });
 
   const dashWidth = radius * 0.29;
   const gap = radius * 0.15;
@@ -91,9 +91,9 @@ export function drawVisionDiscPattern(
       .moveTo(left, y)
       .lineTo(left + dashWidth, y);
   }
-  strokePattern(graphics, color, alpha * 0.96, width * 1.22);
+  strokePattern(graphics, color, Math.min(1, alpha * 1.08), width * 1.36);
   graphics
     .moveTo(-bibBandWidth * 0.38, y + bibBandHeight * 0.26)
     .lineTo(bibBandWidth * 0.38, y + bibBandHeight * 0.26);
-  strokePattern(graphics, color, alpha * 0.28, Math.max(1, width * 0.52));
+  strokePattern(graphics, color, alpha * 0.32, Math.max(1, width * 0.52));
 }

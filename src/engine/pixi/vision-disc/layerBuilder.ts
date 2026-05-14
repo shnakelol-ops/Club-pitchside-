@@ -38,19 +38,19 @@ function resolveLabelFontSize(label: string, geometry: VisionDiscGeometry): numb
     if (geometry.outerRadius <= 20) return base * 1.04;
     return base;
   }
-  if (geometry.outerRadius <= 14) return base * 1.18;
-  if (geometry.outerRadius <= 20) return base * 1.15;
-  if (geometry.outerRadius <= 28) return base * 1.12;
-  return base * 1.08;
+  if (geometry.outerRadius <= 14) return base * 1.32;
+  if (geometry.outerRadius <= 20) return base * 1.28;
+  if (geometry.outerRadius <= 28) return base * 1.22;
+  return base * 1.14;
 }
 
 function drawGlyph(graphics: Graphics, geometry: VisionDiscGeometry, color: number, alpha: number): void {
   const radius = geometry.innerRadius;
   graphics
     .roundRect(-radius * 0.4, -radius * 0.1, radius * 0.8, radius * 0.52, radius * 0.2)
-    .fill({ color, alpha: alpha * 0.2 })
+    .fill({ color, alpha: alpha * 0.08 })
     .circle(0, -radius * 0.35, radius * 0.24)
-    .fill({ color, alpha: alpha * 0.26 });
+    .fill({ color, alpha: alpha * 0.1 });
 }
 
 export function buildVisionDiscLayers(
@@ -79,7 +79,7 @@ export function buildVisionDiscLayers(
     .ellipse(0, geometry.shadowOffsetY, geometry.shadowRx, geometry.shadowRy)
     .fill({
       color: style.colors.shadowColor,
-      alpha: style.alpha.shadowColor * VISION_DISC_GEOMETRY.shadowAlpha,
+      alpha: style.alpha.shadowColor * VISION_DISC_GEOMETRY.shadowAlpha * 0.74,
     });
   token.addChild(layers.shadow);
 
@@ -87,28 +87,21 @@ export function buildVisionDiscLayers(
     .circle(0, 0, geometry.ambientRadius)
     .fill({
       color: style.colors.shadowColor,
-      alpha: style.alpha.shadowColor * VISION_DISC_GEOMETRY.ambientShadowAlpha * 0.84,
+      alpha: style.alpha.shadowColor * VISION_DISC_GEOMETRY.ambientShadowAlpha * 0.24,
     });
   token.addChild(layers.ambient);
 
-  const softenedRingColor = mixColor(style.colors.ringColor, style.colors.shadowColor, 0.06);
-  const ringEdgeColor = mixColor(style.colors.ringStrokeColor, style.colors.shadowColor, 0.16);
+  const softenedRingColor = style.colors.ringColor;
+  const ringEdgeColor = mixColor(style.colors.ringColor, style.colors.shadowColor, 0.28);
   layers.ring
     .circle(0, 0, geometry.outerRadius)
-    .fill({ color: softenedRingColor, alpha: style.alpha.ringColor * 0.96 })
-    .circle(0, 0, geometry.outerRadius)
-    .stroke({
-      color: style.colors.ringStrokeColor,
-      alpha: style.alpha.ringStrokeColor * 0.9,
-      width: Math.max(1, geometry.ringThickness * 0.19),
-      alignment: 0.5,
-    })
+    .fill({ color: softenedRingColor, alpha: style.alpha.ringColor * 0.98 })
     .circle(0, 0, geometry.outerRadius)
     .stroke({
       color: ringEdgeColor,
-      alpha: style.alpha.ringStrokeColor * 0.32,
-      width: Math.max(1, geometry.ringThickness * 0.1),
-      alignment: 1,
+      alpha: style.alpha.ringColor * 0.9,
+      width: Math.max(1, geometry.ringThickness * 0.16),
+      alignment: 0.5,
     });
   token.addChild(layers.ring);
 
@@ -126,26 +119,26 @@ export function buildVisionDiscLayers(
     layers.disc
       .circle(0, 0, geometry.innerRadius)
       .fill(gradient)
-      .ellipse(0, -geometry.innerRadius * 0.36, geometry.innerRadius * 0.62, geometry.innerRadius * 0.08)
-      .fill({ color: style.colors.discHighlightColor, alpha: style.alpha.discHighlightColor * 0.12 })
+      .ellipse(0, -geometry.innerRadius * 0.44, geometry.innerRadius * 0.56, geometry.innerRadius * 0.05)
+      .fill({ color: style.colors.discHighlightColor, alpha: style.alpha.discHighlightColor * 0.05 })
       .circle(0, 0, geometry.innerRadius)
       .stroke({
         color: style.colors.discEdgeColor,
         alpha: style.alpha.discEdgeColor * 0.9,
-        width: Math.max(1, geometry.ringThickness * 0.16),
+        width: Math.max(1, geometry.ringThickness * 0.14),
         alignment: 0.5,
       });
   } else {
     layers.disc
       .circle(0, 0, geometry.innerRadius)
       .fill({ color: style.colors.discBaseColor, alpha: style.alpha.discBaseColor })
-      .ellipse(0, -geometry.innerRadius * 0.35, geometry.innerRadius * 0.6, geometry.innerRadius * 0.085)
-      .fill({ color: style.colors.discHighlightColor, alpha: style.alpha.discHighlightColor * 0.12 })
+      .ellipse(0, -geometry.innerRadius * 0.42, geometry.innerRadius * 0.54, geometry.innerRadius * 0.05)
+      .fill({ color: style.colors.discHighlightColor, alpha: style.alpha.discHighlightColor * 0.05 })
       .circle(0, 0, geometry.innerRadius)
       .stroke({
         color: style.colors.discEdgeColor,
         alpha: style.alpha.discEdgeColor * 0.9,
-        width: Math.max(1, geometry.ringThickness * 0.16),
+        width: Math.max(1, geometry.ringThickness * 0.14),
         alignment: 0.5,
       });
   }
@@ -163,19 +156,19 @@ export function buildVisionDiscLayers(
   drawGlyph(layers.glyph, geometry, style.colors.glyphColor, style.alpha.glyphColor);
   token.addChild(layers.glyph);
 
-  const compactLabelNudge = geometry.outerRadius <= 20 ? -geometry.outerRadius * 0.025 : 0;
-  const labelY = geometry.innerRadius * 0.4 + compactLabelNudge;
+  const compactLabelNudge = geometry.outerRadius <= 20 ? -geometry.outerRadius * 0.02 : 0;
+  const labelY = geometry.innerRadius * 0.31 + compactLabelNudge;
   layers.labelPlate
     .roundRect(
-      -geometry.innerRadius * 0.82,
-      -geometry.innerRadius * 0.4,
-      geometry.innerRadius * 1.64,
-      geometry.innerRadius * 0.8,
-      geometry.innerRadius * 0.24,
+      -geometry.innerRadius * 0.72,
+      -geometry.innerRadius * 0.34,
+      geometry.innerRadius * 1.44,
+      geometry.innerRadius * 0.68,
+      geometry.innerRadius * 0.16,
     )
     .fill({
       color: style.colors.labelPlateColor,
-      alpha: style.alpha.labelPlateColor * 0.86,
+      alpha: style.alpha.labelPlateColor * 0.7,
     });
   layers.labelPlate.position.y = labelY;
   token.addChild(layers.labelPlate);
@@ -185,7 +178,7 @@ export function buildVisionDiscLayers(
   const labelFontSize = resolveLabelFontSize(label, geometry);
   const labelStrokeWidth = Math.max(
     1,
-    geometry.outerRadius * 0.09 * (geometry.outerRadius <= 20 ? 1.14 : 1.02),
+    geometry.outerRadius * 0.1 * (geometry.outerRadius <= 20 ? 1.16 : 1.06),
   );
   layers.labelText = new Text({
     text: label,
@@ -220,7 +213,7 @@ export function buildVisionDiscLayers(
     )
     .fill({
       color: style.colors.ringStrokeColor,
-      alpha: style.alpha.ringStrokeColor * 0.68,
+      alpha: style.alpha.ringStrokeColor * 0.46,
     });
   token.addChild(layers.orientationTick);
 

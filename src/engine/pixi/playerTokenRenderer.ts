@@ -79,15 +79,15 @@ function buildVisionDiscTokens({
     Number.isFinite(kitPatternColor)
       ? Number(kitPatternColor)
       : (Number.isFinite(style.secondaryColor) ? Number(style.secondaryColor) : mixColor(baseColor, 0xffffff, 0.42));
-  const ringColor = mixColor(baseColor, 0x0f172a, 0.08);
-  const ringStrokeColor = mixColor(baseColor, 0xe2e8f0, 0.3);
-  const discBaseColor = mixColor(baseColor, 0xffffff, 0.05);
-  const discHighlightColor = mixColor(baseColor, 0xffffff, 0.16);
-  const discEdgeColor = mixColor(baseColor, 0x0f172a, 0.14);
+  const ringColor = mixColor(0x1a2130, baseColor, 0.08);
+  const ringStrokeColor = mixColor(ringColor, 0xe2e8f0, 0.18);
+  const discBaseColor = mixColor(baseColor, 0xffffff, 0.02);
+  const discHighlightColor = mixColor(baseColor, 0xffffff, 0.08);
+  const discEdgeColor = mixColor(baseColor, 0x0f172a, 0.1);
   const labelColor = 0xffffff;
-  const labelStrokeColor = mixColor(discBaseColor, 0x020617, 0.76);
-  const haloColor = mixColor(accentColor, 0xf8fafc, 0.12);
-  const shadowColor = mixColor(ringColor, 0x020617, 0.52);
+  const labelStrokeColor = mixColor(discBaseColor, 0x020617, 0.82);
+  const haloColor = mixColor(accentColor, 0xf8fafc, 0.08);
+  const shadowColor = mixColor(ringColor, 0x020617, 0.66);
 
   return {
     ringColor: colorToHex(ringColor),
@@ -99,7 +99,7 @@ function buildVisionDiscTokens({
     glyphColor: "#ffffff",
     labelColor: colorToHex(labelColor),
     labelStrokeColor: colorToHex(labelStrokeColor),
-    labelPlateColor: colorToRgba(labelStrokeColor, 0.34),
+    labelPlateColor: colorToRgba(labelStrokeColor, 0.24),
     shadowColor: colorToRgba(shadowColor, 0.95),
     haloColor: colorToHex(haloColor),
   };
