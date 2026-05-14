@@ -1,6 +1,4 @@
-import { Application, Container, Graphics, Text } from "pixi.js";
-
-import { mixColor } from "./tokenDebugColor";
+import { Application, Container, Graphics, Text, type TextStyleFontWeight } from "pixi.js";
 import { DEBUG_TOKEN_RENDERERS } from "./tokenDebugRenderers";
 import {
   DEBUG_TOKEN_COLORWAYS,
@@ -48,7 +46,7 @@ function addText(
   y: number,
   size: number,
   color = TEXT_PRIMARY,
-  weight = "800",
+  weight: TextStyleFontWeight = "800",
 ): Text {
   const label = new Text({
     text,
@@ -95,7 +93,7 @@ function drawHeader(target: Container, width: number, view: TokenDebugView): num
     compact ? 58 : 62,
     compact ? 12 : 15,
     TEXT_SECONDARY,
-    "650",
+    "600",
   );
   addText(
     target,
@@ -176,7 +174,7 @@ function drawRendererMatrix(
   drawPanel(target, { x: panelX, y, width: panelW, height: panelH });
 
   addText(target, renderer.label, panelX + 18, y + 16, compact ? 19 : 22);
-  addText(target, renderer.description, panelX + 18, y + (compact ? 43 : 48), compact ? 11 : 13, TEXT_SECONDARY, "650");
+  addText(target, renderer.description, panelX + 18, y + (compact ? 43 : 48), compact ? 11 : 13, TEXT_SECONDARY, "600");
 
   if (compact) {
     let blockY = y + 88;
@@ -282,7 +280,7 @@ function boardPositions(side: "left" | "right"): { x: number; y: number }[] {
 function drawStressPitch(target: Container, renderer: DebugTokenRenderer, bounds: Bounds, zoomedOut = false): void {
   drawPitch(target, bounds);
   addText(target, "15v15 live-board simulation", bounds.x + 12, bounds.y + 10, 12, 0xf2f9ef, "800");
-  addText(target, "blue/white v red/white | selected: 6 + 11", bounds.x + 12, bounds.y + 28, 10, 0xcfe1d4, "650");
+  addText(target, "blue/white v red/white | selected: 6 + 11", bounds.x + 12, bounds.y + 28, 10, 0xcfe1d4, "600");
   const blue = DEBUG_TOKEN_COLORWAYS[1]!;
   const red = DEBUG_TOKEN_COLORWAYS[2]!;
   const tokenSize = zoomedOut ? Math.max(9, Math.min(14, bounds.width / 42)) : Math.max(12, Math.min(20, bounds.width / 42));
@@ -361,7 +359,7 @@ function drawCloseView(target: Container, width: number): void {
           : margin + 180 + patternIndex * 92;
         const yOffset = compact ? Math.floor(patternIndex / 3) * 48 : 0;
         addToken(target, renderer, colorway, pattern, 28, String(10 + patternIndex), x, rowY + 14 + yOffset, pattern === "slash");
-        addText(target, PATTERN_LABELS[pattern], x - 26, rowY + 36 + yOffset, 9, TEXT_SECONDARY, "650");
+        addText(target, PATTERN_LABELS[pattern], x - 26, rowY + 36 + yOffset, 9, TEXT_SECONDARY, "600");
       });
     });
     y += panelH + 24;
@@ -376,7 +374,7 @@ function drawZoomView(target: Container, width: number): void {
     const panelH = compact ? 308 : 360;
     drawPanel(target, { x: margin, y, width: width - margin * 2, height: panelH });
     addText(target, renderer.label, margin + 18, y + 16, compact ? 18 : 22);
-    addText(target, "zoomed-out 14px-density tactical read", margin + 18, y + 42, 11, TEXT_SECONDARY, "650");
+    addText(target, "zoomed-out 14px-density tactical read", margin + 18, y + 42, 11, TEXT_SECONDARY, "600");
     drawStressPitch(
       target,
       renderer,
