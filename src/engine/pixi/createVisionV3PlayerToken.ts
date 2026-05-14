@@ -31,8 +31,8 @@ export function createVisionV3PlayerToken(input: {
   radius?: number;
   kitPattern?: VisionV3KitPattern;
   kitPatternColor?: number;
-  ring?: number;
-  numberColor?: number;
+  ring?: string | number;
+  numberColor?: string | number;
   glowOnSelect?: boolean;
   selected?: boolean;
   tokenConfig?: TokenConfig;
@@ -44,8 +44,8 @@ export function createVisionV3PlayerToken(input: {
   const cfg: TokenConfig = input.tokenConfig ?? {
     fill: `#${(input.style?.primaryColor ?? 0xf5c518).toString(16).padStart(6, "0")}`,
     secondary: `#${(Number.isFinite(input.kitPatternColor) ? Number(input.kitPatternColor) : (input.style?.secondaryColor ?? 0xffffff)).toString(16).padStart(6, "0")}`,
-    ring: `#${(Number.isFinite(input.ring) ? Number(input.ring) : 0x2a2a2a).toString(16).padStart(6, "0")}`,
-    numberColor: `#${(Number.isFinite(input.numberColor) ? Number(input.numberColor) : 0xffffff).toString(16).padStart(6, "0")}`,
+    ring: typeof input.ring === "string" ? input.ring : `#${(Number.isFinite(input.ring) ? Number(input.ring) : 0x2a2a2a).toString(16).padStart(6, "0")}`,
+    numberColor: typeof input.numberColor === "string" ? input.numberColor : `#${(Number.isFinite(input.numberColor) ? Number(input.numberColor) : 0xffffff).toString(16).padStart(6, "0")}`,
     pattern: normalisePattern(input.kitPattern),
     glowOnSelect: input.glowOnSelect ?? false,
   };
@@ -97,11 +97,7 @@ export function createVisionV3PlayerToken(input: {
     fontWeight: "900",
     fill: textColor,
     align: "center",
-    dropShadow: lod > 0,
-    dropShadowColor: 0x000000,
-    dropShadowAlpha: 0.55,
-    dropShadowDistance: 1,
-    dropShadowBlur: 1.5,
+    ...(lod > 0 ? { dropShadow: { color: 0x000000, alpha: 0.55, distance: 1, blur: 1.5, angle: Math.PI / 4 } } : {}),
   });
   numText.anchor.set(0.5, 0.5);
   numText.position.set(0, 0.5);
