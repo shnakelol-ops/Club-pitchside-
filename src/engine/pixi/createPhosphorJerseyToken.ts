@@ -49,7 +49,7 @@ function drawPattern(
       .ellipse(0, -innerRadius * 0.28, innerRadius * 0.84, innerRadius * 0.26)
       .fill({ color: mixColor(color, 0xffffff, 0.24), alpha })
       .ellipse(0, innerRadius * 0.3, innerRadius * 0.84, innerRadius * 0.28)
-      .fill({ color: mixColor(color, 0x0f172a, 0.22), alpha: Math.max(0.7, alpha - 0.1) });
+      .fill({ color: mixColor(color, 0x0f172a, 0.22), alpha });
     return;
   }
 
@@ -92,50 +92,14 @@ function drawPattern(
     .fill({ color, alpha });
 }
 
-function drawJerseyGlyph(target: Graphics, innerRadius: number, color: number): void {
-  const top = -innerRadius * 0.48;
-  const bottom = innerRadius * 0.34;
-  target
-    .poly([
-      -innerRadius * 0.62,
-      top + innerRadius * 0.18,
-      -innerRadius * 0.28,
-      top,
-      -innerRadius * 0.08,
-      top + innerRadius * 0.14,
-      innerRadius * 0.08,
-      top + innerRadius * 0.14,
-      innerRadius * 0.28,
-      top,
-      innerRadius * 0.62,
-      top + innerRadius * 0.18,
-      innerRadius * 0.4,
-      top + innerRadius * 0.56,
-      innerRadius * 0.34,
-      bottom,
-      -innerRadius * 0.34,
-      bottom,
-      -innerRadius * 0.4,
-      top + innerRadius * 0.56,
-    ])
-    .stroke({
-      color,
-      width: Math.max(0.18, innerRadius * 0.07),
-      alpha: 0.28,
-      cap: "round",
-      join: "round",
-    });
-}
-
 export function createPhosphorJerseyToken(input: CleanTokenRendererInput): CleanTokenRendererOutput {
   const outerRadius = Math.max(2.8, input.radius);
   const ringThickness = Math.max(0.5, outerRadius * 0.18);
-  const innerRadius = outerRadius - ringThickness;
+  const innerRadius = outerRadius - ringThickness * 0.54;
   const label = resolveLabel(input.label);
   const labelFont = resolveLabelFont(label, outerRadius);
-  const ringBlue = mixColor(input.patternColor, 0x60a5fa, 0.5);
-  const ringWhite = 0xf8fafc;
-  const discBase = mixColor(input.baseColor, 0x020617, 0.58);
+  const ringColor = input.outlineColor ?? 0x1a1a2e;
+  const discBase = input.baseColor;
   const labelStrokeColor = input.outlineColor ?? 0x0f172a;
 
   const token = new Container();
@@ -146,50 +110,24 @@ export function createPhosphorJerseyToken(input: CleanTokenRendererInput): Clean
   const shadow = new Graphics();
   shadow
     .ellipse(0, outerRadius * 0.78, outerRadius * 0.82, outerRadius * 0.2)
-    .fill({ color: 0x020617, alpha: 0.14 });
+    .fill({ color: 0x020617, alpha: 0.1 });
   token.addChild(shadow);
 
   const ring = new Graphics();
   ring
     .circle(0, 0, outerRadius)
-    .fill({ color: ringBlue, alpha: 0.95 })
-    .circle(0, 0, outerRadius * 0.86)
-    .fill({ color: ringWhite, alpha: 0.96 });
+    .stroke({ color: ringColor, width: ringThickness, alpha: 0.9, alignment: 0.5 });
   token.addChild(ring);
 
   const disc = new Graphics();
   disc
     .circle(0, 0, innerRadius)
-    .fill({ color: discBase, alpha: 0.98 })
-    .circle(0, 0, innerRadius)
-    .stroke({
-      color: mixColor(labelStrokeColor, ringBlue, 0.24),
-      width: Math.max(0.18, ringThickness * 0.22),
-      alpha: 0.88,
-      alignment: 0.5,
-    });
+    .fill({ color: discBase, alpha: 0.98 });
   token.addChild(disc);
 
   const pattern = new Graphics();
-  drawPattern(pattern, input.pattern, input.patternColor, 0.8, innerRadius * 0.9);
+  drawPattern(pattern, input.pattern, input.patternColor, 0.65, innerRadius * 0.9);
   token.addChild(pattern);
-
-  const glyph = new Graphics();
-  drawJerseyGlyph(glyph, innerRadius * 0.94, mixColor(ringWhite, ringBlue, 0.24));
-  token.addChild(glyph);
-
-  const labelPlate = new Graphics();
-  labelPlate
-    .roundRect(
-      -innerRadius * 0.64,
-      -innerRadius * 0.34,
-      innerRadius * 1.28,
-      innerRadius * 0.66,
-      innerRadius * 0.14,
-    )
-    .fill({ color: 0x020617, alpha: 0.5 });
-  labelPlate.position.y = innerRadius * 0.28;
-  token.addChild(labelPlate);
 
   const labelText = new Text({
     text: label,
@@ -213,18 +151,6 @@ export function createPhosphorJerseyToken(input: CleanTokenRendererInput): Clean
   labelText.resolution =
     typeof window !== "undefined" ? Math.max(2, Math.min(3, window.devicePixelRatio || 1)) : 2;
   token.addChild(labelText);
-
-  const orientationTick = new Graphics();
-  orientationTick
-    .roundRect(
-      -innerRadius * 0.14,
-      -outerRadius + ringThickness * 0.22,
-      innerRadius * 0.28,
-      Math.max(0.2, outerRadius * 0.1),
-      innerRadius * 0.06,
-    )
-    .fill({ color: mixColor(ringWhite, ringBlue, 0.18), alpha: 0.5 });
-  token.addChild(orientationTick);
 
   return { token, shadow };
 }
