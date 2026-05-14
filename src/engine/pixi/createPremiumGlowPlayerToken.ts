@@ -59,7 +59,6 @@ const DEFAULT_STYLE_BY_TEAM: Record<PremiumGlowTeamColor, PremiumGlowPlayerToken
 
 const TOKEN_BASE_COLOR = 0x191919;
 const TOKEN_RADIUS = 3.66;
-const TOKEN_RING_WIDTH = 0.54;
 const TOKEN_IDLE_HALO_ALPHA = 0.2;
 
 function clampColorChannel(value: number): number {
