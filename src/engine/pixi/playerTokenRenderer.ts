@@ -5,7 +5,7 @@ import { createPremiumGlowPlayerToken } from "./createPremiumGlowPlayerToken";
 import { createTorsoPlayerToken } from "./createTorsoPlayerToken";
 import { createVisionV3PlayerToken } from "./createVisionV3PlayerToken";
 import type { PremiumPlayerTokenColor } from "./createPremiumPlayerToken";
-import type { TokenConfig, TokenNumberColorOverride, TokenRingStyle } from "./tokenConfig";
+import type { TokenConfig } from "./tokenConfig";
 
 export type PlayerTokenStyle = "vision-v3" | "classic" | "premium" | "torso";
 export type PlayerTokenPattern = MicroAthleteKitPattern | "chestDash" | "gradient";
@@ -18,10 +18,10 @@ export type PlayerTokenRendererInput = {
   style: Partial<MicroAthleteStyle>;
   kitPattern: PlayerTokenPattern;
   kitPatternColor: number;
-  ring?: TokenRingStyle;
-  numberColor?: TokenNumberColorOverride;
+  ring?: string;
+  numberColor?: string;
   glowOnSelect?: boolean;
-  tokenConfig?: Partial<TokenConfig>;
+  tokenConfig?: TokenConfig;
   radius: number;
 };
 
@@ -42,35 +42,6 @@ function numericToHex(color: number | undefined, fallback = "#2a2a2a"): string {
   if (!Number.isFinite(color)) return fallback;
   const safe = Math.max(0, Math.min(0xffffff, Math.floor(Number(color))));
   return `#${safe.toString(16).padStart(6, "0")}`;
-}
-
-function mapNumberColor(
-  override: TokenNumberColorOverride | undefined,
-  teamColorHex: string,
-): string | undefined {
-  if (!override || override === "auto") return undefined;
-  if (override === "white" || override === "light") return "#ffffff";
-  if (override === "black" || override === "dark") return "#1a1a1a";
-  if (override === "team") return teamColorHex;
-  return undefined;
-}
-
-function sanitizeTokenConfig(input: Partial<TokenConfig> | undefined): TokenConfig | undefined {
-  if (!input) return undefined;
-  const fill = typeof input.fill === "string" ? input.fill : undefined;
-  const secondary = typeof input.secondary === "string" ? input.secondary : undefined;
-  const ring = typeof input.ring === "string" ? input.ring : undefined;
-  const numberColor = typeof input.numberColor === "string" ? input.numberColor : undefined;
-  const pattern = typeof input.pattern === "string" ? input.pattern : undefined;
-  if (!fill || !secondary || !ring || !numberColor || !pattern) return undefined;
-  return {
-    fill,
-    secondary,
-    ring,
-    numberColor,
-    pattern,
-    glowOnSelect: typeof input.glowOnSelect === "boolean" ? input.glowOnSelect : false,
-  };
 }
 
 export const ClassicRingRenderer: PlayerTokenRenderer = ({
@@ -129,6 +100,7 @@ export const VisionV3Renderer: PlayerTokenRenderer = ({
   style,
   kitPattern,
   kitPatternColor,
+  ring,
   numberColor,
   glowOnSelect,
   tokenConfig,
@@ -141,11 +113,12 @@ export const VisionV3Renderer: PlayerTokenRenderer = ({
     kitBaseColor: baseColorHex,
     kitPatternColor: secondaryHex,
     kitPattern,
-    numberColor: mapNumberColor(numberColor, baseColorHex),
+    ring,
+    numberColor,
     glowOnSelect,
     number: label,
     labelMode: /^\d+$/.test(label.trim()) ? "number" : "initials",
-    tokenConfig: sanitizeTokenConfig(tokenConfig),
+    tokenConfig,
   });
   const fallbackShadow = new Graphics();
   const firstChild = safeToken.children[0];
