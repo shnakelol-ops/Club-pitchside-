@@ -10,7 +10,7 @@ export type VisionV3PlayerTokenStyle = {
 };
 
 export type VisionV3TeamColor = "blue" | "red" | "green" | "yellow" | "black" | "white";
-export type VisionV3KitPattern = "plain" | "hoops" | "slash" | "stripes";
+export type VisionV3KitPattern = "plain" | "hoops" | "stripes" | "slash" | "chestDash" | "gradient";
 
 const DEFAULT_STYLE_BY_TEAM: Record<VisionV3TeamColor, VisionV3PlayerTokenStyle> = {
   blue: {
@@ -89,34 +89,70 @@ function drawPatternAccent(
   accentColor: number,
   innerRadius: number,
 ): void {
-  if (pattern === "plain") return;
-  const alpha = 0.18;
+  if (pattern === "plain" || pattern === "gradient") return;
+
+  const alpha = 0.72;
+
   if (pattern === "hoops") {
-    const y1 = -innerRadius * 0.3;
-    const y2 = innerRadius * 0.3;
-    target
-      .moveTo(-innerRadius * 0.68, y1)
-      .lineTo(innerRadius * 0.68, y1)
-      .moveTo(-innerRadius * 0.68, y2)
-      .lineTo(innerRadius * 0.68, y2)
-      .stroke({ color: accentColor, width: Math.max(0.26, innerRadius * 0.16), alpha, cap: "round", join: "round" });
+    const bandH = innerRadius * 0.28;
+    const positions = [
+      -innerRadius * 0.58,
+      -innerRadius * 0.02,
+       innerRadius * 0.54,
+    ];
+    for (const y of positions) {
+      target
+        .rect(-innerRadius, y, innerRadius * 2, bandH)
+        .fill({ color: accentColor, alpha });
+    }
     return;
   }
+
   if (pattern === "stripes") {
-    const x1 = -innerRadius * 0.28;
-    const x2 = innerRadius * 0.28;
-    target
-      .moveTo(x1, -innerRadius * 0.68)
-      .lineTo(x1, innerRadius * 0.68)
-      .moveTo(x2, -innerRadius * 0.68)
-      .lineTo(x2, innerRadius * 0.68)
-      .stroke({ color: accentColor, width: Math.max(0.26, innerRadius * 0.16), alpha, cap: "round", join: "round" });
+    const stripeW = innerRadius * 0.28;
+    const positions = [
+      -innerRadius * 0.58,
+      -innerRadius * 0.14,
+       innerRadius * 0.30,
+    ];
+    for (const x of positions) {
+      target
+        .rect(x, -innerRadius, stripeW, innerRadius * 2)
+        .fill({ color: accentColor, alpha });
+    }
     return;
   }
-  target
-    .moveTo(-innerRadius * 0.62, innerRadius * 0.48)
-    .lineTo(innerRadius * 0.62, -innerRadius * 0.48)
-    .stroke({ color: accentColor, width: Math.max(0.3, innerRadius * 0.19), alpha, cap: "round", join: "round" });
+
+  if (pattern === "slash") {
+    const sashW = innerRadius * 0.82;
+    const len   = innerRadius * 2.2;
+    const angle = -38 * (Math.PI / 180);
+    const cos   = Math.cos(angle);
+    const sin   = Math.sin(angle);
+    const half  = sashW / 2;
+    const corners: [number, number][] = [
+      [-len / 2, -half],
+      [ len / 2, -half],
+      [ len / 2,  half],
+      [-len / 2,  half],
+    ];
+    const rotated = corners.flatMap(([x, y]) => [
+      x * cos - y * sin,
+      x * sin + y * cos,
+    ]);
+    target
+      .poly(rotated)
+      .fill({ color: accentColor, alpha });
+    return;
+  }
+
+  if (pattern === "chestDash") {
+    const bandH = innerRadius * 0.62;
+    target
+      .rect(-innerRadius, -bandH / 2, innerRadius * 2, bandH)
+      .fill({ color: accentColor, alpha });
+    return;
+  }
 }
 
 function drawShirtGlyph(target: Graphics, centerY: number, size: number, color: number): void {
@@ -219,10 +255,14 @@ export function createVisionV3PlayerToken({
     .circle(0, 0, discRadius - 0.08)
     .fill({ color: ringColor })
     .circle(0, 0, innerRadius)
-    .fill({ color: coreColor })
+    .fill({ color: kitPattern === "gradient" ? mixColor(baseColor, 0xffffff, 0.12) : coreColor })
     .ellipse(0, -innerRadius * 0.34, innerRadius * 0.72, innerRadius * 0.22)
     .fill({ color: highlightColor, alpha: 0.3 });
   drawPatternAccent(disc, kitPattern, mixColor(accentColor, 0xffffff, 0.1), innerRadius * 0.9);
+  const patternMask = new Graphics();
+  patternMask.circle(0, 0, innerRadius).fill({ color: 0xffffff });
+  disc.mask = patternMask;
+  disc.addChild(patternMask);
   disc
     .circle(0, 0, discRadius)
     .stroke({ color: edgeColor, width: Math.max(0.22, discRadius * 0.13), alpha: 0.7, alignment: 0.5 })
