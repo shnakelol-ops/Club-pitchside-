@@ -17,7 +17,6 @@ export function createJerseyToken(input: CleanTokenRendererInput): CleanTokenRen
 
   const outerRadius = Math.max(0.1, input.radius);
   const innerRadius = outerRadius * 0.82;
-  const glyphY = 0;
 
   // LAYER 1 — SHADOW
   const shadow = new Graphics();
@@ -60,21 +59,21 @@ export function createJerseyToken(input: CleanTokenRendererInput): CleanTokenRen
     -s * 0.45,
     s * 0.52,
   ];
-  const jerseyGlyph = new Graphics();
-  jerseyGlyph
+  const glyph = new Graphics();
+  glyph
     .poly(points)
     .fill({ color: 0x000000, alpha: 0.18 })
     .poly(points)
     .stroke({ color: 0x000000, alpha: 0.35, width: 1.2 });
-  jerseyGlyph.position.set(0, glyphY);
-  token.addChild(jerseyGlyph);
+  glyph.position.set(0, 0);
+  token.addChild(glyph);
 
   // LAYER 5 — NUMBER TEXT
   const numberText = String(Math.trunc(input.number));
   const fontSize = resolveFontSize(innerRadius, Math.min(numberText.length, 3));
   const textResolution =
     typeof window !== "undefined" ? Math.max(2, Math.min(3, window.devicePixelRatio || 1)) : 2;
-  const numberLabel = new Text({
+  const labelText = new Text({
     text: numberText,
     style: {
       fill: 0xffffff,
@@ -89,11 +88,11 @@ export function createJerseyToken(input: CleanTokenRendererInput): CleanTokenRen
       },
     },
   });
-  numberLabel.anchor.set(0.5, 0.5);
-  numberLabel.position.set(0, glyphY);
-  numberLabel.resolution = textResolution;
-  numberLabel.roundPixels = true;
-  token.addChild(numberLabel);
+  labelText.anchor.set(0.5, 0.5);
+  labelText.position.set(0, 0);
+  labelText.resolution = textResolution;
+  labelText.roundPixels = true;
+  token.addChild(labelText);
 
   return { token, shadow };
 }
