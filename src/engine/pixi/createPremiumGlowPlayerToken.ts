@@ -59,8 +59,8 @@ const DEFAULT_STYLE_BY_TEAM: Record<PremiumGlowTeamColor, PremiumGlowPlayerToken
 
 const TOKEN_BASE_COLOR = 0x191919;
 const TOKEN_RADIUS = 3.66;
-const TOKEN_RING_WIDTH = 0.72;
-const TOKEN_IDLE_HALO_ALPHA = 0.26;
+const TOKEN_RING_WIDTH = 0.54;
+const TOKEN_IDLE_HALO_ALPHA = 0.2;
 
 function clampColorChannel(value: number): number {
   return Math.max(0, Math.min(255, Math.round(value)));
@@ -81,6 +81,13 @@ function mixColor(base: number, target: number, amount: number): number {
   return (r << 16) | (g << 8) | b;
 }
 
+function luminance(color: number): number {
+  const r = (color >> 16) & 0xff;
+  const g = (color >> 8) & 0xff;
+  const b = color & 0xff;
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
 function vividGlowColor(color: number): number {
   const r = (color >> 16) & 0xff;
   const g = (color >> 8) & 0xff;
@@ -99,12 +106,27 @@ function vividGlowColor(color: number): number {
   return mixColor(boostedColor, color, 0.28);
 }
 
-function drawIntegratedCrownNotch(target: Graphics, ringColor: number, outlineColor: number): void {
-  const notchY = -TOKEN_RADIUS + TOKEN_RING_WIDTH * 0.56;
+function drawIntegratedCrownNotch(
+  target: Graphics,
+  ringColor: number,
+  outlineColor: number,
+  tokenRadius: number,
+  ringWidth: number,
+): void {
+  const notchY = -tokenRadius + ringWidth * 0.5;
+  const notchWidth = Math.max(0.34, tokenRadius * 0.15);
+  const notchHeight = Math.max(0.09, tokenRadius * 0.04);
   target
-    .roundRect(-0.26, notchY, 0.52, 0.12, 0.06)
+    .roundRect(-notchWidth * 0.5, notchY, notchWidth, notchHeight, notchHeight * 0.5)
     .fill({ color: mixColor(ringColor, outlineColor, 0.18), alpha: 0.2 })
-    .poly([-0.14, notchY + 0.11, 0, notchY + 0.03, 0.14, notchY + 0.11])
+    .poly([
+      -notchWidth * 0.26,
+      notchY + notchHeight * 0.92,
+      0,
+      notchY + notchHeight * 0.24,
+      notchWidth * 0.26,
+      notchY + notchHeight * 0.92,
+    ])
     .fill({ color: mixColor(ringColor, 0xffffff, 0.08), alpha: 0.18 });
 }
 
@@ -113,6 +135,7 @@ export function createPremiumGlowPlayerToken({
   teamColor,
   style,
   scale,
+  radius,
   kitPattern = "plain",
   kitPatternColor,
 }: {
@@ -120,6 +143,7 @@ export function createPremiumGlowPlayerToken({
   teamColor: PremiumGlowTeamColor;
   style?: Partial<PremiumGlowPlayerTokenStyle>;
   scale?: number;
+  radius?: number;
   kitPattern?: PremiumGlowKitPattern;
   kitPatternColor?: number;
 }): { token: Container; shadow: Graphics } {
@@ -136,6 +160,8 @@ export function createPremiumGlowPlayerToken({
   token.cursor = "grab";
   token.scale.set(scale ?? 1);
 
+  const tokenRadius = Number.isFinite(radius) ? Math.max(2.8, Number(radius)) : TOKEN_RADIUS;
+  const ringWidth = Math.max(0.44, tokenRadius * 0.16);
   const patternStrength = kitPattern === "plain" ? 0.07 : 0.11;
   const teamBaseColor = resolved.goalkeeper && resolved.secondaryColor != null
     ? resolved.secondaryColor
@@ -152,37 +178,39 @@ export function createPremiumGlowPlayerToken({
   const centreRimColor = mixColor(glowColor, resolved.outlineColor, 0.3);
 
   const shadow = new Graphics();
+  const outerAuraRadius = tokenRadius * 1.14;
+  const innerAuraRadius = tokenRadius * 1.04;
   shadow
-    .circle(0, 0, TOKEN_RADIUS * 1.56)
-    .stroke({ color: glowColor, width: 0.66, alpha: 0.96 })
-    .circle(0, 0, TOKEN_RADIUS * 1.34)
-    .stroke({ color: glowColor, width: 0.34, alpha: 0.9 })
-    .circle(0, 0, TOKEN_RADIUS * 1.16)
-    .fill({ color: glowColor, alpha: 0.18 });
+    .circle(0, 0, outerAuraRadius)
+    .stroke({ color: glowColor, width: Math.max(0.14, tokenRadius * 0.052), alpha: 0.72 })
+    .circle(0, 0, innerAuraRadius)
+    .stroke({ color: glowColor, width: Math.max(0.1, tokenRadius * 0.034), alpha: 0.56 })
+    .circle(0, 0, tokenRadius * 1.02)
+    .fill({ color: glowColor, alpha: 0.045 });
   shadow.alpha = TOKEN_IDLE_HALO_ALPHA;
   token.addChild(shadow);
 
   const baseShadow = new Graphics();
   baseShadow
-    .ellipse(0.34, TOKEN_RADIUS * 1.08, TOKEN_RADIUS * 1.2, TOKEN_RADIUS * 0.33)
-    .fill({ color: 0x020617, alpha: 0.17 })
-    .ellipse(0.34, TOKEN_RADIUS * 1.02, TOKEN_RADIUS * 1.04, TOKEN_RADIUS * 0.24)
-    .fill({ color: 0x020617, alpha: 0.12 });
+    .ellipse(0.24, tokenRadius * 1.06, tokenRadius * 0.98, tokenRadius * 0.25)
+    .fill({ color: 0x020617, alpha: 0.14 })
+    .ellipse(0.24, tokenRadius * 1.01, tokenRadius * 0.88, tokenRadius * 0.19)
+    .fill({ color: 0x020617, alpha: 0.09 });
   token.addChild(baseShadow);
 
   const tokenBase = new Graphics();
   tokenBase
-    .circle(0, 0, TOKEN_RADIUS)
+    .circle(0, 0, tokenRadius)
     .fill({ color: TOKEN_BASE_COLOR })
-    .circle(0, 0, TOKEN_RADIUS - 0.08)
-    .stroke({ color: mixColor(TOKEN_BASE_COLOR, 0x000000, 0.3), width: 0.42, alpha: 0.7 })
-    .circle(0, 0, TOKEN_RADIUS - 0.2)
-    .stroke({ color: ringColor, width: TOKEN_RING_WIDTH, alpha: 0.95 })
-    .circle(0, 0, TOKEN_RADIUS - TOKEN_RING_WIDTH - 0.06)
-    .stroke({ color: ringInnerShade, width: 0.2, alpha: 0.54 });
+    .circle(0, 0, tokenRadius - 0.08)
+    .stroke({ color: mixColor(TOKEN_BASE_COLOR, 0x000000, 0.34), width: Math.max(0.2, tokenRadius * 0.062), alpha: 0.74 })
+    .circle(0, 0, tokenRadius - 0.16)
+    .stroke({ color: ringColor, width: ringWidth, alpha: 0.92 })
+    .circle(0, 0, tokenRadius - ringWidth - 0.06)
+    .stroke({ color: ringInnerShade, width: Math.max(0.12, tokenRadius * 0.036), alpha: 0.52 });
   token.addChild(tokenBase);
 
-  const centreRadius = TOKEN_RADIUS - TOKEN_RING_WIDTH - 0.18;
+  const centreRadius = tokenRadius - ringWidth - 0.16;
   const centre = new Graphics();
   centre
     .circle(0, 0, centreRadius)
@@ -198,26 +226,40 @@ export function createPremiumGlowPlayerToken({
   token.addChild(centre);
 
   const notch = new Graphics();
-  drawIntegratedCrownNotch(notch, ringColor, resolved.outlineColor);
+  drawIntegratedCrownNotch(notch, ringColor, resolved.outlineColor, tokenRadius, ringWidth);
   token.addChild(notch);
 
   const orientationTick = new Graphics();
   orientationTick
-    .roundRect(-0.09, -TOKEN_RADIUS + TOKEN_RING_WIDTH * 0.44, 0.18, 0.18, 0.08)
+    .roundRect(
+      -tokenRadius * 0.024,
+      -tokenRadius + ringWidth * 0.42,
+      tokenRadius * 0.048,
+      tokenRadius * 0.048,
+      tokenRadius * 0.02,
+    )
     .fill({ color: mixColor(ringColor, 0xffffff, 0.08), alpha: 0.2 });
   token.addChild(orientationTick);
 
   const safeLabel = label.trim().slice(0, 3) || "?";
   const isNumericLabel = /^\d+$/.test(safeLabel);
+  const labelFillColor =
+    isNumericLabel && luminance(centreColor) >= 156 ? 0x0f172a : resolved.textColor;
   const labelBaseY = isNumericLabel ? -0.02 : -0.06;
   const labelFontSize = isNumericLabel
-    ? safeLabel.length >= 2 ? 4.3 : 4.9
-    : 3.4;
-  const labelLetterSpacing = isNumericLabel ? 0.04 : 0.1;
+    ? safeLabel.length >= 2 ? centreRadius * 1.6 : centreRadius * 1.82
+    : centreRadius * 1.28;
+  const labelLetterSpacing = isNumericLabel ? (safeLabel.length >= 2 ? 0.02 : 0.04) : 0.1;
   const labelPlate = new Graphics();
   labelPlate
-    .roundRect(-centreRadius * 0.9, -1.02, centreRadius * 1.8, 2.04, 0.58)
-    .fill({ color: 0x020617, alpha: 0.24 });
+    .roundRect(
+      -centreRadius * 0.9,
+      -centreRadius * 0.49,
+      centreRadius * 1.8,
+      centreRadius * 0.98,
+      centreRadius * 0.28,
+    )
+    .fill({ color: 0x020617, alpha: 0.26 });
   labelPlate.position.y = labelBaseY;
   token.addChild(labelPlate);
 
@@ -244,15 +286,17 @@ export function createPremiumGlowPlayerToken({
   const labelText = new Text({
     text: safeLabel,
     style: {
-      fill: resolved.textColor,
+      fill: labelFillColor,
       fontSize: labelFontSize,
       fontWeight: "900",
       fontFamily: "\"Barlow Condensed\", \"Inter Tight\", Inter, system-ui, sans-serif",
       align: "center",
       letterSpacing: labelLetterSpacing,
       stroke: {
-        color: mixColor(resolved.outlineColor, 0x000000, 0.22),
-        width: isNumericLabel ? 0.8 : 0.62,
+        color: luminance(labelFillColor) > 140 ? 0x0b1220 : 0xf8fafc,
+        width: isNumericLabel
+          ? safeLabel.length >= 2 ? Math.max(0.52, centreRadius * 0.21) : Math.max(0.46, centreRadius * 0.18)
+          : Math.max(0.4, centreRadius * 0.15),
         join: "round",
       },
     },
