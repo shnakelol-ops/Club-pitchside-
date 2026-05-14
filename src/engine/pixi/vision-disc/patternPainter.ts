@@ -73,9 +73,15 @@ export function drawVisionDiscPattern(
   }
 
   const y = -radius * 0.18;
-  const dashWidth = radius * 0.19;
-  const gap = radius * 0.08;
-  const segmentCount = 4;
+  const bibBandHeight = Math.max(1, width * 1.16);
+  const bibBandWidth = radius * 1.34;
+  graphics
+    .roundRect(-bibBandWidth * 0.5, y - bibBandHeight * 0.5, bibBandWidth, bibBandHeight, bibBandHeight * 0.5)
+    .fill({ color, alpha: alpha * 0.24 });
+
+  const dashWidth = radius * 0.24;
+  const gap = radius * 0.11;
+  const segmentCount = 3;
   const totalWidth = segmentCount * dashWidth + (segmentCount - 1) * gap;
   const startX = -totalWidth * 0.5;
   for (let index = 0; index < segmentCount; index += 1) {
@@ -84,5 +90,9 @@ export function drawVisionDiscPattern(
       .moveTo(left, y)
       .lineTo(left + dashWidth, y);
   }
-  strokePattern(graphics, color, alpha, width * 0.86);
+  strokePattern(graphics, color, alpha * 0.94, width * 1.04);
+  graphics
+    .moveTo(-bibBandWidth * 0.38, y + bibBandHeight * 0.26)
+    .lineTo(bibBandWidth * 0.38, y + bibBandHeight * 0.26);
+  strokePattern(graphics, color, alpha * 0.32, Math.max(1, width * 0.58));
 }

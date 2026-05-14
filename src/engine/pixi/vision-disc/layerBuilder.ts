@@ -5,6 +5,23 @@ import { VISION_DISC_GEOMETRY } from "./constants";
 import type { VisionDiscGeometry } from "./geometry";
 import { drawVisionDiscPattern } from "./patternPainter";
 
+function clampByte(value: number): number {
+  return Math.max(0, Math.min(255, Math.round(value)));
+}
+
+function mixColor(base: number, target: number, amount: number): number {
+  const br = (base >> 16) & 0xff;
+  const bg = (base >> 8) & 0xff;
+  const bb = base & 0xff;
+  const tr = (target >> 16) & 0xff;
+  const tg = (target >> 8) & 0xff;
+  const tb = target & 0xff;
+  const r = clampByte(br + (tr - br) * amount);
+  const g = clampByte(bg + (tg - bg) * amount);
+  const b = clampByte(bb + (tb - bb) * amount);
+  return (r << 16) | (g << 8) | b;
+}
+
 function resolveLabel(input: VisionDiscRenderInput): string {
   const safeInitials = input.label.trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 3);
   if (input.labelMode === "initials" && safeInitials.length > 0) return safeInitials;
@@ -14,8 +31,14 @@ function resolveLabel(input: VisionDiscRenderInput): string {
 
 function resolveLabelFontSize(label: string, geometry: VisionDiscGeometry): number {
   const isNumeric = /^\d+$/.test(label);
-  if (!isNumeric) return geometry.initialsFont;
-  return label.length >= 2 ? geometry.numberFontMulti : geometry.numberFontSingle;
+  const base = !isNumeric
+    ? geometry.initialsFont
+    : label.length >= 2 ? geometry.numberFontMulti : geometry.numberFontSingle;
+  // Keep small tokens legible without changing geometric contracts.
+  if (geometry.outerRadius <= 20) {
+    return base * (isNumeric ? 1.06 : 1.04);
+  }
+  return base;
 }
 
 function drawGlyph(graphics: Graphics, geometry: VisionDiscGeometry, color: number, alpha: number): void {
@@ -65,15 +88,30 @@ export function buildVisionDiscLayers(
     });
   token.addChild(layers.ambient);
 
+  const softenedRingColor = mixColor(style.colors.ringColor, style.colors.shadowColor, 0.14);
+  const ringEdgeColor = mixColor(style.colors.ringStrokeColor, style.colors.shadowColor, 0.24);
+  const ringInsetRadius = geometry.innerRadius + geometry.ringThickness * 0.15;
   layers.ring
     .circle(0, 0, geometry.outerRadius)
-    .fill({ color: style.colors.ringColor, alpha: style.alpha.ringColor })
+    .fill({ color: softenedRingColor, alpha: style.alpha.ringColor * 0.96 })
     .circle(0, 0, geometry.outerRadius)
     .stroke({
       color: style.colors.ringStrokeColor,
-      alpha: style.alpha.ringStrokeColor,
-      width: Math.max(1, geometry.ringThickness * 0.22),
+      alpha: style.alpha.ringStrokeColor * 0.9,
+      width: Math.max(1, geometry.ringThickness * 0.19),
       alignment: 0.5,
+    })
+    .circle(0, 0, geometry.outerRadius)
+    .stroke({
+      color: ringEdgeColor,
+      alpha: style.alpha.ringStrokeColor * 0.32,
+      width: Math.max(1, geometry.ringThickness * 0.1),
+      alignment: 1,
+    })
+    .circle(0, 0, ringInsetRadius)
+    .fill({
+      color: style.colors.discBaseColor,
+      alpha: style.alpha.discBaseColor * 0.24,
     });
   token.addChild(layers.ring);
 
@@ -91,6 +129,8 @@ export function buildVisionDiscLayers(
     layers.disc
       .circle(0, 0, geometry.innerRadius)
       .fill(gradient)
+      .ellipse(0, -geometry.innerRadius * 0.3, geometry.innerRadius * 0.7, geometry.innerRadius * 0.16)
+      .fill({ color: style.colors.discHighlightColor, alpha: style.alpha.discHighlightColor * 0.4 })
       .circle(0, 0, geometry.innerRadius)
       .stroke({
         color: style.colors.discEdgeColor,
@@ -102,8 +142,8 @@ export function buildVisionDiscLayers(
     layers.disc
       .circle(0, 0, geometry.innerRadius)
       .fill({ color: style.colors.discBaseColor, alpha: style.alpha.discBaseColor })
-      .ellipse(0, -geometry.innerRadius * 0.32, geometry.innerRadius * 0.72, geometry.innerRadius * 0.22)
-      .fill({ color: style.colors.discHighlightColor, alpha: style.alpha.discHighlightColor * 0.7 })
+      .ellipse(0, -geometry.innerRadius * 0.29, geometry.innerRadius * 0.7, geometry.innerRadius * 0.17)
+      .fill({ color: style.colors.discHighlightColor, alpha: style.alpha.discHighlightColor * 0.5 })
       .circle(0, 0, geometry.innerRadius)
       .stroke({
         color: style.colors.discEdgeColor,
@@ -126,6 +166,8 @@ export function buildVisionDiscLayers(
   drawGlyph(layers.glyph, geometry, style.colors.glyphColor, style.alpha.glyphColor);
   token.addChild(layers.glyph);
 
+  const compactLabelNudge = geometry.outerRadius <= 20 ? -geometry.outerRadius * 0.025 : 0;
+  const labelY = geometry.innerRadius * 0.4 + compactLabelNudge;
   layers.labelPlate
     .roundRect(
       -geometry.innerRadius * 0.9,
@@ -138,11 +180,15 @@ export function buildVisionDiscLayers(
       color: style.colors.labelPlateColor,
       alpha: style.alpha.labelPlateColor * 0.9,
     });
-  layers.labelPlate.position.y = geometry.innerRadius * 0.4;
+  layers.labelPlate.position.y = labelY;
   token.addChild(layers.labelPlate);
 
   const label = resolveLabel(input);
   const labelFontSize = resolveLabelFontSize(label, geometry);
+  const labelStrokeWidth = Math.max(
+    0.9,
+    geometry.outerRadius * 0.082 * (geometry.outerRadius <= 20 ? 1.1 : 1),
+  );
   layers.labelText = new Text({
     text: label,
     style: {
@@ -153,14 +199,14 @@ export function buildVisionDiscLayers(
       align: "center",
       stroke: {
         color: style.colors.labelStrokeColor,
-        width: Math.max(1, geometry.outerRadius * 0.09),
+        width: labelStrokeWidth,
         join: "round",
       },
       letterSpacing: label.length > 1 ? 0 : 0.1,
     },
   });
   layers.labelText.anchor.set(0.5);
-  layers.labelText.position.y = geometry.innerRadius * 0.4;
+  layers.labelText.position.y = labelY;
   layers.labelText.roundPixels = true;
   layers.labelText.resolution =
     typeof window !== "undefined" ? Math.max(2, Math.min(3, window.devicePixelRatio || 1)) : 2;
@@ -182,11 +228,19 @@ export function buildVisionDiscLayers(
 
   if (input.selected) {
     const selectedHalo = new Graphics();
+    const haloColor = mixColor(style.colors.haloColor, style.colors.shadowColor, 0.26);
     selectedHalo
       .circle(0, 0, geometry.selectedHaloRadius)
       .stroke({
-        color: style.colors.haloColor,
-        alpha: style.alpha.haloColor,
+        color: style.colors.shadowColor,
+        alpha: style.alpha.shadowColor * 0.24,
+        width: Math.max(1, geometry.selectedHaloStroke * 1.2),
+        alignment: 0.5,
+      })
+      .circle(0, 0, geometry.selectedHaloRadius)
+      .stroke({
+        color: haloColor,
+        alpha: style.alpha.haloColor * 0.82,
         width: Math.max(1, geometry.selectedHaloStroke),
         alignment: 0.5,
       });
