@@ -96,6 +96,11 @@ function clampPatternForTiny(pattern: TokenPatternType, isTiny: boolean): TokenP
   return "plain";
 }
 
+function colorToHex(color: number): string {
+  const safe = Math.max(0, Math.min(0xffffff, Math.floor(color)));
+  return `#${safe.toString(16).padStart(6, "0")}`;
+}
+
 export function createVisionV3PlayerToken({
   label,
   teamColor,
@@ -200,13 +205,15 @@ export function createVisionV3PlayerToken({
 
   if (pattern !== "plain") {
     const patternLayer = new Graphics();
+    const patternLod = lodTier === "tiny" ? 0 : lodTier === "small" ? 1 : 2;
     drawTokenPattern({
-      target: patternLayer,
+      g: patternLayer,
       pattern,
-      patternColor: patternInkColor,
-      radius: innerRadius * 0.92,
-      lodTier,
-      alpha: lodTier === "regular" ? 0.54 : 0.62,
+      secondary: colorToHex(patternInkColor),
+      cx: 0,
+      cy: 0,
+      r: innerRadius * 0.92,
+      lod: patternLod,
     });
     token.addChild(patternLayer);
   }

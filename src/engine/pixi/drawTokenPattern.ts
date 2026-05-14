@@ -1,105 +1,236 @@
+/**
+ * drawTokenPattern.ts
+ * ----------------------------------------------------------------------------
+ * Pure PixiJS pattern drawing engine.
+ *
+ * CONTRACT
+ *   - Receives a PixiJS Graphics object that is already clipped to a circle
+ *     of radius `r` centred at (cx, cy).
+ *   - Draws secondary-colour marks ONLY (the base fill is drawn by the caller
+ *     before this function is invoked).
+ *   - Never creates its own Graphics — always draws into the one passed in.
+ *   - Never touches Text, Container, shadows, rings, or number plates.
+ *   - Compatible with PixiJS v7 AND v8 Graphics API.
+ *
+ * LOD (Level of Detail)
+ *   lod === 0  -> tiny (<=24px radius): skip pattern entirely — number only
+ *   lod === 1  -> small (24–36px): simplified pattern (single mark)
+ *   lod === 2  -> full (>36px): complete pattern
+ * ----------------------------------------------------------------------------
+ */
+
 import type { Graphics } from "pixi.js";
+import type { TokenPattern } from "./tokenConfig";
 
-import type { TokenPatternType } from "./tokenConfig";
-import { mixColor, type TokenPatternLodTier } from "./tokenPatternContrast";
+const LOD_SKIP = 14;
+const LOD_SIMPLE = 22;
 
-function isV7(graphics: Graphics): boolean {
-  return typeof (graphics as Graphics & { stroke?: unknown }).stroke !== "function";
+export type PatternLOD = 0 | 1 | 2;
+
+export function resolvePatternLOD(radius: number): PatternLOD {
+  if (radius <= LOD_SKIP) return 0;
+  if (radius <= LOD_SIMPLE) return 1;
+  return 2;
 }
 
-function strokePath(
-  graphics: Graphics,
+function isV7(g: Graphics): boolean {
+  return typeof (g as Graphics & { beginFill?: unknown }).beginFill === "function";
+}
+
+function fillRect(
+  g: Graphics,
   color: number,
-  width: number,
   alpha: number,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
 ): void {
-  if (isV7(graphics)) {
-    const g = graphics as Graphics & {
-      lineStyle: (lineWidth: number, lineColor: number, lineAlpha?: number) => Graphics;
-    };
-    g.lineStyle(width, color, alpha);
-    return;
-  }
-  graphics.stroke({ color, width, alpha, cap: "round", join: "round" });
-}
-
-function fillCircle(graphics: Graphics, color: number, alpha: number, radius: number): void {
-  if (isV7(graphics)) {
-    const g = graphics as Graphics & {
+  if (isV7(g)) {
+    const v7 = g as Graphics & {
       beginFill: (fillColor: number, fillAlpha?: number) => Graphics;
-      drawCircle: (x: number, y: number, r: number) => Graphics;
+      drawRect: (xPos: number, yPos: number, width: number, height: number) => Graphics;
       endFill: () => Graphics;
     };
-    g.beginFill(color, alpha);
-    g.drawCircle(0, 0, radius);
-    g.endFill();
+    v7.beginFill(color, alpha);
+    v7.drawRect(x, y, w, h);
+    v7.endFill();
     return;
   }
-  graphics.circle(0, 0, radius).fill({ color, alpha });
+  (g as Graphics & { rect: (xPos: number, yPos: number, width: number, height: number) => Graphics })
+    .rect(x, y, w, h)
+    .fill({ color, alpha });
 }
 
-export type DrawTokenPatternOptions = {
-  target: Graphics;
-  pattern: TokenPatternType;
-  patternColor: number;
-  radius: number;
-  lodTier: TokenPatternLodTier;
-  alpha?: number;
-};
+function fillPoly(
+  g: Graphics,
+  color: number,
+  alpha: number,
+  points: number[],
+): void {
+  if (isV7(g)) {
+    const v7 = g as Graphics & {
+      beginFill: (fillColor: number, fillAlpha?: number) => Graphics;
+      drawPolygon: (polygonPoints: number[]) => Graphics;
+      endFill: () => Graphics;
+    };
+    v7.beginFill(color, alpha);
+    v7.drawPolygon(points);
+    v7.endFill();
+    return;
+  }
+  (g as Graphics & { poly: (polygonPoints: number[]) => Graphics })
+    .poly(points)
+    .fill({ color, alpha });
+}
 
-export function drawTokenPattern({
-  target,
-  pattern,
-  patternColor,
-  radius,
-  lodTier,
-  alpha = 0.6,
-}: DrawTokenPatternOptions): void {
-  if (pattern === "plain") return;
-  if (lodTier === "tiny" && pattern !== "gradient") return;
+export function hexToPixi(hex: string): number {
+  return Number.parseInt(hex.replace("#", "0x"), 16);
+}
 
-  if (pattern === "gradient") {
-    const stops = lodTier === "small" ? 5 : 7;
-    const outer = Math.max(0.2, radius);
-    for (let index = 0; index < stops; index += 1) {
-      const t = (index + 1) / stops;
-      const color = mixColor(patternColor, 0x0b1220, t * 0.2);
-      fillCircle(target, color, 0.05 + t * 0.09, outer * (1 - t * 0.11));
-    }
+export interface DrawPatternOptions {
+  g: Graphics;
+  pattern: TokenPattern;
+  secondary: string;
+  cx: number;
+  cy: number;
+  r: number;
+  lod: PatternLOD;
+}
+
+export function drawTokenPattern(opts: DrawPatternOptions): void {
+  const {
+    g,
+    pattern,
+    secondary,
+    cx,
+    cy,
+    r,
+    lod,
+  } = opts;
+
+  if (lod === 0) return;
+  if (pattern === "plain" || pattern === "gradient" || pattern === "solid") return;
+
+  const col = hexToPixi(secondary);
+  const alpha = 1.0;
+
+  switch (pattern) {
+    case "hoops":
+      drawHoops(g, col, alpha, cx, cy, r, lod);
+      break;
+    case "stripes":
+      drawStripes(g, col, alpha, cx, cy, r, lod);
+      break;
+    case "slash":
+      drawSlash(g, col, alpha, cx, cy, r, lod);
+      break;
+    case "chestDash":
+      drawChestDash(g, col, alpha, cx, cy, r, lod);
+      break;
+    default:
+      break;
+  }
+}
+
+function drawHoops(
+  g: Graphics,
+  col: number,
+  alpha: number,
+  cx: number,
+  cy: number,
+  r: number,
+  lod: PatternLOD,
+): void {
+  const d = r * 2;
+  const bh = d / 7;
+  const top = cy - r;
+
+  if (lod === 1) {
+    fillRect(g, col, alpha, cx - r, cy - bh / 2, d, bh);
     return;
   }
 
-  const strokeWidth = Math.max(
-    0.34,
-    radius * (lodTier === "tiny" ? 0.3 : lodTier === "small" ? 0.24 : 0.2),
-  );
+  const positions = [
+    top + bh * 0.5,
+    top + bh * 2.5,
+    top + bh * 4.5,
+  ];
+  for (const yPos of positions) {
+    fillRect(g, col, alpha, cx - r, yPos, d, bh);
+  }
+}
 
-  if (pattern === "hoops") {
-    const yOffsets = [-radius * 0.32, radius * 0.05, radius * 0.42];
-    const marks = lodTier === "regular" ? yOffsets : [yOffsets[0] ?? 0, yOffsets[2] ?? 0];
-    for (const y of marks) {
-      target.moveTo(-radius * 0.68, y).lineTo(radius * 0.68, y);
-    }
-    strokePath(target, patternColor, strokeWidth, alpha);
+function drawStripes(
+  g: Graphics,
+  col: number,
+  alpha: number,
+  cx: number,
+  cy: number,
+  r: number,
+  lod: PatternLOD,
+): void {
+  const d = r * 2;
+  const sw = d / 7;
+  const left = cx - r;
+
+  if (lod === 1) {
+    fillRect(g, col, alpha, cx - sw / 2, cy - r, sw, d);
     return;
   }
 
-  if (pattern === "stripes") {
-    const xOffsets = [-radius * 0.36, 0, radius * 0.36];
-    const marks = lodTier === "regular" ? xOffsets : [xOffsets[0] ?? 0, xOffsets[2] ?? 0];
-    for (const x of marks) {
-      target.moveTo(x, -radius * 0.68).lineTo(x, radius * 0.68);
-    }
-    strokePath(target, patternColor, strokeWidth, alpha);
-    return;
+  const xPositions = [
+    left + sw * 0.5,
+    left + sw * 2.5,
+    left + sw * 4.5,
+  ];
+  for (const xPos of xPositions) {
+    fillRect(g, col, alpha, xPos, cy - r, sw, d);
   }
+}
 
-  if (pattern === "chestDash") {
-    target.moveTo(-radius * 0.66, radius * 0.08).lineTo(radius * 0.66, radius * 0.08);
-    strokePath(target, patternColor, strokeWidth * 1.06, alpha);
-    return;
-  }
+function drawSlash(
+  g: Graphics,
+  col: number,
+  alpha: number,
+  cx: number,
+  cy: number,
+  r: number,
+  lod: PatternLOD,
+): void {
+  const d = r * 2;
+  const sashW = lod === 1 ? d * 0.55 : d * 0.42;
+  const halfSash = sashW / 2;
+  const angle = -38 * (Math.PI / 180);
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
 
-  target.moveTo(-radius * 0.62, radius * 0.54).lineTo(radius * 0.62, -radius * 0.54);
-  strokePath(target, patternColor, strokeWidth * 1.08, alpha);
+  const len = d * 1.6;
+  const corners: Array<[number, number]> = [
+    [-len / 2, -halfSash],
+    [len / 2, -halfSash],
+    [len / 2, halfSash],
+    [-len / 2, halfSash],
+  ];
+
+  const rotated = corners.flatMap(([x, y]) => [
+    cx + x * cos - y * sin,
+    cy + x * sin + y * cos,
+  ]);
+
+  fillPoly(g, col, alpha, rotated);
+}
+
+function drawChestDash(
+  g: Graphics,
+  col: number,
+  alpha: number,
+  cx: number,
+  cy: number,
+  r: number,
+  lod: PatternLOD,
+): void {
+  const d = r * 2;
+  const bh = lod === 1 ? d * 0.48 : d * 0.38;
+  fillRect(g, col, alpha, cx - r, cy - bh / 2, d, bh);
 }
