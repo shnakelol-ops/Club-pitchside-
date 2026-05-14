@@ -173,13 +173,12 @@ function addMaskedPattern(
   alpha: number,
 ): void {
   const patternLayer = new Container();
+  const mask = new Graphics();
+  mask.circle(0, 0, radius * 0.88).fill({ color: 0xffffff });
+  patternLayer.mask = mask;
   const graphic = new Graphics();
   drawPattern(graphic, pattern, radius * 0.9, patternColor, alpha);
   patternLayer.addChild(graphic);
-  const mask = new Graphics();
-  mask.circle(0, 0, radius * 0.88).fill({ color: 0xffffff });
-  mask.renderable = false;
-  patternLayer.mask = mask;
   token.addChild(mask);
   token.addChild(patternLayer);
 }
