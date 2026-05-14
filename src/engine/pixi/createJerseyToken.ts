@@ -4,9 +4,9 @@ import type { CleanTokenRendererInput } from "./createCleanTokenRenderers";
 import type { CleanTokenRendererOutput } from "./createCleanTokenRenderers";
 
 function resolveFontSize(innerRadius: number, digitCount: number): number {
-  if (digitCount <= 1) return innerRadius * 1.1;
-  if (digitCount === 2) return innerRadius * 0.88;
-  return innerRadius * 0.68;
+  if (digitCount <= 1) return innerRadius * 1.3;
+  if (digitCount === 2) return innerRadius * 1.05;
+  return innerRadius * 0.8;
 }
 
 export function createJerseyToken(input: CleanTokenRendererInput): CleanTokenRendererOutput {
@@ -83,7 +83,7 @@ export function createJerseyToken(input: CleanTokenRendererInput): CleanTokenRen
       align: "center",
       stroke: {
         color: 0x000000,
-        width: outerRadius * 0.1,
+        width: Math.max(2, outerRadius * 0.14),
         join: "round",
       },
     },
