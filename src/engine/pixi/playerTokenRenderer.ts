@@ -5,8 +5,10 @@ import { createPremiumGlowPlayerToken } from "./createPremiumGlowPlayerToken";
 import { createTorsoPlayerToken } from "./createTorsoPlayerToken";
 import { createVisionV3PlayerToken } from "./createVisionV3PlayerToken";
 import type { PremiumPlayerTokenColor } from "./createPremiumPlayerToken";
+import type { TokenConfig, TokenNumberColorOverride, TokenRingStyle } from "./tokenConfig";
 
 export type PlayerTokenStyle = "vision-v3" | "classic" | "premium" | "torso";
+export type PlayerTokenPattern = MicroAthleteKitPattern | "chestDash" | "gradient";
 
 export type PlayerTokenRendererInput = {
   label: string;
@@ -14,8 +16,12 @@ export type PlayerTokenRendererInput = {
   teamColor: PremiumPlayerTokenColor;
   scale: number;
   style: Partial<MicroAthleteStyle>;
-  kitPattern: MicroAthleteKitPattern;
+  kitPattern: PlayerTokenPattern;
   kitPatternColor: number;
+  ring?: TokenRingStyle;
+  numberColor?: TokenNumberColorOverride;
+  glowOnSelect?: boolean;
+  tokenConfig?: Partial<TokenConfig>;
   radius: number;
 };
 
@@ -25,6 +31,12 @@ export type PlayerTokenRendererOutput = {
 };
 
 export type PlayerTokenRenderer = (input: PlayerTokenRendererInput) => PlayerTokenRendererOutput;
+
+function toLegacyPattern(pattern: PlayerTokenPattern): MicroAthleteKitPattern {
+  if (pattern === "chestDash") return "hoops";
+  if (pattern === "gradient") return "plain";
+  return pattern;
+}
 
 export const ClassicRingRenderer: PlayerTokenRenderer = ({
   label,
@@ -39,7 +51,7 @@ export const ClassicRingRenderer: PlayerTokenRenderer = ({
     teamColor,
     scale,
     style,
-    kitPattern,
+    kitPattern: toLegacyPattern(kitPattern),
     kitPatternColor,
   });
 
@@ -56,7 +68,7 @@ export const PremiumGlowRenderer: PlayerTokenRenderer = ({
     teamColor,
     scale,
     style,
-    kitPattern,
+    kitPattern: toLegacyPattern(kitPattern),
     kitPatternColor,
   });
 
@@ -73,7 +85,7 @@ export const TorsoRenderer: PlayerTokenRenderer = ({
     teamColor,
     scale,
     style,
-    kitPattern,
+    kitPattern: toLegacyPattern(kitPattern),
     kitPatternColor,
   });
 
@@ -84,6 +96,10 @@ export const VisionV3Renderer: PlayerTokenRenderer = ({
   style,
   kitPattern,
   kitPatternColor,
+  ring,
+  numberColor,
+  glowOnSelect,
+  tokenConfig,
   radius,
 }) =>
   createVisionV3PlayerToken({
@@ -94,6 +110,10 @@ export const VisionV3Renderer: PlayerTokenRenderer = ({
     style,
     kitPattern,
     kitPatternColor,
+    ring,
+    numberColor,
+    glowOnSelect,
+    tokenConfig,
   });
 
 export function resolvePlayerTokenRenderer(style: PlayerTokenStyle): PlayerTokenRenderer {

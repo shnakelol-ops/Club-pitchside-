@@ -1,5 +1,21 @@
 import { Container, Graphics, Text } from "pixi.js";
 
+import { drawTokenPattern } from "./drawTokenPattern";
+import {
+  tokenConfigFromKitFields,
+  type TokenConfig,
+  type TokenNumberColorOverride,
+  type TokenPatternType,
+  type TokenRingStyle,
+} from "./tokenConfig";
+import {
+  minimumPatternContrast,
+  mixColor,
+  relativeLuminance,
+  resolvePatternDetailTier,
+  resolvePatternMarkColor,
+} from "./tokenPatternContrast";
+
 export type VisionV3PlayerTokenStyle = {
   primaryColor: number;
   secondaryColor?: number;
@@ -10,7 +26,7 @@ export type VisionV3PlayerTokenStyle = {
 };
 
 export type VisionV3TeamColor = "blue" | "red" | "green" | "yellow" | "black" | "white";
-export type VisionV3KitPattern = "plain" | "hoops" | "slash" | "stripes";
+export type VisionV3KitPattern = TokenPatternType;
 
 const DEFAULT_STYLE_BY_TEAM: Record<VisionV3TeamColor, VisionV3PlayerTokenStyle> = {
   blue: {
@@ -57,105 +73,27 @@ const DEFAULT_STYLE_BY_TEAM: Record<VisionV3TeamColor, VisionV3PlayerTokenStyle>
   },
 };
 
-function clampColorChannel(value: number): number {
-  return Math.max(0, Math.min(255, Math.round(value)));
+function resolveNumberFill(
+  override: TokenNumberColorOverride,
+  baseFillColor: number,
+  teamColor: number,
+): number {
+  if (override === "white" || override === "light") return 0xf8fafc;
+  if (override === "black" || override === "dark") return 0x0b1220;
+  if (override === "team") return mixColor(teamColor, 0xf8fafc, 0.15);
+  return relativeLuminance(baseFillColor) < 0.42 ? 0xf8fafc : 0x0f172a;
 }
 
-function mixColor(base: number, target: number, amount: number): number {
-  const baseR = (base >> 16) & 0xff;
-  const baseG = (base >> 8) & 0xff;
-  const baseB = base & 0xff;
-  const targetR = (target >> 16) & 0xff;
-  const targetG = (target >> 8) & 0xff;
-  const targetB = target & 0xff;
-
-  const r = clampColorChannel(baseR + (targetR - baseR) * amount);
-  const g = clampColorChannel(baseG + (targetG - baseG) * amount);
-  const b = clampColorChannel(baseB + (targetB - baseB) * amount);
-
-  return (r << 16) | (g << 8) | b;
+function resolveOuterRingWidth(ring: TokenRingStyle, radius: number): number {
+  if (ring === "none") return Math.max(0.38, radius * 0.11);
+  if (ring === "thin") return Math.max(0.5, radius * 0.145);
+  if (ring === "strong") return Math.max(0.64, radius * 0.19);
+  return Math.max(0.56, radius * 0.165);
 }
 
-function luminance(color: number): number {
-  const r = (color >> 16) & 0xff;
-  const g = (color >> 8) & 0xff;
-  const b = color & 0xff;
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
-
-function drawPatternAccent(
-  target: Graphics,
-  pattern: VisionV3KitPattern,
-  accentColor: number,
-  innerRadius: number,
-): void {
-  if (pattern === "plain") return;
-  const alpha = 0.18;
-  if (pattern === "hoops") {
-    const y1 = -innerRadius * 0.3;
-    const y2 = innerRadius * 0.3;
-    target
-      .moveTo(-innerRadius * 0.68, y1)
-      .lineTo(innerRadius * 0.68, y1)
-      .moveTo(-innerRadius * 0.68, y2)
-      .lineTo(innerRadius * 0.68, y2)
-      .stroke({ color: accentColor, width: Math.max(0.26, innerRadius * 0.16), alpha, cap: "round", join: "round" });
-    return;
-  }
-  if (pattern === "stripes") {
-    const x1 = -innerRadius * 0.28;
-    const x2 = innerRadius * 0.28;
-    target
-      .moveTo(x1, -innerRadius * 0.68)
-      .lineTo(x1, innerRadius * 0.68)
-      .moveTo(x2, -innerRadius * 0.68)
-      .lineTo(x2, innerRadius * 0.68)
-      .stroke({ color: accentColor, width: Math.max(0.26, innerRadius * 0.16), alpha, cap: "round", join: "round" });
-    return;
-  }
-  target
-    .moveTo(-innerRadius * 0.62, innerRadius * 0.48)
-    .lineTo(innerRadius * 0.62, -innerRadius * 0.48)
-    .stroke({ color: accentColor, width: Math.max(0.3, innerRadius * 0.19), alpha, cap: "round", join: "round" });
-}
-
-function drawShirtGlyph(target: Graphics, centerY: number, size: number, color: number): void {
-  const top = centerY - size * 0.5;
-  const bottom = centerY + size * 0.5;
-  target
-    .poly([
-      -size * 0.64,
-      top + size * 0.16,
-      -size * 0.3,
-      top,
-      -size * 0.12,
-      top + size * 0.14,
-      size * 0.12,
-      top + size * 0.14,
-      size * 0.3,
-      top,
-      size * 0.64,
-      top + size * 0.16,
-      size * 0.42,
-      top + size * 0.5,
-      size * 0.38,
-      bottom,
-      -size * 0.38,
-      bottom,
-      -size * 0.42,
-      top + size * 0.5,
-    ])
-    .fill({ color, alpha: 0.18 });
-}
-
-function drawPersonCircleGlyph(target: Graphics, radius: number, color: number): void {
-  target
-    .circle(0, 0, radius)
-    .stroke({ color, width: Math.max(0.14, radius * 0.12), alpha: 0.2, alignment: 0.5 })
-    .circle(0, -radius * 0.18, radius * 0.26)
-    .fill({ color, alpha: 0.16 })
-    .roundRect(-radius * 0.44, radius * 0.06, radius * 0.88, radius * 0.46, radius * 0.22)
-    .fill({ color, alpha: 0.12 });
+function clampPatternForTiny(pattern: TokenPatternType, isTiny: boolean): TokenPatternType {
+  if (!isTiny) return pattern;
+  return "plain";
 }
 
 export function createVisionV3PlayerToken({
@@ -166,6 +104,10 @@ export function createVisionV3PlayerToken({
   radius,
   kitPattern = "plain",
   kitPatternColor,
+  ring,
+  numberColor,
+  glowOnSelect,
+  tokenConfig,
 }: {
   label: string;
   teamColor: VisionV3TeamColor;
@@ -174,6 +116,10 @@ export function createVisionV3PlayerToken({
   radius?: number;
   kitPattern?: VisionV3KitPattern;
   kitPatternColor?: number;
+  ring?: TokenRingStyle;
+  numberColor?: TokenNumberColorOverride;
+  glowOnSelect?: boolean;
+  tokenConfig?: Partial<TokenConfig>;
 }): { token: Container; shadow: Graphics } {
   const defaults = DEFAULT_STYLE_BY_TEAM[teamColor];
   const resolved: VisionV3PlayerTokenStyle = {
@@ -186,78 +132,121 @@ export function createVisionV3PlayerToken({
   const token = new Container();
   token.eventMode = "static";
   token.cursor = "grab";
-  token.scale.set(scale ?? 1);
+  const tokenScale = scale ?? 1;
+  token.scale.set(tokenScale);
 
   const discRadius = Number.isFinite(radius) ? Math.max(2.8, Number(radius)) : 3.66;
-  const ringWidth = Math.max(0.58, discRadius * 0.2);
+  const lodTier = resolvePatternDetailTier(discRadius, tokenScale, 5);
+  const mergedConfig = tokenConfigFromKitFields(
+    {
+      kitPattern,
+      ring,
+      numberColor,
+      glowOnSelect,
+    },
+    tokenConfig,
+  );
+
+  const ringWidth = resolveOuterRingWidth(mergedConfig.ring, discRadius);
   const innerRadius = discRadius - ringWidth;
-  const baseColor =
+  const coreColor =
     resolved.goalkeeper && resolved.secondaryColor != null
-      ? resolved.secondaryColor
-      : resolved.primaryColor;
-  const accentColor = Number.isFinite(kitPatternColor)
+      ? mixColor(resolved.secondaryColor, 0x020617, 0.22)
+      : mixColor(resolved.primaryColor, 0x020617, 0.22);
+  const requestedAccentColor = Number.isFinite(kitPatternColor)
     ? Number(kitPatternColor)
-    : (resolved.secondaryColor ?? mixColor(baseColor, 0xffffff, 0.3));
-  const ringColor = mixColor(baseColor, accentColor, 0.3);
-  const coreColor = mixColor(baseColor, 0x020617, 0.18);
-  const highlightColor = mixColor(coreColor, 0xffffff, 0.2);
-  const edgeColor = mixColor(resolved.outlineColor, 0x000000, 0.24);
+    : (resolved.secondaryColor ?? mixColor(resolved.primaryColor, 0xffffff, 0.28));
+  const pattern = clampPatternForTiny(mergedConfig.pattern, lodTier === "tiny");
+  const patternInkColor = resolvePatternMarkColor(
+    coreColor,
+    requestedAccentColor,
+    minimumPatternContrast(pattern, lodTier),
+  );
+  const ringColor = mixColor(resolved.primaryColor, requestedAccentColor, 0.22);
+  const ringEdge = mixColor(ringColor, resolved.outlineColor, 0.5);
+  const centerHighlight = mixColor(coreColor, 0xffffff, 0.2);
 
   const shadow = new Graphics();
   shadow
-    .circle(0, 0, discRadius * 1.4)
-    .fill({ color: ringColor, alpha: 0.1 })
-    .ellipse(0.2, discRadius * 1.04, discRadius * 0.98, discRadius * 0.26)
-    .fill({ color: 0x020617, alpha: 0.21 });
+    .circle(0, 0, discRadius * 1.34)
+    .fill({ color: ringColor, alpha: lodTier === "tiny" ? 0.06 : 0.09 })
+    .ellipse(0.18, discRadius * 1.04, discRadius * 0.96, discRadius * 0.24)
+    .fill({ color: 0x020617, alpha: lodTier === "tiny" ? 0.14 : 0.19 });
   shadow.alpha = 0.24;
   token.addChild(shadow);
 
   const disc = new Graphics();
   disc
     .circle(0, 0, discRadius)
-    .fill({ color: 0x0b1120 })
+    .fill({ color: 0x0b1220 })
     .circle(0, 0, discRadius - 0.08)
-    .fill({ color: ringColor })
+    .fill({ color: mixColor(ringColor, 0xffffff, 0.08) })
+    .circle(0, 0, discRadius - ringWidth * 0.45)
+    .fill({ color: ringColor, alpha: 0.9 })
     .circle(0, 0, innerRadius)
     .fill({ color: coreColor })
+    .ellipse(0, innerRadius * 0.38, innerRadius * 0.92, innerRadius * 0.48)
+    .fill({ color: mixColor(coreColor, 0x020617, 0.2), alpha: 0.2 })
     .ellipse(0, -innerRadius * 0.34, innerRadius * 0.72, innerRadius * 0.22)
-    .fill({ color: highlightColor, alpha: 0.3 });
-  drawPatternAccent(disc, kitPattern, mixColor(accentColor, 0xffffff, 0.1), innerRadius * 0.9);
-  disc
+    .fill({ color: centerHighlight, alpha: lodTier === "tiny" ? 0.18 : 0.26 })
     .circle(0, 0, discRadius)
-    .stroke({ color: edgeColor, width: Math.max(0.22, discRadius * 0.13), alpha: 0.7, alignment: 0.5 })
-    .circle(0, 0, innerRadius)
-    .stroke({ color: mixColor(edgeColor, 0xffffff, 0.08), width: Math.max(0.12, discRadius * 0.06), alpha: 0.4, alignment: 0.5 });
+    .stroke({
+      color: mixColor(ringEdge, 0x000000, 0.28),
+      width: Math.max(0.18, discRadius * 0.11),
+      alpha: 0.66,
+      alignment: 0.5,
+    });
   token.addChild(disc);
 
-  const iconLayer = new Graphics();
-  drawShirtGlyph(iconLayer, -innerRadius * 0.02, innerRadius * 0.98, 0xffffff);
-  iconLayer.position.y = -innerRadius * 0.06;
-  token.addChild(iconLayer);
+  if (pattern !== "plain") {
+    const patternLayer = new Graphics();
+    drawTokenPattern({
+      target: patternLayer,
+      pattern,
+      patternColor: patternInkColor,
+      radius: innerRadius * 0.92,
+      lodTier,
+      alpha: lodTier === "regular" ? 0.54 : 0.62,
+    });
+    token.addChild(patternLayer);
+  }
 
-  const personLayer = new Graphics();
-  drawPersonCircleGlyph(personLayer, innerRadius * 0.42, 0xffffff);
-  personLayer.position.y = -innerRadius * 0.62;
-  token.addChild(personLayer);
+  if (mergedConfig.glowOnSelect) {
+    const selectedRing = new Graphics();
+    selectedRing
+      .circle(0, 0, discRadius + Math.max(0.08, discRadius * 0.04))
+      .stroke({
+        color: mixColor(patternInkColor, 0xffffff, 0.24),
+        width: Math.max(0.14, discRadius * 0.05),
+        alpha: 0.78,
+        alignment: 0.5,
+      });
+    token.addChild(selectedRing);
+  }
 
   const orientationTick = new Graphics();
   orientationTick
-    .roundRect(-innerRadius * 0.16, -discRadius + ringWidth * 0.16, innerRadius * 0.32, Math.max(0.2, discRadius * 0.14), innerRadius * 0.08)
-    .fill({ color: mixColor(ringColor, 0xffffff, 0.16), alpha: 0.36 });
+    .roundRect(
+      -innerRadius * 0.15,
+      -discRadius + ringWidth * 0.16,
+      innerRadius * 0.3,
+      Math.max(0.19, discRadius * 0.14),
+      innerRadius * 0.08,
+    )
+    .fill({ color: mixColor(ringColor, 0xffffff, 0.18), alpha: 0.34 });
   token.addChild(orientationTick);
 
   const safeLabel = label.trim().slice(0, 3) || "?";
   const isNumericLabel = /^\d+$/.test(safeLabel);
-  const highContrastText = luminance(coreColor) < 132 ? 0xf8fafc : 0x0f172a;
-  const labelColor = isNumericLabel ? highContrastText : resolved.textColor;
-  const labelStroke = luminance(labelColor) > 140 ? 0x0f172a : 0xf8fafc;
-  const labelFontSize = isNumericLabel
-    ? safeLabel.length >= 2 ? innerRadius * 1.1 : innerRadius * 1.26
-    : innerRadius * 0.86;
-  const labelBaseY = isNumericLabel ? innerRadius * 0.03 : 0;
-  const labelLetterSpacing = isNumericLabel && safeLabel.length >= 2 ? 0 : 0.04;
+  const isDoubleDigit = isNumericLabel && safeLabel.length >= 2;
+  const labelFill = resolveNumberFill(
+    mergedConfig.numberColor,
+    coreColor,
+    resolved.primaryColor,
+  );
+  const labelStroke = relativeLuminance(labelFill) > 0.5 ? 0x0b1220 : 0xf8fafc;
   const textResolution =
-    typeof window !== "undefined" ? Math.max(2, Math.min(3, window.devicePixelRatio || 1)) : 2;
+    typeof window !== "undefined" ? Math.max(2.4, Math.min(3.2, window.devicePixelRatio || 1.5)) : 2.6;
 
   const labelPlate = new Graphics();
   labelPlate
@@ -268,46 +257,32 @@ export function createVisionV3PlayerToken({
       innerRadius * 1.08,
       innerRadius * 0.32,
     )
-    .fill({ color: mixColor(coreColor, 0x020617, 0.46), alpha: 0.24 });
-  labelPlate.position.y = labelBaseY;
+    .fill({ color: mixColor(coreColor, 0x020617, 0.54), alpha: isDoubleDigit ? 0.38 : 0.32 });
+  labelPlate.position.y = isNumericLabel ? (isDoubleDigit ? 0 : innerRadius * 0.02) : 0;
   token.addChild(labelPlate);
-
-  const labelShadow = new Text({
-    text: safeLabel,
-    style: {
-      fill: mixColor(labelStroke, 0x020617, 0.35),
-      fontSize: labelFontSize,
-      fontWeight: "900",
-      fontFamily: "\"Barlow Condensed\", \"Inter Tight\", Inter, system-ui, sans-serif",
-      align: "center",
-      letterSpacing: labelLetterSpacing,
-    },
-  });
-  labelShadow.anchor.set(0.5);
-  labelShadow.position.y = labelBaseY + 0.09;
-  labelShadow.alpha = 0.3;
-  labelShadow.resolution = textResolution;
-  labelShadow.roundPixels = true;
-  token.addChild(labelShadow);
 
   const labelText = new Text({
     text: safeLabel,
     style: {
-      fill: labelColor,
-      fontSize: labelFontSize,
+      fill: labelFill,
+      fontSize: isNumericLabel
+        ? (isDoubleDigit ? innerRadius * 1.04 : innerRadius * 1.24)
+        : innerRadius * 0.84,
       fontWeight: "900",
       fontFamily: "\"Barlow Condensed\", \"Inter Tight\", Inter, system-ui, sans-serif",
       align: "center",
-      letterSpacing: labelLetterSpacing,
+      letterSpacing: isDoubleDigit ? 0.01 : 0.03,
       stroke: {
         color: labelStroke,
-        width: isNumericLabel ? Math.max(0.42, innerRadius * 0.2) : Math.max(0.32, innerRadius * 0.14),
+        width: isNumericLabel
+          ? (isDoubleDigit ? Math.max(0.56, innerRadius * 0.24) : Math.max(0.48, innerRadius * 0.2))
+          : Math.max(0.34, innerRadius * 0.14),
         join: "round",
       },
     },
   });
-  labelText.anchor.set(0.5);
-  labelText.position.y = labelBaseY;
+  labelText.anchor.set(0.5, 0.5);
+  labelText.position.y = isNumericLabel ? (isDoubleDigit ? 0 : innerRadius * 0.015) : 0;
   labelText.resolution = textResolution;
   labelText.roundPixels = true;
   token.addChild(labelText);
