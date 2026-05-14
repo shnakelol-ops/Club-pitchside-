@@ -4,12 +4,14 @@ import { createRoot } from "react-dom/client";
 import { OverlayPortalProvider } from "./overlay/OverlayPortalContext";
 import PitchFlowCoachShell from "./pages/PitchFlowCoachShell";
 import TacticalPadLiteClean from "./pages/TacticalPadLiteClean";
+import TokenDebug from "./pages/TokenDebug";
 
 const boardShell = () => <PitchFlowCoachShell initialTab="home" />;
 const VISION_BOARD_PATH = "/vision-board";
 const QUICK_BOARD_PATH = "/quickboard";
 const FLOW_STATS_PATH = "/flowstats";
 const NOTES_PATH = "/notes";
+const TOKEN_DEBUG_PATH = "/token-debug";
 
 function redirectToBoard() {
   if (window.location.pathname !== "/board") {
@@ -76,6 +78,9 @@ function pickRootComponent() {
   }
   if (normalizedPath === NOTES_PATH) {
     return () => <PitchFlowCoachShell initialTab="notes" />;
+  }
+  if (normalizedPath === TOKEN_DEBUG_PATH) {
+    return TokenDebug;
   }
   if (normalizedPath === "/library") {
     return redirectToNotes();

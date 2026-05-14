@@ -1,0 +1,202 @@
+import { Container, FillGradient, Graphics, Text } from "pixi.js";
+
+import type { VisionDiscRenderInput, VisionDiscRenderOutput, VisionDiscResolvedStyle } from "./contracts";
+import { VISION_DISC_GEOMETRY } from "./constants";
+import type { VisionDiscGeometry } from "./geometry";
+import { drawVisionDiscPattern } from "./patternPainter";
+
+function resolveLabel(input: VisionDiscRenderInput): string {
+  const safeInitials = input.label.trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 3);
+  if (input.labelMode === "initials" && safeInitials.length > 0) return safeInitials;
+  if (Number.isFinite(input.number)) return String(Math.max(0, Math.floor(input.number))).slice(0, 3);
+  return safeInitials || "?";
+}
+
+function resolveLabelFontSize(label: string, geometry: VisionDiscGeometry): number {
+  const isNumeric = /^\d+$/.test(label);
+  if (!isNumeric) return geometry.initialsFont;
+  return label.length >= 2 ? geometry.numberFontMulti : geometry.numberFontSingle;
+}
+
+function drawGlyph(graphics: Graphics, geometry: VisionDiscGeometry, color: number, alpha: number): void {
+  const radius = geometry.innerRadius;
+  graphics
+    .roundRect(-radius * 0.4, -radius * 0.1, radius * 0.8, radius * 0.52, radius * 0.2)
+    .fill({ color, alpha: alpha * 0.2 })
+    .circle(0, -radius * 0.35, radius * 0.24)
+    .fill({ color, alpha: alpha * 0.26 });
+}
+
+export function buildVisionDiscLayers(
+  input: VisionDiscRenderInput,
+  style: VisionDiscResolvedStyle,
+  geometry: VisionDiscGeometry,
+): VisionDiscRenderOutput {
+  const token = new Container();
+  token.eventMode = "static";
+  token.cursor = "grab";
+  token.scale.set(input.scale ?? 1);
+
+  const layers: VisionDiscRenderOutput["layers"] = {
+    shadow: new Graphics(),
+    ambient: new Graphics(),
+    ring: new Graphics(),
+    disc: new Graphics(),
+    pattern: new Graphics(),
+    glyph: new Graphics(),
+    labelPlate: new Graphics(),
+    labelText: new Text({ text: "?" }),
+    orientationTick: new Graphics(),
+  };
+
+  layers.shadow
+    .ellipse(0, geometry.shadowOffsetY, geometry.shadowRx, geometry.shadowRy)
+    .fill({
+      color: style.colors.shadowColor,
+      alpha: style.alpha.shadowColor * VISION_DISC_GEOMETRY.shadowAlpha,
+    });
+  token.addChild(layers.shadow);
+
+  layers.ambient
+    .circle(0, 0, geometry.ambientRadius)
+    .fill({
+      color: style.colors.shadowColor,
+      alpha: style.alpha.shadowColor * VISION_DISC_GEOMETRY.ambientShadowAlpha,
+    });
+  token.addChild(layers.ambient);
+
+  layers.ring
+    .circle(0, 0, geometry.outerRadius)
+    .fill({ color: style.colors.ringColor, alpha: style.alpha.ringColor })
+    .circle(0, 0, geometry.outerRadius)
+    .stroke({
+      color: style.colors.ringStrokeColor,
+      alpha: style.alpha.ringStrokeColor,
+      width: Math.max(1, geometry.ringThickness * 0.22),
+      alignment: 0.5,
+    });
+  token.addChild(layers.ring);
+
+  if (input.pattern === "gradient") {
+    const gradient = new FillGradient({
+      type: "linear",
+      start: { x: 0.5, y: 0 },
+      end: { x: 0.5, y: 1 },
+      textureSpace: "local",
+      colorStops: [
+        { offset: 0, color: input.styleTokens.discHighlightColor },
+        { offset: 1, color: input.styleTokens.discBaseColor },
+      ],
+    });
+    layers.disc
+      .circle(0, 0, geometry.innerRadius)
+      .fill(gradient)
+      .circle(0, 0, geometry.innerRadius)
+      .stroke({
+        color: style.colors.discEdgeColor,
+        alpha: style.alpha.discEdgeColor,
+        width: Math.max(1, geometry.ringThickness * 0.18),
+        alignment: 0.5,
+      });
+  } else {
+    layers.disc
+      .circle(0, 0, geometry.innerRadius)
+      .fill({ color: style.colors.discBaseColor, alpha: style.alpha.discBaseColor })
+      .ellipse(0, -geometry.innerRadius * 0.32, geometry.innerRadius * 0.72, geometry.innerRadius * 0.22)
+      .fill({ color: style.colors.discHighlightColor, alpha: style.alpha.discHighlightColor * 0.7 })
+      .circle(0, 0, geometry.innerRadius)
+      .stroke({
+        color: style.colors.discEdgeColor,
+        alpha: style.alpha.discEdgeColor,
+        width: Math.max(1, geometry.ringThickness * 0.18),
+        alignment: 0.5,
+      });
+  }
+  token.addChild(layers.disc);
+
+  drawVisionDiscPattern(
+    layers.pattern,
+    input.pattern,
+    style.colors.patternColor,
+    style.alpha.patternColor * 0.9,
+    geometry,
+  );
+  token.addChild(layers.pattern);
+
+  drawGlyph(layers.glyph, geometry, style.colors.glyphColor, style.alpha.glyphColor);
+  token.addChild(layers.glyph);
+
+  layers.labelPlate
+    .roundRect(
+      -geometry.innerRadius * 0.9,
+      -geometry.innerRadius * 0.44,
+      geometry.innerRadius * 1.8,
+      geometry.innerRadius * 0.88,
+      geometry.innerRadius * 0.3,
+    )
+    .fill({
+      color: style.colors.labelPlateColor,
+      alpha: style.alpha.labelPlateColor * 0.9,
+    });
+  layers.labelPlate.position.y = geometry.innerRadius * 0.4;
+  token.addChild(layers.labelPlate);
+
+  const label = resolveLabel(input);
+  const labelFontSize = resolveLabelFontSize(label, geometry);
+  layers.labelText = new Text({
+    text: label,
+    style: {
+      fill: style.colors.labelColor,
+      fontSize: labelFontSize,
+      fontWeight: "900",
+      fontFamily: "\"Barlow Condensed\", \"Inter Tight\", Inter, system-ui, sans-serif",
+      align: "center",
+      stroke: {
+        color: style.colors.labelStrokeColor,
+        width: Math.max(1, geometry.outerRadius * 0.09),
+        join: "round",
+      },
+      letterSpacing: label.length > 1 ? 0 : 0.1,
+    },
+  });
+  layers.labelText.anchor.set(0.5);
+  layers.labelText.position.y = geometry.innerRadius * 0.4;
+  layers.labelText.roundPixels = true;
+  layers.labelText.resolution =
+    typeof window !== "undefined" ? Math.max(2, Math.min(3, window.devicePixelRatio || 1)) : 2;
+  token.addChild(layers.labelText);
+
+  layers.orientationTick
+    .roundRect(
+      -geometry.innerRadius * 0.16,
+      -geometry.outerRadius + geometry.ringThickness * 0.24,
+      geometry.innerRadius * 0.32,
+      Math.max(1, geometry.outerRadius * 0.12),
+      geometry.innerRadius * 0.08,
+    )
+    .fill({
+      color: style.colors.ringStrokeColor,
+      alpha: style.alpha.ringStrokeColor * 0.68,
+    });
+  token.addChild(layers.orientationTick);
+
+  if (input.selected) {
+    const selectedHalo = new Graphics();
+    selectedHalo
+      .circle(0, 0, geometry.selectedHaloRadius)
+      .stroke({
+        color: style.colors.haloColor,
+        alpha: style.alpha.haloColor,
+        width: Math.max(1, geometry.selectedHaloStroke),
+        alignment: 0.5,
+      });
+    token.addChild(selectedHalo);
+    layers.selectedHalo = selectedHalo;
+  }
+
+  return {
+    token,
+    shadow: layers.shadow,
+    layers,
+  };
+}

@@ -1,0 +1,32 @@
+export const VISION_DISC_GEOMETRY = {
+  outerRadiusRatio: 1,
+  innerDiscRadiusRatio: 0.84,
+  ringThicknessRatio: 0.16,
+  selectedHaloOffsetRatio: 0.12,
+  selectedHaloStrokeRatio: 0.08,
+  numberFontRatioSingle: 0.56,
+  numberFontRatioMulti: 0.48,
+  initialsFontRatio: 0.36,
+  patternStrokeRatio: 0.12,
+  shadowOffsetYRatio: 0.18,
+  shadowRxRatio: 0.78,
+  shadowRyRatio: 0.22,
+  shadowAlpha: 0.22,
+  ambientShadowRadiusRatio: 1.1,
+  ambientShadowAlpha: 0.08,
+} as const;
+
+export const VISION_DISC_CSS_VAR_MAP = {
+  ringColor: "--vd-ring-color",
+  ringStrokeColor: "--vd-ring-stroke-color",
+  discBaseColor: "--vd-disc-base-color",
+  discHighlightColor: "--vd-disc-highlight-color",
+  discEdgeColor: "--vd-disc-edge-color",
+  patternColor: "--vd-pattern-color",
+  glyphColor: "--vd-glyph-color",
+  labelColor: "--vd-label-color",
+  labelStrokeColor: "--vd-label-stroke-color",
+  labelPlateColor: "--vd-label-plate-color",
+  shadowColor: "--vd-shadow-color",
+  haloColor: "--vd-halo-color",
+} as const;

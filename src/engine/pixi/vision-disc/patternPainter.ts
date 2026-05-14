@@ -1,0 +1,88 @@
+import type { Graphics } from "pixi.js";
+
+import type { VisionDiscPattern } from "./contracts";
+import type { VisionDiscGeometry } from "./geometry";
+
+function halfSpanAtOffset(radius: number, offset: number): number {
+  const inside = radius * radius - offset * offset;
+  if (inside <= 0) return 0;
+  return Math.sqrt(inside);
+}
+
+function strokePattern(
+  graphics: Graphics,
+  color: number,
+  alpha: number,
+  width: number,
+): void {
+  graphics.stroke({
+    color,
+    alpha,
+    width,
+    cap: "round",
+    join: "round",
+    alignment: 0.5,
+  });
+}
+
+export function drawVisionDiscPattern(
+  graphics: Graphics,
+  pattern: VisionDiscPattern,
+  color: number,
+  alpha: number,
+  geometry: VisionDiscGeometry,
+): void {
+  const radius = geometry.innerRadius * 0.98;
+  const width = Math.max(1, geometry.patternStroke);
+  if (pattern === "solid" || pattern === "gradient") return;
+
+  if (pattern === "hoops") {
+    const y1 = -radius * 0.3;
+    const y2 = radius * 0.3;
+    const h1 = halfSpanAtOffset(radius, y1);
+    const h2 = halfSpanAtOffset(radius, y2);
+    graphics
+      .moveTo(-h1, y1)
+      .lineTo(h1, y1)
+      .moveTo(-h2, y2)
+      .lineTo(h2, y2);
+    strokePattern(graphics, color, alpha, width);
+    return;
+  }
+
+  if (pattern === "stripes") {
+    const x1 = -radius * 0.3;
+    const x2 = radius * 0.3;
+    const h1 = halfSpanAtOffset(radius, x1);
+    const h2 = halfSpanAtOffset(radius, x2);
+    graphics
+      .moveTo(x1, -h1)
+      .lineTo(x1, h1)
+      .moveTo(x2, -h2)
+      .lineTo(x2, h2);
+    strokePattern(graphics, color, alpha, width);
+    return;
+  }
+
+  if (pattern === "slash") {
+    graphics
+      .moveTo(-radius * 0.62, radius * 0.48)
+      .lineTo(radius * 0.62, -radius * 0.48);
+    strokePattern(graphics, color, alpha, width);
+    return;
+  }
+
+  const y = -radius * 0.18;
+  const dashWidth = radius * 0.19;
+  const gap = radius * 0.08;
+  const segmentCount = 4;
+  const totalWidth = segmentCount * dashWidth + (segmentCount - 1) * gap;
+  const startX = -totalWidth * 0.5;
+  for (let index = 0; index < segmentCount; index += 1) {
+    const left = startX + index * (dashWidth + gap);
+    graphics
+      .moveTo(left, y)
+      .lineTo(left + dashWidth, y);
+  }
+  strokePattern(graphics, color, alpha, width * 0.86);
+}
