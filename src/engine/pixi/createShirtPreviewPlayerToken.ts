@@ -85,6 +85,53 @@ function luminance(color: number): number {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
+function linearizedChannel(channel: number): number {
+  const normalized = channel / 255;
+  if (normalized <= 0.03928) return normalized / 12.92;
+  return ((normalized + 0.055) / 1.055) ** 2.4;
+}
+
+function relativeLuminance(color: number): number {
+  const r = linearizedChannel((color >> 16) & 0xff);
+  const g = linearizedChannel((color >> 8) & 0xff);
+  const b = linearizedChannel(color & 0xff);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function contrastRatio(foreground: number, background: number): number {
+  const fg = relativeLuminance(foreground);
+  const bg = relativeLuminance(background);
+  const lighter = Math.max(fg, bg);
+  const darker = Math.min(fg, bg);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+function resolveContrastingAccentColor(baseFillColor: number, requestedAccentColor: number): number {
+  const fallbackLight = 0xf8fafc;
+  const fallbackDark = 0x0b1220;
+  const preferredFallback = relativeLuminance(baseFillColor) < 0.34 ? fallbackLight : fallbackDark;
+  const minimumContrast = 2.35;
+  const candidates = [
+    requestedAccentColor,
+    mixColor(requestedAccentColor, preferredFallback, 0.28),
+    preferredFallback,
+    relativeLuminance(baseFillColor) < 0.34 ? 0xe2e8f0 : 0x111827,
+  ];
+
+  let bestColor = candidates[0] ?? preferredFallback;
+  let bestContrast = contrastRatio(bestColor, baseFillColor);
+  for (const candidate of candidates) {
+    const candidateContrast = contrastRatio(candidate, baseFillColor);
+    if (candidateContrast > bestContrast) {
+      bestColor = candidate;
+      bestContrast = candidateContrast;
+    }
+  }
+
+  if (bestContrast >= minimumContrast) return bestColor;
+  return preferredFallback;
+}
+
 function resolveLodTier(discRadius: number, scale: number, lodScale: number): ShirtPreviewLodTier {
   const pixelRadius = discRadius * Math.max(0.6, scale) * Math.max(1, lodScale);
   if (pixelRadius < 11.2) return "tiny";
@@ -92,59 +139,79 @@ function resolveLodTier(discRadius: number, scale: number, lodScale: number): Sh
   return "regular";
 }
 
-function drawShirtShape(target: Graphics, shirtColor: number, sleeveColor: number, innerRadius: number): void {
+function drawShirtShape(
+  target: Graphics,
+  shirtColor: number,
+  sleeveColor: number,
+  innerRadius: number,
+  lodTier: ShirtPreviewLodTier,
+): void {
+  const strokeWidth = Math.max(0.28, innerRadius * (lodTier === "tiny" ? 0.19 : 0.16));
+  const outlineColor = mixColor(sleeveColor, 0x0b1220, 0.34);
+
   target
     .poly([
-      -innerRadius * 0.7,
-      -innerRadius * 0.22,
-      -innerRadius * 0.42,
-      -innerRadius * 0.44,
-      -innerRadius * 0.16,
-      -innerRadius * 0.3,
-      innerRadius * 0.16,
-      -innerRadius * 0.3,
-      innerRadius * 0.42,
-      -innerRadius * 0.44,
-      innerRadius * 0.7,
-      -innerRadius * 0.22,
-      innerRadius * 0.46,
-      innerRadius * 0.18,
-      innerRadius * 0.4,
-      innerRadius * 0.66,
-      -innerRadius * 0.4,
-      innerRadius * 0.66,
+      -innerRadius * 0.78,
+      -innerRadius * 0.28,
       -innerRadius * 0.46,
+      -innerRadius * 0.52,
+      -innerRadius * 0.18,
+      -innerRadius * 0.34,
       innerRadius * 0.18,
+      -innerRadius * 0.34,
+      innerRadius * 0.46,
+      -innerRadius * 0.52,
+      innerRadius * 0.78,
+      -innerRadius * 0.28,
+      innerRadius * 0.52,
+      innerRadius * 0.24,
+      innerRadius * 0.45,
+      innerRadius * 0.74,
+      -innerRadius * 0.45,
+      innerRadius * 0.74,
+      -innerRadius * 0.52,
+      innerRadius * 0.24,
     ])
-    .fill({ color: shirtColor, alpha: 0.88 });
+    .fill({ color: shirtColor, alpha: lodTier === "tiny" ? 0.94 : 0.91 })
+    .stroke({ color: outlineColor, width: strokeWidth, alpha: 0.74, alignment: 0.5, join: "round" });
 
   target
     .poly([
-      -innerRadius * 0.7,
-      -innerRadius * 0.22,
-      -innerRadius * 0.47,
-      -innerRadius * 0.06,
-      -innerRadius * 0.54,
-      innerRadius * 0.2,
-      -innerRadius * 0.7,
-      innerRadius * 0.06,
+      -innerRadius * 0.78,
+      -innerRadius * 0.28,
+      -innerRadius * 0.5,
+      -innerRadius * 0.1,
+      -innerRadius * 0.58,
+      innerRadius * 0.24,
+      -innerRadius * 0.78,
+      innerRadius * 0.08,
     ])
-    .fill({ color: sleeveColor, alpha: 0.86 })
+    .fill({ color: sleeveColor, alpha: 0.94 })
+    .stroke({ color: outlineColor, width: strokeWidth * 0.88, alpha: 0.72, alignment: 0.5, join: "round" })
     .poly([
-      innerRadius * 0.7,
-      -innerRadius * 0.22,
-      innerRadius * 0.47,
-      -innerRadius * 0.06,
-      innerRadius * 0.54,
-      innerRadius * 0.2,
-      innerRadius * 0.7,
-      innerRadius * 0.06,
+      innerRadius * 0.78,
+      -innerRadius * 0.28,
+      innerRadius * 0.5,
+      -innerRadius * 0.1,
+      innerRadius * 0.58,
+      innerRadius * 0.24,
+      innerRadius * 0.78,
+      innerRadius * 0.08,
     ])
-    .fill({ color: sleeveColor, alpha: 0.86 });
+    .fill({ color: sleeveColor, alpha: 0.94 })
+    .stroke({ color: outlineColor, width: strokeWidth * 0.88, alpha: 0.72, alignment: 0.5, join: "round" });
 
-  target
-    .roundRect(-innerRadius * 0.18, -innerRadius * 0.42, innerRadius * 0.36, innerRadius * 0.16, innerRadius * 0.07)
-    .fill({ color: 0xffffff, alpha: 0.18 });
+  if (lodTier !== "tiny") {
+    target
+      .roundRect(
+        -innerRadius * 0.2,
+        -innerRadius * 0.48,
+        innerRadius * 0.4,
+        innerRadius * 0.18,
+        innerRadius * 0.08,
+      )
+      .fill({ color: mixColor(sleeveColor, 0xffffff, 0.24), alpha: 0.6 });
+  }
 }
 
 function drawShirtPattern(
@@ -155,40 +222,40 @@ function drawShirtPattern(
   lodTier: ShirtPreviewLodTier,
 ): void {
   if (pattern === "plain") return;
-  const alpha = lodTier === "tiny" ? 0.28 : 0.24;
-  const width = Math.max(0.22, innerRadius * (lodTier === "tiny" ? 0.18 : 0.15));
+  const alpha = lodTier === "tiny" ? 0.62 : 0.56;
+  const width = Math.max(0.3, innerRadius * (lodTier === "tiny" ? 0.22 : 0.18));
 
   if (pattern === "hoops") {
-    const y = innerRadius * 0.34;
+    const y = innerRadius * 0.4;
     target
-      .moveTo(-innerRadius * 0.38, y)
-      .lineTo(innerRadius * 0.38, y)
+      .moveTo(-innerRadius * 0.44, y)
+      .lineTo(innerRadius * 0.44, y)
       .stroke({ color: patternColor, width, alpha, cap: "round", join: "round" });
     if (lodTier !== "tiny") {
       target
-        .moveTo(-innerRadius * 0.36, -innerRadius * 0.04)
-        .lineTo(innerRadius * 0.36, -innerRadius * 0.04)
-        .stroke({ color: patternColor, width: width * 0.88, alpha: 0.2, cap: "round", join: "round" });
+        .moveTo(-innerRadius * 0.42, innerRadius * 0.18)
+        .lineTo(innerRadius * 0.42, innerRadius * 0.18)
+        .stroke({ color: patternColor, width: width * 0.9, alpha: 0.5, cap: "round", join: "round" });
     }
     return;
   }
 
   if (pattern === "stripes") {
-    const x = innerRadius * 0.22;
+    const x = innerRadius * 0.26;
     target
-      .moveTo(-x, -innerRadius * 0.24)
-      .lineTo(-x, innerRadius * 0.6)
-      .moveTo(x, -innerRadius * 0.24)
-      .lineTo(x, innerRadius * 0.6)
+      .moveTo(-x, innerRadius * 0.08)
+      .lineTo(-x, innerRadius * 0.68)
+      .moveTo(x, innerRadius * 0.08)
+      .lineTo(x, innerRadius * 0.68)
       .stroke({ color: patternColor, width, alpha, cap: "round", join: "round" });
     return;
   }
 
   target
-    .moveTo(-innerRadius * 0.36, innerRadius * 0.56)
-    .lineTo(-innerRadius * 0.06, innerRadius * 0.2)
-    .moveTo(innerRadius * 0.06, innerRadius * 0)
-    .lineTo(innerRadius * 0.36, -innerRadius * 0.28)
+    .moveTo(-innerRadius * 0.42, innerRadius * 0.66)
+    .lineTo(-innerRadius * 0.08, innerRadius * 0.28)
+    .moveTo(innerRadius * 0.08, innerRadius * 0.1)
+    .lineTo(innerRadius * 0.42, -innerRadius * 0.22)
     .stroke({ color: patternColor, width: width * 1.06, alpha, cap: "round", join: "round" });
 }
 
@@ -230,12 +297,19 @@ export function createShirtPreviewPlayerToken({
   const ringWidth = Math.max(0.56, discRadius * 0.19);
   const innerRadius = discRadius - ringWidth;
   const shirtColor = resolved.primaryColor;
-  const accentColor = Number.isFinite(kitPatternColor)
+  const requestedAccentColor = Number.isFinite(kitPatternColor)
     ? Number(kitPatternColor)
     : (resolved.secondaryColor ?? mixColor(shirtColor, 0xffffff, 0.28));
   const ringColor = mixColor(shirtColor, 0x0f172a, 0.18);
   const centerColor = mixColor(shirtColor, 0x020617, 0.24);
-  const inkColor = mixColor(accentColor, luminance(centerColor) < 132 ? 0xffffff : 0x0f172a, 0.28);
+  const contrastedAccentColor = resolveContrastingAccentColor(centerColor, requestedAccentColor);
+  const shirtBodyColor = mixColor(
+    shirtColor,
+    luminance(centerColor) < 132 ? 0xffffff : 0x020617,
+    luminance(centerColor) < 132 ? 0.14 : 0.08,
+  );
+  const sleeveColor = mixColor(contrastedAccentColor, shirtBodyColor, 0.08);
+  const patternColor = mixColor(contrastedAccentColor, luminance(centerColor) < 132 ? 0xffffff : 0x0f172a, 0.06);
 
   const shadow = new Graphics();
   shadow
@@ -265,8 +339,8 @@ export function createShirtPreviewPlayerToken({
   token.addChild(disc);
 
   const shirtLayer = new Graphics();
-  drawShirtShape(shirtLayer, mixColor(shirtColor, 0xffffff, 0.04), mixColor(accentColor, 0xffffff, 0.08), innerRadius);
-  drawShirtPattern(shirtLayer, kitPattern, inkColor, innerRadius, lodTier);
+  drawShirtShape(shirtLayer, shirtBodyColor, sleeveColor, innerRadius, lodTier);
+  drawShirtPattern(shirtLayer, kitPattern, patternColor, innerRadius, lodTier);
   token.addChild(shirtLayer);
 
   const orientationTick = new Graphics();
