@@ -129,8 +129,8 @@ const KIT_COLOR_CSS: Record<(typeof KIT_COLOR_CHOICES)[number], string> = {
   grey: "#6b7280",
   black: "#111827",
 };
-const KIT_PATTERN_CHOICES: TacticalKitPattern[] = ["plain", "hoops", "stripes", "slash"];
-const KIT_PATTERN_LABEL: Record<TacticalKitPattern, string> = {
+const KIT_PATTERN_CHOICES = ["plain", "hoops", "stripes", "slash"] as const satisfies ReadonlyArray<TacticalKitPattern>;
+const KIT_PATTERN_LABEL: Record<(typeof KIT_PATTERN_CHOICES)[number], string> = {
   plain: "Plain",
   hoops: "Hoops",
   stripes: "Stripes",
@@ -139,9 +139,8 @@ const KIT_PATTERN_LABEL: Record<TacticalKitPattern, string> = {
 const LABEL_MODE_CHOICES: TacticalLabelMode[] = ["number", "initials"];
 const TOKEN_STYLE_CHOICES: ReadonlyArray<{ value: TacticalPlayerTokenStyle; label: string }> = [
   { value: "vision-v3", label: "Vision V3" },
-  { value: "classic", label: "Classic" },
-  { value: "premium", label: "Glow" },
-  { value: "torso", label: "Torso" },
+  { value: "phosphor", label: "Phosphor" },
+  { value: "procedural-pixi", label: "Procedural Pixi" },
 ];
 type KitEditorTab = "base" | "pattern" | "label";
 const KIT_EDITOR_TABS: ReadonlyArray<{ id: KitEditorTab; label: string }> = [

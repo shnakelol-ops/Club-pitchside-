@@ -1,20 +1,23 @@
 import type { Container, Graphics } from "pixi.js";
 
-import { createMicroAthleteToken, type MicroAthleteKitPattern, type MicroAthleteStyle } from "./createMicroAthleteToken";
-import { createPremiumGlowPlayerToken } from "./createPremiumGlowPlayerToken";
-import { createTorsoPlayerToken } from "./createTorsoPlayerToken";
-import { createVisionV3PlayerToken } from "./createVisionV3PlayerToken";
+import { createPhosphorToken, createProceduralPixiToken } from "./createCleanTokenRenderers";
+import {
+  createVisionV3PlayerToken,
+  type VisionV3KitPattern,
+  type VisionV3PlayerTokenStyle,
+} from "./createVisionV3PlayerToken";
 import type { PremiumPlayerTokenColor } from "./createPremiumPlayerToken";
 
-export type PlayerTokenStyle = "vision-v3" | "classic" | "premium" | "torso";
+export type PlayerTokenStyle = "vision-v3" | "phosphor" | "procedural-pixi";
+export type PlayerTokenKitPattern = VisionV3KitPattern;
 
 export type PlayerTokenRendererInput = {
   label: string;
   number: number;
   teamColor: PremiumPlayerTokenColor;
   scale: number;
-  style: Partial<MicroAthleteStyle>;
-  kitPattern: MicroAthleteKitPattern;
+  style: Partial<VisionV3PlayerTokenStyle>;
+  kitPattern: PlayerTokenKitPattern;
   kitPatternColor: number;
   radius: number;
 };
@@ -25,57 +28,6 @@ export type PlayerTokenRendererOutput = {
 };
 
 export type PlayerTokenRenderer = (input: PlayerTokenRendererInput) => PlayerTokenRendererOutput;
-
-export const ClassicRingRenderer: PlayerTokenRenderer = ({
-  label,
-  teamColor,
-  scale,
-  style,
-  kitPattern,
-  kitPatternColor,
-}) =>
-  createMicroAthleteToken({
-    label,
-    teamColor,
-    scale,
-    style,
-    kitPattern,
-    kitPatternColor,
-  });
-
-export const PremiumGlowRenderer: PlayerTokenRenderer = ({
-  label,
-  teamColor,
-  scale,
-  style,
-  kitPattern,
-  kitPatternColor,
-}) =>
-  createPremiumGlowPlayerToken({
-    label,
-    teamColor,
-    scale,
-    style,
-    kitPattern,
-    kitPatternColor,
-  });
-
-export const TorsoRenderer: PlayerTokenRenderer = ({
-  label,
-  teamColor,
-  scale,
-  style,
-  kitPattern,
-  kitPatternColor,
-}) =>
-  createTorsoPlayerToken({
-    label,
-    teamColor,
-    scale,
-    style,
-    kitPattern,
-    kitPatternColor,
-  });
 
 export const VisionV3Renderer: PlayerTokenRenderer = ({
   label,
@@ -96,14 +48,52 @@ export const VisionV3Renderer: PlayerTokenRenderer = ({
     kitPatternColor,
   });
 
+export const PhosphorRenderer: PlayerTokenRenderer = ({
+  label,
+  scale,
+  style,
+  kitPattern,
+  kitPatternColor,
+  radius,
+}) =>
+  createPhosphorToken({
+    label,
+    scale,
+    radius,
+    baseColor: style.primaryColor ?? 0x2563eb,
+    patternColor: kitPatternColor,
+    numberColor: style.textColor,
+    outlineColor: style.outlineColor,
+    pattern: kitPattern,
+  });
+
+export const ProceduralPixiRenderer: PlayerTokenRenderer = ({
+  label,
+  scale,
+  style,
+  kitPattern,
+  kitPatternColor,
+  radius,
+}) =>
+  createProceduralPixiToken({
+    label,
+    scale,
+    radius,
+    baseColor: style.primaryColor ?? 0x2563eb,
+    patternColor: kitPatternColor,
+    numberColor: style.textColor,
+    outlineColor: style.outlineColor,
+    pattern: kitPattern,
+  });
+
 export function resolvePlayerTokenRenderer(style: PlayerTokenStyle): PlayerTokenRenderer {
+  if (style === "phosphor") return PhosphorRenderer;
+  if (style === "procedural-pixi") return ProceduralPixiRenderer;
   if (style === "vision-v3") return VisionV3Renderer;
-  if (style === "premium") return PremiumGlowRenderer;
-  if (style === "torso") return TorsoRenderer;
-  return ClassicRingRenderer;
+  return VisionV3Renderer;
 }
 
 export function sanitizePlayerTokenStyle(value: unknown): PlayerTokenStyle {
-  if (value === "vision-v3" || value === "classic" || value === "premium" || value === "torso") return value;
+  if (value === "vision-v3" || value === "phosphor" || value === "procedural-pixi") return value;
   return "vision-v3";
 }
