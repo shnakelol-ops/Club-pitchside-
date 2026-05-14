@@ -17,7 +17,7 @@ export function createJerseyToken(input: CleanTokenRendererInput): CleanTokenRen
 
   const outerRadius = Math.max(0.1, input.radius);
   const innerRadius = outerRadius * 0.82;
-  const glyphY = innerRadius * 0.06;
+  const glyphY = 0;
 
   // LAYER 1 — SHADOW
   const shadow = new Graphics();
@@ -63,9 +63,9 @@ export function createJerseyToken(input: CleanTokenRendererInput): CleanTokenRen
   const jerseyGlyph = new Graphics();
   jerseyGlyph
     .poly(points)
-    .fill({ color: 0xffffff, alpha: 0.13 })
+    .fill({ color: 0x000000, alpha: 0.18 })
     .poly(points)
-    .stroke({ color: 0xffffff, alpha: 0.22, width: 0.8 });
+    .stroke({ color: 0x000000, alpha: 0.35, width: 1.2 });
   jerseyGlyph.position.set(0, glyphY);
   token.addChild(jerseyGlyph);
 
