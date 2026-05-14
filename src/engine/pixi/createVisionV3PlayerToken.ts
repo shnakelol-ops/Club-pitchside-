@@ -215,10 +215,9 @@ export function createVisionV3PlayerToken({
     mergedConfig.pattern === "slash" ||
     mergedConfig.pattern === "chestDash"
   ) {
-    const patternLayer = new Graphics();
     const patternMask = new Graphics();
     patternMask.circle(0, 0, innerRadius).fill({ color: 0xffffff });
-    patternMask.visible = false;
+    const patternLayer = new Graphics();
     patternLayer.mask = patternMask;
     drawTokenPattern({
       g: patternLayer,
@@ -229,8 +228,8 @@ export function createVisionV3PlayerToken({
       r: innerRadius,
       lod: resolvePatternLod(innerRadius, tokenScale),
     });
-    token.addChild(patternLayer);
     token.addChild(patternMask);
+    token.addChild(patternLayer);
   }
 
   if (mergedConfig.glowOnSelect) {
