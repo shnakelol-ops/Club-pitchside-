@@ -4,9 +4,9 @@ import type { CleanTokenRendererInput } from "./createCleanTokenRenderers";
 import type { CleanTokenRendererOutput } from "./createCleanTokenRenderers";
 
 function resolveFontSize(innerRadius: number, digitCount: number): number {
-  if (digitCount <= 1) return innerRadius * 1.3;
-  if (digitCount === 2) return innerRadius * 1.05;
-  return innerRadius * 0.8;
+  if (digitCount <= 1) return innerRadius * 1.25;
+  if (digitCount === 2) return innerRadius * 1.0;
+  return innerRadius * 0.78;
 }
 
 export function createJerseyToken(input: CleanTokenRendererInput): CleanTokenRendererOutput {
@@ -39,36 +39,7 @@ export function createJerseyToken(input: CleanTokenRendererInput): CleanTokenRen
     .fill({ color: input.baseColor, alpha: 1 });
   token.addChild(discBase);
 
-  // LAYER 4 — JERSEY GLYPH
-  const s = innerRadius * 0.72;
-  const points = [
-    -s * 0.55,
-    -s * 0.5,
-    -s * 0.22,
-    -s * 0.5,
-    -s * 0.12,
-    -s * 0.3,
-    s * 0.12,
-    -s * 0.3,
-    s * 0.22,
-    -s * 0.5,
-    s * 0.55,
-    -s * 0.5,
-    s * 0.45,
-    s * 0.52,
-    -s * 0.45,
-    s * 0.52,
-  ];
-  const glyph = new Graphics();
-  glyph
-    .poly(points)
-    .fill({ color: 0x000000, alpha: 0.18 })
-    .poly(points)
-    .stroke({ color: 0x000000, alpha: 0.35, width: 1.2 });
-  glyph.position.set(0, 0);
-  token.addChild(glyph);
-
-  // LAYER 5 — NUMBER TEXT
+  // LAYER 4 — NUMBER TEXT
   const numberText = String(Math.trunc(input.number));
   const fontSize = resolveFontSize(innerRadius, Math.min(numberText.length, 3));
   const textResolution =
