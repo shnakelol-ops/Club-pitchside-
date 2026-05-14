@@ -321,7 +321,17 @@ function sanitizeKitColor(value: string | undefined): TacticalKitColor | undefin
 
 function sanitizeKitPattern(value: TacticalKitPattern | undefined): TacticalKitPattern | undefined {
   if (!value) return undefined;
-  if (value === "plain" || value === "hoops" || value === "slash" || value === "stripes") return value;
+  if (
+    value === "plain" ||
+    value === "solid" ||
+    value === "gradient" ||
+    value === "hoops" ||
+    value === "slash" ||
+    value === "stripes" ||
+    value === "chestDash"
+  ) {
+    return value;
+  }
   return undefined;
 }
 

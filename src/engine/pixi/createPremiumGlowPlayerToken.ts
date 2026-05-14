@@ -10,7 +10,14 @@ export type PremiumGlowPlayerTokenStyle = {
 };
 
 export type PremiumGlowTeamColor = "blue" | "red" | "green" | "yellow" | "black" | "white";
-export type PremiumGlowKitPattern = "plain" | "hoops" | "slash" | "stripes";
+export type PremiumGlowKitPattern =
+  | "plain"
+  | "solid"
+  | "gradient"
+  | "hoops"
+  | "slash"
+  | "stripes"
+  | "chestDash";
 
 const DEFAULT_STYLE_BY_TEAM: Record<PremiumGlowTeamColor, PremiumGlowPlayerTokenStyle> = {
   blue: {
