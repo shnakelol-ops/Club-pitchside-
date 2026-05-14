@@ -84,13 +84,12 @@ export function buildVisionDiscLayers(
     .circle(0, 0, geometry.ambientRadius)
     .fill({
       color: style.colors.shadowColor,
-      alpha: style.alpha.shadowColor * VISION_DISC_GEOMETRY.ambientShadowAlpha,
+      alpha: style.alpha.shadowColor * VISION_DISC_GEOMETRY.ambientShadowAlpha * 0.84,
     });
   token.addChild(layers.ambient);
 
-  const softenedRingColor = mixColor(style.colors.ringColor, style.colors.shadowColor, 0.14);
-  const ringEdgeColor = mixColor(style.colors.ringStrokeColor, style.colors.shadowColor, 0.24);
-  const ringInsetRadius = geometry.innerRadius + geometry.ringThickness * 0.15;
+  const softenedRingColor = mixColor(style.colors.ringColor, style.colors.shadowColor, 0.06);
+  const ringEdgeColor = mixColor(style.colors.ringStrokeColor, style.colors.shadowColor, 0.16);
   layers.ring
     .circle(0, 0, geometry.outerRadius)
     .fill({ color: softenedRingColor, alpha: style.alpha.ringColor * 0.96 })
@@ -107,11 +106,6 @@ export function buildVisionDiscLayers(
       alpha: style.alpha.ringStrokeColor * 0.32,
       width: Math.max(1, geometry.ringThickness * 0.1),
       alignment: 1,
-    })
-    .circle(0, 0, ringInsetRadius)
-    .fill({
-      color: style.colors.discBaseColor,
-      alpha: style.alpha.discBaseColor * 0.24,
     });
   token.addChild(layers.ring);
 
@@ -129,26 +123,26 @@ export function buildVisionDiscLayers(
     layers.disc
       .circle(0, 0, geometry.innerRadius)
       .fill(gradient)
-      .ellipse(0, -geometry.innerRadius * 0.3, geometry.innerRadius * 0.7, geometry.innerRadius * 0.16)
-      .fill({ color: style.colors.discHighlightColor, alpha: style.alpha.discHighlightColor * 0.4 })
+      .ellipse(0, -geometry.innerRadius * 0.28, geometry.innerRadius * 0.68, geometry.innerRadius * 0.11)
+      .fill({ color: style.colors.discHighlightColor, alpha: style.alpha.discHighlightColor * 0.2 })
       .circle(0, 0, geometry.innerRadius)
       .stroke({
         color: style.colors.discEdgeColor,
-        alpha: style.alpha.discEdgeColor,
-        width: Math.max(1, geometry.ringThickness * 0.18),
+        alpha: style.alpha.discEdgeColor * 0.9,
+        width: Math.max(1, geometry.ringThickness * 0.16),
         alignment: 0.5,
       });
   } else {
     layers.disc
       .circle(0, 0, geometry.innerRadius)
       .fill({ color: style.colors.discBaseColor, alpha: style.alpha.discBaseColor })
-      .ellipse(0, -geometry.innerRadius * 0.29, geometry.innerRadius * 0.7, geometry.innerRadius * 0.17)
-      .fill({ color: style.colors.discHighlightColor, alpha: style.alpha.discHighlightColor * 0.5 })
+      .ellipse(0, -geometry.innerRadius * 0.27, geometry.innerRadius * 0.66, geometry.innerRadius * 0.12)
+      .fill({ color: style.colors.discHighlightColor, alpha: style.alpha.discHighlightColor * 0.24 })
       .circle(0, 0, geometry.innerRadius)
       .stroke({
         color: style.colors.discEdgeColor,
-        alpha: style.alpha.discEdgeColor,
-        width: Math.max(1, geometry.ringThickness * 0.18),
+        alpha: style.alpha.discEdgeColor * 0.9,
+        width: Math.max(1, geometry.ringThickness * 0.16),
         alignment: 0.5,
       });
   }
@@ -228,19 +222,19 @@ export function buildVisionDiscLayers(
 
   if (input.selected) {
     const selectedHalo = new Graphics();
-    const haloColor = mixColor(style.colors.haloColor, style.colors.shadowColor, 0.26);
+    const haloColor = mixColor(style.colors.haloColor, style.colors.shadowColor, 0.38);
     selectedHalo
       .circle(0, 0, geometry.selectedHaloRadius)
       .stroke({
         color: style.colors.shadowColor,
-        alpha: style.alpha.shadowColor * 0.24,
+        alpha: style.alpha.shadowColor * 0.2,
         width: Math.max(1, geometry.selectedHaloStroke * 1.2),
         alignment: 0.5,
       })
       .circle(0, 0, geometry.selectedHaloRadius)
       .stroke({
         color: haloColor,
-        alpha: style.alpha.haloColor * 0.82,
+        alpha: style.alpha.haloColor * 0.66,
         width: Math.max(1, geometry.selectedHaloStroke),
         alignment: 0.5,
       });

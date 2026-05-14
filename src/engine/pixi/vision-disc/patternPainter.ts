@@ -19,8 +19,8 @@ function strokePattern(
     color,
     alpha,
     width,
-    cap: "round",
-    join: "round",
+    cap: "butt",
+    join: "miter",
     alignment: 0.5,
   });
 }
@@ -33,7 +33,7 @@ export function drawVisionDiscPattern(
   geometry: VisionDiscGeometry,
 ): void {
   const radius = geometry.innerRadius * 0.98;
-  const width = Math.max(1, geometry.patternStroke);
+  const width = Math.max(1, geometry.patternStroke * 1.45);
   if (pattern === "solid" || pattern === "gradient") return;
 
   if (pattern === "hoops") {
@@ -69,19 +69,19 @@ export function drawVisionDiscPattern(
     graphics
       .moveTo(-radius * 0.62, radius * 0.48)
       .lineTo(radius * 0.62, -radius * 0.48);
-    strokePattern(graphics, color, alpha, width);
+    strokePattern(graphics, color, alpha * 0.96, width * 1.05);
     return;
   }
 
   const y = -radius * 0.18;
-  const bibBandHeight = Math.max(1, width * 1.16);
+  const bibBandHeight = Math.max(1, width * 1.34);
   const bibBandWidth = radius * 1.34;
   graphics
-    .roundRect(-bibBandWidth * 0.5, y - bibBandHeight * 0.5, bibBandWidth, bibBandHeight, bibBandHeight * 0.5)
-    .fill({ color, alpha: alpha * 0.24 });
+    .rect(-bibBandWidth * 0.5, y - bibBandHeight * 0.5, bibBandWidth, bibBandHeight)
+    .fill({ color, alpha: alpha * 0.18 });
 
-  const dashWidth = radius * 0.24;
-  const gap = radius * 0.11;
+  const dashWidth = radius * 0.29;
+  const gap = radius * 0.15;
   const segmentCount = 3;
   const totalWidth = segmentCount * dashWidth + (segmentCount - 1) * gap;
   const startX = -totalWidth * 0.5;
@@ -91,9 +91,9 @@ export function drawVisionDiscPattern(
       .moveTo(left, y)
       .lineTo(left + dashWidth, y);
   }
-  strokePattern(graphics, color, alpha * 0.94, width * 1.04);
+  strokePattern(graphics, color, alpha * 0.96, width * 1.22);
   graphics
     .moveTo(-bibBandWidth * 0.38, y + bibBandHeight * 0.26)
     .lineTo(bibBandWidth * 0.38, y + bibBandHeight * 0.26);
-  strokePattern(graphics, color, alpha * 0.32, Math.max(1, width * 0.58));
+  strokePattern(graphics, color, alpha * 0.28, Math.max(1, width * 0.52));
 }
