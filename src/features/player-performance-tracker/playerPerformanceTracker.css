@@ -3,8 +3,11 @@
 .ppt-header{border-bottom:1px solid #183044;padding:14px 16px}
 .ppt-sub{color:#93a7bd;font-size:14px}
 .ppt-nav{position:fixed;left:0;right:0;bottom:0;background:#0d1d2d;border-top:1px solid #183044;z-index:50}
-.ppt-nav-inner{max-width:430px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px 14px}
-.ppt-tab{border:1px solid #2a3f54;border-radius:12px;padding:10px 12px;background:#17293b;color:#96a8bc;font-weight:700}.ppt-tab.active{background:#f1f5f9;color:#0b1824}
+.ppt-nav-inner{max-width:430px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 14px calc(14px + env(safe-area-inset-bottom,0px))}
+.ppt-nav-item{border:0;background:transparent;border-radius:14px;min-height:70px;padding:8px 10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:#8497ad;font-weight:600;font-size:16px}
+.ppt-nav-item .ppt-nav-icon{width:28px;height:28px}
+.ppt-nav-item.active{color:#fff;background:rgba(23,41,59,.55);box-shadow:0 0 0 1px rgba(148,163,184,.22),0 0 18px rgba(148,163,184,.18)}
+.ppt-nav-item.inactive{color:#7d90a7}
 .ppt-wrap{padding:12px 14px;display:grid;gap:10px}.ppt-panel{border:1px solid #17324a;border-radius:16px;background:#0a2134;padding:14px}.ppt-center{text-align:center}
 .ppt-eyebrow{font-size:12px;letter-spacing:.25em;color:#8fa3b8;font-weight:700}.ppt-timer{font-size:64px;font-weight:700;line-height:1}.ppt-row{display:flex;gap:8px;justify-content:center;margin-top:10px}
 .ppt-control{border:0;border-radius:12px;color:white;font-weight:700;padding:10px 16px}.ppt-start{background:#0a9349}.ppt-reset{background:#9b1c1c}
