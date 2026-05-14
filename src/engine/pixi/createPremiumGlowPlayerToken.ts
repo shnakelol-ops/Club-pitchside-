@@ -1,5 +1,9 @@
 import { Container, Graphics, Text } from "pixi.js";
-import { resolvePatternMarkColor } from "./tokenPatternContrast";
+import {
+  resolvePatternDetailTier,
+  resolvePatternMarkColor,
+  type TokenPatternDetailTier,
+} from "./tokenPatternContrast";
 
 export type PremiumGlowPlayerTokenStyle = {
   primaryColor: number;
@@ -135,10 +139,14 @@ function drawGlowPatternMarks(
   pattern: PremiumGlowKitPattern,
   markColor: number,
   centerRadius: number,
+  detailTier: TokenPatternDetailTier,
 ): void {
   if (pattern === "plain") return;
-  const strokeWidth = Math.max(0.28, centerRadius * 0.24);
-  const alpha = 0.62;
+  const strokeWidth = Math.max(
+    0.34,
+    centerRadius * (detailTier === "tiny" ? 0.28 : detailTier === "small" ? 0.24 : 0.22),
+  );
+  const alpha = detailTier === "tiny" ? 0.68 : detailTier === "small" ? 0.62 : 0.58;
 
   if (pattern === "hoops") {
     const yOffset = centerRadius * 0.3;
@@ -152,20 +160,21 @@ function drawGlowPatternMarks(
   }
 
   if (pattern === "stripes") {
-    const xOffset = centerRadius * 0.28;
-    target
-      .moveTo(-xOffset, -centerRadius * 0.64)
-      .lineTo(-xOffset, centerRadius * 0.64)
-      .moveTo(xOffset, -centerRadius * 0.64)
-      .lineTo(xOffset, centerRadius * 0.64)
-      .stroke({ color: markColor, width: strokeWidth, alpha, cap: "round", join: "round" });
+    const stripeOffsets =
+      detailTier === "tiny"
+        ? [-centerRadius * 0.3, centerRadius * 0.3]
+        : [-centerRadius * 0.42, 0, centerRadius * 0.42];
+    for (const xOffset of stripeOffsets) {
+      target.moveTo(xOffset, -centerRadius * 0.64).lineTo(xOffset, centerRadius * 0.64);
+    }
+    target.stroke({ color: markColor, width: strokeWidth, alpha, cap: "round", join: "round" });
     return;
   }
 
   target
     .moveTo(-centerRadius * 0.6, centerRadius * 0.5)
     .lineTo(centerRadius * 0.6, -centerRadius * 0.5)
-    .stroke({ color: markColor, width: strokeWidth * 1.04, alpha, cap: "round", join: "round" });
+    .stroke({ color: markColor, width: strokeWidth * 1.08, alpha, cap: "round", join: "round" });
 }
 
 export function createPremiumGlowPlayerToken({
@@ -174,6 +183,7 @@ export function createPremiumGlowPlayerToken({
   style,
   scale,
   radius,
+  lodScale = 5,
   kitPattern = "plain",
   kitPatternColor,
 }: {
@@ -182,6 +192,7 @@ export function createPremiumGlowPlayerToken({
   style?: Partial<PremiumGlowPlayerTokenStyle>;
   scale?: number;
   radius?: number;
+  lodScale?: number;
   kitPattern?: PremiumGlowKitPattern;
   kitPatternColor?: number;
 }): { token: Container; shadow: Graphics } {
@@ -196,9 +207,11 @@ export function createPremiumGlowPlayerToken({
   const token = new Container();
   token.eventMode = "static";
   token.cursor = "grab";
-  token.scale.set(scale ?? 1);
+  const tokenScale = scale ?? 1;
+  token.scale.set(tokenScale);
 
   const tokenRadius = Number.isFinite(radius) ? Math.max(2.8, Number(radius)) : TOKEN_RADIUS;
+  const detailTier = resolvePatternDetailTier(tokenRadius, tokenScale, lodScale);
   const ringWidth = Math.max(0.44, tokenRadius * 0.16);
   const teamBaseColor = resolved.goalkeeper && resolved.secondaryColor != null
     ? resolved.secondaryColor
@@ -264,7 +277,7 @@ export function createPremiumGlowPlayerToken({
   token.addChild(centre);
 
   const patternMarks = new Graphics();
-  drawGlowPatternMarks(patternMarks, kitPattern, patternMarkColor, centreRadius * 0.92);
+  drawGlowPatternMarks(patternMarks, kitPattern, patternMarkColor, centreRadius * 0.92, detailTier);
   token.addChild(patternMarks);
 
   const notch = new Graphics();

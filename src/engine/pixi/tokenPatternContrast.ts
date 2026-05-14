@@ -1,5 +1,6 @@
 export const TOKEN_PATTERN_LIGHT_FALLBACK = 0xf8fafc;
 export const TOKEN_PATTERN_DARK_FALLBACK = 0x0b1220;
+export type TokenPatternDetailTier = "tiny" | "small" | "regular";
 
 function clampColorChannel(value: number): number {
   return Math.max(0, Math.min(255, Math.round(value)));
@@ -68,4 +69,15 @@ export function resolvePatternMarkColor(
 
   if (bestContrast >= minimumContrast) return bestColor;
   return preferredFallback;
+}
+
+export function resolvePatternDetailTier(
+  radius: number,
+  scale = 1,
+  lodScale = 5,
+): TokenPatternDetailTier {
+  const pixelRadius = radius * Math.max(0.6, scale) * Math.max(1, lodScale);
+  if (pixelRadius < 11.5) return "tiny";
+  if (pixelRadius < 14.5) return "small";
+  return "regular";
 }

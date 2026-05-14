@@ -94,10 +94,13 @@ function drawPatternAccent(
   lodTier: VisionV3LodTier,
 ): void {
   if (pattern === "plain") return;
-  const alpha = lodTier === "tiny" ? 0.34 : lodTier === "small" ? 0.3 : 0.27;
-  const lineWidth = Math.max(0.3, innerRadius * (lodTier === "tiny" ? 0.22 : 0.19));
+  const alpha = lodTier === "tiny" ? 0.62 : lodTier === "small" ? 0.56 : 0.5;
+  const lineWidth = Math.max(
+    0.34,
+    innerRadius * (lodTier === "tiny" ? 0.28 : lodTier === "small" ? 0.24 : 0.21),
+  );
   if (pattern === "hoops") {
-    const yOffset = lodTier === "tiny" ? innerRadius * 0.38 : innerRadius * 0.32;
+    const yOffset = lodTier === "tiny" ? innerRadius * 0.34 : innerRadius * 0.3;
     target
       .moveTo(-innerRadius * 0.68, -yOffset)
       .lineTo(innerRadius * 0.68, -yOffset)
@@ -107,25 +110,29 @@ function drawPatternAccent(
     return;
   }
   if (pattern === "stripes") {
-    const xOffset = lodTier === "tiny" ? innerRadius * 0.38 : innerRadius * 0.31;
-    target
-      .moveTo(-xOffset, -innerRadius * 0.68)
-      .lineTo(-xOffset, innerRadius * 0.68)
-      .moveTo(xOffset, -innerRadius * 0.68)
-      .lineTo(xOffset, innerRadius * 0.68);
+    const stripeOffsets =
+      lodTier === "tiny"
+        ? [-innerRadius * 0.3, innerRadius * 0.3]
+        : lodTier === "small"
+          ? [-innerRadius * 0.38, 0, innerRadius * 0.38]
+          : [-innerRadius * 0.4, 0, innerRadius * 0.4];
+    for (const xOffset of stripeOffsets) {
+      target.moveTo(xOffset, -innerRadius * 0.68).lineTo(xOffset, innerRadius * 0.68);
+    }
     target.stroke({ color: accentColor, width: lineWidth, alpha, cap: "round", join: "round" });
     return;
   }
-  target.moveTo(-innerRadius * 0.62, innerRadius * 0.48).lineTo(-innerRadius * 0.14, innerRadius * 0.1);
-  target.moveTo(innerRadius * 0.14, -innerRadius * 0.1).lineTo(innerRadius * 0.62, -innerRadius * 0.48);
-  if (lodTier !== "tiny") {
+  if (lodTier === "regular") {
     target
       .moveTo(-innerRadius * 0.56, innerRadius * 0.62)
-      .lineTo(-innerRadius * 0.1, innerRadius * 0.24)
-      .moveTo(innerRadius * 0.1, 0)
-      .lineTo(innerRadius * 0.56, -innerRadius * 0.38);
+      .lineTo(innerRadius * 0.56, -innerRadius * 0.42)
+      .stroke({ color: accentColor, width: Math.max(0.34, lineWidth * 0.94), alpha, cap: "round", join: "round" });
+    return;
   }
-  target.stroke({ color: accentColor, width: Math.max(0.3, lineWidth), alpha, cap: "round", join: "round" });
+  target
+    .moveTo(-innerRadius * 0.6, innerRadius * 0.5)
+    .lineTo(innerRadius * 0.6, -innerRadius * 0.5)
+    .stroke({ color: accentColor, width: Math.max(0.34, lineWidth * 1.06), alpha, cap: "round", join: "round" });
 }
 
 function drawShirtGlyph(target: Graphics, centerY: number, size: number, color: number): void {

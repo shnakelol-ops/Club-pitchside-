@@ -176,41 +176,40 @@ function drawShirtPattern(
   lodTier: ShirtPreviewLodTier,
 ): void {
   if (pattern === "plain") return;
-  const alpha = lodTier === "tiny" ? 0.62 : 0.56;
-  const width = Math.max(0.3, innerRadius * (lodTier === "tiny" ? 0.22 : 0.18));
+  const alpha = lodTier === "tiny" ? 0.68 : lodTier === "small" ? 0.62 : 0.56;
+  const width = Math.max(
+    0.34,
+    innerRadius * (lodTier === "tiny" ? 0.28 : lodTier === "small" ? 0.24 : 0.21),
+  );
 
   if (pattern === "hoops") {
-    const y = innerRadius * 0.4;
     target
-      .moveTo(-innerRadius * 0.44, y)
-      .lineTo(innerRadius * 0.44, y)
+      .moveTo(-innerRadius * 0.44, innerRadius * 0.18)
+      .lineTo(innerRadius * 0.44, innerRadius * 0.18)
+      .moveTo(-innerRadius * 0.44, innerRadius * 0.44)
+      .lineTo(innerRadius * 0.44, innerRadius * 0.44)
       .stroke({ color: patternColor, width, alpha, cap: "round", join: "round" });
-    if (lodTier !== "tiny") {
-      target
-        .moveTo(-innerRadius * 0.42, innerRadius * 0.18)
-        .lineTo(innerRadius * 0.42, innerRadius * 0.18)
-        .stroke({ color: patternColor, width: width * 0.9, alpha: 0.5, cap: "round", join: "round" });
-    }
     return;
   }
 
   if (pattern === "stripes") {
-    const x = innerRadius * 0.26;
-    target
-      .moveTo(-x, innerRadius * 0.08)
-      .lineTo(-x, innerRadius * 0.68)
-      .moveTo(x, innerRadius * 0.08)
-      .lineTo(x, innerRadius * 0.68)
-      .stroke({ color: patternColor, width, alpha, cap: "round", join: "round" });
+    const stripeOffsets =
+      lodTier === "tiny"
+        ? [-innerRadius * 0.26, innerRadius * 0.26]
+        : [-innerRadius * 0.32, 0, innerRadius * 0.32];
+    for (const xOffset of stripeOffsets) {
+      target
+        .moveTo(xOffset, innerRadius * 0.08)
+        .lineTo(xOffset, innerRadius * 0.68);
+    }
+    target.stroke({ color: patternColor, width, alpha, cap: "round", join: "round" });
     return;
   }
 
   target
-    .moveTo(-innerRadius * 0.42, innerRadius * 0.66)
-    .lineTo(-innerRadius * 0.08, innerRadius * 0.28)
-    .moveTo(innerRadius * 0.08, innerRadius * 0.1)
-    .lineTo(innerRadius * 0.42, -innerRadius * 0.22)
-    .stroke({ color: patternColor, width: width * 1.06, alpha, cap: "round", join: "round" });
+    .moveTo(-innerRadius * 0.46, innerRadius * 0.7)
+    .lineTo(innerRadius * 0.42, -innerRadius * 0.18)
+    .stroke({ color: patternColor, width: width * 1.08, alpha, cap: "round", join: "round" });
 }
 
 export function createShirtPreviewPlayerToken({
