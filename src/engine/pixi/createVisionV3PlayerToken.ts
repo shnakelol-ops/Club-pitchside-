@@ -74,7 +74,7 @@ const DEFAULT_STYLE_BY_TEAM: Record<VisionV3TeamColor, VisionV3PlayerTokenStyle>
 };
 
 function resolveNumberFill(
-  override: TokenNumberColorOverride,
+  override: string,
   baseFillColor: number,
   teamColor: number,
 ): number {
@@ -84,7 +84,7 @@ function resolveNumberFill(
   return relativeLuminance(baseFillColor) < 0.42 ? 0xf8fafc : 0x0f172a;
 }
 
-function resolveOuterRingWidth(ring: TokenRingStyle, radius: number): number {
+function resolveOuterRingWidth(ring: string, radius: number): number {
   if (ring === "none") return Math.max(0.38, radius * 0.11);
   if (ring === "thin") return Math.max(0.5, radius * 0.145);
   if (ring === "strong") return Math.max(0.64, radius * 0.19);
