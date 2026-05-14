@@ -4,12 +4,14 @@ import { createRoot } from "react-dom/client";
 import { OverlayPortalProvider } from "./overlay/OverlayPortalContext";
 import PitchFlowCoachShell from "./pages/PitchFlowCoachShell";
 import TacticalPadLiteClean from "./pages/TacticalPadLiteClean";
+import VisionLabsV2Page from "./ui/v2/VisionLabsV2Page";
 
 const boardShell = () => <PitchFlowCoachShell initialTab="home" />;
 const VISION_BOARD_PATH = "/vision-board";
 const QUICK_BOARD_PATH = "/quickboard";
 const FLOW_STATS_PATH = "/flowstats";
 const NOTES_PATH = "/notes";
+const VISION_LABS_V2_SANDBOX_PATH = "/vision-labs-v2-sandbox";
 
 function redirectToBoard() {
   if (window.location.pathname !== "/board") {
@@ -85,6 +87,9 @@ function pickRootComponent() {
   }
   if (normalizedPath === "/plans") {
     return () => <PitchFlowCoachShell initialTab="plans" />;
+  }
+  if (normalizedPath === VISION_LABS_V2_SANDBOX_PATH) {
+    return VisionLabsV2Page;
   }
   return redirectToBoard();
 }
