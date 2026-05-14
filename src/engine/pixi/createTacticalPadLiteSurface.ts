@@ -155,7 +155,7 @@ type PhaseSnapshot = {
 const WORLD_SIZE = { width: 160, height: 100 } as const;
 const PLAYER_RADIUS = 4.1;
 const PLAYER_TOUCH_HIT_DIAMETER_PX = 48;
-const TACTICAL_PLAYER_VISUAL_SCALE = 0.8;
+const TACTICAL_PLAYER_VISUAL_SCALE = 0.92;
 const TACTICAL_ITEM_HALF_SIZE = 2.2;
 const TACTICAL_ITEM_DRAG_THRESHOLD_PX = 5;
 const TACTICAL_ITEM_TOUCH_HIT_DIAMETER_PX = 46;
@@ -321,7 +321,7 @@ function sanitizeKitColor(value: string | undefined): TacticalKitColor | undefin
 
 function sanitizeKitPattern(value: TacticalKitPattern | undefined): TacticalKitPattern | undefined {
   if (!value) return undefined;
-  if (value === "plain" || value === "hoops" || value === "slash" || value === "stripes") return value;
+  if (value === "plain" || value === "hoops" || value === "slash" || value === "stripes" || value === "chestDash") return value;
   return undefined;
 }
 
