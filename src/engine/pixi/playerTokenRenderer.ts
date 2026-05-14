@@ -11,8 +11,10 @@ export type PlayerTokenStyle = "vision-v3" | "classic" | "premium" | "torso";
 export type PlayerTokenRendererInput = {
   label: string;
   number: number;
+  captain?: boolean;
   teamColor: PremiumPlayerTokenColor;
   scale: number;
+  lodScale?: number;
   style: Partial<MicroAthleteStyle>;
   kitPattern: MicroAthleteKitPattern;
   kitPatternColor: number;
@@ -85,12 +87,16 @@ export const VisionV3Renderer: PlayerTokenRenderer = ({
   kitPattern,
   kitPatternColor,
   radius,
+  captain,
+  lodScale,
 }) =>
   createVisionV3PlayerToken({
     label,
     teamColor,
     radius,
     scale,
+    captain,
+    lodScale,
     style,
     kitPattern,
     kitPatternColor,
