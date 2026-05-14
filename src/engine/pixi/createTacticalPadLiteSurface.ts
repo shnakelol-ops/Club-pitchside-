@@ -9,7 +9,6 @@ import {
   PREMIUM_TOKEN_IDLE_SHADOW_ALPHA,
   type PremiumPlayerTokenColor,
 } from "./createPremiumPlayerToken";
-import type { MicroAthleteKitPattern } from "./createMicroAthleteToken";
 import {
   resolvePlayerTokenRenderer,
   sanitizePlayerTokenStyle,
@@ -33,13 +32,22 @@ import {
   type WhiteboardDrawTool,
 } from "../../features/quickboard/drawing/tacticalDrawingTypes";
 
-export type TacticalKitPattern = MicroAthleteKitPattern;
-export type TacticalLabelMode = "number" | "initials";
+export type TacticalKitPattern =
+  | "plain"
+  | "hoops"
+  | "slash"
+  | "stripes"
+  | "chestDash"
+  | "gradient";
+export type TacticalLabelMode = "number" | "initials" | "none";
 export type TacticalPlayerTokenStyle = PlayerTokenStyle;
 export type TacticalPlayerKitFields = {
   kitBaseColor?: string;
   kitPattern?: TacticalKitPattern;
   kitPatternColor?: string;
+  ring?: string;
+  numberColor?: string;
+  glowOnSelect?: boolean;
   labelMode?: TacticalLabelMode;
   initials?: string;
 };
@@ -321,12 +329,19 @@ function sanitizeKitColor(value: string | undefined): TacticalKitColor | undefin
 
 function sanitizeKitPattern(value: TacticalKitPattern | undefined): TacticalKitPattern | undefined {
   if (!value) return undefined;
-  if (value === "plain" || value === "hoops" || value === "slash" || value === "stripes") return value;
+  if (value === "plain" || value === "hoops" || value === "slash" || value === "stripes" || value === "chestDash" || value === "gradient") return value;
   return undefined;
 }
 
+function sanitizeHexColor(value: string | undefined): number | undefined {
+  if (typeof value !== "string") return undefined;
+  const raw = value.trim().replace(/^#/, "");
+  if (!/^[0-9a-fA-F]{6}$/.test(raw)) return undefined;
+  return Number.parseInt(raw, 16);
+}
+
 function sanitizeLabelMode(value: TacticalLabelMode | undefined): TacticalLabelMode | undefined {
-  if (value === "number" || value === "initials") return value;
+  if (value === "number" || value === "initials" || value === "none") return value;
   return undefined;
 }
 
@@ -421,6 +436,9 @@ function sanitizeBoardPlayerState(input: unknown): TacticalBoardPlayerState | nu
     kitPatternColor: sanitizeKitColor(typeof input.kitPatternColor === "string" ? input.kitPatternColor : undefined),
     labelMode: sanitizeLabelMode((input.labelMode as TacticalLabelMode | undefined) ?? undefined),
     initials: sanitizeInitials(typeof input.initials === "string" ? input.initials : undefined),
+    ring: typeof input.ring === "string" ? input.ring : undefined,
+    numberColor: typeof input.numberColor === "string" ? input.numberColor : undefined,
+    glowOnSelect: typeof input.glowOnSelect === "boolean" ? input.glowOnSelect : undefined,
   };
 }
 
@@ -458,12 +476,18 @@ function sanitizePlayerKitPatch(patch: TacticalPlayerKitPatch): TacticalPlayerKi
   const nextPatternColor = sanitizeKitColor(patch.kitPatternColor);
   const nextLabelMode = sanitizeLabelMode(patch.labelMode);
   const nextInitials = sanitizeInitials(patch.initials);
+  const nextRing = typeof patch.ring === "string" ? patch.ring : undefined;
+  const nextNumberColor = typeof patch.numberColor === "string" ? patch.numberColor : undefined;
+  const nextGlowOnSelect = typeof patch.glowOnSelect === "boolean" ? patch.glowOnSelect : undefined;
   return {
     ...(patch.kitBaseColor !== undefined ? { kitBaseColor: nextBaseColor } : {}),
     ...(patch.kitPattern !== undefined ? { kitPattern: nextPattern } : {}),
     ...(patch.kitPatternColor !== undefined ? { kitPatternColor: nextPatternColor } : {}),
     ...(patch.labelMode !== undefined ? { labelMode: nextLabelMode } : {}),
     ...(patch.initials !== undefined ? { initials: nextInitials } : {}),
+    ...(patch.ring !== undefined ? { ring: nextRing } : {}),
+    ...(patch.numberColor !== undefined ? { numberColor: nextNumberColor } : {}),
+    ...(patch.glowOnSelect !== undefined ? { glowOnSelect: nextGlowOnSelect } : {}),
   };
 }
 
@@ -873,7 +897,7 @@ export async function createTacticalPadLiteSurface(
     return safePlayerNumberLabel(player.number);
   }
 
-  function createTokenPackForPlayer(player: Pick<TacticalPlayer, "number" | "team" | "teamColor" | "kitBaseColor" | "kitPattern" | "kitPatternColor" | "labelMode" | "initials">): {
+  function createTokenPackForPlayer(player: Pick<TacticalPlayer, "number" | "team" | "teamColor" | "kitBaseColor" | "kitPattern" | "kitPatternColor" | "labelMode" | "initials" | "ring" | "numberColor" | "glowOnSelect">): {
     token: Container;
     shadow: Graphics;
   } {
@@ -902,6 +926,9 @@ export async function createTacticalPadLiteSurface(
       },
       kitPattern: pattern,
       kitPatternColor: KIT_COLOR_NUMERIC[patternColor],
+      ring: sanitizeHexColor(player.ring),
+      numberColor: sanitizeHexColor(player.numberColor),
+      glowOnSelect: player.glowOnSelect,
     });
   }
 

@@ -129,12 +129,14 @@ const KIT_COLOR_CSS: Record<(typeof KIT_COLOR_CHOICES)[number], string> = {
   grey: "#6b7280",
   black: "#111827",
 };
-const KIT_PATTERN_CHOICES: TacticalKitPattern[] = ["plain", "hoops", "stripes", "slash"];
+const KIT_PATTERN_CHOICES: TacticalKitPattern[] = ["plain", "hoops", "stripes", "slash", "gradient", "chestDash"];
 const KIT_PATTERN_LABEL: Record<TacticalKitPattern, string> = {
   plain: "Plain",
   hoops: "Hoops",
   stripes: "Stripes",
   slash: "Slash",
+  gradient: "Gradient",
+  chestDash: "Chest Dash",
 };
 const LABEL_MODE_CHOICES: TacticalLabelMode[] = ["number", "initials"];
 const TOKEN_STYLE_CHOICES: ReadonlyArray<{ value: TacticalPlayerTokenStyle; label: string }> = [
