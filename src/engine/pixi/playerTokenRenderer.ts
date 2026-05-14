@@ -17,6 +17,9 @@ export type PlayerTokenRendererInput = {
   kitPattern: MicroAthleteKitPattern;
   kitPatternColor: number;
   radius: number;
+  ring?: number;
+  numberColor?: number;
+  glowOnSelect?: boolean;
 };
 
 export type PlayerTokenRendererOutput = {
@@ -85,6 +88,9 @@ export const VisionV3Renderer: PlayerTokenRenderer = ({
   kitPattern,
   kitPatternColor,
   radius,
+  ring,
+  numberColor,
+  glowOnSelect,
 }) =>
   createVisionV3PlayerToken({
     label,
@@ -94,6 +100,9 @@ export const VisionV3Renderer: PlayerTokenRenderer = ({
     style,
     kitPattern,
     kitPatternColor,
+    ring,
+    numberColor,
+    glowOnSelect,
   });
 
 export function resolvePlayerTokenRenderer(style: PlayerTokenStyle): PlayerTokenRenderer {
