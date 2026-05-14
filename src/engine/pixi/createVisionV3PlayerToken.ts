@@ -1,4 +1,5 @@
 import { Container, Graphics, Text } from "pixi.js";
+import { resolvePatternMarkColor } from "./tokenPatternContrast";
 
 export type VisionV3PlayerTokenStyle = {
   primaryColor: number;
@@ -93,8 +94,8 @@ function drawPatternAccent(
   lodTier: VisionV3LodTier,
 ): void {
   if (pattern === "plain") return;
-  const alpha = lodTier === "tiny" ? 0.26 : lodTier === "small" ? 0.24 : 0.22;
-  const lineWidth = Math.max(0.28, innerRadius * (lodTier === "tiny" ? 0.2 : 0.18));
+  const alpha = lodTier === "tiny" ? 0.34 : lodTier === "small" ? 0.3 : 0.27;
+  const lineWidth = Math.max(0.3, innerRadius * (lodTier === "tiny" ? 0.22 : 0.19));
   if (pattern === "hoops") {
     const yOffset = lodTier === "tiny" ? innerRadius * 0.38 : innerRadius * 0.32;
     target
@@ -224,8 +225,7 @@ export function createVisionV3PlayerToken({
   const coreShadeColor = mixColor(coreColor, 0x020617, 0.2);
   const highlightColor = mixColor(coreColor, 0xffffff, 0.22);
   const edgeColor = mixColor(resolved.outlineColor, 0x000000, 0.24);
-  const patternContrastTarget = luminance(coreColor) < 132 ? 0xffffff : 0x0f172a;
-  const patternInkColor = mixColor(accentColor, patternContrastTarget, lodTier === "tiny" ? 0.44 : 0.34);
+  const patternInkColor = resolvePatternMarkColor(coreColor, accentColor, 2.35);
 
   const shadow = new Graphics();
   const shadowHaloAlpha = lodTier === "tiny" ? 0.06 : lodTier === "small" ? 0.085 : 0.11;

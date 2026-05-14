@@ -1,4 +1,5 @@
 import { Container, Graphics, Text } from "pixi.js";
+import { resolvePatternMarkColor } from "./tokenPatternContrast";
 
 export type ShirtPreviewPlayerTokenStyle = {
   primaryColor: number;
@@ -83,53 +84,6 @@ function luminance(color: number): number {
   const g = (color >> 8) & 0xff;
   const b = color & 0xff;
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
-
-function linearizedChannel(channel: number): number {
-  const normalized = channel / 255;
-  if (normalized <= 0.03928) return normalized / 12.92;
-  return ((normalized + 0.055) / 1.055) ** 2.4;
-}
-
-function relativeLuminance(color: number): number {
-  const r = linearizedChannel((color >> 16) & 0xff);
-  const g = linearizedChannel((color >> 8) & 0xff);
-  const b = linearizedChannel(color & 0xff);
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
-
-function contrastRatio(foreground: number, background: number): number {
-  const fg = relativeLuminance(foreground);
-  const bg = relativeLuminance(background);
-  const lighter = Math.max(fg, bg);
-  const darker = Math.min(fg, bg);
-  return (lighter + 0.05) / (darker + 0.05);
-}
-
-function resolveContrastingAccentColor(baseFillColor: number, requestedAccentColor: number): number {
-  const fallbackLight = 0xf8fafc;
-  const fallbackDark = 0x0b1220;
-  const preferredFallback = relativeLuminance(baseFillColor) < 0.34 ? fallbackLight : fallbackDark;
-  const minimumContrast = 2.35;
-  const candidates = [
-    requestedAccentColor,
-    mixColor(requestedAccentColor, preferredFallback, 0.28),
-    preferredFallback,
-    relativeLuminance(baseFillColor) < 0.34 ? 0xe2e8f0 : 0x111827,
-  ];
-
-  let bestColor = candidates[0] ?? preferredFallback;
-  let bestContrast = contrastRatio(bestColor, baseFillColor);
-  for (const candidate of candidates) {
-    const candidateContrast = contrastRatio(candidate, baseFillColor);
-    if (candidateContrast > bestContrast) {
-      bestColor = candidate;
-      bestContrast = candidateContrast;
-    }
-  }
-
-  if (bestContrast >= minimumContrast) return bestColor;
-  return preferredFallback;
 }
 
 function resolveLodTier(discRadius: number, scale: number, lodScale: number): ShirtPreviewLodTier {
@@ -302,14 +256,14 @@ export function createShirtPreviewPlayerToken({
     : (resolved.secondaryColor ?? mixColor(shirtColor, 0xffffff, 0.28));
   const ringColor = mixColor(shirtColor, 0x0f172a, 0.18);
   const centerColor = mixColor(shirtColor, 0x020617, 0.24);
-  const contrastedAccentColor = resolveContrastingAccentColor(centerColor, requestedAccentColor);
+  const contrastedAccentColor = resolvePatternMarkColor(centerColor, requestedAccentColor, 2.35);
   const shirtBodyColor = mixColor(
     shirtColor,
     luminance(centerColor) < 132 ? 0xffffff : 0x020617,
     luminance(centerColor) < 132 ? 0.14 : 0.08,
   );
   const sleeveColor = mixColor(contrastedAccentColor, shirtBodyColor, 0.08);
-  const patternColor = mixColor(contrastedAccentColor, luminance(centerColor) < 132 ? 0xffffff : 0x0f172a, 0.06);
+  const patternColor = resolvePatternMarkColor(shirtBodyColor, contrastedAccentColor, 2.35);
 
   const shadow = new Graphics();
   shadow

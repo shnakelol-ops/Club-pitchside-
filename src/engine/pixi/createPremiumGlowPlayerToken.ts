@@ -1,4 +1,5 @@
 import { Container, Graphics, Text } from "pixi.js";
+import { resolvePatternMarkColor } from "./tokenPatternContrast";
 
 export type PremiumGlowPlayerTokenStyle = {
   primaryColor: number;
@@ -129,6 +130,44 @@ function drawIntegratedCrownNotch(
     .fill({ color: mixColor(ringColor, 0xffffff, 0.08), alpha: 0.18 });
 }
 
+function drawGlowPatternMarks(
+  target: Graphics,
+  pattern: PremiumGlowKitPattern,
+  markColor: number,
+  centerRadius: number,
+): void {
+  if (pattern === "plain") return;
+  const strokeWidth = Math.max(0.28, centerRadius * 0.24);
+  const alpha = 0.62;
+
+  if (pattern === "hoops") {
+    const yOffset = centerRadius * 0.3;
+    target
+      .moveTo(-centerRadius * 0.62, -yOffset)
+      .lineTo(centerRadius * 0.62, -yOffset)
+      .moveTo(-centerRadius * 0.62, yOffset)
+      .lineTo(centerRadius * 0.62, yOffset)
+      .stroke({ color: markColor, width: strokeWidth, alpha, cap: "round", join: "round" });
+    return;
+  }
+
+  if (pattern === "stripes") {
+    const xOffset = centerRadius * 0.28;
+    target
+      .moveTo(-xOffset, -centerRadius * 0.64)
+      .lineTo(-xOffset, centerRadius * 0.64)
+      .moveTo(xOffset, -centerRadius * 0.64)
+      .lineTo(xOffset, centerRadius * 0.64)
+      .stroke({ color: markColor, width: strokeWidth, alpha, cap: "round", join: "round" });
+    return;
+  }
+
+  target
+    .moveTo(-centerRadius * 0.6, centerRadius * 0.5)
+    .lineTo(centerRadius * 0.6, -centerRadius * 0.5)
+    .stroke({ color: markColor, width: strokeWidth * 1.04, alpha, cap: "round", join: "round" });
+}
+
 export function createPremiumGlowPlayerToken({
   label,
   teamColor,
@@ -161,7 +200,6 @@ export function createPremiumGlowPlayerToken({
 
   const tokenRadius = Number.isFinite(radius) ? Math.max(2.8, Number(radius)) : TOKEN_RADIUS;
   const ringWidth = Math.max(0.44, tokenRadius * 0.16);
-  const patternStrength = kitPattern === "plain" ? 0.07 : 0.11;
   const teamBaseColor = resolved.goalkeeper && resolved.secondaryColor != null
     ? resolved.secondaryColor
     : resolved.primaryColor;
@@ -171,10 +209,11 @@ export function createPremiumGlowPlayerToken({
   const patternTintSource = Number.isFinite(kitPatternColor)
     ? Number(kitPatternColor)
     : glowColor;
-  const innerTintColor = mixColor(glowColor, patternTintSource, patternStrength);
+  const innerTintColor = mixColor(glowColor, patternTintSource, 0.08);
   const centreColor = mixColor(TOKEN_BASE_COLOR, glowColor, 0.3);
   const centreHighlightColor = mixColor(centreColor, 0xffffff, 0.32);
   const centreRimColor = mixColor(glowColor, resolved.outlineColor, 0.3);
+  const patternMarkColor = resolvePatternMarkColor(centreColor, patternTintSource, 2.35);
 
   const shadow = new Graphics();
   const outerAuraRadius = tokenRadius * 1.14;
@@ -223,6 +262,10 @@ export function createPremiumGlowPlayerToken({
     .ellipse(-centreRadius * 0.22, -centreRadius * 0.46, centreRadius * 0.54, centreRadius * 0.2)
     .fill({ color: 0xffffff, alpha: 0.16 });
   token.addChild(centre);
+
+  const patternMarks = new Graphics();
+  drawGlowPatternMarks(patternMarks, kitPattern, patternMarkColor, centreRadius * 0.92);
+  token.addChild(patternMarks);
 
   const notch = new Graphics();
   drawIntegratedCrownNotch(notch, ringColor, resolved.outlineColor, tokenRadius, ringWidth);
