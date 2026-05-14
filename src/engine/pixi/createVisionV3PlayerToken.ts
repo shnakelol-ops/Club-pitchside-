@@ -1,298 +1,261 @@
-import { Container, Graphics, Text } from "pixi.js";
-
-import { drawTokenPattern } from "./drawTokenPattern";
+import * as PIXI from "pixi.js";
 import {
-  tokenConfigFromKitFields,
+  drawTokenPattern,
+  resolvePatternLOD,
+  hexToPixi,
+  type DrawPatternOptions,
+} from "./drawTokenPattern";
+import {
+  normalisePattern,
+  kitFieldsToTokenConfig,
   type TokenConfig,
-  type TokenNumberColorOverride,
-  type TokenPatternType,
-  type TokenRingStyle,
+  type TokenPattern,
 } from "./tokenConfig";
-import {
-  minimumPatternContrast,
-  mixColor,
-  relativeLuminance,
-  resolvePatternDetailTier,
-  resolvePatternMarkColor,
-} from "./tokenPatternContrast";
 
-export type VisionV3PlayerTokenStyle = {
-  primaryColor: number;
-  secondaryColor?: number;
-  badgeColor: number;
-  outlineColor: number;
-  textColor: number;
-  goalkeeper?: boolean;
-};
+const RING_THICKNESS = 2.8;
+const CHARCOAL = "#2a2a2a";
+const CHARCOAL_NUM = 0x2a2a2a;
+const SELECTED_COLOR = 0xffffff;
+const SELECTED_ALPHA = 0.85;
+const SELECTED_THICK = 2.0;
+const SHADOW_ALPHA = 0.22;
+const SHADOW_OFFSET_Y = 1.5;
 
-export type VisionV3TeamColor = "blue" | "red" | "green" | "yellow" | "black" | "white";
-export type VisionV3KitPattern = TokenPatternType;
-
-const DEFAULT_STYLE_BY_TEAM: Record<VisionV3TeamColor, VisionV3PlayerTokenStyle> = {
-  blue: {
-    primaryColor: 0x2563eb,
-    secondaryColor: 0x60a5fa,
-    badgeColor: 0x1d4ed8,
-    outlineColor: 0x0f172a,
-    textColor: 0xffffff,
-  },
-  red: {
-    primaryColor: 0xdc2626,
-    secondaryColor: 0xf87171,
-    badgeColor: 0xb91c1c,
-    outlineColor: 0x0f172a,
-    textColor: 0xffffff,
-  },
-  green: {
-    primaryColor: 0x16a34a,
-    secondaryColor: 0x4ade80,
-    badgeColor: 0x166534,
-    outlineColor: 0x0b1220,
-    textColor: 0xffffff,
-  },
-  yellow: {
-    primaryColor: 0xfacc15,
-    secondaryColor: 0xfde68a,
-    badgeColor: 0xca8a04,
-    outlineColor: 0x111827,
-    textColor: 0x0f172a,
-  },
-  black: {
-    primaryColor: 0x1f2937,
-    secondaryColor: 0x4b5563,
-    badgeColor: 0x020617,
-    outlineColor: 0x000000,
-    textColor: 0xffffff,
-  },
-  white: {
-    primaryColor: 0xe5e7eb,
-    secondaryColor: 0xffffff,
-    badgeColor: 0x94a3b8,
-    outlineColor: 0x0f172a,
-    textColor: 0x0f172a,
-  },
-};
-
-function resolveNumberFill(
-  override: string,
-  baseFillColor: number,
-  teamColor: number,
-): number {
-  if (override === "white" || override === "light") return 0xf8fafc;
-  if (override === "black" || override === "dark") return 0x0b1220;
-  if (override === "team") return mixColor(teamColor, 0xf8fafc, 0.15);
-  return relativeLuminance(baseFillColor) < 0.42 ? 0xf8fafc : 0x0f172a;
-}
-
-function resolveOuterRingWidth(ring: string, radius: number): number {
-  if (ring === "none") return Math.max(0.38, radius * 0.11);
-  if (ring === "thin") return Math.max(0.5, radius * 0.145);
-  if (ring === "strong") return Math.max(0.64, radius * 0.19);
-  return Math.max(0.56, radius * 0.165);
-}
-
-function clampPatternForTiny(pattern: TokenPatternType, isTiny: boolean): TokenPatternType {
-  if (!isTiny) return pattern;
-  return "plain";
-}
-
-function colorToHex(color: number): string {
-  const safe = Math.max(0, Math.min(0xffffff, Math.floor(color)));
-  return `#${safe.toString(16).padStart(6, "0")}`;
-}
-
-export function createVisionV3PlayerToken({
-  label,
-  teamColor,
-  style,
-  scale,
-  radius,
-  kitPattern = "plain",
-  kitPatternColor,
-  ring,
-  numberColor,
-  glowOnSelect,
-  tokenConfig,
-}: {
-  label: string;
-  teamColor: VisionV3TeamColor;
-  style?: Partial<VisionV3PlayerTokenStyle>;
-  scale?: number;
-  radius?: number;
-  kitPattern?: VisionV3KitPattern;
-  kitPatternColor?: number;
-  ring?: TokenRingStyle;
-  numberColor?: TokenNumberColorOverride;
+export interface VisionV3RendererInput {
+  radius: number;
+  kitBaseColor?: string;
+  kitPatternColor?: string;
+  kitPattern?: string;
+  ring?: string;
+  numberColor?: string;
   glowOnSelect?: boolean;
-  tokenConfig?: Partial<TokenConfig>;
-}): { token: Container; shadow: Graphics } {
-  const defaults = DEFAULT_STYLE_BY_TEAM[teamColor];
-  const resolved: VisionV3PlayerTokenStyle = {
-    ...defaults,
-    ...style,
-    secondaryColor: style?.secondaryColor ?? defaults.secondaryColor,
-    goalkeeper: style?.goalkeeper ?? defaults.goalkeeper,
-  };
-
-  const token = new Container();
-  token.eventMode = "static";
-  token.cursor = "grab";
-  const tokenScale = scale ?? 1;
-  token.scale.set(tokenScale);
-
-  const discRadius = Number.isFinite(radius) ? Math.max(2.8, Number(radius)) : 3.66;
-  const lodTier = resolvePatternDetailTier(discRadius, tokenScale, 5);
-  const mergedConfig = tokenConfigFromKitFields(
-    {
-      kitPattern,
-      ring,
-      numberColor,
-      glowOnSelect,
-    },
-    tokenConfig,
-  );
-
-  const ringWidth = resolveOuterRingWidth(mergedConfig.ring, discRadius);
-  const innerRadius = discRadius - ringWidth;
-  const coreColor =
-    resolved.goalkeeper && resolved.secondaryColor != null
-      ? mixColor(resolved.secondaryColor, 0x020617, 0.22)
-      : mixColor(resolved.primaryColor, 0x020617, 0.22);
-  const requestedAccentColor = Number.isFinite(kitPatternColor)
-    ? Number(kitPatternColor)
-    : (resolved.secondaryColor ?? mixColor(resolved.primaryColor, 0xffffff, 0.28));
-  const pattern = clampPatternForTiny(mergedConfig.pattern, lodTier === "tiny");
-  const patternInkColor = resolvePatternMarkColor(
-    coreColor,
-    requestedAccentColor,
-    minimumPatternContrast(pattern, lodTier),
-  );
-  const ringColor = mixColor(resolved.primaryColor, requestedAccentColor, 0.22);
-  const ringEdge = mixColor(ringColor, resolved.outlineColor, 0.5);
-  const centerHighlight = mixColor(coreColor, 0xffffff, 0.2);
-
-  const shadow = new Graphics();
-  shadow
-    .circle(0, 0, discRadius * 1.34)
-    .fill({ color: ringColor, alpha: lodTier === "tiny" ? 0.06 : 0.09 })
-    .ellipse(0.18, discRadius * 1.04, discRadius * 0.96, discRadius * 0.24)
-    .fill({ color: 0x020617, alpha: lodTier === "tiny" ? 0.14 : 0.19 });
-  shadow.alpha = 0.24;
-  token.addChild(shadow);
-
-  const disc = new Graphics();
-  disc
-    .circle(0, 0, discRadius)
-    .fill({ color: 0x0b1220 })
-    .circle(0, 0, discRadius - 0.08)
-    .fill({ color: mixColor(ringColor, 0xffffff, 0.08) })
-    .circle(0, 0, discRadius - ringWidth * 0.45)
-    .fill({ color: ringColor, alpha: 0.9 })
-    .circle(0, 0, innerRadius)
-    .fill({ color: coreColor })
-    .ellipse(0, innerRadius * 0.38, innerRadius * 0.92, innerRadius * 0.48)
-    .fill({ color: mixColor(coreColor, 0x020617, 0.2), alpha: 0.2 })
-    .ellipse(0, -innerRadius * 0.34, innerRadius * 0.72, innerRadius * 0.22)
-    .fill({ color: centerHighlight, alpha: lodTier === "tiny" ? 0.18 : 0.26 })
-    .circle(0, 0, discRadius)
-    .stroke({
-      color: mixColor(ringEdge, 0x000000, 0.28),
-      width: Math.max(0.18, discRadius * 0.11),
-      alpha: 0.66,
-      alignment: 0.5,
-    });
-  token.addChild(disc);
-
-  if (pattern !== "plain") {
-    const patternLayer = new Graphics();
-    const patternLod = lodTier === "tiny" ? 0 : lodTier === "small" ? 1 : 2;
-    drawTokenPattern({
-      g: patternLayer,
-      pattern,
-      secondary: colorToHex(patternInkColor),
-      cx: 0,
-      cy: 0,
-      r: innerRadius * 0.92,
-      lod: patternLod,
-    });
-    token.addChild(patternLayer);
-  }
-
-  if (mergedConfig.glowOnSelect) {
-    const selectedRing = new Graphics();
-    selectedRing
-      .circle(0, 0, discRadius + Math.max(0.08, discRadius * 0.04))
-      .stroke({
-        color: mixColor(patternInkColor, 0xffffff, 0.24),
-        width: Math.max(0.14, discRadius * 0.05),
-        alpha: 0.78,
-        alignment: 0.5,
-      });
-    token.addChild(selectedRing);
-  }
-
-  const orientationTick = new Graphics();
-  orientationTick
-    .roundRect(
-      -innerRadius * 0.15,
-      -discRadius + ringWidth * 0.16,
-      innerRadius * 0.3,
-      Math.max(0.19, discRadius * 0.14),
-      innerRadius * 0.08,
-    )
-    .fill({ color: mixColor(ringColor, 0xffffff, 0.18), alpha: 0.34 });
-  token.addChild(orientationTick);
-
-  const safeLabel = label.trim().slice(0, 3) || "?";
-  const isNumericLabel = /^\d+$/.test(safeLabel);
-  const isDoubleDigit = isNumericLabel && safeLabel.length >= 2;
-  const labelFill = resolveNumberFill(
-    mergedConfig.numberColor,
-    coreColor,
-    resolved.primaryColor,
-  );
-  const labelStroke = relativeLuminance(labelFill) > 0.5 ? 0x0b1220 : 0xf8fafc;
-  const textResolution =
-    typeof window !== "undefined" ? Math.max(2.4, Math.min(3.2, window.devicePixelRatio || 1.5)) : 2.6;
-
-  const labelPlate = new Graphics();
-  labelPlate
-    .roundRect(
-      -innerRadius * 0.92,
-      -innerRadius * 0.5,
-      innerRadius * 1.84,
-      innerRadius * 1.08,
-      innerRadius * 0.32,
-    )
-    .fill({ color: mixColor(coreColor, 0x020617, 0.54), alpha: isDoubleDigit ? 0.38 : 0.32 });
-  labelPlate.position.y = isNumericLabel ? (isDoubleDigit ? 0 : innerRadius * 0.02) : 0;
-  token.addChild(labelPlate);
-
-  const labelText = new Text({
-    text: safeLabel,
-    style: {
-      fill: labelFill,
-      fontSize: isNumericLabel
-        ? (isDoubleDigit ? innerRadius * 1.04 : innerRadius * 1.24)
-        : innerRadius * 0.84,
-      fontWeight: "900",
-      fontFamily: "\"Barlow Condensed\", \"Inter Tight\", Inter, system-ui, sans-serif",
-      align: "center",
-      letterSpacing: isDoubleDigit ? 0.01 : 0.03,
-      stroke: {
-        color: labelStroke,
-        width: isNumericLabel
-          ? (isDoubleDigit ? Math.max(0.56, innerRadius * 0.24) : Math.max(0.48, innerRadius * 0.2))
-          : Math.max(0.34, innerRadius * 0.14),
-        join: "round",
-      },
-    },
-  });
-  labelText.anchor.set(0.5, 0.5);
-  labelText.position.y = isNumericLabel ? (isDoubleDigit ? 0 : innerRadius * 0.015) : 0;
-  labelText.resolution = textResolution;
-  labelText.roundPixels = true;
-  token.addChild(labelText);
-
-  return { token, shadow };
+  number?: number | string;
+  initials?: string;
+  labelMode?: "number" | "initials" | "none";
+  selected?: boolean;
+  tokenConfig?: TokenConfig;
 }
+
+export function createVisionV3PlayerToken(
+  input: VisionV3RendererInput,
+): PIXI.Container {
+  const container = new PIXI.Container();
+
+  const cfg: TokenConfig = input.tokenConfig ?? kitFieldsToTokenConfig({
+    kitBaseColor: input.kitBaseColor,
+    kitPatternColor: input.kitPatternColor,
+    kitPattern: input.kitPattern,
+    ring: input.ring,
+    numberColor: input.numberColor,
+    glowOnSelect: input.glowOnSelect,
+  });
+
+  const pattern = normalisePattern(cfg.pattern);
+  const r = input.radius;
+  const cx = 0;
+  const cy = 0;
+
+  const lod = resolvePatternLOD(r);
+
+  const shadow = new PIXI.Graphics();
+  drawFilledCircle(shadow, 0x000000, SHADOW_ALPHA, cx, cy + SHADOW_OFFSET_Y, r + RING_THICKNESS);
+  (shadow as PIXI.Graphics & { filters?: PIXI.Filter[] }).filters = [new PIXI.BlurFilter(2.5)];
+  container.addChild(shadow);
+
+  const ringHex = cfg.ring === "#000000" ? CHARCOAL : cfg.ring;
+  const ringColor = hexToPixi(ringHex);
+  const ring = new PIXI.Graphics();
+  drawFilledCircle(ring, ringColor, 1.0, cx, cy, r + RING_THICKNESS);
+  container.addChild(ring);
+
+  const base = new PIXI.Graphics();
+  if (pattern === "gradient") {
+    drawFilledCircle(base, hexToPixi(cfg.fill), 1.0, cx, cy, r);
+    drawFilledCircle(base, lightenPixi(cfg.fill, 0.28), 0.55, cx - r * 0.12, cy - r * 0.2, r * 0.6);
+    drawFilledCircle(base, darkenPixi(cfg.fill, 0.25), 0.45, cx, cy, r);
+  } else {
+    drawFilledCircle(base, hexToPixi(cfg.fill), 1.0, cx, cy, r);
+  }
+  container.addChild(base);
+
+  if (lod > 0 && pattern !== "plain" && pattern !== "gradient") {
+    const patternG = new PIXI.Graphics();
+    const mask = new PIXI.Graphics();
+    drawFilledCircle(mask, 0xffffff, 1.0, cx, cy, r);
+    patternG.mask = mask;
+    container.addChild(mask);
+
+    const opts: DrawPatternOptions = {
+      g: patternG,
+      pattern,
+      secondary: cfg.secondary,
+      cx,
+      cy,
+      r,
+      lod,
+    };
+    drawTokenPattern(opts);
+    container.addChild(patternG);
+  }
+
+  if (lod === 2 && (pattern === "gradient" || pattern === "plain")) {
+    const shine = new PIXI.Graphics();
+    drawFilledEllipse(shine, 0xffffff, 0.15, cx - r * 0.1, cy - r * 0.25, r * 0.42, r * 0.2);
+    container.addChild(shine);
+  }
+
+  const labelMode = input.labelMode ?? "number";
+  const label = resolveLabel(input);
+  if (labelMode !== "none" && label !== "") {
+    const fontSize = resolveFontSize(r, label);
+    const textColor = resolveNumberColor(cfg, pattern);
+
+    const numText = new PIXI.Text({
+      text: label,
+      style: {
+        fontFamily: "Georgia, serif",
+        fontSize,
+        fontWeight: "900",
+        fill: textColor,
+        align: "center",
+        dropShadow: lod > 0,
+      },
+    });
+
+    numText.anchor.set(0.5, 0.5);
+    numText.position.set(cx, cy + 0.5);
+    numText.zIndex = 100;
+    container.addChild(numText);
+  }
+
+  if (input.selected) {
+    const selRing = new PIXI.Graphics();
+    const glowCol = cfg.glowOnSelect ? hexToPixi(cfg.fill) : SELECTED_COLOR;
+    if (isV7()) {
+      const g7 = selRing as PIXI.Graphics & {
+        lineStyle: (width: number, color: number, alpha?: number) => PIXI.Graphics;
+        drawCircle: (xPos: number, yPos: number, radius: number) => PIXI.Graphics;
+      };
+      g7.lineStyle(SELECTED_THICK, glowCol, SELECTED_ALPHA);
+      g7.drawCircle(cx, cy, r + RING_THICKNESS + 2);
+    } else {
+      (selRing as PIXI.Graphics & {
+        circle: (xPos: number, yPos: number, radius: number) => PIXI.Graphics;
+      })
+        .circle(cx, cy, r + RING_THICKNESS + 2)
+        .stroke({ color: glowCol, alpha: SELECTED_ALPHA, width: SELECTED_THICK });
+    }
+    container.addChild(selRing);
+  }
+
+  container.sortableChildren = true;
+  return container;
+}
+
+function isV7(): boolean {
+  try {
+    return (PIXI as typeof PIXI & { VERSION?: string }).VERSION?.startsWith("7") ?? true;
+  } catch {
+    return true;
+  }
+}
+
+function drawFilledCircle(
+  g: PIXI.Graphics,
+  color: number,
+  alpha: number,
+  x: number,
+  y: number,
+  r: number,
+): void {
+  if (isV7()) {
+    const v7 = g as PIXI.Graphics & {
+      beginFill: (fillColor: number, fillAlpha?: number) => PIXI.Graphics;
+      drawCircle: (xPos: number, yPos: number, radius: number) => PIXI.Graphics;
+      endFill: () => PIXI.Graphics;
+    };
+    v7.beginFill(color, alpha);
+    v7.drawCircle(x, y, r);
+    v7.endFill();
+  } else {
+    (g as PIXI.Graphics & {
+      circle: (xPos: number, yPos: number, radius: number) => PIXI.Graphics;
+    })
+      .circle(x, y, r)
+      .fill({ color, alpha });
+  }
+}
+
+function drawFilledEllipse(
+  g: PIXI.Graphics,
+  color: number,
+  alpha: number,
+  x: number,
+  y: number,
+  rx: number,
+  ry: number,
+): void {
+  if (isV7()) {
+    const v7 = g as PIXI.Graphics & {
+      beginFill: (fillColor: number, fillAlpha?: number) => PIXI.Graphics;
+      drawEllipse: (xPos: number, yPos: number, radiusX: number, radiusY: number) => PIXI.Graphics;
+      endFill: () => PIXI.Graphics;
+    };
+    v7.beginFill(color, alpha);
+    v7.drawEllipse(x, y, rx, ry);
+    v7.endFill();
+  } else {
+    (g as PIXI.Graphics & {
+      ellipse: (xPos: number, yPos: number, radiusX: number, radiusY: number) => PIXI.Graphics;
+    })
+      .ellipse(x, y, rx, ry)
+      .fill({ color, alpha });
+  }
+}
+
+function resolveLabel(input: VisionV3RendererInput): string {
+  const mode = input.labelMode ?? "number";
+  if (mode === "none") return "";
+  if (mode === "initials") return input.initials?.slice(0, 3) ?? "";
+  return input.number !== undefined ? String(input.number) : "";
+}
+
+function resolveFontSize(r: number, label: string): number {
+  const base = r * 0.85;
+  if (label.length > 2) return Math.max(base * 0.65, 7);
+  if (label.length > 1) return Math.max(base * 0.78, 8);
+  return Math.max(base, 9);
+}
+
+function resolveNumberColor(cfg: TokenConfig, _pattern: TokenPattern | string): number {
+  if (cfg.numberColor && cfg.numberColor !== "") {
+    return hexToPixi(cfg.numberColor);
+  }
+  return luminance(cfg.fill) > 0.4 ? CHARCOAL_NUM : 0xffffff;
+}
+
+function luminance(hex: string): number {
+  const n = Number.parseInt(hex.replace("#", ""), 16);
+  const r = (n >> 16) / 255;
+  const g = ((n >> 8) & 0xff) / 255;
+  const b = (n & 0xff) / 255;
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function lightenPixi(hex: string, amt: number): number {
+  const n = Number.parseInt(hex.replace("#", ""), 16);
+  const r = Math.min(255, (n >> 16) + Math.round(255 * amt));
+  const g = Math.min(255, ((n >> 8) & 0xff) + Math.round(255 * amt));
+  const b = Math.min(255, (n & 0xff) + Math.round(255 * amt));
+  return (r << 16) | (g << 8) | b;
+}
+
+function darkenPixi(hex: string, amt: number): number {
+  const n = Number.parseInt(hex.replace("#", ""), 16);
+  const r = Math.max(0, (n >> 16) - Math.round(255 * amt));
+  const g = Math.max(0, ((n >> 8) & 0xff) - Math.round(255 * amt));
+  const b = Math.max(0, (n & 0xff) - Math.round(255 * amt));
+  return (r << 16) | (g << 8) | b;
+}
+
+export type { TokenConfig };

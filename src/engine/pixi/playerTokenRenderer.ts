@@ -1,4 +1,4 @@
-import type { Container, Graphics } from "pixi.js";
+import { Graphics, type Container } from "pixi.js";
 
 import { createMicroAthleteToken, type MicroAthleteKitPattern, type MicroAthleteStyle } from "./createMicroAthleteToken";
 import { createPremiumGlowPlayerToken } from "./createPremiumGlowPlayerToken";
@@ -36,6 +36,41 @@ function toLegacyPattern(pattern: PlayerTokenPattern): MicroAthleteKitPattern {
   if (pattern === "chestDash") return "hoops";
   if (pattern === "gradient") return "plain";
   return pattern;
+}
+
+function numericToHex(color: number | undefined, fallback = "#2a2a2a"): string {
+  if (!Number.isFinite(color)) return fallback;
+  const safe = Math.max(0, Math.min(0xffffff, Math.floor(Number(color))));
+  return `#${safe.toString(16).padStart(6, "0")}`;
+}
+
+function mapNumberColor(
+  override: TokenNumberColorOverride | undefined,
+  teamColorHex: string,
+): string | undefined {
+  if (!override || override === "auto") return undefined;
+  if (override === "white" || override === "light") return "#ffffff";
+  if (override === "black" || override === "dark") return "#1a1a1a";
+  if (override === "team") return teamColorHex;
+  return undefined;
+}
+
+function sanitizeTokenConfig(input: Partial<TokenConfig> | undefined): TokenConfig | undefined {
+  if (!input) return undefined;
+  const fill = typeof input.fill === "string" ? input.fill : undefined;
+  const secondary = typeof input.secondary === "string" ? input.secondary : undefined;
+  const ring = typeof input.ring === "string" ? input.ring : undefined;
+  const numberColor = typeof input.numberColor === "string" ? input.numberColor : undefined;
+  const pattern = typeof input.pattern === "string" ? input.pattern : undefined;
+  if (!fill || !secondary || !ring || !numberColor || !pattern) return undefined;
+  return {
+    fill,
+    secondary,
+    ring,
+    numberColor,
+    pattern,
+    glowOnSelect: typeof input.glowOnSelect === "boolean" ? input.glowOnSelect : false,
+  };
 }
 
 export const ClassicRingRenderer: PlayerTokenRenderer = ({
@@ -91,30 +126,32 @@ export const TorsoRenderer: PlayerTokenRenderer = ({
 
 export const VisionV3Renderer: PlayerTokenRenderer = ({
   label,
-  teamColor,
-  scale,
   style,
   kitPattern,
   kitPatternColor,
-  ring,
   numberColor,
   glowOnSelect,
   tokenConfig,
   radius,
-}) =>
-  createVisionV3PlayerToken({
-    label,
-    teamColor,
+}) => {
+  const baseColorHex = numericToHex(style.primaryColor, "#f5c518");
+  const secondaryHex = numericToHex(kitPatternColor, "#2a2a2a");
+  const safeToken = createVisionV3PlayerToken({
     radius,
-    scale,
-    style,
+    kitBaseColor: baseColorHex,
+    kitPatternColor: secondaryHex,
     kitPattern,
-    kitPatternColor,
-    ring,
-    numberColor,
+    numberColor: mapNumberColor(numberColor, baseColorHex),
     glowOnSelect,
-    tokenConfig,
+    number: label,
+    labelMode: /^\d+$/.test(label.trim()) ? "number" : "initials",
+    tokenConfig: sanitizeTokenConfig(tokenConfig),
   });
+  const fallbackShadow = new Graphics();
+  const firstChild = safeToken.children[0];
+  const shadow = firstChild instanceof Graphics ? firstChild : fallbackShadow;
+  return { token: safeToken, shadow };
+};
 
 export function resolvePlayerTokenRenderer(style: PlayerTokenStyle): PlayerTokenRenderer {
   if (style === "vision-v3") return VisionV3Renderer;
