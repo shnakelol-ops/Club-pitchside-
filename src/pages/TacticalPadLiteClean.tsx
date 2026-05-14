@@ -140,7 +140,8 @@ const LABEL_MODE_CHOICES: TacticalLabelMode[] = ["number", "initials"];
 const TOKEN_STYLE_CHOICES: ReadonlyArray<{ value: TacticalPlayerTokenStyle; label: string }> = [
   { value: "vision-v3", label: "Vision V3" },
   { value: "phosphor", label: "Phosphor" },
-  { value: "procedural-pixi", label: "Procedural Pixi" },
+  { value: "procedural-pixi", label: "Pixi" },
+  { value: "jersey", label: "Jersey" },
 ];
 type KitEditorTab = "base" | "pattern" | "label";
 const KIT_EDITOR_TABS: ReadonlyArray<{ id: KitEditorTab; label: string }> = [

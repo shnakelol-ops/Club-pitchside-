@@ -1,6 +1,10 @@
 import type { Container, Graphics } from "pixi.js";
 
-import { createPhosphorToken, createProceduralPixiToken } from "./createCleanTokenRenderers";
+import {
+  createPhosphorJerseyToken,
+  createPhosphorToken,
+  createProceduralPixiToken,
+} from "./createCleanTokenRenderers";
 import {
   createVisionV3PlayerToken,
   type VisionV3KitPattern,
@@ -8,7 +12,7 @@ import {
 } from "./createVisionV3PlayerToken";
 import type { PremiumPlayerTokenColor } from "./createPremiumPlayerToken";
 
-export type PlayerTokenStyle = "vision-v3" | "phosphor" | "procedural-pixi";
+export type PlayerTokenStyle = "vision-v3" | "phosphor" | "procedural-pixi" | "jersey";
 export type PlayerTokenKitPattern = VisionV3KitPattern;
 
 export type PlayerTokenRendererInput = {
@@ -86,7 +90,27 @@ export const ProceduralPixiRenderer: PlayerTokenRenderer = ({
     pattern: kitPattern,
   });
 
+export const PhosphorJerseyRenderer: PlayerTokenRenderer = ({
+  label,
+  scale,
+  style,
+  kitPattern,
+  kitPatternColor,
+  radius,
+}) =>
+  createPhosphorJerseyToken({
+    label,
+    scale,
+    radius,
+    baseColor: style.primaryColor ?? 0x2563eb,
+    patternColor: kitPatternColor,
+    numberColor: style.textColor,
+    outlineColor: style.outlineColor,
+    pattern: kitPattern,
+  });
+
 export function resolvePlayerTokenRenderer(style: PlayerTokenStyle): PlayerTokenRenderer {
+  if (style === "jersey") return PhosphorJerseyRenderer;
   if (style === "phosphor") return PhosphorRenderer;
   if (style === "procedural-pixi") return ProceduralPixiRenderer;
   if (style === "vision-v3") return VisionV3Renderer;
@@ -94,6 +118,6 @@ export function resolvePlayerTokenRenderer(style: PlayerTokenStyle): PlayerToken
 }
 
 export function sanitizePlayerTokenStyle(value: unknown): PlayerTokenStyle {
-  if (value === "vision-v3" || value === "phosphor" || value === "procedural-pixi") return value;
+  if (value === "vision-v3" || value === "phosphor" || value === "procedural-pixi" || value === "jersey") return value;
   return "vision-v3";
 }

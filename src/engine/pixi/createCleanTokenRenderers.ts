@@ -276,3 +276,5 @@ export function createProceduralPixiToken(input: CleanTokenRendererInput): Clean
   }));
   return { token, shadow };
 }
+
+export { createPhosphorJerseyToken } from "./createPhosphorJerseyToken";
