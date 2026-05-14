@@ -1,93 +1,51 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactElement } from "react";
+import { useEffect, useRef, type CSSProperties, type ReactElement } from "react";
 
 import {
   applyVisionDiscCssVarsToStyle,
-  createVisionDiscDebugScene,
-  resolveVisionDiscCssTokensFromElement,
+  createDiscVariantDebugScene,
+  createJerseyDiscToken,
+  createPixiFoundDiscToken,
+  createVisionDiscToken,
+  type DiscVariantDebugSceneOptions,
   type VisionDiscCssTokenSet,
-  type VisionDiscDebugPreset,
   type VisionDiscPattern,
 } from "../engine/pixi/vision-disc";
 
-const PATTERNS: VisionDiscPattern[] = ["solid", "gradient", "hoops", "stripes", "slash", "chestDash"];
+const PATTERNS: VisionDiscPattern[] = ["solid", "hoops", "stripes", "slash", "chestDash"];
 const SIZES = [14, 20, 28];
 
-const PRESETS: VisionDiscDebugPreset[] = [
-  {
-    id: "club-blue",
-    label: "Club Blue",
-    description: "Balanced blue with cool halo and high-contrast label",
-    tokens: {
-      ringColor: "#2563eb",
-      ringStrokeColor: "#93c5fd",
-      discBaseColor: "#1d4ed8",
-      discHighlightColor: "#60a5fa",
-      discEdgeColor: "#1e3a8a",
-      patternColor: "#e0f2fe",
-      glyphColor: "#ffffff",
-      labelColor: "#ffffff",
-      labelStrokeColor: "#0f172a",
-      labelPlateColor: "rgba(2, 6, 23, 0.34)",
-      shadowColor: "rgba(2, 6, 23, 0.94)",
-      haloColor: "#22d3ee",
-    },
-  },
-  {
-    id: "sunset-gradient",
-    label: "Sunset",
-    description: "Warm gradient palette for contrast stress testing",
-    tokens: {
-      ringColor: "#f97316",
-      ringStrokeColor: "#fdba74",
-      discBaseColor: "#dc2626",
-      discHighlightColor: "#fb7185",
-      discEdgeColor: "#7f1d1d",
-      patternColor: "#ffedd5",
-      glyphColor: "#fff7ed",
-      labelColor: "#fff7ed",
-      labelStrokeColor: "#7c2d12",
-      labelPlateColor: "rgba(124, 45, 18, 0.36)",
-      shadowColor: "rgba(15, 23, 42, 0.95)",
-      haloColor: "#facc15",
-    },
-  },
-  {
-    id: "mono-charcoal",
-    label: "Mono Charcoal",
-    description: "Monochrome token to validate contour/readability",
-    tokens: {
-      ringColor: "#334155",
-      ringStrokeColor: "#cbd5e1",
-      discBaseColor: "#1f2937",
-      discHighlightColor: "#64748b",
-      discEdgeColor: "#0f172a",
-      patternColor: "#e2e8f0",
-      glyphColor: "#ffffff",
-      labelColor: "#f8fafc",
-      labelStrokeColor: "#020617",
-      labelPlateColor: "rgba(15, 23, 42, 0.42)",
-      shadowColor: "rgba(2, 6, 23, 0.96)",
-      haloColor: "#38bdf8",
-    },
-  },
-];
+const BLUE_WHITE_TOKENS: VisionDiscCssTokenSet = {
+  ringColor: "#1f2a37",
+  ringStrokeColor: "#314154",
+  discBaseColor: "#2563eb",
+  discHighlightColor: "#60a5fa",
+  discEdgeColor: "#1e3a8a",
+  patternColor: "#ffffff",
+  glyphColor: "#ffffff",
+  labelColor: "#ffffff",
+  labelStrokeColor: "#0f172a",
+  labelPlateColor: "rgba(15, 23, 42, 0.26)",
+  shadowColor: "rgba(2, 6, 23, 0.9)",
+  haloColor: "#93c5fd",
+};
+
+const YELLOW_GREEN_TOKENS: VisionDiscCssTokenSet = {
+  ringColor: "#1f2a37",
+  ringStrokeColor: "#314154",
+  discBaseColor: "#16a34a",
+  discHighlightColor: "#4ade80",
+  discEdgeColor: "#14532d",
+  patternColor: "#facc15",
+  glyphColor: "#ffffff",
+  labelColor: "#ffffff",
+  labelStrokeColor: "#0f172a",
+  labelPlateColor: "rgba(15, 23, 42, 0.26)",
+  shadowColor: "rgba(2, 6, 23, 0.9)",
+  haloColor: "#fde047",
+};
 
 function patternOverlay(pattern: VisionDiscPattern, size: number): ReactElement | null {
   if (pattern === "solid") return null;
-  if (pattern === "gradient") {
-    return (
-      <div
-        style={{
-          position: "absolute",
-          inset: `${Math.round(size * 0.16)}px`,
-          borderRadius: "999px",
-          background:
-            "linear-gradient(180deg, color-mix(in srgb, var(--vd-disc-highlight-color) 88%, white 12%), var(--vd-disc-base-color))",
-          pointerEvents: "none",
-        }}
-      />
-    );
-  }
   if (pattern === "hoops") {
     return (
       <>
@@ -181,7 +139,7 @@ function HtmlVisionDiscToken(props: {
   const innerDiameter = diameter * 0.84;
   const ringThickness = diameter * 0.08;
   const isNumeric = /^\d+$/.test(label);
-  const numericScale = size <= 14 ? 1.18 : size <= 20 ? 1.15 : size <= 28 ? 1.12 : 1.08;
+  const numericScale = size <= 14 ? 1.32 : size <= 20 ? 1.28 : size <= 28 ? 1.22 : 1.14;
   const labelSize = isNumeric
     ? Math.max(9, size * (label.length <= 1 ? 0.56 : 0.48) * numericScale)
     : Math.max(9, size * 0.36 * 1.04);
@@ -227,12 +185,12 @@ function HtmlVisionDiscToken(props: {
           style={{
             position: "absolute",
             left: "19%",
-            top: "8%",
+            top: "5%",
             width: "62%",
-            height: "16%",
+            height: "10%",
             borderRadius: "999px",
             background: "var(--vd-disc-highlight-color)",
-            opacity: 0.12,
+            opacity: 0.06,
           }}
         />
       </div>
@@ -267,9 +225,9 @@ function HtmlVisionDiscToken(props: {
           left: "50%",
           top: `${size * 1.2}px`,
           transform: "translateX(-50%)",
-          minWidth: `${size * 1.02}px`,
-          padding: `0 ${Math.max(2, size * 0.05)}px`,
-          height: `${size * 0.46}px`,
+          minWidth: `${size * 0.98}px`,
+          padding: `0 ${Math.max(2, size * 0.04)}px`,
+          height: `${size * 0.44}px`,
           borderRadius: `${size * 0.14}px`,
           display: "grid",
           placeItems: "center",
@@ -281,7 +239,7 @@ function HtmlVisionDiscToken(props: {
           lineHeight: 1,
           letterSpacing: isNumeric ? "0px" : "0.08px",
           textShadow:
-            "-1px 0 var(--vd-label-stroke-color), 1px 0 var(--vd-label-stroke-color), 0 -1px var(--vd-label-stroke-color), 0 1px var(--vd-label-stroke-color), 0 1px 0 rgba(2,6,23,0.24)",
+            "-1px 0 var(--vd-label-stroke-color), 1px 0 var(--vd-label-stroke-color), 0 -1px var(--vd-label-stroke-color), 0 1px var(--vd-label-stroke-color)",
         }}
       >
         {label}
@@ -303,47 +261,87 @@ function HtmlVisionDiscToken(props: {
   );
 }
 
-export default function TokenDebug(): ReactElement {
-  const [presetId, setPresetId] = useState(PRESETS[0]?.id ?? "");
-  const pixiHostRef = useRef<HTMLDivElement | null>(null);
-  const playgroundRef = useRef<HTMLDivElement | null>(null);
-  const selectedPreset = useMemo(
-    () => PRESETS.find((entry) => entry.id === presetId) ?? PRESETS[0]!,
-    [presetId],
-  );
+function VariantSceneCard(props: {
+  title: string;
+  renderer: DiscVariantDebugSceneOptions["renderer"];
+}): ReactElement {
+  const { title, renderer } = props;
+  const blueHostRef = useRef<HTMLDivElement | null>(null);
+  const yellowHostRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const host = pixiHostRef.current;
-    const playground = playgroundRef.current;
-    if (!host || !playground) return;
+    const blueHost = blueHostRef.current;
+    const yellowHost = yellowHostRef.current;
+    if (!blueHost || !yellowHost) return;
     let disposed = false;
-    let dispose: (() => void) | null = null;
+    const disposers: Array<() => void> = [];
 
-    const styleTokens: VisionDiscCssTokenSet = resolveVisionDiscCssTokensFromElement(
-      playground,
-      selectedPreset.tokens,
-    );
-    void createVisionDiscDebugScene(host, {
-      patterns: PATTERNS,
-      sizes: SIZES,
-      styleTokens,
-    }).then((scene) => {
+    const mount = async (
+      host: HTMLDivElement,
+      palette: { label: string; teamColor: "blue" | "green"; styleTokens: VisionDiscCssTokenSet },
+    ) => {
+      const scene = await createDiscVariantDebugScene(host, {
+        title,
+        renderer,
+        patterns: PATTERNS,
+        sizes: SIZES,
+        palette: {
+          label: palette.label,
+          teamSide: "BLUE",
+          teamColor: palette.teamColor,
+          styleTokens: palette.styleTokens,
+        },
+      });
       if (disposed) {
         scene.dispose();
         return;
       }
-      dispose = scene.dispose;
+      disposers.push(scene.dispose);
+    };
+
+    void mount(blueHost, {
+      label: "Blue / White",
+      teamColor: "blue",
+      styleTokens: BLUE_WHITE_TOKENS,
+    });
+    void mount(yellowHost, {
+      label: "Yellow / Green",
+      teamColor: "green",
+      styleTokens: YELLOW_GREEN_TOKENS,
     });
 
     return () => {
       disposed = true;
-      dispose?.();
-      host.innerHTML = "";
+      for (const dispose of disposers) dispose();
+      blueHost.innerHTML = "";
+      yellowHost.innerHTML = "";
     };
-  }, [selectedPreset]);
+  }, [renderer, title]);
 
-  const cssVarStyle = {
-    ...applyVisionDiscCssVarsToStyle(selectedPreset.tokens),
+  return (
+    <section
+      style={{
+        border: "1px solid rgba(148,163,184,0.22)",
+        borderRadius: "12px",
+        padding: "12px",
+        background: "rgba(15,23,42,0.62)",
+        display: "grid",
+        gap: "10px",
+      }}
+    >
+      <h2 style={{ margin: 0, fontSize: "15px", fontWeight: 800 }}>{title}</h2>
+      <div ref={blueHostRef} />
+      <div ref={yellowHostRef} />
+    </section>
+  );
+}
+
+export default function TokenDebug(): ReactElement {
+  const blueCssVars = {
+    ...applyVisionDiscCssVarsToStyle(BLUE_WHITE_TOKENS),
+  } as CSSProperties & Record<string, string>;
+  const yellowCssVars = {
+    ...applyVisionDiscCssVarsToStyle(YELLOW_GREEN_TOKENS),
   } as CSSProperties & Record<string, string>;
 
   return (
@@ -359,45 +357,11 @@ export default function TokenDebug(): ReactElement {
       <header style={{ marginBottom: "14px" }}>
         <h1 style={{ margin: 0, fontSize: "20px", fontWeight: 800 }}>VisionDisc /token-debug</h1>
         <p style={{ margin: "8px 0 0", opacity: 0.86, fontSize: "13px" }}>
-          Phase 2 validation harness. HTML playground values drive Pixi rendering via CSS token mapping.
+          Variant comparison harness (debug-only): current VisionDisc vs JerseyDiscRenderer vs PixiFoundDiscRenderer.
         </p>
       </header>
 
-      <section style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "12px" }}>
-        {PRESETS.map((preset) => {
-          const active = preset.id === selectedPreset.id;
-          return (
-            <button
-              key={preset.id}
-              type="button"
-              onClick={() => setPresetId(preset.id)}
-              style={{
-                border: active ? "1px solid #38bdf8" : "1px solid rgba(148,163,184,0.32)",
-                background: active ? "rgba(56,189,248,0.16)" : "rgba(15,23,42,0.7)",
-                color: "#e2e8f0",
-                borderRadius: "10px",
-                padding: "8px 10px",
-                cursor: "pointer",
-                textAlign: "left",
-              }}
-            >
-              <div style={{ fontWeight: 700, fontSize: "12px" }}>{preset.label}</div>
-              <div style={{ fontSize: "11px", opacity: 0.76 }}>{preset.description}</div>
-            </button>
-          );
-        })}
-      </section>
-
-      <section
-        ref={playgroundRef}
-        style={{
-          ...cssVarStyle,
-          display: "grid",
-          gap: "12px",
-          gridTemplateColumns: "minmax(320px, 1fr) minmax(420px, 1.25fr)",
-          alignItems: "start",
-        }}
-      >
+      <section style={{ display: "grid", gap: "12px", marginBottom: "14px" }}>
         <div
           style={{
             border: "1px solid rgba(148,163,184,0.22)",
@@ -408,55 +372,61 @@ export default function TokenDebug(): ReactElement {
         >
           <h2 style={{ margin: 0, fontSize: "14px", fontWeight: 700 }}>HTML playground reference</h2>
           <p style={{ margin: "6px 0 12px", fontSize: "12px", opacity: 0.78 }}>
-            Source-of-truth token layout with CSS variables and locked geometry ratios.
+            Source-of-truth feel samples shown for Blue/White and Yellow/Green.
           </p>
-          <div style={{ display: "grid", gap: "10px" }}>
-            {PATTERNS.map((pattern, rowIndex) => (
-              <div
-                key={`html-row-${pattern}`}
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "92px 1fr",
-                  gap: "8px",
-                  alignItems: "center",
-                }}
-              >
-                <div style={{ fontSize: "12px", fontWeight: 700, opacity: 0.9 }}>{pattern}</div>
-                <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                  {SIZES.map((size) => (
-                    <HtmlVisionDiscToken
-                      key={`html-token-${pattern}-${size}`}
-                      pattern={pattern}
-                      size={size}
-                      label={pattern === "chestDash" ? "CD" : String(rowIndex + 1)}
-                    />
-                  ))}
-                  <HtmlVisionDiscToken
-                    pattern={pattern}
-                    size={SIZES[1] ?? 20}
-                    label="10"
-                    selected
-                  />
+          <div style={{ display: "grid", gap: "12px" }}>
+            <div style={{ ...blueCssVars, display: "grid", gap: "8px" }}>
+              <p style={{ margin: 0, fontSize: "12px", fontWeight: 700, opacity: 0.9 }}>Blue / White</p>
+              {PATTERNS.map((pattern, rowIndex) => (
+                <div
+                  key={`html-blue-${pattern}`}
+                  style={{ display: "grid", gridTemplateColumns: "92px 1fr", gap: "8px", alignItems: "center" }}
+                >
+                  <div style={{ fontSize: "12px", fontWeight: 700, opacity: 0.9 }}>{pattern}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                    {SIZES.map((size) => (
+                      <HtmlVisionDiscToken
+                        key={`html-blue-token-${pattern}-${size}`}
+                        pattern={pattern}
+                        size={size}
+                        label={pattern === "chestDash" ? "CD" : String(rowIndex + 1)}
+                      />
+                    ))}
+                    <HtmlVisionDiscToken pattern={pattern} size={SIZES[1] ?? 20} label="10" selected />
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+            <div style={{ ...yellowCssVars, display: "grid", gap: "8px" }}>
+              <p style={{ margin: 0, fontSize: "12px", fontWeight: 700, opacity: 0.9 }}>Yellow / Green</p>
+              {PATTERNS.map((pattern, rowIndex) => (
+                <div
+                  key={`html-yellow-${pattern}`}
+                  style={{ display: "grid", gridTemplateColumns: "92px 1fr", gap: "8px", alignItems: "center" }}
+                >
+                  <div style={{ fontSize: "12px", fontWeight: 700, opacity: 0.9 }}>{pattern}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                    {SIZES.map((size) => (
+                      <HtmlVisionDiscToken
+                        key={`html-yellow-token-${pattern}-${size}`}
+                        pattern={pattern}
+                        size={size}
+                        label={pattern === "chestDash" ? "CD" : String(rowIndex + 1)}
+                      />
+                    ))}
+                    <HtmlVisionDiscToken pattern={pattern} size={SIZES[1] ?? 20} label="10" selected />
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
+      </section>
 
-        <div
-          style={{
-            border: "1px solid rgba(148,163,184,0.22)",
-            borderRadius: "12px",
-            padding: "12px",
-            background: "rgba(15,23,42,0.62)",
-          }}
-        >
-          <h2 style={{ margin: 0, fontSize: "14px", fontWeight: 700 }}>Pixi output</h2>
-          <p style={{ margin: "6px 0 12px", fontSize: "12px", opacity: 0.78 }}>
-            Isolated VisionDiscRenderer output for solid, gradient, hoops, stripes, slash, chestDash.
-          </p>
-          <div ref={pixiHostRef} />
-        </div>
+      <section style={{ display: "grid", gap: "12px" }}>
+        <VariantSceneCard title="Current VisionDiscRenderer" renderer={createVisionDiscToken} />
+        <VariantSceneCard title="JerseyDiscRenderer (debug-only)" renderer={createJerseyDiscToken} />
+        <VariantSceneCard title="PixiFoundDiscRenderer (debug-only)" renderer={createPixiFoundDiscToken} />
       </section>
     </main>
   );

@@ -24,3 +24,7 @@ export type {
 export { adaptTacticalPlayerToVisionDisc } from "./adapters/tacticalToVisionDisc";
 export type { VisionDiscDebugScene, VisionDiscDebugSceneOptions } from "./debug/createVisionDiscDebugScene";
 export { createVisionDiscDebugScene } from "./debug/createVisionDiscDebugScene";
+export type { DiscVariantDebugScene, DiscVariantDebugSceneOptions, DiscVariantPalette } from "./debug/createDiscVariantDebugScene";
+export { createDiscVariantDebugScene } from "./debug/createDiscVariantDebugScene";
+export { createJerseyDiscToken } from "./debug/createJerseyDiscToken";
+export { createPixiFoundDiscToken } from "./debug/createPixiFoundDiscToken";
