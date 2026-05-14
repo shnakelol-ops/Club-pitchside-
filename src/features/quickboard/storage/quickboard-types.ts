@@ -2,6 +2,26 @@ export const QUICKBOARD_STORAGE_KEY = "pitchflow_quickboard_boards_v1";
 const MAX_BOARD_NAME_LENGTH = 48;
 export const MAX_QUICKBOARD_SAVES = 100;
 
+
+export type TacticalKitPattern = "plain" | "hoops" | "slash" | "stripes" | "chestDash" | "gradient";
+
+const VALID_KIT_PATTERNS = ["plain", "hoops", "slash", "stripes", "chestDash", "gradient"] as const;
+
+export function isValidKitPattern(p: string): p is TacticalKitPattern {
+  return (VALID_KIT_PATTERNS as readonly string[]).includes(p);
+}
+
+export interface TacticalPlayerKitSnapshot {
+  kitBaseColor: string;
+  kitPattern: TacticalKitPattern;
+  kitPatternColor: string;
+  labelMode: string;
+  initials: string;
+  ring?: string;
+  numberColor?: string;
+  glowOnSelect?: boolean;
+}
+
 export type QuickBoardBoardState = {
   players: unknown[];
   items: unknown[];

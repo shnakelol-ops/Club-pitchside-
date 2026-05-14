@@ -5,6 +5,7 @@ import { createPremiumGlowPlayerToken } from "./createPremiumGlowPlayerToken";
 import { createTorsoPlayerToken } from "./createTorsoPlayerToken";
 import { createVisionV3PlayerToken } from "./createVisionV3PlayerToken";
 import type { PremiumPlayerTokenColor } from "./createPremiumPlayerToken";
+import type { TokenConfig } from "./tokenConfig";
 
 export type PlayerTokenStyle = "vision-v3" | "classic" | "premium" | "torso";
 
@@ -17,6 +18,10 @@ export type PlayerTokenRendererInput = {
   kitPattern: MicroAthleteKitPattern;
   kitPatternColor: number;
   radius: number;
+  ring?: string | number;
+  numberColor?: string | number;
+  glowOnSelect?: boolean;
+  tokenConfig?: TokenConfig;
 };
 
 export type PlayerTokenRendererOutput = {
@@ -85,6 +90,10 @@ export const VisionV3Renderer: PlayerTokenRenderer = ({
   kitPattern,
   kitPatternColor,
   radius,
+  ring,
+  numberColor,
+  glowOnSelect,
+  tokenConfig,
 }) =>
   createVisionV3PlayerToken({
     label,
@@ -94,6 +103,10 @@ export const VisionV3Renderer: PlayerTokenRenderer = ({
     style,
     kitPattern,
     kitPatternColor,
+    ring,
+    numberColor,
+    glowOnSelect,
+    tokenConfig,
   });
 
 export function resolvePlayerTokenRenderer(style: PlayerTokenStyle): PlayerTokenRenderer {
