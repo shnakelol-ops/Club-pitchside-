@@ -980,6 +980,10 @@ function BoardPage() {
             <span>Written Notes</span>
             <small>Open Notes</small>
           </button>
+          <button type="button" className="pf-home-secondary-btn" onClick={() => navigateTo("/player-performance-tracker")}>
+            <span>Vision Training</span>
+            <small>Player Performance Tracker</small>
+          </button>
         </div>
       </div>
       <p className="pf-section-title pf-home-section-title-recent">Recent Boards</p>

@@ -137,6 +137,14 @@
     {
       "source": "/flowstats/(.*)",
       "destination": "/index.html"
+    },
+    {
+      "source": "/player-performance-tracker",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/player-performance-tracker/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
