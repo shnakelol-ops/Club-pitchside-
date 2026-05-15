@@ -21,9 +21,9 @@
     >
       PV
     </text>
-    <path d="M98 72L126 100" stroke="#FFFFFF" stroke-width="11" stroke-linecap="round" />
-    <path d="M126 72L98 100" stroke="#FFFFFF" stroke-width="11" stroke-linecap="round" />
-    <circle cx="714" cy="234" r="11" stroke="#FFFFFF" stroke-width="8" />
-    <path d="M168 258H734" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round" stroke-dasharray="18 16" opacity="0.95" />
+    <path d="M148 214L170 236" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round" opacity="0.86" />
+    <path d="M170 214L148 236" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round" opacity="0.86" />
+    <circle cx="712" cy="225" r="10" fill="none" stroke="#FFFFFF" stroke-width="6.2" opacity="0.88" />
+    <path d="M194 225H680" stroke="#FFFFFF" stroke-width="6.2" stroke-linecap="round" stroke-dasharray="14 14" opacity="0.82" />
   </g>
 </svg>

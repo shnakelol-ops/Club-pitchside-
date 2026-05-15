@@ -6,6 +6,7 @@ type BrandVariant = {
   description: string;
   src: string;
 };
+type PreviewMode = "all" | "dark" | "header" | "icons" | "export";
 
 const VARIANTS: readonly BrandVariant[] = [
   {
@@ -14,7 +15,7 @@ const VARIANTS: readonly BrandVariant[] = [
     chip: "Clean Tactical",
     title: "Bold PV with tactical X/O + dashed support line",
     description:
-      "Readability-first PV monogram. A small X marker top-left, small O marker bottom-right, and a subtle dashed tactical baseline.",
+      "Readability-first PV monogram. A small tactical x and o bracket a subtle dashed tactical baseline under the letters.",
     src: "/brand-preview/wordmark-paircvision-clean.svg",
   },
   {
@@ -44,6 +45,15 @@ function getVisibleVariants(): readonly BrandVariant[] {
     focus === "clean" ? "a" : focus === "painted" ? "b" : focus === "broadcast" ? "c" : focus;
   const focusedVariant = VARIANTS.find((item) => item.id === normalizedFocus);
   return focusedVariant ? [focusedVariant] : VARIANTS;
+}
+
+function getPreviewMode(): PreviewMode {
+  if (typeof window === "undefined") return "all";
+  const mode = new URLSearchParams(window.location.search).get("mode");
+  if (mode === "dark" || mode === "header" || mode === "icons" || mode === "export") {
+    return mode;
+  }
+  return "all";
 }
 
 function PvIcon({ variantId, size }: { variantId: BrandVariant["id"]; size: number }) {
@@ -82,10 +92,10 @@ function PvIcon({ variantId, size }: { variantId: BrandVariant["id"]; size: numb
         </text>
         {variantId === "a" ? (
           <>
-            <path d="M48 74L63 89" stroke="#FFFFFF" strokeWidth="8.4" strokeLinecap="round" />
-            <path d="M63 74L48 89" stroke="#FFFFFF" strokeWidth="8.4" strokeLinecap="round" />
-            <circle cx="196" cy="182" r="6.4" stroke="#FFFFFF" strokeWidth="5.6" />
-            <path d="M44 192H208" stroke="#FFFFFF" strokeWidth="4.8" strokeLinecap="round" strokeDasharray="8 8" />
+            <path d="M52 174L64 186" stroke="#FFFFFF" strokeWidth="6.4" strokeLinecap="round" opacity="0.86" />
+            <path d="M64 174L52 186" stroke="#FFFFFF" strokeWidth="6.4" strokeLinecap="round" opacity="0.86" />
+            <circle cx="198" cy="180" r="6.1" fill="none" stroke="#FFFFFF" strokeWidth="4.8" opacity="0.88" />
+            <path d="M78 180H178" stroke="#FFFFFF" strokeWidth="4.2" strokeLinecap="round" strokeDasharray="8 8" opacity="0.82" />
           </>
         ) : null}
         {variantId === "b" ? (
@@ -347,6 +357,21 @@ const BRAND_PREVIEW_CSS = `
   opacity: 0.24;
 }
 
+.brand-preview-export-large {
+  border-radius: 12px;
+  border: 1px solid rgba(57, 118, 84, 0.56);
+  background: rgba(4, 18, 12, 0.96);
+  padding: 14px 10px;
+}
+
+.brand-preview-export-large img {
+  width: min(100%, 720px);
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  filter: drop-shadow(0 10px 22px rgba(0,0,0,0.36));
+}
+
 @media (min-width: 860px) {
   .brand-preview-compare-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -360,6 +385,7 @@ const BRAND_PREVIEW_CSS = `
 
 export default function BrandPreview() {
   const visibleVariants = getVisibleVariants();
+  const previewMode = getPreviewMode();
 
   return (
     <main className="brand-preview">
@@ -382,67 +408,87 @@ export default function BrandPreview() {
             <h2>{variant.title}</h2>
             <p>{variant.description}</p>
 
-            <div className="brand-preview-hero-stage">
-              <img className="brand-preview-wordmark" src={variant.src} alt={`${variant.title} hero`} />
-              <p className="brand-preview-label">{variant.label}</p>
-            </div>
+            {previewMode === "all" || previewMode === "dark" ? (
+              <div className="brand-preview-hero-stage">
+                <img className="brand-preview-wordmark" src={variant.src} alt={`${variant.title} hero`} />
+                <p className="brand-preview-label">{variant.label}</p>
+              </div>
+            ) : null}
 
-            <div className="brand-preview-compare-grid">
-              <article className="brand-preview-panel">
-                <h3 className="brand-preview-panel-title">Dark comparison</h3>
-                <div className="brand-preview-hero-stage" style={{ margin: 0, padding: "14px 10px" }}>
-                  <img className="brand-preview-wordmark" src={variant.src} alt={`${variant.label} dark comparison`} />
-                </div>
-              </article>
-              <article className="brand-preview-panel light">
-                <h3 className="brand-preview-panel-title">Light comparison</h3>
-                <div
-                  style={{
-                    borderRadius: "12px",
-                    border: "1px solid rgba(180, 202, 189, 0.86)",
-                    background: "linear-gradient(180deg, rgba(251, 254, 253, 1) 0%, rgba(235, 241, 238, 1) 100%)",
-                    padding: "14px 10px",
-                  }}
-                >
-                  <img className="brand-preview-wordmark" src={variant.src} alt={`${variant.label} light comparison`} />
-                </div>
-              </article>
-            </div>
-
-            <div className="brand-preview-meta-grid">
-              <article className="brand-preview-panel">
-                <h3 className="brand-preview-panel-title">Mobile header previews</h3>
-                <div className="brand-preview-header-sim">
-                  <span className="brand-preview-header-dot" aria-hidden="true" />
-                  <img className="brand-preview-header-logo" src={variant.src} alt={`${variant.label} app header preview`} />
-                </div>
-                <div className="brand-preview-mobile-frame">
-                  <div className="brand-preview-mobile-notch" aria-hidden="true" />
-                  <img className="brand-preview-mobile-wordmark" src={variant.src} alt={`${variant.label} mobile preview`} />
-                </div>
-              </article>
-
-              <article className="brand-preview-panel">
-                <h3 className="brand-preview-panel-title">Favicon + app icon previews</h3>
-                <div className="brand-preview-icon-grid">
-                  <div className="brand-preview-icon-item">
-                    <PvIcon variantId={variant.id} size={32} />
-                    <span>Favicon</span>
+            {previewMode === "all" || previewMode === "dark" ? (
+              <div className="brand-preview-compare-grid">
+                <article className="brand-preview-panel">
+                  <h3 className="brand-preview-panel-title">Dark comparison</h3>
+                  <div className="brand-preview-hero-stage" style={{ margin: 0, padding: "14px 10px" }}>
+                    <img className="brand-preview-wordmark" src={variant.src} alt={`${variant.label} dark comparison`} />
                   </div>
-                  <div className="brand-preview-icon-item">
-                    <PvIcon variantId={variant.id} size={160} />
-                    <span>App icon</span>
+                </article>
+                <article className="brand-preview-panel light">
+                  <h3 className="brand-preview-panel-title">Light comparison</h3>
+                  <div
+                    style={{
+                      borderRadius: "12px",
+                      border: "1px solid rgba(180, 202, 189, 0.86)",
+                      background: "linear-gradient(180deg, rgba(251, 254, 253, 1) 0%, rgba(235, 241, 238, 1) 100%)",
+                      padding: "14px 10px",
+                    }}
+                  >
+                    <img className="brand-preview-wordmark" src={variant.src} alt={`${variant.label} light comparison`} />
                   </div>
-                </div>
-              </article>
+                </article>
+              </div>
+            ) : null}
 
-              <article className="brand-preview-panel">
-                <h3 className="brand-preview-panel-title">Export watermark preview</h3>
-                <div className="brand-preview-watermark-stage">
-                  <img className="brand-preview-watermark-logo" src={variant.src} alt={`${variant.label} export watermark preview`} />
-                </div>
-              </article>
-            </div>
+            {previewMode === "all" || previewMode === "header" || previewMode === "icons" || previewMode === "export" ? (
+              <div className="brand-preview-meta-grid">
+                {previewMode === "all" || previewMode === "header" ? (
+                  <article className="brand-preview-panel">
+                    <h3 className="brand-preview-panel-title">Mobile header previews</h3>
+                    <div className="brand-preview-header-sim">
+                      <span className="brand-preview-header-dot" aria-hidden="true" />
+                      <img className="brand-preview-header-logo" src={variant.src} alt={`${variant.label} app header preview`} />
+                    </div>
+                    <div className="brand-preview-mobile-frame">
+                      <div className="brand-preview-mobile-notch" aria-hidden="true" />
+                      <img className="brand-preview-mobile-wordmark" src={variant.src} alt={`${variant.label} mobile preview`} />
+                    </div>
+                  </article>
+                ) : null}
+
+                {previewMode === "all" || previewMode === "icons" ? (
+                  <article className="brand-preview-panel">
+                    <h3 className="brand-preview-panel-title">Favicon + app icon previews</h3>
+                    <div className="brand-preview-icon-grid">
+                      <div className="brand-preview-icon-item">
+                        <PvIcon variantId={variant.id} size={32} />
+                        <span>Favicon</span>
+                      </div>
+                      <div className="brand-preview-icon-item">
+                        <PvIcon variantId={variant.id} size={160} />
+                        <span>App icon</span>
+                      </div>
+                    </div>
+                  </article>
+                ) : null}
+
+                {previewMode === "all" || previewMode === "export" ? (
+                  <article className="brand-preview-panel">
+                    <h3 className="brand-preview-panel-title">Export watermark preview</h3>
+                    <div className="brand-preview-watermark-stage">
+                      <img className="brand-preview-watermark-logo" src={variant.src} alt={`${variant.label} export watermark preview`} />
+                    </div>
+                    {variant.id === "a" ? (
+                      <>
+                        <h3 className="brand-preview-panel-title">Enlarged clean export</h3>
+                        <div className="brand-preview-export-large">
+                          <img src={variant.src} alt="Direction A enlarged clean export" />
+                        </div>
+                      </>
+                    ) : null}
+                  </article>
+                ) : null}
+              </div>
+            ) : null}
           </section>
         ))}
       </div>
