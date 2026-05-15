@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import SetupScreen from "../features/player-performance-tracker/components/SetupScreen";
 import TrackerScreen from "../features/player-performance-tracker/components/TrackerScreen";
 import RatingsScreen from "../features/player-performance-tracker/components/RatingsScreen";
+import SeasonScreen from "../features/player-performance-tracker/components/SeasonScreen";
 import { TRAINING_EVENTS } from "../features/player-performance-tracker/model/trainingScoring";
 import { loadSavedSquads, loadSeasonTable, loadSessionState, saveSavedSquads, saveSeasonTable, saveSessionState } from "../features/player-performance-tracker/storage/trainingSessionStorage";
 import { type SavedSquad, type SeasonPlayerStat, type TrainingLogEntry, type TrainingPeriod, type TrainingSessionState } from "../features/player-performance-tracker/model/trainingTypes";
@@ -47,8 +48,6 @@ export default function PlayerPerformanceTracker(){
    onPlayerChange={(id,updates)=>setState((s)=>({...s,players:s.players.map((p)=>p.id===id?{...p,...updates}:p)}))}
    onAddPlayer={()=>setState((s)=>s.players.length>=30?s:{...s,players:[...s.players,{id:`player-${id()}`,name:`Player ${s.players.length+1}`,number:s.players.length+1}]})}
    onStart={()=>{setState((s)=>({...s,hasStarted:true,activeTab:"tracker"}));setScreen("live");}}
-   seasonTable={seasonTable}
-   onClearSeason={()=>{ if(window.confirm("Clear season table?")){ setSeasonTable([]); saveSeasonTable([]);} }}
    squads={squads}
    activeSquadId={activeSquadId}
    onSelectSquad={(squadId)=>{const squad=squads.find((x)=>x.id===squadId); if(!squad) return; setActiveSquadId(squadId); setState((s)=>({...s,players:squad.players.map((p)=>({...p}))}));}}
@@ -71,7 +70,7 @@ export default function PlayerPerformanceTracker(){
       onDelete={(id)=>setState((s)=>{const found=s.logs.find((l)=>l.id===id)??null; return {...s,logs:s.logs.filter((l)=>l.id!==id),lastDeleted:found};})}
       onUndo={()=>setState((s)=>s.lastDeleted?{...s,logs:[...s.logs,s.lastDeleted],lastDeleted:null}:s)}
       lastDeleted={state.lastDeleted}
-    /> : screen==="ratings" ? <RatingsScreen players={state.players} logs={state.logs} ratings={ratings} /> : <section className="ppt-wrap"><section className="ppt-panel"><h2 className="ppt-ratings-title" style={{fontSize:24}}>Season</h2><p className="ppt-sub">Season screen shell is ready. Season table remains in setup for this pass.</p></section></section>}
+    /> : screen==="ratings" ? <RatingsScreen players={state.players} logs={state.logs} ratings={ratings} /> : <SeasonScreen seasonTable={seasonTable} onClearSeason={()=>{ if(window.confirm("Clear season table?")){ setSeasonTable([]); saveSeasonTable([]);} }} />}
     </div>
     <nav className="ppt-nav">
       <div className="ppt-nav-inner">
