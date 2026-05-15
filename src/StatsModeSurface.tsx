@@ -5638,7 +5638,7 @@ export default function StatsModeSurface() {
                 : "0 4px 10px rgba(2, 8, 15, 0.22)",
             }}
           >
-            <img src="/pv-logo-icon.svg" alt="TacaVision menu" aria-hidden="true" style={EVENT_PICKER_LOGO_STYLE} />
+            <img src="/pv-logo-icon.svg" alt="PáircVision menu" aria-hidden="true" style={EVENT_PICKER_LOGO_STYLE} />
           </button>
       </div>
         <div
@@ -5653,7 +5653,7 @@ export default function StatsModeSurface() {
               : "radial-gradient(ellipse at center, rgba(29,90,54,0.96) 0%, rgba(29,90,54,0.88) 40%, rgba(29,90,54,0) 70%)",
             overflow: "hidden",
           }}
-          aria-label="TacaVision Pixi pitch"
+          aria-label="PáircVision Pixi pitch"
           role="img"
         />
       </main>

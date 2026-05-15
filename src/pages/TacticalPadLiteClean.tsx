@@ -2588,7 +2588,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const handleSaveCurrentBoard = () => {
     const surface = surfaceRef.current;
     if (!surface || isWhiteboardMode || isStatsMode) {
-      showQuickBoardNotice("Vision Board not ready");
+      showQuickBoardNotice("PáircVision Board not ready");
       return;
     }
     if (hasReachedQuickBoardSaveLimit()) {
@@ -2864,7 +2864,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     if (isWhiteboardMode || isStatsMode || isPortraitViewingMode) return;
     const surface = surfaceRef.current;
     if (!surface) {
-      showQuickBoardNotice("Vision Board not ready");
+      showQuickBoardNotice("PáircVision Board not ready");
       return;
     }
     const confirmed = window.confirm("Start a new board?\nUnsaved changes on the current board will be lost.");
@@ -3203,7 +3203,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   }
 
   return (
-    <OrientationGate modeLabel="Vision Board">
+    <OrientationGate modeLabel="PáircVision Board">
       <div
         style={isWhiteboardMode ? ROOT_WHITEBOARD_STYLE : ROOT_STYLE}
         className={isWhiteboardMode ? undefined : "simulator-container"}
@@ -3717,12 +3717,12 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                 style={toolsPortalCompactPanelStyle}
                 role="dialog"
                 aria-modal="false"
-                aria-label="Vision Board tools"
+                aria-label="PáircVision Board tools"
                 onPointerDown={(event) => event.stopPropagation()}
                 onClick={(event) => event.stopPropagation()}
               >
                 <div style={MOBILE_COACH_HUB_HEADER_STYLE}>
-                  <p style={MOBILE_COACH_HUB_TITLE_STYLE}>Vision Board Tools</p>
+                  <p style={MOBILE_COACH_HUB_TITLE_STYLE}>PáircVision Board Tools</p>
                   <button type="button" className="control-button" style={MOBILE_COACH_HUB_CLOSE_STYLE} onClick={() => setToolsOpen(false)}>
                     Close
                   </button>
@@ -3969,7 +3969,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                 style={toolsPortalPanelStyle}
                 role="dialog"
                 aria-modal="false"
-                aria-label="Vision Board tools"
+                aria-label="PáircVision Board tools"
                 onPointerDown={(event) => event.stopPropagation()}
                 onClick={(event) => event.stopPropagation()}
               >
@@ -4373,7 +4373,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             }
           >
             <span className="tool-bubble-icon" aria-hidden="true">
-              <img className="tool-bubble-logo" src="/pv-logo-icon.svg" alt="TacaVision menu" />
+              <img className="tool-bubble-logo" src="/pv-logo-icon.svg" alt="PáircVision menu" />
             </span>
           </button>
         ) : null}
@@ -4396,7 +4396,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
               aria-modal="false"
               aria-label="Quick Share onboarding"
             >
-              <p style={QUICK_SHARE_ONBOARDING_TITLE_STYLE}>TacaVision Vision Board Share</p>
+              <p style={QUICK_SHARE_ONBOARDING_TITLE_STYLE}>PáircVision Board Share</p>
               <p style={QUICK_SHARE_ONBOARDING_BODY_STYLE}>
                 Use your phone&apos;s screen recorder.
                 <br />
@@ -4415,7 +4415,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         ) : null}
         {!isWhiteboardMode && quickShareOpen ? (
           <div ref={quickSharePopoverRef} style={quickSharePopoverStyle} role="dialog" aria-modal="false" aria-label="Quick Share">
-            <p style={QUICK_SHARE_TITLE_STYLE}>TacaVision Vision Board Share</p>
+            <p style={QUICK_SHARE_TITLE_STYLE}>PáircVision Board Share</p>
             <button type="button" className="control-button" style={QUICK_SHARE_OPTION_BUTTON_STYLE} onClick={handleQuickShareRecordClip}>
               <span style={QUICK_SHARE_OPTION_TITLE_STYLE}>🎥 Record Coaching Clip</span>
               <span style={QUICK_SHARE_OPTION_SUBTITLE_STYLE}>
@@ -4475,7 +4475,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             </button>
             {whiteboardHomeConfirmOpen ? (
               <div ref={whiteboardHomeConfirmRef} style={WHITEBOARD_HOME_CONFIRM_STYLE} role="dialog" aria-modal="false">
-                <p style={WHITEBOARD_HOME_CONFIRM_TITLE_STYLE}>Leave Vision Board?</p>
+                <p style={WHITEBOARD_HOME_CONFIRM_TITLE_STYLE}>Leave PáircVision Board?</p>
                 <p style={WHITEBOARD_HOME_CONFIRM_MESSAGE_STYLE}>Your current board may not be saved.</p>
                 <div style={WHITEBOARD_HOME_CONFIRM_ACTIONS_STYLE}>
                   <button type="button" style={WHITEBOARD_HOME_CONFIRM_BUTTON_STYLE} onClick={closeWhiteboardHomeConfirm}>

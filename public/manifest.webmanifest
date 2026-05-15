@@ -1,7 +1,7 @@
 {
-  "name": "TacaVision",
-  "short_name": "TacaVision",
-  "description": "TacaVision coaching workspace",
+  "name": "PáircVision",
+  "short_name": "PV",
+  "description": "PáircVision coaching workspace",
   "start_url": "/board",
   "scope": "/",
   "display": "standalone",

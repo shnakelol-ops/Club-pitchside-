@@ -36,8 +36,8 @@ type QuickBrowseId = "systems" | "sessions" | "eight-week-plans" | "season-plans
 
 const BOTTOM_NAV_ITEMS: ReadonlyArray<BottomNavItem> = [
   { id: "home", label: "Home", short: "H", path: "/board" },
-  { id: "flowlab", label: "Vision Board", short: "V", path: "/vision-board" },
-  { id: "flowstats", label: "Vision Stats", short: "S", path: "/flowstats" },
+  { id: "flowlab", label: "Board", short: "V", path: "/vision-board" },
+  { id: "flowstats", label: "Stats", short: "S", path: "/flowstats" },
   { id: "notes", label: "Notes", short: "N", path: "/notes" },
 ];
 
@@ -946,14 +946,14 @@ function BoardPage() {
         <div className="pf-header-top">
           <div className="pf-wordmark">
             <div className="pf-wordmark-brand">
-              <img className="pf-logo" src="/pv-logo-icon.svg" alt="TacaVision symbol" />
-              <h1 className="pf-title">TacaVision</h1>
+              <img className="pf-logo" src="/pv-logo-icon.svg" alt="PáircVision symbol" />
+              <h1 className="pf-title">PáircVision</h1>
             </div>
             <span className="pf-title-accent" aria-hidden="true" />
           </div>
         </div>
         <p className="pf-subtitle">
-          Built for Gaelic Games coaches.
+          Built for GAA coaches.
           <br />
           <br />
           Create the vision.
@@ -965,7 +965,7 @@ function BoardPage() {
         <div className="pf-home-primary-wrap">
           <button type="button" className="pf-home-primary-btn" onClick={() => navigateTo("/flowstats")}>
             <span className="pf-home-primary-label">START MATCH</span>
-            <span className="pf-home-primary-sub">Launch FlowStats</span>
+            <span className="pf-home-primary-sub">Launch PáircVision Stats</span>
           </button>
         </div>
       </div>
@@ -973,8 +973,8 @@ function BoardPage() {
       <div className="pf-card">
         <div className="pf-home-secondary-grid">
           <button type="button" className="pf-home-secondary-btn" onClick={() => navigateToVisionBoard()}>
-            <span>Vision Board</span>
-            <small>Open Vision Board</small>
+            <span>PáircVision Board</span>
+            <small>Open PáircVision Board</small>
           </button>
           <button type="button" className="pf-home-secondary-btn" onClick={() => navigateTo("/notes")}>
             <span>Written Notes</span>
@@ -991,7 +991,7 @@ function BoardPage() {
         <p className="pf-card-title">Recent Boards</p>
         {recentBoards.length <= 0 ? (
           <p className="pf-card-text" style={{ marginTop: "10px" }}>
-            No saved boards yet. Save a board in Vision Board to see it here.
+            No saved boards yet. Save a board in PáircVision Board to see it here.
           </p>
         ) : (
           <div className="pf-list">
