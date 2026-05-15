@@ -1,5 +1,5 @@
 import "../features/player-performance-tracker/playerPerformanceTracker.css";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import SetupScreen from "../features/player-performance-tracker/components/SetupScreen";
 import TrackerScreen from "../features/player-performance-tracker/components/TrackerScreen";
 import RatingsScreen from "../features/player-performance-tracker/components/RatingsScreen";
@@ -10,6 +10,7 @@ import { type SavedSquad, type SeasonPlayerStat, type TrainingLogEntry, type Tra
 
 function id(){return `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;}
 type TrackerScreenView = "setup" | "live" | "ratings" | "season";
+type SaveSessionFeedbackState = "idle" | "success" | "failure";
 
 export default function PlayerPerformanceTracker(){
   const [state,setState]=useState<TrainingSessionState>(()=>loadSessionState());
@@ -17,31 +18,44 @@ export default function PlayerPerformanceTracker(){
   const [squads,setSquads]=useState<SavedSquad[]>(()=>loadSavedSquads());
   const [activeSquadId,setActiveSquadId]=useState<string|null>(null);
   const [screen,setScreen]=useState<TrackerScreenView>(()=>!state.hasStarted?"setup":state.activeTab==="ratings"?"ratings":"live");
+  const [saveSessionFeedback,setSaveSessionFeedback]=useState<SaveSessionFeedbackState>("idle");
+  const saveSessionFeedbackTimeoutRef=useRef<number|null>(null);
 
   useEffect(()=>{saveSessionState(state);},[state]);
   useEffect(()=>{if(!state.hasStarted||!state.isRunning) return;const t=window.setInterval(()=>setState((s)=>({...s,elapsedSeconds:Math.max(0,(s.elapsedSeconds||0)+1)})),1000);return ()=>window.clearInterval(t);},[state.hasStarted,state.isRunning]);
+  useEffect(()=>()=>{if(saveSessionFeedbackTimeoutRef.current!==null){window.clearTimeout(saveSessionFeedbackTimeoutRef.current);}},[]);
 
   const ratings = useMemo(()=>state.players.reduce<Record<string,number>>((acc,p)=>{acc[p.id]=state.logs.filter((l)=>l.playerId===p.id).reduce((a,l)=>a+l.points,0);return acc;},{}),[state.players,state.logs]);
 
+  const scheduleSaveSessionFeedbackReset=()=>{if(saveSessionFeedbackTimeoutRef.current!==null){window.clearTimeout(saveSessionFeedbackTimeoutRef.current);}saveSessionFeedbackTimeoutRef.current=window.setTimeout(()=>{setSaveSessionFeedback("idle");saveSessionFeedbackTimeoutRef.current=null;},1800);};
   const saveCurrentSessionToSeason = ()=>{
-    const next = new Map(seasonTable.map((s)=>[s.playerId,s]));
-    state.players.forEach((p)=>{
-      const existing = next.get(p.id);
-      const points = ratings[p.id] ?? 0;
-      next.set(p.id, {
-        playerId: p.id,
-        playerNumber: p.number,
-        playerName: p.name,
-        totalPoints: (existing?.totalPoints ?? 0) + points,
-        sessions: (existing?.sessions ?? 0) + 1,
+    try {
+      const next = new Map(seasonTable.map((s)=>[s.playerId,s]));
+      state.players.forEach((p)=>{
+        const existing = next.get(p.id);
+        const points = ratings[p.id] ?? 0;
+        next.set(p.id, {
+          playerId: p.id,
+          playerNumber: p.number,
+          playerName: p.name,
+          totalPoints: (existing?.totalPoints ?? 0) + points,
+          sessions: (existing?.sessions ?? 0) + 1,
+        });
       });
-    });
-    const merged = Array.from(next.values());
-    setSeasonTable(merged);
-    saveSeasonTable(merged);
+      const merged = Array.from(next.values());
+      setSeasonTable(merged);
+      saveSeasonTable(merged);
+      setSaveSessionFeedback("success");
+    } catch {
+      setSaveSessionFeedback("failure");
+    } finally {
+      scheduleSaveSessionFeedbackReset();
+    }
   };
 
   const onTapPlayer=(playerId:string)=>{if(!state.activeEventKey) return; const player=state.players.find((p)=>p.id===playerId); const ev=TRAINING_EVENTS.find((e)=>e.key===state.activeEventKey); if(!player||!ev) return; const log:TrainingLogEntry={id:id(),eventKey:ev.key,eventLabel:ev.label,points:ev.points,category:ev.category,playerId:player.id,playerName:player.name,playerNumber:player.number,elapsedSeconds:Math.max(0,state.elapsedSeconds||0),period:state.period,createdAt:Date.now()}; setState((s)=>({...s,logs:[...s.logs,log]}));};
+  const saveSessionButtonLabel=saveSessionFeedback==="success"?"SAVED ✓":saveSessionFeedback==="failure"?"FAILED":"Save Session to Season";
+  const saveSessionButtonClassName=["ppt-action","primary","ppt-save-session-btn",saveSessionFeedback==="success"?"ppt-save-session-btn-success":"",saveSessionFeedback==="failure"?"ppt-save-session-btn-failure":""].filter(Boolean).join(" ");
 
   if(screen==="setup") return <SetupScreen sessionName={state.sessionName} players={state.players}
    onSessionNameChange={(sessionName)=>setState((s)=>({...s,sessionName}))}
@@ -59,7 +73,7 @@ export default function PlayerPerformanceTracker(){
       <header className="ppt-header">
         <h1 className="text-xl font-semibold">Vision Training</h1>
         <p className="text-sm text-slate-300">Player Performance Tracker</p>
-        <div style={{display:"flex",gap:8,marginTop:8}}><button className="ppt-action" onClick={()=>{setState((s)=>({...s,hasStarted:false,isRunning:false,activeTab:"tracker"}));setScreen("setup");}}>Back to Squad</button><button className="ppt-action primary" onClick={saveCurrentSessionToSeason}>Save Session to Season</button><button className="ppt-action" onClick={()=>setScreen("season")}>Season</button></div>
+        <div style={{display:"flex",gap:8,marginTop:8}}><button className="ppt-action" onClick={()=>{setState((s)=>({...s,hasStarted:false,isRunning:false,activeTab:"tracker"}));setScreen("setup");}}>Back to Squad</button><button className={saveSessionButtonClassName} onClick={saveCurrentSessionToSeason}>{saveSessionButtonLabel}</button><button className="ppt-action" onClick={()=>setScreen("season")}>Season</button></div>
       </header>
     {screen==="live" ? <TrackerScreen players={state.players} logs={state.logs} elapsedSeconds={state.elapsedSeconds} isRunning={state.isRunning} period={state.period} activeEventKey={state.activeEventKey}
       onToggleTimer={()=>setState((s)=>({...s,isRunning:!s.isRunning}))}
