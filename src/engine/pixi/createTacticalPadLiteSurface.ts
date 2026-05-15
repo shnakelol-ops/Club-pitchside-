@@ -1557,42 +1557,36 @@ export async function createTacticalPadLiteSurface(
     }
     if (item.type === "footballSmall" || item.type === "football" || item.type === "footballLarge") {
       const radius = TACTICAL_ITEM_HALF_SIZE * (item.type === "footballSmall" ? 0.72 : item.type === "footballLarge" ? 1.12 : 0.9);
-      graphic.circle(0, radius * 0.24, radius * 0.86).fill({ color: 0x020617, alpha: 0.12 });
-      graphic.circle(0, 0, radius).fill(0xf8fafc).stroke({ color: 0x475569, width: 0.26 });
-      graphic.circle(-radius * 0.22, -radius * 0.3, radius * 0.29).fill({ color: 0xffffff, alpha: 0.42 });
-      graphic.arc(0, 0, radius * 0.58, Math.PI * 0.18, Math.PI * 0.82).stroke({
-        color: 0x475569,
-        width: 0.12,
-        alpha: 0.82,
-      });
-      graphic.arc(0, 0, radius * 0.58, Math.PI * 1.18, Math.PI * 1.82).stroke({
-        color: 0x475569,
-        width: 0.12,
-        alpha: 0.82,
-      });
+      graphic.ellipse(0, radius * 0.54, radius * 0.78, radius * 0.22).fill({ color: 0x020617, alpha: 0.16 });
+      graphic.circle(0, 0, radius).fill(0xf8fafc).stroke({ color: 0x334155, width: 0.3 });
+      graphic.circle(-radius * 0.26, -radius * 0.28, radius * 0.27).fill({ color: 0xffffff, alpha: 0.5 });
+      graphic.circle(radius * 0.22, radius * 0.24, radius * 0.68).fill({ color: 0x94a3b8, alpha: 0.08 });
+      graphic.arc(0, 0, radius * 0.62, Math.PI * 0.18, Math.PI * 0.82).stroke({ color: 0x334155, width: 0.16, alpha: 0.9 });
+      graphic.arc(0, 0, radius * 0.62, Math.PI * 1.18, Math.PI * 1.82).stroke({ color: 0x334155, width: 0.16, alpha: 0.9 });
       graphic
         .moveTo(-radius * 0.56, 0)
-        .lineTo(-radius * 0.2, 0)
-        .moveTo(radius * 0.56, 0)
-        .lineTo(radius * 0.2, 0)
-        .stroke({ color: 0x64748b, width: 0.12, alpha: 0.74 });
+        .lineTo(radius * 0.56, 0)
+        .stroke({ color: 0x475569, width: 0.14, alpha: 0.92 });
+      graphic
+        .moveTo(-radius * 0.48, -radius * 0.02)
+        .lineTo(-radius * 0.22, -radius * 0.02)
+        .moveTo(radius * 0.22, radius * 0.02)
+        .lineTo(radius * 0.48, radius * 0.02)
+        .stroke({ color: 0x64748b, width: 0.1, alpha: 0.75 });
       return;
     }
     if (item.type === "sliotarSmall" || item.type === "sliotar" || item.type === "sliotarLarge") {
       const radius = TACTICAL_ITEM_HALF_SIZE * (item.type === "sliotarSmall" ? 0.6 : item.type === "sliotarLarge" ? 0.9 : 0.74);
-      graphic.circle(0, radius * 0.22, radius * 0.82).fill({ color: 0x111827, alpha: 0.1 });
-      graphic.circle(0, 0, radius).fill(0xfff3d6).stroke({ color: 0x6b7280, width: 0.24 });
-      graphic.circle(-radius * 0.22, -radius * 0.32, radius * 0.26).fill({ color: 0xffffff, alpha: 0.45 });
-      graphic.arc(0, 0, radius * 0.66, Math.PI * 0.32, Math.PI * 0.78).stroke({
-        color: 0x4b5563,
-        width: 0.15,
-        alpha: 0.82,
-      });
-      graphic.arc(0, 0, radius * 0.66, Math.PI * 1.32, Math.PI * 1.78).stroke({
-        color: 0x4b5563,
-        width: 0.15,
-        alpha: 0.82,
-      });
+      graphic.ellipse(0, radius * 0.56, radius * 0.72, radius * 0.2).fill({ color: 0x111827, alpha: 0.15 });
+      graphic.circle(0, 0, radius).fill(0xffefbd).stroke({ color: 0x4b5563, width: 0.3 });
+      graphic.circle(-radius * 0.24, -radius * 0.3, radius * 0.24).fill({ color: 0xffffff, alpha: 0.44 });
+      graphic.circle(radius * 0.25, radius * 0.22, radius * 0.62).fill({ color: 0xb45309, alpha: 0.08 });
+      graphic.arc(0, 0, radius * 0.68, Math.PI * 0.3, Math.PI * 0.82).stroke({ color: 0x374151, width: 0.22, alpha: 0.95 });
+      graphic.arc(0, 0, radius * 0.68, Math.PI * 1.3, Math.PI * 1.82).stroke({ color: 0x374151, width: 0.22, alpha: 0.95 });
+      graphic
+        .moveTo(-radius * 0.7, 0)
+        .lineTo(radius * 0.7, 0)
+        .stroke({ color: 0x374151, width: 0.18, alpha: 0.94 });
       return;
     }
   }
