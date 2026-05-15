@@ -67,3 +67,17 @@ export type TrainingSessionState = {
   activeEventKey: TrainingEventKey | null;
   lastDeleted?: TrainingLogEntry | null;
 };
+
+export type SeasonPlayerStat = {
+  playerId: string;
+  playerNumber: number;
+  playerName: string;
+  totalPoints: number;
+  sessions: number;
+};
+
+export type SavedSquad = {
+  id: string;
+  name: string;
+  players: TrainingPlayer[];
+};

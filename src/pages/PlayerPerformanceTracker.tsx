@@ -4,18 +4,39 @@ import SetupScreen from "../features/player-performance-tracker/components/Setup
 import TrackerScreen from "../features/player-performance-tracker/components/TrackerScreen";
 import RatingsScreen from "../features/player-performance-tracker/components/RatingsScreen";
 import { TRAINING_EVENTS } from "../features/player-performance-tracker/model/trainingScoring";
-import { loadSessionState, saveSessionState } from "../features/player-performance-tracker/storage/trainingSessionStorage";
-import { type TrainingLogEntry, type TrainingPeriod, type TrainingSessionState } from "../features/player-performance-tracker/model/trainingTypes";
+import { loadSavedSquads, loadSeasonTable, loadSessionState, saveSavedSquads, saveSeasonTable, saveSessionState } from "../features/player-performance-tracker/storage/trainingSessionStorage";
+import { type SavedSquad, type SeasonPlayerStat, type TrainingLogEntry, type TrainingPeriod, type TrainingSessionState } from "../features/player-performance-tracker/model/trainingTypes";
 
 function id(){return `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;}
 
 export default function PlayerPerformanceTracker(){
   const [state,setState]=useState<TrainingSessionState>(()=>loadSessionState());
+  const [seasonTable,setSeasonTable]=useState<SeasonPlayerStat[]>(()=>loadSeasonTable());
+  const [squads,setSquads]=useState<SavedSquad[]>(()=>loadSavedSquads());
+  const [activeSquadId,setActiveSquadId]=useState<string|null>(null);
 
   useEffect(()=>{saveSessionState(state);},[state]);
   useEffect(()=>{if(!state.hasStarted||!state.isRunning) return;const t=window.setInterval(()=>setState((s)=>({...s,elapsedSeconds:Math.max(0,(s.elapsedSeconds||0)+1)})),1000);return ()=>window.clearInterval(t);},[state.hasStarted,state.isRunning]);
 
   const ratings = useMemo(()=>state.players.reduce<Record<string,number>>((acc,p)=>{acc[p.id]=state.logs.filter((l)=>l.playerId===p.id).reduce((a,l)=>a+l.points,0);return acc;},{}),[state.players,state.logs]);
+
+  const saveCurrentSessionToSeason = ()=>{
+    const next = new Map(seasonTable.map((s)=>[s.playerId,s]));
+    state.players.forEach((p)=>{
+      const existing = next.get(p.id);
+      const points = ratings[p.id] ?? 0;
+      next.set(p.id, {
+        playerId: p.id,
+        playerNumber: p.number,
+        playerName: p.name,
+        totalPoints: (existing?.totalPoints ?? 0) + points,
+        sessions: (existing?.sessions ?? 0) + 1,
+      });
+    });
+    const merged = Array.from(next.values());
+    setSeasonTable(merged);
+    saveSeasonTable(merged);
+  };
 
   const onTapPlayer=(playerId:string)=>{if(!state.activeEventKey) return; const player=state.players.find((p)=>p.id===playerId); const ev=TRAINING_EVENTS.find((e)=>e.key===state.activeEventKey); if(!player||!ev) return; const log:TrainingLogEntry={id:id(),eventKey:ev.key,eventLabel:ev.label,points:ev.points,category:ev.category,playerId:player.id,playerName:player.name,playerNumber:player.number,elapsedSeconds:Math.max(0,state.elapsedSeconds||0),period:state.period,createdAt:Date.now()}; setState((s)=>({...s,logs:[...s.logs,log]}));};
 
@@ -24,6 +45,12 @@ export default function PlayerPerformanceTracker(){
    onPlayerChange={(id,updates)=>setState((s)=>({...s,players:s.players.map((p)=>p.id===id?{...p,...updates}:p)}))}
    onAddPlayer={()=>setState((s)=>s.players.length>=30?s:{...s,players:[...s.players,{id:`player-${id()}`,name:`Player ${s.players.length+1}`,number:s.players.length+1}]})}
    onStart={()=>setState((s)=>({...s,hasStarted:true,activeTab:"tracker"}))}
+   seasonTable={seasonTable}
+   onClearSeason={()=>{ if(window.confirm("Clear season table?")){ setSeasonTable([]); saveSeasonTable([]);} }}
+   squads={squads}
+   activeSquadId={activeSquadId}
+   onSelectSquad={(squadId)=>{const squad=squads.find((x)=>x.id===squadId); if(!squad) return; setActiveSquadId(squadId); setState((s)=>({...s,players:squad.players.map((p)=>({...p}))}));}}
+   onSaveCurrentSquad={()=>{const exists=activeSquadId? squads.find((s)=>s.id===activeSquadId):null; const nextName=exists?.name ?? `Squad ${squads.length+1}`; const nextId=exists?.id ?? `squad-${Date.now()}`; const nextSquad:SavedSquad={id:nextId,name:nextName,players:state.players.slice(0,30).map((p)=>({...p}))}; const next=exists?squads.map((s)=>s.id===nextId?nextSquad:s):[...squads,nextSquad].slice(0,10); setSquads(next); setActiveSquadId(nextId); saveSavedSquads(next);}}
   />;
 
   return <div className="ppt-shell">
@@ -31,6 +58,7 @@ export default function PlayerPerformanceTracker(){
       <header className="ppt-header">
         <h1 className="text-xl font-semibold">Vision Training</h1>
         <p className="text-sm text-slate-300">Player Performance Tracker</p>
+        <div style={{display:"flex",gap:8,marginTop:8}}><button className="ppt-action" onClick={()=>setState((s)=>({...s,hasStarted:false,isRunning:false,activeTab:"tracker"}))}>Back to Squad</button><button className="ppt-action primary" onClick={saveCurrentSessionToSeason}>Save Session to Season</button></div>
       </header>
     {state.activeTab==='tracker' ? <TrackerScreen players={state.players} logs={state.logs} elapsedSeconds={state.elapsedSeconds} isRunning={state.isRunning} period={state.period} activeEventKey={state.activeEventKey}
       onToggleTimer={()=>setState((s)=>({...s,isRunning:!s.isRunning}))}
