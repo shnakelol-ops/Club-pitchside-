@@ -1324,6 +1324,13 @@ const PANEL_CSS = `
   box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.22), 0 0 12px rgba(34, 197, 94, 0.28);
 }
 
+.counts-bubble-btn--portrait {
+  position: fixed;
+  z-index: 22;
+  left: max(10px, calc(env(safe-area-inset-left, 0px) + 8px));
+  bottom: max(84px, calc(env(safe-area-inset-bottom, 0px) + 78px));
+}
+
 .player-bubble-btn {
   width: 36px;
   height: 36px;
@@ -1352,6 +1359,20 @@ const PANEL_CSS = `
   pointer-events: none;
   left: 16px;
   bottom: 90px;
+  opacity: 1;
+  transform: scale(1);
+  transform-origin: left bottom;
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.utility-controls--hidden {
+  opacity: 0;
+  transform: translateY(4px) scale(0.96);
+}
+
+.utility-controls--hidden .utility-bubble-btn,
+.utility-controls--hidden .utility-menu {
+  pointer-events: none;
 }
 
 .utility-controls--portrait {
@@ -2310,20 +2331,23 @@ const PANEL_CSS = `
   }
 
   .utility-bubble-btn {
-    left: 16px;
+    left: max(8px, calc(env(safe-area-inset-left, 0px) + 6px));
     right: auto;
-    bottom: 90px;
+    bottom: max(14px, calc(env(safe-area-inset-bottom, 0px) + 10px));
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
   }
 
   .utility-controls--landscape {
-    left: 16px;
+    left: max(8px, calc(env(safe-area-inset-left, 0px) + 6px));
     right: auto;
-    bottom: 90px;
+    bottom: max(14px, calc(env(safe-area-inset-bottom, 0px) + 10px));
     align-items: flex-start;
   }
 
   .utility-controls--landscape .utility-menu {
-    margin-left: 44px;
+    margin-left: 40px;
     margin-right: 0;
   }
 }
@@ -4500,9 +4524,14 @@ export default function StatsModeSurface() {
     </div>
   );
 
-  const utilityControlsClass = isLandscape
-    ? "utility-controls utility-controls--landscape"
-    : "utility-controls utility-controls--portrait";
+  const shouldShowUtilityBubble =
+    matchState === "PRE_MATCH" || matchState === "HALF_TIME" || matchState === "FULL_TIME";
+  const utilityControlsClass = [
+    isLandscape ? "utility-controls utility-controls--landscape" : "utility-controls utility-controls--portrait",
+    shouldShowUtilityBubble ? "" : "utility-controls--hidden",
+  ]
+    .filter(Boolean)
+    .join(" ");
   const utilityBubbleStyle =
     utilityBubblePosition == null
       ? undefined
@@ -5622,7 +5651,26 @@ export default function StatsModeSurface() {
           >
             👤
           </button>
-          {matchState !== "FULL_TIME" ? (
+          {!isLandscape && matchState !== "FULL_TIME" ? (
+            <button
+              type="button"
+              className="bubble-btn counts-bubble-btn--portrait"
+              aria-label="Toggle live counts"
+              aria-expanded={isCountsOverlayOpen}
+              onClick={toggleCountsOverlay}
+              style={{
+                border: isCountsOverlayOpen
+                  ? "1px solid rgba(125,211,252,0.84)"
+                  : "1px solid rgba(148,163,184,0.45)",
+                boxShadow: isCountsOverlayOpen
+                  ? "0 0 0 1px rgba(125,211,252,0.24), 0 0 12px rgba(125,211,252,0.22)"
+                  : "0 0 0 1px rgba(148,163,184,0.16), 0 0 8px rgba(148,163,184,0.16)",
+              }}
+            >
+              Cts
+            </button>
+          ) : null}
+          {isLandscape && matchState !== "FULL_TIME" ? (
             <button
               type="button"
               className="bubble-btn"
