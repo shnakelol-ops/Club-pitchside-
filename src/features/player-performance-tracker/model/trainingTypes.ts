@@ -75,3 +75,9 @@ export type SeasonPlayerStat = {
   totalPoints: number;
   sessions: number;
 };
+
+export type SavedSquad = {
+  id: string;
+  name: string;
+  players: TrainingPlayer[];
+};

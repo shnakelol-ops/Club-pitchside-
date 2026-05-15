@@ -4,14 +4,16 @@ import SetupScreen from "../features/player-performance-tracker/components/Setup
 import TrackerScreen from "../features/player-performance-tracker/components/TrackerScreen";
 import RatingsScreen from "../features/player-performance-tracker/components/RatingsScreen";
 import { TRAINING_EVENTS } from "../features/player-performance-tracker/model/trainingScoring";
-import { loadSeasonTable, loadSessionState, saveSeasonTable, saveSessionState } from "../features/player-performance-tracker/storage/trainingSessionStorage";
-import { type SeasonPlayerStat, type TrainingLogEntry, type TrainingPeriod, type TrainingSessionState } from "../features/player-performance-tracker/model/trainingTypes";
+import { loadSavedSquads, loadSeasonTable, loadSessionState, saveSavedSquads, saveSeasonTable, saveSessionState } from "../features/player-performance-tracker/storage/trainingSessionStorage";
+import { type SavedSquad, type SeasonPlayerStat, type TrainingLogEntry, type TrainingPeriod, type TrainingSessionState } from "../features/player-performance-tracker/model/trainingTypes";
 
 function id(){return `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;}
 
 export default function PlayerPerformanceTracker(){
   const [state,setState]=useState<TrainingSessionState>(()=>loadSessionState());
   const [seasonTable,setSeasonTable]=useState<SeasonPlayerStat[]>(()=>loadSeasonTable());
+  const [squads,setSquads]=useState<SavedSquad[]>(()=>loadSavedSquads());
+  const [activeSquadId,setActiveSquadId]=useState<string|null>(null);
 
   useEffect(()=>{saveSessionState(state);},[state]);
   useEffect(()=>{if(!state.hasStarted||!state.isRunning) return;const t=window.setInterval(()=>setState((s)=>({...s,elapsedSeconds:Math.max(0,(s.elapsedSeconds||0)+1)})),1000);return ()=>window.clearInterval(t);},[state.hasStarted,state.isRunning]);
@@ -45,6 +47,10 @@ export default function PlayerPerformanceTracker(){
    onStart={()=>setState((s)=>({...s,hasStarted:true,activeTab:"tracker"}))}
    seasonTable={seasonTable}
    onClearSeason={()=>{ if(window.confirm("Clear season table?")){ setSeasonTable([]); saveSeasonTable([]);} }}
+   squads={squads}
+   activeSquadId={activeSquadId}
+   onSelectSquad={(squadId)=>{const squad=squads.find((x)=>x.id===squadId); if(!squad) return; setActiveSquadId(squadId); setState((s)=>({...s,players:squad.players.map((p)=>({...p}))}));}}
+   onSaveCurrentSquad={()=>{const exists=activeSquadId? squads.find((s)=>s.id===activeSquadId):null; const nextName=exists?.name ?? `Squad ${squads.length+1}`; const nextId=exists?.id ?? `squad-${Date.now()}`; const nextSquad:SavedSquad={id:nextId,name:nextName,players:state.players.slice(0,30).map((p)=>({...p}))}; const next=exists?squads.map((s)=>s.id===nextId?nextSquad:s):[...squads,nextSquad].slice(0,10); setSquads(next); setActiveSquadId(nextId); saveSavedSquads(next);}}
   />;
 
   return <div className="ppt-shell">
