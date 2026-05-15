@@ -178,13 +178,15 @@ const TACTICAL_ITEM_HALF_SIZE = 2.2;
 const TACTICAL_ITEM_DRAG_THRESHOLD_PX = 5;
 const TACTICAL_ITEM_TOUCH_HIT_DIAMETER_PX = 46;
 const ATTACHED_BALL_OFFSETS_WORLD: ReadonlyArray<Readonly<NormalizedPoint>> = [
-  { x: 6.4, y: -5.4 },
-  { x: 6.4, y: 5.4 },
-  { x: -6.4, y: -5.4 },
-  { x: -6.4, y: 5.4 },
-  { x: 7.2, y: 0 },
-  { x: -7.2, y: 0 },
+  { x: 4.0, y: -3.2 },
+  { x: 4.0, y: 3.2 },
+  { x: -4.0, y: -3.2 },
+  { x: -4.0, y: 3.2 },
+  { x: 4.7, y: 0 },
+  { x: -4.7, y: 0 },
 ];
+const ATTACHED_BALL_FOLLOW_MAX_LEAD_WORLD = 0.6;
+const ATTACHED_BALL_FOLLOW_SMOOTHING = 0.28;
 const BALL_PATH_MIN_POINT_DISTANCE = 0.35;
 const WHITEBOARD_DEFAULT_STROKE_COLOR = 0x111111;
 const WHITEBOARD_BLUE_START_X = 30;
@@ -2065,6 +2067,11 @@ export async function createTacticalPadLiteSurface(
     };
   }
 
+  function getPlaybackEaseProgress(progress: number): number {
+    const clamped = Math.max(0, Math.min(1, progress));
+    return clamped * clamped * (3 - 2 * clamped);
+  }
+
   function stepPlayback(deltaMs: number): void {
     if (!isPlaying || playbackPath.length < 2) return;
 
@@ -2082,6 +2089,7 @@ export async function createTacticalPadLiteSurface(
       playElapsedMs += stepMs;
       remainingMs -= stepMs;
       const progress = Math.max(0, Math.min(1, playElapsedMs / segmentDurationMs));
+      const easedProgress = getPlaybackEaseProgress(progress);
 
       for (const player of players) {
         const idx = players.indexOf(player);
@@ -2089,8 +2097,8 @@ export async function createTacticalPadLiteSurface(
         const toPoint = toSnapshot.players[idx];
         if (!fromPoint || !toPoint) continue;
         player.current = {
-          x: fromPoint.x + (toPoint.x - fromPoint.x) * progress,
-          y: fromPoint.y + (toPoint.y - fromPoint.y) * progress,
+          x: fromPoint.x + (toPoint.x - fromPoint.x) * easedProgress,
+          y: fromPoint.y + (toPoint.y - fromPoint.y) * easedProgress,
         };
         setTokenWorldPositionForPoint(player, player.current, mapper);
       }
@@ -2106,8 +2114,19 @@ export async function createTacticalPadLiteSurface(
           state.path = [];
           const attachedPoint = getAttachedBallPositionForPlayerId(targetAttachedPlayerId);
           if (!attachedPoint) continue;
-          item.x = attachedPoint.x;
-          item.y = attachedPoint.y;
+          const rawDx = attachedPoint.x - item.x;
+          const rawDy = attachedPoint.y - item.y;
+          const rawDistance = Math.hypot(rawDx, rawDy);
+          if (rawDistance <= ATTACHED_BALL_FOLLOW_MAX_LEAD_WORLD) {
+            item.x = attachedPoint.x;
+            item.y = attachedPoint.y;
+          } else {
+            const cappedScale = ATTACHED_BALL_FOLLOW_MAX_LEAD_WORLD / rawDistance;
+            const cappedX = attachedPoint.x - rawDx * cappedScale;
+            const cappedY = attachedPoint.y - rawDy * cappedScale;
+            item.x += (cappedX - item.x) * ATTACHED_BALL_FOLLOW_SMOOTHING;
+            item.y += (cappedY - item.y) * ATTACHED_BALL_FOLLOW_SMOOTHING;
+          }
         } else {
           const freePoint = interpolateBallPath(fromBall, toBall, progress);
           state.attachedPlayerId = null;
