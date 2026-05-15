@@ -155,6 +155,7 @@ export default function BrandingPreview() {
             Three explorations that all start from an upside-down V, reusing the left leg as the P stem and building the bowl from that
             shared structure.
           </p>
+          <p>Proportion target in this pass: dominant P read first, with a lighter supporting V base underneath.</p>
         </section>
 
         {PV_VARIATIONS.map((variation) => (

@@ -9,7 +9,7 @@
     shape-rendering="geometricPrecision"
   />
   <path
-    d="M98 76H136C156 76 170 90 170 108C170 126 156 140 136 140H110"
+    d="M99 72H144C161 72 173 84 173 99C173 114 161 126 144 126H110"
     stroke="#FFFFFF"
     stroke-width="20"
     stroke-linecap="round"
@@ -17,9 +17,9 @@
     shape-rendering="geometricPrecision"
   />
   <path
-    d="M124 196L166 132"
+    d="M124 196L162 150"
     stroke="#FFFFFF"
-    stroke-width="20"
+    stroke-width="16"
     stroke-linecap="round"
     stroke-linejoin="round"
     shape-rendering="geometricPrecision"
