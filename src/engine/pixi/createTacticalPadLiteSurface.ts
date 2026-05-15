@@ -26,12 +26,17 @@ import {
 } from "../shared/normalization";
 import {
   cloneMovementPathRecord,
-  interpolateMovementPathPoint,
+  cloneMovementPathPoints,
   sanitizeMovementPathRecord,
-  smoothMovementPathPoints,
   type MovementPathEntityType,
   type MovementPathRecord,
-} from "../shared/movementPaths";
+} from "../movement/movementTypes";
+import {
+  findMovementPath,
+  interpolateMovementEntity,
+  type MovementPlaybackDebugEvent,
+} from "../movement/movementPlayback";
+import { drawMovementPathRecord } from "../movement/movementRendering";
 import { createTacticalDrawingController } from "../../features/quickboard/drawing/tacticalDrawingController";
 import {
   drawingToolToWhiteboardTool,
@@ -110,6 +115,7 @@ export type TacticalPadLiteSurface = {
   setPlaybackSpeedMultiplier: (multiplier: number) => void;
   freeBall: () => void;
   setFreeBallPathMode: (enabled: boolean) => void;
+  clearFreeBallPath: () => void;
   addTacticalPlayer: (team?: "BLUE" | "RED") => void;
   removeTacticalPlayer: (team?: "BLUE" | "RED") => void;
   getTacticalPlayer: (playerId: string) => TacticalPlayerKitSnapshot | null;
@@ -182,11 +188,6 @@ const ATTACHED_BALL_OFFSETS_WORLD: ReadonlyArray<Readonly<NormalizedPoint>> = [
 ];
 const BALL_PATH_MIN_POINT_DISTANCE = 0.35;
 const MOVEMENT_PATH_MIN_POINT_DISTANCE = 0.45;
-const MOVEMENT_PATH_DASH_LENGTH = 2.4;
-const MOVEMENT_PATH_DASH_GAP = 1.25;
-const MOVEMENT_PATH_STROKE_WIDTH = 0.42;
-const MOVEMENT_PATH_ARROW_LENGTH = 2.1;
-const MOVEMENT_PATH_ARROW_HALF_WIDTH = 1.05;
 const WHITEBOARD_DEFAULT_STROKE_COLOR = 0x111111;
 const WHITEBOARD_BLUE_START_X = 30;
 const WHITEBOARD_RED_START_X = 70;
@@ -1050,6 +1051,7 @@ export async function createTacticalPadLiteSurface(
   let movementPathCounter = 0;
   let isFreeBallPathMode = false;
   let activeMovementPathDraft: ActiveMovementPathDraft | null = null;
+  let lastMovementPlaybackDebugKey: string | null = null;
 
   let activeDrag: ActiveDragState = null;
   let selectedItemId: string | null = null;
@@ -1163,29 +1165,6 @@ export async function createTacticalPadLiteSurface(
     return `movement-path-${getMovementPathKey(entityType, entityId, phaseIndex)}-${movementPathCounter}`;
   }
 
-  function cloneMovementPathPoints(points: readonly NormalizedPoint[]): NormalizedPoint[] {
-    return points.map((point) => ({
-      x: clampNormalizedValue(point.x),
-      y: clampNormalizedValue(point.y),
-    }));
-  }
-
-  function findMovementPath(
-    entityType: MovementPathEntityType,
-    entityId: string,
-    phaseIndex: number,
-  ): MovementPathRecord | null {
-    const normalizedPhaseIndex = Math.max(0, Math.floor(phaseIndex));
-    return (
-      movementPaths.find(
-        (path) =>
-          path.entityType === entityType &&
-          path.entityId === entityId &&
-          path.phaseIndex === normalizedPhaseIndex,
-      ) ?? null
-    );
-  }
-
   function upsertMovementPath(
     entityType: MovementPathEntityType,
     entityId: string,
@@ -1196,7 +1175,7 @@ export async function createTacticalPadLiteSurface(
     const normalizedPoints = cloneMovementPathPoints(points);
     if (normalizedPoints.length < 2) return;
     const normalizedPhaseIndex = Math.max(0, Math.floor(phaseIndex));
-    const existing = findMovementPath(entityType, entityId, normalizedPhaseIndex);
+    const existing = findMovementPath(movementPaths, entityType, entityId, normalizedPhaseIndex);
     const nextPath: MovementPathRecord = {
       id: existing?.id ?? createMovementPathId(entityType, entityId, normalizedPhaseIndex),
       entityId,
@@ -1225,7 +1204,7 @@ export async function createTacticalPadLiteSurface(
       if (!snapshot) continue;
       for (const ball of snapshot.football) {
         if (!ball.isFree || !ball.path || ball.path.length < 2) continue;
-        if (findMovementPath("ball", ball.id, phaseIndex)) continue;
+        if (findMovementPath(movementPaths, "ball", ball.id, phaseIndex)) continue;
         upsertMovementPath("ball", ball.id, phaseIndex, ball.path, {
           kind: "free-ball-path",
           source: "legacy-phase-ball-path",
@@ -1234,173 +1213,16 @@ export async function createTacticalPadLiteSurface(
     }
   }
 
-  function resolveMovementPathPoints(
-    entityType: MovementPathEntityType,
-    entityId: string,
-    phaseIndex: number,
-    fromPoint: NormalizedPoint,
-    toPoint: NormalizedPoint,
-    fallbackPath?: readonly NormalizedPoint[],
-  ): NormalizedPoint[] {
-    const movementPath = findMovementPath(entityType, entityId, phaseIndex);
-    const pathPoints = movementPath?.points ?? fallbackPath ?? [];
-    if (pathPoints.length < 2) return [];
-    const normalizedPoints = cloneMovementPathPoints(pathPoints);
-    const firstPoint = normalizedPoints[0];
-    const lastPoint = normalizedPoints[normalizedPoints.length - 1];
-    if (
-      firstPoint &&
-      Math.hypot(firstPoint.x - fromPoint.x, firstPoint.y - fromPoint.y) >= MOVEMENT_PATH_MIN_POINT_DISTANCE
-    ) {
-      normalizedPoints.unshift({ x: clampNormalizedValue(fromPoint.x), y: clampNormalizedValue(fromPoint.y) });
-    }
-    if (
-      lastPoint &&
-      Math.hypot(lastPoint.x - toPoint.x, lastPoint.y - toPoint.y) >= MOVEMENT_PATH_MIN_POINT_DISTANCE
-    ) {
-      normalizedPoints.push({ x: clampNormalizedValue(toPoint.x), y: clampNormalizedValue(toPoint.y) });
-    }
-    return normalizedPoints;
-  }
-
-  function interpolateEntityMovementPath(
-    entityType: MovementPathEntityType,
-    entityId: string,
-    phaseIndex: number,
-    fromPoint: NormalizedPoint,
-    toPoint: NormalizedPoint,
-    progress: number,
-    fallbackPath?: readonly NormalizedPoint[],
-  ): NormalizedPoint | null {
-    const pathPoints = resolveMovementPathPoints(
-      entityType,
-      entityId,
-      phaseIndex,
-      fromPoint,
-      toPoint,
-      fallbackPath,
-    );
-    if (pathPoints.length < 2) return null;
-    return interpolateMovementPathPoint(pathPoints, progress);
-  }
-
-  function getMovementPathColor(path: Pick<MovementPathRecord, "entityType" | "metadata">): number {
-    const metadataColor = path.metadata?.color;
-    if (typeof metadataColor === "number" && Number.isFinite(metadataColor)) {
-      return Math.max(0, Math.floor(metadataColor));
-    }
-    return path.entityType === "ball" ? 0xf8fafc : 0x7dd3fc;
-  }
-
-  function drawDashedWorldPath(
-    graphic: Graphics,
-    points: readonly NormalizedPoint[],
-    color: number,
-    alpha: number,
-  ): void {
-    if (points.length < 2) return;
-    const worldPoints = smoothMovementPathPoints(points).map((point) => mapper.normalizedToWorld(point));
-    let dashRemaining = MOVEMENT_PATH_DASH_LENGTH;
-    let gapRemaining = 0;
-    for (let index = 1; index < worldPoints.length; index += 1) {
-      const previous = worldPoints[index - 1];
-      const current = worldPoints[index];
-      if (!previous || !current) continue;
-      const segmentDx = current.x - previous.x;
-      const segmentDy = current.y - previous.y;
-      const segmentLength = Math.hypot(segmentDx, segmentDy);
-      if (segmentLength <= 0) continue;
-      let consumed = 0;
-      while (consumed < segmentLength) {
-        const remainingSegment = segmentLength - consumed;
-        if (gapRemaining > 0) {
-          const gapStep = Math.min(gapRemaining, remainingSegment);
-          consumed += gapStep;
-          gapRemaining -= gapStep;
-          if (gapRemaining <= 0) {
-            dashRemaining = MOVEMENT_PATH_DASH_LENGTH;
-          }
-          continue;
-        }
-        const dashStep = Math.min(dashRemaining, remainingSegment);
-        const startRatio = consumed / segmentLength;
-        const endRatio = (consumed + dashStep) / segmentLength;
-        graphic
-          .moveTo(previous.x + segmentDx * startRatio, previous.y + segmentDy * startRatio)
-          .lineTo(previous.x + segmentDx * endRatio, previous.y + segmentDy * endRatio)
-          .stroke({
-            color,
-            alpha,
-            width: MOVEMENT_PATH_STROKE_WIDTH,
-            cap: "round",
-            join: "round",
-            alignment: 0.5,
-          });
-        consumed += dashStep;
-        dashRemaining -= dashStep;
-        if (dashRemaining <= 0) {
-          gapRemaining = MOVEMENT_PATH_DASH_GAP;
-        }
-      }
-    }
-  }
-
-  function drawMovementPathArrowhead(
-    graphic: Graphics,
-    points: readonly NormalizedPoint[],
-    color: number,
-    alpha: number,
-  ): void {
-    if (points.length < 2) return;
-    const smoothed = smoothMovementPathPoints(points);
-    const end = smoothed[smoothed.length - 1];
-    if (!end) return;
-    let previous = smoothed[smoothed.length - 2];
-    for (let index = smoothed.length - 2; index >= 0; index -= 1) {
-      const candidate = smoothed[index];
-      if (!candidate) continue;
-      if (Math.hypot(end.x - candidate.x, end.y - candidate.y) >= 0.1) {
-        previous = candidate;
-        break;
-      }
-    }
-    if (!previous) return;
-    const endWorld = mapper.normalizedToWorld(end);
-    const previousWorld = mapper.normalizedToWorld(previous);
-    const angle = Math.atan2(endWorld.y - previousWorld.y, endWorld.x - previousWorld.x);
-    const backX = endWorld.x - Math.cos(angle) * MOVEMENT_PATH_ARROW_LENGTH;
-    const backY = endWorld.y - Math.sin(angle) * MOVEMENT_PATH_ARROW_LENGTH;
-    const normalX = -Math.sin(angle) * MOVEMENT_PATH_ARROW_HALF_WIDTH;
-    const normalY = Math.cos(angle) * MOVEMENT_PATH_ARROW_HALF_WIDTH;
-    graphic
-      .poly([
-        endWorld.x,
-        endWorld.y,
-        backX + normalX,
-        backY + normalY,
-        backX - normalX,
-        backY - normalY,
-      ])
-      .fill({ color, alpha });
-  }
-
-  function drawMovementPathRecord(
-    graphic: Graphics,
-    path: MovementPathRecord,
-    alpha = 0.72,
-  ): void {
-    if (path.points.length < 2) return;
-    const color = getMovementPathColor(path);
-    drawDashedWorldPath(graphic, path.points, color, alpha);
-    drawMovementPathArrowhead(graphic, path.points, color, Math.min(0.9, alpha + 0.12));
-  }
-
   function renderMovementPaths(): void {
     movementPathGraphics.clear();
     movementPathPreviewGraphics.clear();
     if (surfaceVariant !== "tactical") return;
     for (const path of movementPaths) {
-      drawMovementPathRecord(movementPathGraphics, path);
+      drawMovementPathRecord({
+        graphic: movementPathGraphics,
+        mapper,
+        path,
+      });
     }
     if (activeMovementPathDraft && activeMovementPathDraft.points.length >= 2) {
       const previewPath: MovementPathRecord = {
@@ -1411,7 +1233,12 @@ export async function createTacticalPadLiteSurface(
         points: activeMovementPathDraft.points,
         metadata: { color: activeWhiteboardColor },
       };
-      drawMovementPathRecord(movementPathPreviewGraphics, previewPath, 0.9);
+      drawMovementPathRecord({
+        graphic: movementPathPreviewGraphics,
+        mapper,
+        path: previewPath,
+        alpha: 0.9,
+      });
     }
   }
 
@@ -1500,6 +1327,20 @@ export async function createTacticalPadLiteSurface(
     });
     options.onItemMove?.(ball.id, ball.x, ball.y);
     renderTacticalItems();
+    renderMovementPaths();
+  }
+
+  function clearPrimaryFreeBallMovementPath(): void {
+    if (surfaceVariant !== "tactical" || isPlaybackInputLocked()) return;
+    resetActiveMovementPathDraft();
+    const ball = findPrimaryBallItem();
+    if (!ball || !isBallItem(ball)) return;
+    const phaseIndex = getCurrentMovementPathPhaseIndex();
+    movementPaths = movementPaths.filter(
+      (path) => !(path.entityType === "ball" && path.entityId === ball.id && path.phaseIndex === phaseIndex),
+    );
+    const state = getBallRuntimeState(ball);
+    state.path = [{ x: clampNormalizedValue(ball.x), y: clampNormalizedValue(ball.y) }];
     renderMovementPaths();
   }
 
@@ -2368,6 +2209,7 @@ export async function createTacticalPadLiteSurface(
     releaseActiveDrag();
     clearSelectedItem();
     resetActiveMovementPathDraft();
+    isFreeBallPathMode = false;
     if (isPaused && playbackPath.length >= 2) {
       isPaused = false;
       isPlaying = true;
@@ -2382,6 +2224,24 @@ export async function createTacticalPadLiteSurface(
     playSingleStartToCurrent();
   }
 
+  function emitMovementPlaybackDebug(event: MovementPlaybackDebugEvent): void {
+    if (typeof window === "undefined") return;
+    let enabled = false;
+    try {
+      enabled = window.localStorage?.getItem("visionLabsMovementDebug") === "1";
+    } catch {
+      enabled = false;
+    }
+    if (!enabled) return;
+    const progressBucket = Math.floor(event.progress * 20);
+    const key = `${event.entityType}:${event.entityId}:${event.phaseIndex}:${event.source}:${event.pointCount}:${progressBucket}`;
+    if (key === lastMovementPlaybackDebugKey) return;
+    lastMovementPlaybackDebugKey = key;
+    // Vision Labs R&D instrumentation. Remove or replace with a structured
+    // debug channel before productionizing movement playback.
+    console.debug("[movement-playback]", event);
+  }
+
   function interpolateBallPath(
     fromBall: PhaseBallSnapshot | null,
     toBall: PhaseBallSnapshot,
@@ -2394,15 +2254,18 @@ export async function createTacticalPadLiteSurface(
       y: fallbackStart.y + (toBall.y - fallbackStart.y) * progress,
     };
     return (
-      interpolateEntityMovementPath(
-        "ball",
-        toBall.id,
+      interpolateMovementEntity({
+        paths: movementPaths,
+        entityType: "ball",
+        entityId: toBall.id,
         phaseIndex,
-        fallbackStart,
-        toBall,
+        fromPoint: fallbackStart,
+        toPoint: toBall,
         progress,
-        toBall.path,
-      ) ?? fallbackPoint
+        fallbackPath: toBall.path,
+        minPointDistance: MOVEMENT_PATH_MIN_POINT_DISTANCE,
+        debug: emitMovementPlaybackDebug,
+      }) ?? fallbackPoint
     );
   }
 
@@ -2429,14 +2292,17 @@ export async function createTacticalPadLiteSurface(
         const fromPoint = fromSnapshot.players[idx];
         const toPoint = toSnapshot.players[idx];
         if (!fromPoint || !toPoint) continue;
-        const pathPoint = interpolateEntityMovementPath(
-          "player",
-          player.id,
-          activeSegmentIndex,
+        const pathPoint = interpolateMovementEntity({
+          paths: movementPaths,
+          entityType: "player",
+          entityId: player.id,
+          phaseIndex: activeSegmentIndex,
           fromPoint,
           toPoint,
           progress,
-        );
+          minPointDistance: MOVEMENT_PATH_MIN_POINT_DISTANCE,
+          debug: emitMovementPlaybackDebug,
+        });
         player.current =
           pathPoint ?? {
             x: fromPoint.x + (toPoint.x - fromPoint.x) * progress,
@@ -3065,6 +2931,7 @@ export async function createTacticalPadLiteSurface(
       releaseActiveDrag();
       clearSelectedItem();
       resetActiveMovementPathDraft();
+      isFreeBallPathMode = false;
       cancelPlaybackAnimation();
       startPositions = captureCurrentSnapshot();
       phases = [];
@@ -3077,6 +2944,7 @@ export async function createTacticalPadLiteSurface(
       releaseActiveDrag();
       clearSelectedItem();
       resetActiveMovementPathDraft();
+      isFreeBallPathMode = false;
       cancelPlaybackAnimation();
       const targetPhaseIndex = phases.length;
       phases = [...phases, captureCurrentSnapshot(targetPhaseIndex)];
@@ -3087,6 +2955,7 @@ export async function createTacticalPadLiteSurface(
       releaseActiveDrag();
       clearSelectedItem();
       resetActiveMovementPathDraft();
+      isFreeBallPathMode = false;
       cancelPlaybackAnimation();
       if (phases.length <= 0) return;
       phases = phases.slice(0, -1);
@@ -3132,6 +3001,7 @@ export async function createTacticalPadLiteSurface(
       }
     },
     freeBall: detachPrimaryBall,
+    clearFreeBallPath: clearPrimaryFreeBallMovementPath,
     setFreeBallPathMode: (enabled) => {
       if (surfaceVariant !== "tactical") return;
       const nextEnabled = Boolean(enabled);

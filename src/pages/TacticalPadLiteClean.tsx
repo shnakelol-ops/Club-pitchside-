@@ -2514,6 +2514,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   }, [isWhiteboardMode, whiteboardBubbleOpen]);
 
   const handlePlayPress = () => {
+    exitBallPathMode();
     if (isPaused) {
       surfaceRef.current?.resumePlayback();
     } else {
@@ -2944,12 +2945,22 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     setItems([]);
   };
 
-  const freeBall = () => {
-    if (isPortraitViewingMode || isPlaybackLocked) return;
-    surfaceRef.current?.freeBall();
+  const exitBallPathMode = () => {
     surfaceRef.current?.setFreeBallPathMode(false);
     setTacticalTool("move");
     surfaceRef.current?.setWhiteboardDrawTool("move");
+  };
+
+  const freeBall = () => {
+    if (isPortraitViewingMode || isPlaybackLocked) return;
+    surfaceRef.current?.freeBall();
+    exitBallPathMode();
+  };
+
+  const clearFreeBallPath = () => {
+    if (isPortraitViewingMode || isPlaybackLocked) return;
+    surfaceRef.current?.clearFreeBallPath();
+    exitBallPathMode();
   };
 
   const handleWhiteboardBubblePointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
@@ -3658,6 +3669,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                 disabled={isPlaybackLocked}
                 style={isPlaybackLocked ? DISABLED_CONTROL_BUTTON_STYLE : SET_START_BUTTON_STYLE}
                 onClick={() => {
+                  exitBallPathMode();
                   surfaceRef.current?.setStart();
                   closeControlsMenu();
                 }}
@@ -3672,6 +3684,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                 disabled={isPlaybackLocked}
                 style={isPlaybackLocked ? DISABLED_CONTROL_BUTTON_STYLE : ADD_PHASE_BUTTON_STYLE}
                 onClick={() => {
+                  exitBallPathMode();
                   surfaceRef.current?.addPhase();
                   closeControlsMenu();
                 }}
@@ -3704,6 +3717,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                 disabled={phaseCount <= 0}
                 style={phaseCount <= 0 ? DISABLED_CONTROL_BUTTON_STYLE : UNDO_PHASE_BUTTON_STYLE}
                 onClick={() => {
+                  exitBallPathMode();
                   surfaceRef.current?.undoPhase();
                   closeControlsMenu();
                 }}
@@ -3951,6 +3965,14 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                           onClick={freeBall}
                         >
                           Free Ball
+                        </button>
+                        <button
+                          type="button"
+                          style={{ ...coachHubActionButtonStyle, gridColumn: "1 / -1" }}
+                          disabled={isPlaybackLocked}
+                          onClick={clearFreeBallPath}
+                        >
+                          Clear Ball Path
                         </button>
                         {TACTICAL_ITEM_CHOICES.map((choice) => (
                           <button
@@ -4211,6 +4233,14 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                     onClick={freeBall}
                   >
                     Free Ball
+                  </button>
+                  <button
+                    type="button"
+                    style={{ ...coachHubActionButtonStyle, gridColumn: "1 / -1" }}
+                    disabled={isPlaybackLocked}
+                    onClick={clearFreeBallPath}
+                  >
+                    Clear Ball Path
                   </button>
                   {TACTICAL_ITEM_CHOICES.map((choice) => (
                     <button
