@@ -71,11 +71,19 @@ const PLAYBACK_SPEED_OPTIONS: ReadonlyArray<{ multiplier: number; label: string 
 const DEFAULT_PLAYBACK_SPEED_MULTIPLIER = 1.0;
 const TACTICAL_ITEM_CHOICES: ReadonlyArray<{ label: string; type: TacticalItem["type"] }> = [
   { label: "Cone", type: "cone" },
+  { label: "Disc Cone", type: "discCone" },
   { label: "Pole", type: "pole" },
+  { label: "Mini Goal", type: "miniGoal" },
+  { label: "Mannequin", type: "mannequin" },
   { label: "Ladder", type: "ladder" },
+  { label: "Hurdle", type: "hurdle" },
   { label: "Tackle Bag", type: "tackleBag" },
-  { label: "Football", type: "football" },
-  { label: "Sliotar", type: "sliotar" },
+  { label: "Football (S)", type: "footballSmall" },
+  { label: "Football (M)", type: "football" },
+  { label: "Football (L)", type: "footballLarge" },
+  { label: "Sliotar (S)", type: "sliotarSmall" },
+  { label: "Sliotar (M)", type: "sliotar" },
+  { label: "Sliotar (L)", type: "sliotarLarge" },
 ];
 const ORIENTATION_SETTLE_DEBOUNCE_MS = 140;
 type WhiteboardToolControl =
@@ -2661,11 +2669,19 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
               x == null ||
               y == null ||
               (type !== "cone" &&
+                type !== "discCone" &&
                 type !== "pole" &&
+                type !== "miniGoal" &&
+                type !== "mannequin" &&
                 type !== "ladder" &&
+                type !== "hurdle" &&
                 type !== "tackleBag" &&
+                type !== "footballSmall" &&
                 type !== "football" &&
-                type !== "sliotar")
+                type !== "footballLarge" &&
+                type !== "sliotarSmall" &&
+                type !== "sliotar" &&
+                type !== "sliotarLarge")
             ) {
               return null;
             }

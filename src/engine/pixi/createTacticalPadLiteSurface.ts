@@ -63,7 +63,21 @@ type TacticalPlayer = TacticalPlayerKitFields & {
 };
 
 export type WhiteboardTokenColor = PremiumPlayerTokenColor;
-export type FlowItemType = "cone" | "pole" | "ladder" | "tackleBag" | "football" | "sliotar";
+export type FlowItemType =
+  | "cone"
+  | "discCone"
+  | "pole"
+  | "miniGoal"
+  | "mannequin"
+  | "ladder"
+  | "hurdle"
+  | "tackleBag"
+  | "footballSmall"
+  | "football"
+  | "footballLarge"
+  | "sliotarSmall"
+  | "sliotar"
+  | "sliotarLarge";
 export type ItemMode = "edit" | "locked";
 export type TacticalItem = {
   id: string;
@@ -470,11 +484,19 @@ function sanitizeTacticalItemCandidate(input: unknown): TacticalItem | null {
   const type = input.type;
   if (
     type !== "cone" &&
+    type !== "discCone" &&
     type !== "pole" &&
+    type !== "miniGoal" &&
+    type !== "mannequin" &&
     type !== "ladder" &&
+    type !== "hurdle" &&
     type !== "tackleBag" &&
+    type !== "footballSmall" &&
     type !== "football" &&
-    type !== "sliotar"
+    type !== "footballLarge" &&
+    type !== "sliotarSmall" &&
+    type !== "sliotar" &&
+    type !== "sliotarLarge"
   ) {
     return null;
   }
@@ -683,7 +705,14 @@ function normalizeTacticalItem(item: TacticalItem): TacticalItem {
 }
 
 function isBallItem(item: Pick<TacticalItem, "type">): boolean {
-  return item.type === "football" || item.type === "sliotar";
+  return (
+    item.type === "footballSmall" ||
+    item.type === "football" ||
+    item.type === "footballLarge" ||
+    item.type === "sliotarSmall" ||
+    item.type === "sliotar" ||
+    item.type === "sliotarLarge"
+  );
 }
 
 function getStagePointFromEvent(
@@ -1451,7 +1480,14 @@ export async function createTacticalPadLiteSurface(
 
   function drawTacticalItemGraphic(graphic: Graphics, item: TacticalItem): void {
     graphic.clear();
+    const shadowColor = 0x020617;
+    if (item.type === "discCone") {
+      graphic.ellipse(0, TACTICAL_ITEM_HALF_SIZE * 0.58, TACTICAL_ITEM_HALF_SIZE * 0.86, TACTICAL_ITEM_HALF_SIZE * 0.28).fill({ color: shadowColor, alpha: 0.14 });
+      graphic.ellipse(0, 0, TACTICAL_ITEM_HALF_SIZE * 0.9, TACTICAL_ITEM_HALF_SIZE * 0.34).fill(0xfb923c).stroke({ color: 0xc2410c, width: 0.24 });
+      return;
+    }
     if (item.type === "cone") {
+      graphic.ellipse(0, TACTICAL_ITEM_HALF_SIZE * 0.68, TACTICAL_ITEM_HALF_SIZE * 0.86, TACTICAL_ITEM_HALF_SIZE * 0.3).fill({ color: shadowColor, alpha: 0.16 });
       graphic
         .poly([
           -TACTICAL_ITEM_HALF_SIZE,
@@ -1466,6 +1502,7 @@ export async function createTacticalPadLiteSurface(
       return;
     }
     if (item.type === "pole") {
+      graphic.ellipse(0, TACTICAL_ITEM_HALF_SIZE * 0.76, TACTICAL_ITEM_HALF_SIZE * 0.6, TACTICAL_ITEM_HALF_SIZE * 0.24).fill({ color: shadowColor, alpha: 0.16 });
       graphic
         .roundRect(-0.45, -TACTICAL_ITEM_HALF_SIZE, 0.9, TACTICAL_ITEM_HALF_SIZE * 2, 0.35)
         .fill(0xfde68a)
@@ -1495,6 +1532,16 @@ export async function createTacticalPadLiteSurface(
           .lineTo(left + width - railInset, y)
           .stroke({ color: 0x94a3b8, width: 0.24 });
       }
+      graphic.ellipse(0, top + height + TACTICAL_ITEM_HALF_SIZE * 0.22, width * 0.34, TACTICAL_ITEM_HALF_SIZE * 0.2).fill({ color: shadowColor, alpha: 0.14 });
+      return;
+    }
+    if (item.type === "hurdle") {
+      const width = TACTICAL_ITEM_HALF_SIZE * 2.3;
+      const height = TACTICAL_ITEM_HALF_SIZE * 1.3;
+      graphic.ellipse(0, TACTICAL_ITEM_HALF_SIZE * 0.72, width * 0.35, TACTICAL_ITEM_HALF_SIZE * 0.22).fill({ color: shadowColor, alpha: 0.14 });
+      graphic.roundRect(-width / 2, -height * 0.12, width, height * 0.22, 0.12).fill(0xef4444).stroke({ color: 0x991b1b, width: 0.2 });
+      graphic.roundRect(-width / 2, -height * 0.12, width * 0.14, height, 0.1).fill(0xfca5a5).stroke({ color: 0x991b1b, width: 0.18 });
+      graphic.roundRect(width / 2 - width * 0.14, -height * 0.12, width * 0.14, height, 0.1).fill(0xfca5a5).stroke({ color: 0x991b1b, width: 0.18 });
       return;
     }
     if (item.type === "tackleBag") {
@@ -1506,8 +1553,8 @@ export async function createTacticalPadLiteSurface(
         .stroke({ color: 0x0f172a, width: 0.36 });
       return;
     }
-    if (item.type === "football") {
-      const radius = TACTICAL_ITEM_HALF_SIZE * 0.9;
+    if (item.type === "footballSmall" || item.type === "football" || item.type === "footballLarge") {
+      const radius = TACTICAL_ITEM_HALF_SIZE * (item.type === "footballSmall" ? 0.72 : item.type === "footballLarge" ? 1.12 : 0.9);
       graphic.circle(0, radius * 0.24, radius * 0.86).fill({ color: 0x020617, alpha: 0.12 });
       graphic.circle(0, 0, radius).fill(0xf8fafc).stroke({ color: 0x475569, width: 0.26 });
       graphic.circle(-radius * 0.22, -radius * 0.3, radius * 0.29).fill({ color: 0xffffff, alpha: 0.42 });
@@ -1529,8 +1576,8 @@ export async function createTacticalPadLiteSurface(
         .stroke({ color: 0x64748b, width: 0.12, alpha: 0.74 });
       return;
     }
-    if (item.type === "sliotar") {
-      const radius = TACTICAL_ITEM_HALF_SIZE * 0.74;
+    if (item.type === "sliotarSmall" || item.type === "sliotar" || item.type === "sliotarLarge") {
+      const radius = TACTICAL_ITEM_HALF_SIZE * (item.type === "sliotarSmall" ? 0.6 : item.type === "sliotarLarge" ? 0.9 : 0.74);
       graphic.circle(0, radius * 0.22, radius * 0.82).fill({ color: 0x111827, alpha: 0.1 });
       graphic.circle(0, 0, radius).fill(0xfff3d6).stroke({ color: 0x6b7280, width: 0.24 });
       graphic.circle(-radius * 0.22, -radius * 0.32, radius * 0.26).fill({ color: 0xffffff, alpha: 0.45 });
