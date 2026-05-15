@@ -1,0 +1,27 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="PaircView PV monogram">
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="#0A4A34" />
+  <path
+    d="M92 66V138"
+    stroke="#FFFFFF"
+    stroke-width="22"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    shape-rendering="geometricPrecision"
+  />
+  <path
+    d="M92 66H136C158 66 174 81 174 102C174 123 158 138 136 138H92"
+    stroke="#FFFFFF"
+    stroke-width="22"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    shape-rendering="geometricPrecision"
+  />
+  <path
+    d="M90 156L128 202L166 156"
+    stroke="#FFFFFF"
+    stroke-width="22"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    shape-rendering="geometricPrecision"
+  />
+</svg>

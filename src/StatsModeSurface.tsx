@@ -5638,7 +5638,7 @@ export default function StatsModeSurface() {
                 : "0 4px 10px rgba(2, 8, 15, 0.22)",
             }}
           >
-            <img src="/icon-tv-3.svg" alt="TacaVision menu" aria-hidden="true" style={EVENT_PICKER_LOGO_STYLE} />
+            <img src="/icon-pv-1.svg" alt="PaircView menu" aria-hidden="true" style={EVENT_PICKER_LOGO_STYLE} />
           </button>
       </div>
         <div

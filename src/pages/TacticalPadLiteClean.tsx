@@ -4373,7 +4373,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             }
           >
             <span className="tool-bubble-icon" aria-hidden="true">
-              <img className="tool-bubble-logo" src="/icon-tv-3.svg" alt="TacaVision menu" />
+              <img className="tool-bubble-logo" src="/icon-pv-1.svg" alt="PaircView menu" />
             </span>
           </button>
         ) : null}
