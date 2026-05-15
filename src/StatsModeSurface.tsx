@@ -2328,6 +2328,25 @@ const PANEL_CSS = `
   }
 }
 
+@media (orientation: portrait) {
+  .scoreboard-strip {
+    top: max(8px, calc(env(safe-area-inset-top, 0px) + 6px));
+  }
+
+  .match-stopwatch {
+    top: max(14px, calc(env(safe-area-inset-top, 0px) + 10px));
+    right: max(10px, calc(env(safe-area-inset-right, 0px) + 8px));
+  }
+
+  .review-strip--portrait {
+    top: max(104px, calc(env(safe-area-inset-top, 0px) + 100px));
+  }
+
+  .review-event-card--portrait {
+    top: max(104px, calc(env(safe-area-inset-top, 0px) + 100px));
+  }
+}
+
 @media (max-width: 700px) and (orientation: portrait) {
   .stats-stadium-light {
     top: 5%;
@@ -5648,6 +5667,7 @@ export default function StatsModeSurface() {
             zIndex: 1,
             width: "100%",
             height: "100%",
+            transform: isLandscape ? "none" : "translateY(-28px)",
             background: isPitchReady
               ? "transparent"
               : "radial-gradient(ellipse at center, rgba(29,90,54,0.96) 0%, rgba(29,90,54,0.88) 40%, rgba(29,90,54,0) 70%)",
