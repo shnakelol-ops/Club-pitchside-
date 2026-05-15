@@ -1509,109 +1509,123 @@ export async function createTacticalPadLiteSurface(
   // Custom in-house renderer inspired by real GAA football characteristics.
   // This is procedural tactical artwork and does not copy branded ball graphics.
   function drawPremiumFootball(graphic: Graphics, radius: number): void {
-    const shellStroke = clampStrokeWidth(radius * 0.11, 0.2, 0.34);
-    const primarySeamStroke = clampStrokeWidth(radius * 0.14, 0.22, 0.36);
-    const seamDetailStroke = clampStrokeWidth(radius * 0.1, 0.18, 0.3);
+    const shellStroke = clampStrokeWidth(radius * 0.14, 0.24, 0.42);
+    const primarySeamStroke = clampStrokeWidth(radius * 0.16, 0.24, 0.4);
+    const seamDetailStroke = clampStrokeWidth(radius * 0.12, 0.2, 0.34);
 
     drawBallGroundingShadows(graphic, radius, {
-      castYOffset: 0.58,
-      castXScale: 0.98,
-      castYScale: 0.34,
-      castAlpha: 0.1,
-      contactYOffset: 0.8,
-      contactXScale: 0.7,
-      contactYScale: 0.2,
-      contactAlpha: 0.17,
+      castYOffset: 0.6,
+      castXScale: 1.06,
+      castYScale: 0.36,
+      castAlpha: 0.12,
+      contactYOffset: 0.84,
+      contactXScale: 0.78,
+      contactYScale: 0.23,
+      contactAlpha: 0.2,
     });
 
     graphic
       .circle(0, 0, radius)
-      .fill(0xf3f4f1)
-      .stroke({ color: 0x636f79, width: shellStroke, alpha: 0.9, alignment: 0.5 });
+      .fill(0x98a2aa)
+      .circle(0, -radius * 0.015, radius * 0.92)
+      .fill(0xf4f3ec)
+      .stroke({ color: 0x5e6972, width: shellStroke, alpha: 0.9, alignment: 0.5 });
 
-    // Soft shell lift from upper-left and gentle lower rim shade for depth.
+    // Chunkier tactical shading boosts object presence at phone-scale.
     graphic
-      .ellipse(-radius * 0.33, -radius * 0.36, radius * 0.44, radius * 0.27)
-      .fill({ color: 0xffffff, alpha: 0.44 });
+      .ellipse(radius * 0.04, radius * 0.53, radius * 0.78, radius * 0.35)
+      .fill({ color: 0x5e6872, alpha: 0.23 });
     graphic
-      .ellipse(-radius * 0.1, -radius * 0.58, radius * 0.2, radius * 0.1)
-      .fill({ color: 0xffffff, alpha: 0.2 });
+      .ellipse(-radius * 0.3, -radius * 0.36, radius * 0.48, radius * 0.28)
+      .fill({ color: 0xffffff, alpha: 0.48 });
     graphic
-      .ellipse(radius * 0.04, radius * 0.52, radius * 0.72, radius * 0.32)
-      .fill({ color: 0x616d78, alpha: 0.19 });
+      .ellipse(-radius * 0.07, -radius * 0.58, radius * 0.23, radius * 0.11)
+      .fill({ color: 0xffffff, alpha: 0.26 });
 
     graphic
-      .arc(0, 0, radius * 0.73, Math.PI * 0.2, Math.PI * 0.8)
-      .stroke({ color: 0x5e6a73, width: primarySeamStroke, alpha: 0.86, cap: "round", join: "round" });
+      .arc(0, 0, radius * 0.72, Math.PI * 0.2, Math.PI * 0.8)
+      .stroke({ color: 0x5a6670, width: primarySeamStroke, alpha: 0.88, cap: "round", join: "round" });
     graphic
-      .arc(0, 0, radius * 0.73, Math.PI * 1.2, Math.PI * 1.8)
-      .stroke({ color: 0x5e6a73, width: primarySeamStroke, alpha: 0.86, cap: "round", join: "round" });
+      .arc(0, 0, radius * 0.72, Math.PI * 1.2, Math.PI * 1.8)
+      .stroke({ color: 0x5a6670, width: primarySeamStroke, alpha: 0.88, cap: "round", join: "round" });
     graphic
-      .moveTo(-radius * 0.62, -radius * 0.04)
+      .moveTo(-radius * 0.63, -radius * 0.04)
       .lineTo(-radius * 0.2, radius * 0.03)
-      .moveTo(radius * 0.62, -radius * 0.04)
+      .moveTo(radius * 0.63, -radius * 0.04)
       .lineTo(radius * 0.2, radius * 0.03)
-      .stroke({ color: 0x66737f, width: seamDetailStroke, alpha: 0.79, cap: "round", join: "round" });
+      .stroke({ color: 0x64717c, width: seamDetailStroke, alpha: 0.82, cap: "round", join: "round" });
     graphic
       .moveTo(0, -radius * 0.62)
       .lineTo(0, -radius * 0.24)
       .moveTo(0, radius * 0.24)
       .lineTo(0, radius * 0.62)
-      .stroke({ color: 0x62707b, width: seamDetailStroke, alpha: 0.56, cap: "round", join: "round" });
+      .stroke({ color: 0x5f6b76, width: seamDetailStroke, alpha: 0.64, cap: "round", join: "round" });
+
+    const stitchTickStroke = clampStrokeWidth(radius * 0.09, 0.16, 0.24);
+    const stitchTickOffsets = [-0.46, -0.3, -0.14, 0.14, 0.3, 0.46];
+    for (const offset of stitchTickOffsets) {
+      const x = radius * offset;
+      graphic
+        .moveTo(x - radius * 0.028, -radius * 0.03)
+        .lineTo(x + radius * 0.028, radius * 0.03);
+    }
+    graphic.stroke({ color: 0x727f8a, width: stitchTickStroke, alpha: 0.56, cap: "round", join: "round" });
   }
 
   // Custom in-house renderer inspired by real sliotar seam/ridge behavior.
   // This remains original tactical artwork and does not copy branded assets.
   function drawPremiumSliotar(graphic: Graphics, radius: number): void {
-    const shellStroke = clampStrokeWidth(radius * 0.12, 0.19, 0.33);
-    const ridgeStroke = clampStrokeWidth(radius * 0.17, 0.22, 0.38);
-    const stitchStroke = clampStrokeWidth(radius * 0.13, 0.18, 0.3);
+    const shellStroke = clampStrokeWidth(radius * 0.14, 0.21, 0.36);
+    const ridgeStroke = clampStrokeWidth(radius * 0.22, 0.28, 0.48);
+    const stitchStroke = clampStrokeWidth(radius * 0.15, 0.2, 0.34);
 
     drawBallGroundingShadows(graphic, radius, {
-      castYOffset: 0.55,
-      castXScale: 0.88,
-      castYScale: 0.3,
-      castAlpha: 0.1,
-      contactYOffset: 0.76,
-      contactXScale: 0.63,
-      contactYScale: 0.18,
-      contactAlpha: 0.17,
+      castYOffset: 0.57,
+      castXScale: 0.92,
+      castYScale: 0.31,
+      castAlpha: 0.12,
+      contactYOffset: 0.79,
+      contactXScale: 0.66,
+      contactYScale: 0.2,
+      contactAlpha: 0.2,
     });
 
     graphic
       .circle(0, 0, radius)
-      .fill(0xf8e4a6)
-      .stroke({ color: 0x79653c, width: shellStroke, alpha: 0.9, alignment: 0.5 });
+      .fill(0x9f8144)
+      .circle(0, -radius * 0.01, radius * 0.91)
+      .fill(0xf3d579)
+      .stroke({ color: 0x6f5930, width: shellStroke, alpha: 0.92, alignment: 0.5 });
     graphic
-      .ellipse(-radius * 0.28, -radius * 0.33, radius * 0.4, radius * 0.23)
-      .fill({ color: 0xfff6d8, alpha: 0.42 });
+      .ellipse(radius * 0.04, radius * 0.52, radius * 0.68, radius * 0.33)
+      .fill({ color: 0x7a6337, alpha: 0.23 });
     graphic
-      .ellipse(radius * 0.03, radius * 0.5, radius * 0.65, radius * 0.31)
-      .fill({ color: 0x8b7445, alpha: 0.16 });
+      .ellipse(-radius * 0.3, -radius * 0.34, radius * 0.42, radius * 0.25)
+      .fill({ color: 0xfff5d2, alpha: 0.44 });
 
     // Dual ridge pass gives sliotar seam a subtle raised look at small scale.
     graphic
       .moveTo(-radius * 0.8, -radius * 0.18)
       .quadraticCurveTo(0, -radius * 0.76, radius * 0.8, radius * 0.04)
-      .stroke({ color: 0x6f5930, width: ridgeStroke, alpha: 0.86, cap: "round", join: "round" });
+      .stroke({ color: 0x664f2a, width: ridgeStroke, alpha: 0.9, cap: "round", join: "round" });
     graphic
       .moveTo(-radius * 0.8, -radius * 0.19)
       .quadraticCurveTo(0, -radius * 0.73, radius * 0.8, radius * 0.01)
-      .stroke({ color: 0xaa9365, width: clampStrokeWidth(ridgeStroke * 0.44, 0.16, 0.2), alpha: 0.42, cap: "round", join: "round" });
+      .stroke({ color: 0xb99f65, width: clampStrokeWidth(ridgeStroke * 0.42, 0.16, 0.21), alpha: 0.52, cap: "round", join: "round" });
     graphic
       .moveTo(-radius * 0.8, radius * 0.14)
       .quadraticCurveTo(0, -radius * 0.44, radius * 0.8, radius * 0.34)
-      .stroke({ color: 0x775f36, width: ridgeStroke, alpha: 0.78, cap: "round", join: "round" });
+      .stroke({ color: 0x71572f, width: ridgeStroke, alpha: 0.84, cap: "round", join: "round" });
 
-    const stitchOffsets = [-0.56, -0.3, -0.04, 0.22, 0.48];
+    const stitchOffsets = [-0.58, -0.38, -0.18, 0.02, 0.22, 0.42, 0.62];
     for (const offset of stitchOffsets) {
       const x = radius * offset;
-      const y = radius * (0.08 + offset * 0.2);
+      const y = radius * (0.06 + offset * 0.18);
       graphic
-        .moveTo(x - radius * 0.055, y - radius * 0.042)
-        .lineTo(x + radius * 0.055, y + radius * 0.042);
+        .moveTo(x - radius * 0.062, y - radius * 0.052)
+        .lineTo(x + radius * 0.062, y + radius * 0.052);
     }
-    graphic.stroke({ color: 0x6a5330, width: stitchStroke, alpha: 0.72, cap: "round", join: "round" });
+    graphic.stroke({ color: 0x5d4725, width: stitchStroke, alpha: 0.78, cap: "round", join: "round" });
   }
 
   function drawTacticalItemGraphic(graphic: Graphics, item: TacticalItem): void {
