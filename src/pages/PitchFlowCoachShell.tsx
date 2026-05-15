@@ -946,7 +946,7 @@ function BoardPage() {
         <div className="pf-header-top">
           <div className="pf-wordmark">
             <div className="pf-wordmark-brand">
-              <img className="pf-logo" src="/icon-tv-3.svg" alt="TacaVision symbol" />
+              <img className="pf-logo" src="/pv-logo-icon.svg" alt="TacaVision symbol" />
               <h1 className="pf-title">TacaVision</h1>
             </div>
             <span className="pf-title-accent" aria-hidden="true" />
