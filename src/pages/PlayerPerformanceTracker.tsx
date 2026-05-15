@@ -8,12 +8,14 @@ import { loadSavedSquads, loadSeasonTable, loadSessionState, saveSavedSquads, sa
 import { type SavedSquad, type SeasonPlayerStat, type TrainingLogEntry, type TrainingPeriod, type TrainingSessionState } from "../features/player-performance-tracker/model/trainingTypes";
 
 function id(){return `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;}
+type TrackerScreenView = "setup" | "live" | "ratings" | "season";
 
 export default function PlayerPerformanceTracker(){
   const [state,setState]=useState<TrainingSessionState>(()=>loadSessionState());
   const [seasonTable,setSeasonTable]=useState<SeasonPlayerStat[]>(()=>loadSeasonTable());
   const [squads,setSquads]=useState<SavedSquad[]>(()=>loadSavedSquads());
   const [activeSquadId,setActiveSquadId]=useState<string|null>(null);
+  const [screen,setScreen]=useState<TrackerScreenView>(()=>!state.hasStarted?"setup":state.activeTab==="ratings"?"ratings":"live");
 
   useEffect(()=>{saveSessionState(state);},[state]);
   useEffect(()=>{if(!state.hasStarted||!state.isRunning) return;const t=window.setInterval(()=>setState((s)=>({...s,elapsedSeconds:Math.max(0,(s.elapsedSeconds||0)+1)})),1000);return ()=>window.clearInterval(t);},[state.hasStarted,state.isRunning]);
@@ -40,11 +42,11 @@ export default function PlayerPerformanceTracker(){
 
   const onTapPlayer=(playerId:string)=>{if(!state.activeEventKey) return; const player=state.players.find((p)=>p.id===playerId); const ev=TRAINING_EVENTS.find((e)=>e.key===state.activeEventKey); if(!player||!ev) return; const log:TrainingLogEntry={id:id(),eventKey:ev.key,eventLabel:ev.label,points:ev.points,category:ev.category,playerId:player.id,playerName:player.name,playerNumber:player.number,elapsedSeconds:Math.max(0,state.elapsedSeconds||0),period:state.period,createdAt:Date.now()}; setState((s)=>({...s,logs:[...s.logs,log]}));};
 
-  if(!state.hasStarted) return <SetupScreen sessionName={state.sessionName} players={state.players}
+  if(screen==="setup") return <SetupScreen sessionName={state.sessionName} players={state.players}
    onSessionNameChange={(sessionName)=>setState((s)=>({...s,sessionName}))}
    onPlayerChange={(id,updates)=>setState((s)=>({...s,players:s.players.map((p)=>p.id===id?{...p,...updates}:p)}))}
    onAddPlayer={()=>setState((s)=>s.players.length>=30?s:{...s,players:[...s.players,{id:`player-${id()}`,name:`Player ${s.players.length+1}`,number:s.players.length+1}]})}
-   onStart={()=>setState((s)=>({...s,hasStarted:true,activeTab:"tracker"}))}
+   onStart={()=>{setState((s)=>({...s,hasStarted:true,activeTab:"tracker"}));setScreen("live");}}
    seasonTable={seasonTable}
    onClearSeason={()=>{ if(window.confirm("Clear season table?")){ setSeasonTable([]); saveSeasonTable([]);} }}
    squads={squads}
@@ -58,9 +60,9 @@ export default function PlayerPerformanceTracker(){
       <header className="ppt-header">
         <h1 className="text-xl font-semibold">Vision Training</h1>
         <p className="text-sm text-slate-300">Player Performance Tracker</p>
-        <div style={{display:"flex",gap:8,marginTop:8}}><button className="ppt-action" onClick={()=>setState((s)=>({...s,hasStarted:false,isRunning:false,activeTab:"tracker"}))}>Back to Squad</button><button className="ppt-action primary" onClick={saveCurrentSessionToSeason}>Save Session to Season</button></div>
+        <div style={{display:"flex",gap:8,marginTop:8}}><button className="ppt-action" onClick={()=>{setState((s)=>({...s,hasStarted:false,isRunning:false,activeTab:"tracker"}));setScreen("setup");}}>Back to Squad</button><button className="ppt-action primary" onClick={saveCurrentSessionToSeason}>Save Session to Season</button><button className="ppt-action" onClick={()=>setScreen("season")}>Season</button></div>
       </header>
-    {state.activeTab==='tracker' ? <TrackerScreen players={state.players} logs={state.logs} elapsedSeconds={state.elapsedSeconds} isRunning={state.isRunning} period={state.period} activeEventKey={state.activeEventKey}
+    {screen==="live" ? <TrackerScreen players={state.players} logs={state.logs} elapsedSeconds={state.elapsedSeconds} isRunning={state.isRunning} period={state.period} activeEventKey={state.activeEventKey}
       onToggleTimer={()=>setState((s)=>({...s,isRunning:!s.isRunning}))}
       onReset={()=>{if(window.confirm('Reset session timer and logs?')) setState((s)=>({...s,elapsedSeconds:0,logs:[],isRunning:false,lastDeleted:null}));}}
       onPeriod={(period:TrainingPeriod)=>setState((s)=>({...s,period}))}
@@ -69,15 +71,15 @@ export default function PlayerPerformanceTracker(){
       onDelete={(id)=>setState((s)=>{const found=s.logs.find((l)=>l.id===id)??null; return {...s,logs:s.logs.filter((l)=>l.id!==id),lastDeleted:found};})}
       onUndo={()=>setState((s)=>s.lastDeleted?{...s,logs:[...s.logs,s.lastDeleted],lastDeleted:null}:s)}
       lastDeleted={state.lastDeleted}
-    /> : <RatingsScreen players={state.players} logs={state.logs} ratings={ratings} />}
+    /> : screen==="ratings" ? <RatingsScreen players={state.players} logs={state.logs} ratings={ratings} /> : <section className="ppt-wrap"><section className="ppt-panel"><h2 className="ppt-ratings-title" style={{fontSize:24}}>Season</h2><p className="ppt-sub">Season screen shell is ready. Season table remains in setup for this pass.</p></section></section>}
     </div>
     <nav className="ppt-nav">
       <div className="ppt-nav-inner">
         <button
           type="button"
-          onClick={()=>setState((s)=>({...s,activeTab:'tracker'}))}
+          onClick={()=>{setState((s)=>({...s,activeTab:'tracker'}));setScreen("live");}}
           className={[
-            "ppt-nav-item",state.activeTab==='tracker' ? "active" : "inactive",
+            "ppt-nav-item",screen==="live" ? "active" : "inactive",
           ].join(" ")}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true" className="ppt-nav-icon"><path d="M2 13h4l3-8 4 14 3-8h6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -85,9 +87,9 @@ export default function PlayerPerformanceTracker(){
         </button>
         <button
           type="button"
-          onClick={()=>setState((s)=>({...s,activeTab:'ratings'}))}
+          onClick={()=>{setState((s)=>({...s,activeTab:'ratings'}));setScreen("ratings");}}
           className={[
-            "ppt-nav-item",state.activeTab==='ratings' ? "active" : "inactive",
+            "ppt-nav-item",screen==="ratings" ? "active" : "inactive",
           ].join(" ")}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true" className="ppt-nav-icon"><path d="M4 20V10m6 10V4m6 16v-7m4 7H2" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
