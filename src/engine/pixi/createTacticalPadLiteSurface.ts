@@ -100,6 +100,7 @@ export type TacticalPadLiteSurface = {
   pausePlayback: () => void;
   resumePlayback: () => void;
   setPlaybackSpeedMultiplier: (multiplier: number) => void;
+  freeBall: () => void;
   addTacticalPlayer: (team?: "BLUE" | "RED") => void;
   removeTacticalPlayer: (team?: "BLUE" | "RED") => void;
   getTacticalPlayer: (playerId: string) => TacticalPlayerKitSnapshot | null;
@@ -146,6 +147,9 @@ type PhaseBallSnapshot = {
   id: string;
   x: number;
   y: number;
+  attachedPlayerId: string | null;
+  isFree: boolean;
+  path?: NormalizedPoint[];
 };
 type PhaseSnapshot = {
   players: NormalizedPoint[];
@@ -159,6 +163,15 @@ const TACTICAL_PLAYER_VISUAL_SCALE = 0.8;
 const TACTICAL_ITEM_HALF_SIZE = 2.2;
 const TACTICAL_ITEM_DRAG_THRESHOLD_PX = 5;
 const TACTICAL_ITEM_TOUCH_HIT_DIAMETER_PX = 46;
+const ATTACHED_BALL_OFFSETS_WORLD: ReadonlyArray<Readonly<NormalizedPoint>> = [
+  { x: 6.4, y: -5.4 },
+  { x: 6.4, y: 5.4 },
+  { x: -6.4, y: -5.4 },
+  { x: -6.4, y: 5.4 },
+  { x: 7.2, y: 0 },
+  { x: -7.2, y: 0 },
+];
+const BALL_PATH_MIN_POINT_DISTANCE = 0.35;
 const WHITEBOARD_DEFAULT_STROKE_COLOR = 0x111111;
 const WHITEBOARD_BLUE_START_X = 30;
 const WHITEBOARD_RED_START_X = 70;
@@ -232,6 +245,12 @@ type PlayerSeed = {
 type TacticalSurfaceItem = TacticalItem & {
   graphic: Graphics;
   selectionGraphic: Graphics;
+};
+
+type BallRuntimeState = {
+  attachedPlayerId: string | null;
+  isFree: boolean;
+  path: NormalizedPoint[];
 };
 
 type DragPointerState = {
@@ -360,6 +379,13 @@ function sanitizeNormalizedPoint(point: unknown): NormalizedPoint | null {
   return { x, y };
 }
 
+function sanitizeBallPath(input: unknown): NormalizedPoint[] {
+  if (!Array.isArray(input)) return [];
+  return input
+    .map((entry) => sanitizeNormalizedPoint(entry))
+    .filter((entry): entry is NormalizedPoint => entry != null);
+}
+
 function sanitizeSnapshotFootball(input: unknown): PhaseBallSnapshot[] {
   if (!Array.isArray(input)) return [];
   return input
@@ -370,7 +396,20 @@ function sanitizeSnapshotFootball(input: unknown): PhaseBallSnapshot[] {
       const x = typeof entry.x === "number" && Number.isFinite(entry.x) ? clampNormalizedValue(entry.x) : null;
       const y = typeof entry.y === "number" && Number.isFinite(entry.y) ? clampNormalizedValue(entry.y) : null;
       if (x == null || y == null) return null;
-      return { id, x, y };
+      const attachedPlayerId =
+        typeof entry.attachedPlayerId === "string" && entry.attachedPlayerId.trim().length > 0
+          ? entry.attachedPlayerId.trim()
+          : null;
+      const isFree = typeof entry.isFree === "boolean" ? entry.isFree : attachedPlayerId == null;
+      const path = isFree ? sanitizeBallPath(entry.path) : [];
+      return {
+        id,
+        x,
+        y,
+        attachedPlayerId: isFree ? null : attachedPlayerId,
+        isFree,
+        ...(isFree && path.length > 0 ? { path } : {}),
+      };
     })
     .filter((entry): entry is PhaseBallSnapshot => entry != null);
 }
@@ -750,6 +789,10 @@ export async function createTacticalPadLiteSurface(
   const playersLayer = new Container();
   world.addChild(playersLayer);
 
+  const ballLayer = new Container();
+  ballLayer.eventMode = "passive";
+  world.addChild(ballLayer);
+
   const whiteboardInputLayer = new Container();
   whiteboardInputLayer.eventMode = "none";
   whiteboardInputLayer.hitArea = {
@@ -974,6 +1017,7 @@ export async function createTacticalPadLiteSurface(
   let activeWhiteboardTool: WhiteboardDrawTool = "move";
   let activeWhiteboardColor = options.whiteboardDrawColor ?? WHITEBOARD_DEFAULT_STROKE_COLOR;
   const tacticalItems: TacticalSurfaceItem[] = [];
+  const ballStatesByItemId = new Map<string, BallRuntimeState>();
   const itemSelectionLayer = new Container();
   itemSelectionLayer.eventMode = "none";
   world.addChild(itemSelectionLayer);
@@ -1054,6 +1098,180 @@ export async function createTacticalPadLiteSurface(
     );
   }
 
+  function getBallRuntimeState(item: Pick<TacticalItem, "id" | "x" | "y">): BallRuntimeState {
+    const existing = ballStatesByItemId.get(item.id);
+    if (existing) return existing;
+    const created: BallRuntimeState = {
+      attachedPlayerId: null,
+      isFree: true,
+      path: [{ x: clampNormalizedValue(item.x), y: clampNormalizedValue(item.y) }],
+    };
+    ballStatesByItemId.set(item.id, created);
+    return created;
+  }
+
+  function syncTacticalItemRenderLayer(item: TacticalSurfaceItem): void {
+    const targetLayer = isBallItem(item) ? ballLayer : itemsLayer;
+    if (item.graphic.parent !== targetLayer) {
+      targetLayer.addChild(item.graphic);
+    }
+  }
+
+  function getAttachedBallPositionForPlayer(player: TacticalPlayer): NormalizedPoint {
+    const playerWorld = mapper.normalizedToWorld(player.current);
+    for (const offset of ATTACHED_BALL_OFFSETS_WORLD) {
+      const worldPoint = {
+        x: playerWorld.x + offset.x,
+        y: playerWorld.y + offset.y,
+      };
+      if (
+        worldPoint.x >= 0 &&
+        worldPoint.x <= WORLD_SIZE.width &&
+        worldPoint.y >= 0 &&
+        worldPoint.y <= WORLD_SIZE.height
+      ) {
+        const normalized = mapper.worldToNormalized(worldPoint);
+        return {
+          x: clampNormalizedValue(normalized.x),
+          y: clampNormalizedValue(normalized.y),
+        };
+      }
+    }
+
+    const fallbackOffset = ATTACHED_BALL_OFFSETS_WORLD[0] ?? { x: 6.4, y: -5.4 };
+    const boundedWorld = {
+      x: clampWorld(playerWorld.x + fallbackOffset.x, WORLD_SIZE.width),
+      y: clampWorld(playerWorld.y + fallbackOffset.y, WORLD_SIZE.height),
+    };
+    const normalized = mapper.worldToNormalized(boundedWorld);
+    return {
+      x: clampNormalizedValue(normalized.x),
+      y: clampNormalizedValue(normalized.y),
+    };
+  }
+
+  function getAttachedBallPositionForPlayerId(playerId: string | null): NormalizedPoint | null {
+    if (!playerId) return null;
+    const player = players.find((entry) => entry.id === playerId);
+    if (!player) return null;
+    return getAttachedBallPositionForPlayer(player);
+  }
+
+  function applyBallRuntimeStateToItem(item: TacticalSurfaceItem): void {
+    if (!isBallItem(item)) return;
+    const state = getBallRuntimeState(item);
+    if (state.isFree) return;
+    const attachedPoint = getAttachedBallPositionForPlayerId(state.attachedPlayerId);
+    if (!attachedPoint) {
+      state.attachedPlayerId = null;
+      state.isFree = true;
+      state.path = [{ x: clampNormalizedValue(item.x), y: clampNormalizedValue(item.y) }];
+      return;
+    }
+    item.x = attachedPoint.x;
+    item.y = attachedPoint.y;
+  }
+
+  function resetBallMovementPath(item: TacticalSurfaceItem): void {
+    if (!isBallItem(item)) return;
+    const state = getBallRuntimeState(item);
+    state.path = [{ x: clampNormalizedValue(item.x), y: clampNormalizedValue(item.y) }];
+  }
+
+  function resetAllBallMovementPaths(): void {
+    for (const item of tacticalItems) {
+      if (!isBallItem(item)) continue;
+      applyBallRuntimeStateToItem(item);
+      resetBallMovementPath(item);
+    }
+  }
+
+  function appendBallMovementPathPoint(item: TacticalSurfaceItem): void {
+    if (!isBallItem(item)) return;
+    const state = getBallRuntimeState(item);
+    if (!state.isFree) return;
+    const nextPoint = {
+      x: clampNormalizedValue(item.x),
+      y: clampNormalizedValue(item.y),
+    };
+    const lastPoint = state.path[state.path.length - 1];
+    if (
+      lastPoint &&
+      Math.hypot(nextPoint.x - lastPoint.x, nextPoint.y - lastPoint.y) < BALL_PATH_MIN_POINT_DISTANCE
+    ) {
+      state.path[state.path.length - 1] = nextPoint;
+      return;
+    }
+    state.path.push(nextPoint);
+  }
+
+  function findPrimaryBallItem(): TacticalSurfaceItem | null {
+    if (selectedItemId) {
+      const selectedItem = findTacticalItemById(selectedItemId);
+      if (selectedItem && isBallItem(selectedItem)) return selectedItem;
+    }
+    return tacticalItems.find((item) => isBallItem(item)) ?? null;
+  }
+
+  function detachPrimaryBall(): void {
+    if (surfaceVariant !== "tactical" || isPlaybackInputLocked()) return;
+    const ball = findPrimaryBallItem();
+    if (!ball) return;
+    applyBallRuntimeStateToItem(ball);
+    const state = getBallRuntimeState(ball);
+    state.attachedPlayerId = null;
+    state.isFree = true;
+    state.path = [{ x: clampNormalizedValue(ball.x), y: clampNormalizedValue(ball.y) }];
+    setItemWorldPosition(ball, mapper);
+    renderTacticalItems();
+    syncWhiteboardTokenInputMode();
+  }
+
+  function attachPrimaryBallToPlayer(player: TacticalPlayer): void {
+    if (surfaceVariant !== "tactical" || isPlaybackInputLocked()) return;
+    const ball = findPrimaryBallItem();
+    if (!ball) return;
+    const attachedPoint = getAttachedBallPositionForPlayer(player);
+    const state = getBallRuntimeState(ball);
+    state.attachedPlayerId = player.id;
+    state.isFree = false;
+    state.path = [];
+    ball.x = attachedPoint.x;
+    ball.y = attachedPoint.y;
+    selectedItemId = null;
+    setItemWorldPosition(ball, mapper);
+    renderTacticalItems();
+    syncWhiteboardTokenInputMode();
+  }
+
+  function updateAttachedBallsForPlayer(playerId: string): void {
+    for (const item of tacticalItems) {
+      if (!isBallItem(item)) continue;
+      const state = getBallRuntimeState(item);
+      if (state.isFree || state.attachedPlayerId !== playerId) continue;
+      applyBallRuntimeStateToItem(item);
+      setItemWorldPosition(item, mapper);
+    }
+  }
+
+  function isFreeBallInteractionEnabled(item: TacticalSurfaceItem): boolean {
+    if (!isBallItem(item)) return false;
+    const state = getBallRuntimeState(item);
+    return (
+      surfaceVariant === "tactical" &&
+      state.isFree &&
+      activeWhiteboardTool === "move" &&
+      !isPlaybackInputLocked()
+    );
+  }
+
+  function canInteractWithTacticalItem(item: TacticalSurfaceItem): boolean {
+    if (isBallItem(item)) {
+      return isFreeBallInteractionEnabled(item);
+    }
+    return isItemInteractionEnabled();
+  }
+
   function updateDraggedPlayerFromEvent(event: unknown): void {
     if (!activeDrag || activeDrag.type !== "player" || isPlaybackInputLocked()) return;
     const activePlayerId = activeDrag.playerId;
@@ -1091,6 +1309,7 @@ export async function createTacticalPadLiteSurface(
       y: Math.max(NORMALIZED_MIN, Math.min(NORMALIZED_MAX, normalized.y)),
     };
     setTokenWorldPositionForPoint(dragPlayer, dragPlayer.current, mapper);
+    updateAttachedBallsForPlayer(dragPlayer.id);
     renderPlayerOriginGraphic();
   }
 
@@ -1108,8 +1327,9 @@ export async function createTacticalPadLiteSurface(
     }
     for (const item of tacticalItems) {
       const isCurrentItemDragging = draggingItemId === item.id;
-      item.graphic.eventMode = canInteractItems ? "static" : "none";
-      item.graphic.cursor = isCurrentItemDragging ? "grabbing" : canInteractItems ? "grab" : "default";
+      const canInteractWithItem = canInteractWithTacticalItem(item);
+      item.graphic.eventMode = canInteractWithItem ? "static" : "none";
+      item.graphic.cursor = isCurrentItemDragging ? "grabbing" : canInteractWithItem ? "grab" : "default";
     }
     if (!canInteractItems && selectedItemId !== null) {
       selectedItemId = null;
@@ -1339,6 +1559,8 @@ export async function createTacticalPadLiteSurface(
   function renderTacticalItems(): void {
     if (surfaceVariant !== "tactical") return;
     for (const item of tacticalItems) {
+      syncTacticalItemRenderLayer(item);
+      applyBallRuntimeStateToItem(item);
       setItemWorldPosition(item, mapper);
       drawTacticalItemGraphic(item.graphic, item);
       drawSelectedItemGraphic(item.selectionGraphic, item.id === selectedItemId);
@@ -1357,7 +1579,7 @@ export async function createTacticalPadLiteSurface(
   }
 
   function beginItemDrag(item: TacticalSurfaceItem, event: unknown): void {
-    if (!isItemInteractionEnabled()) return;
+    if (!canInteractWithTacticalItem(item)) return;
     if (activeDrag) return;
     selectedItemId = item.id;
     const pointerId = getPointerIdFromEvent(event);
@@ -1404,6 +1626,7 @@ export async function createTacticalPadLiteSurface(
       item.graphic.removeAllListeners();
       item.graphic.destroy();
       item.selectionGraphic.destroy();
+      ballStatesByItemId.delete(item.id);
       tacticalItems.splice(index, 1);
       if (selectedItemId === item.id) {
         selectedItemId = null;
@@ -1419,11 +1642,18 @@ export async function createTacticalPadLiteSurface(
         existingItem.type = nextItem.type;
         existingItem.x = nextItem.x;
         existingItem.y = nextItem.y;
+        syncTacticalItemRenderLayer(existingItem);
+        if (isBallItem(existingItem)) {
+          getBallRuntimeState(existingItem);
+        } else {
+          ballStatesByItemId.delete(existingItem.id);
+        }
         continue;
       }
       const graphic = new Graphics();
       graphic.eventMode = "none";
-      itemsLayer.addChild(graphic);
+      const targetLayer = isBallItem(nextItem) ? ballLayer : itemsLayer;
+      targetLayer.addChild(graphic);
       const selectionGraphic = new Graphics();
       selectionGraphic.eventMode = "none";
       itemSelectionLayer.addChild(selectionGraphic);
@@ -1432,6 +1662,9 @@ export async function createTacticalPadLiteSurface(
         graphic,
         selectionGraphic,
       };
+      if (isBallItem(createdItem)) {
+        getBallRuntimeState(createdItem);
+      }
       setItemTouchHitArea(createdItem, mapper);
       bindTacticalItemPointerDown(createdItem);
       tacticalItems.push(createdItem);
@@ -1443,7 +1676,6 @@ export async function createTacticalPadLiteSurface(
 
   function updateDraggedItemFromEvent(event: unknown): void {
     if (!activeDrag || activeDrag.type !== "item") return;
-    if (!isItemInteractionEnabled()) return;
     if (!isMatchingActivePointer(event)) return;
     const itemId = activeDrag.itemId;
     const item = findTacticalItemById(itemId);
@@ -1451,6 +1683,7 @@ export async function createTacticalPadLiteSurface(
       activeDrag = null;
       return;
     }
+    if (!canInteractWithTacticalItem(item)) return;
     if (!hasExceededDragThreshold(event, activeDrag)) return;
     activeDrag.hasCrossedThreshold = true;
     const pointerNormalized = getBoundedNormalizedPointFromEvent(event);
@@ -1461,6 +1694,12 @@ export async function createTacticalPadLiteSurface(
     };
     item.x = normalized.x;
     item.y = normalized.y;
+    if (isBallItem(item)) {
+      const state = getBallRuntimeState(item);
+      state.attachedPlayerId = null;
+      state.isFree = true;
+      appendBallMovementPathPoint(item);
+    }
     setItemWorldPosition(item, mapper);
     options.onItemMove?.(item.id, normalized.x, normalized.y);
   }
@@ -1474,6 +1713,11 @@ export async function createTacticalPadLiteSurface(
       if (player) {
         setPlayerDragVisualTarget(player, false);
         player.token.cursor = "grab";
+      }
+    } else if (activeDrag.type === "item") {
+      const item = findTacticalItemById(activeDrag.itemId);
+      if (item && isBallItem(item)) {
+        appendBallMovementPathPoint(item);
       }
     }
     activeDrag = null;
@@ -1541,7 +1785,14 @@ export async function createTacticalPadLiteSurface(
   function cloneSnapshot(snapshot: PhaseSnapshot): PhaseSnapshot {
     return {
       players: snapshot.players.map((point) => ({ x: point.x, y: point.y })),
-      football: snapshot.football.map((point) => ({ id: point.id, x: point.x, y: point.y })),
+      football: snapshot.football.map((point) => ({
+        id: point.id,
+        x: point.x,
+        y: point.y,
+        attachedPlayerId: point.attachedPlayerId ?? null,
+        isFree: point.isFree,
+        ...(point.path ? { path: point.path.map((pathPoint) => ({ x: pathPoint.x, y: pathPoint.y })) } : {}),
+      })),
     };
   }
 
@@ -1567,8 +1818,32 @@ export async function createTacticalPadLiteSurface(
           id: ball.id,
           x: clampNormalizedValue(ball.x),
           y: clampNormalizedValue(ball.y),
+          attachedPlayerId:
+            typeof ball.attachedPlayerId === "string" && ball.attachedPlayerId.trim().length > 0
+              ? ball.attachedPlayerId.trim()
+              : null,
+          isFree: ball.isFree !== false,
+          path: (ball.path ?? [])
+            .map((pathPoint) => ({
+              x: clampNormalizedValue(pathPoint.x),
+              y: clampNormalizedValue(pathPoint.y),
+            }))
+            .filter((pathPoint) => Number.isFinite(pathPoint.x) && Number.isFinite(pathPoint.y)),
         }))
-        .filter((ball) => ball.id.trim().length > 0),
+        .filter((ball) => ball.id.trim().length > 0)
+        .map((ball) => {
+          const normalizedBall: PhaseBallSnapshot = {
+            id: ball.id,
+            x: ball.x,
+            y: ball.y,
+            attachedPlayerId: ball.isFree ? null : ball.attachedPlayerId,
+            isFree: ball.isFree,
+          };
+          if (ball.isFree && ball.path.length > 0) {
+            normalizedBall.path = ball.path;
+          }
+          return normalizedBall;
+        }),
     };
   }
 
@@ -1577,7 +1852,29 @@ export async function createTacticalPadLiteSurface(
       players: players.map((player) => ({ x: player.current.x, y: player.current.y })),
       football: tacticalItems
         .filter((item) => isBallItem(item))
-        .map((item) => ({ id: item.id, x: item.x, y: item.y })),
+        .map((item) => {
+          applyBallRuntimeStateToItem(item);
+          const state = getBallRuntimeState(item);
+          const point = {
+            x: clampNormalizedValue(item.x),
+            y: clampNormalizedValue(item.y),
+          };
+          const path =
+            state.isFree && state.path.length > 0
+              ? [...state.path, point].map((pathPoint) => ({
+                  x: clampNormalizedValue(pathPoint.x),
+                  y: clampNormalizedValue(pathPoint.y),
+                }))
+              : undefined;
+          return {
+            id: item.id,
+            x: point.x,
+            y: point.y,
+            attachedPlayerId: state.isFree ? null : state.attachedPlayerId,
+            isFree: state.isFree,
+            ...(path ? { path } : {}),
+          };
+        }),
     };
   }
 
@@ -1591,6 +1888,21 @@ export async function createTacticalPadLiteSurface(
     for (const ball of snapshot.football) {
       const item = findTacticalItemById(ball.id);
       if (!item || !isBallItem(item)) continue;
+      const state = getBallRuntimeState(item);
+      state.attachedPlayerId = ball.isFree ? null : ball.attachedPlayerId ?? null;
+      state.isFree = ball.isFree;
+      state.path = ball.path?.map((pathPoint) => ({ x: pathPoint.x, y: pathPoint.y })) ?? [];
+      if (!state.isFree) {
+        const attachedPoint = getAttachedBallPositionForPlayerId(state.attachedPlayerId);
+        if (attachedPoint) {
+          item.x = attachedPoint.x;
+          item.y = attachedPoint.y;
+          setItemWorldPosition(item, mapper);
+          continue;
+        }
+        state.attachedPlayerId = null;
+        state.isFree = true;
+      }
       item.x = clampNormalizedValue(ball.x);
       item.y = clampNormalizedValue(ball.y);
       setItemWorldPosition(item, mapper);
@@ -1644,6 +1956,68 @@ export async function createTacticalPadLiteSurface(
     playSingleStartToCurrent();
   }
 
+  function interpolateBallPath(
+    fromBall: PhaseBallSnapshot | null,
+    toBall: PhaseBallSnapshot,
+    progress: number,
+  ): NormalizedPoint {
+    const fallbackStart = fromBall ?? toBall;
+    const fallbackPoint = {
+      x: fallbackStart.x + (toBall.x - fallbackStart.x) * progress,
+      y: fallbackStart.y + (toBall.y - fallbackStart.y) * progress,
+    };
+    const storedPath = toBall.path ?? [];
+    if (storedPath.length < 2) {
+      return fallbackPoint;
+    }
+
+    const path = storedPath.map((point) => ({
+      x: clampNormalizedValue(point.x),
+      y: clampNormalizedValue(point.y),
+    }));
+    const firstPoint = path[0];
+    if (
+      fromBall &&
+      firstPoint &&
+      Math.hypot(firstPoint.x - fromBall.x, firstPoint.y - fromBall.y) >= BALL_PATH_MIN_POINT_DISTANCE
+    ) {
+      path.unshift({ x: clampNormalizedValue(fromBall.x), y: clampNormalizedValue(fromBall.y) });
+    }
+
+    let totalDistance = 0;
+    for (let index = 1; index < path.length; index += 1) {
+      const previous = path[index - 1];
+      const current = path[index];
+      if (!previous || !current) continue;
+      totalDistance += Math.hypot(current.x - previous.x, current.y - previous.y);
+    }
+    if (totalDistance <= 0) {
+      return fallbackPoint;
+    }
+
+    const targetDistance = totalDistance * progress;
+    let traveledDistance = 0;
+    for (let index = 1; index < path.length; index += 1) {
+      const previous = path[index - 1];
+      const current = path[index];
+      if (!previous || !current) continue;
+      const segmentDistance = Math.hypot(current.x - previous.x, current.y - previous.y);
+      if (segmentDistance <= 0) continue;
+      if (traveledDistance + segmentDistance >= targetDistance) {
+        const segmentProgress = (targetDistance - traveledDistance) / segmentDistance;
+        return {
+          x: previous.x + (current.x - previous.x) * segmentProgress,
+          y: previous.y + (current.y - previous.y) * segmentProgress,
+        };
+      }
+      traveledDistance += segmentDistance;
+    }
+    return {
+      x: clampNormalizedValue(toBall.x),
+      y: clampNormalizedValue(toBall.y),
+    };
+  }
+
   function stepPlayback(deltaMs: number): void {
     if (!isPlaying || playbackPath.length < 2) return;
 
@@ -1674,11 +2048,27 @@ export async function createTacticalPadLiteSurface(
         setTokenWorldPositionForPoint(player, player.current, mapper);
       }
       for (const toBall of toSnapshot.football) {
-        const fromBall = fromSnapshot.football.find((point) => point.id === toBall.id) ?? toBall;
+        const fromBall = fromSnapshot.football.find((point) => point.id === toBall.id) ?? null;
         const item = findTacticalItemById(toBall.id);
         if (!item || !isBallItem(item)) continue;
-        item.x = fromBall.x + (toBall.x - fromBall.x) * progress;
-        item.y = fromBall.y + (toBall.y - fromBall.y) * progress;
+        const state = getBallRuntimeState(item);
+        const targetAttachedPlayerId = toBall.isFree ? null : toBall.attachedPlayerId ?? null;
+        if (targetAttachedPlayerId) {
+          state.attachedPlayerId = targetAttachedPlayerId;
+          state.isFree = false;
+          state.path = [];
+          const attachedPoint = getAttachedBallPositionForPlayerId(targetAttachedPlayerId);
+          if (!attachedPoint) continue;
+          item.x = attachedPoint.x;
+          item.y = attachedPoint.y;
+        } else {
+          const freePoint = interpolateBallPath(fromBall, toBall, progress);
+          state.attachedPlayerId = null;
+          state.isFree = true;
+          state.path = toBall.path?.map((pathPoint) => ({ x: pathPoint.x, y: pathPoint.y })) ?? [];
+          item.x = clampNormalizedValue(freePoint.x);
+          item.y = clampNormalizedValue(freePoint.y);
+        }
         setItemWorldPosition(item, mapper);
       }
 
@@ -1849,6 +2239,7 @@ export async function createTacticalPadLiteSurface(
         lastTappedPlayer = null;
         return;
       }
+      attachPrimaryBallToPlayer(player);
       emitPlayerDoubleTap(player, event);
     });
   }
@@ -1858,6 +2249,7 @@ export async function createTacticalPadLiteSurface(
       setPlayerTouchHitArea(player, mapper);
       setTokenWorldPositionForPoint(player, player.current, mapper);
     }
+    renderTacticalItems();
     renderPlayerOriginGraphic();
   }
 
@@ -1977,7 +2369,7 @@ export async function createTacticalPadLiteSurface(
       },
     };
     return {
-      version: 2,
+      version: 3,
       players: playerStates,
       items: itemStates,
       drawings: drawingStates,
@@ -2188,6 +2580,11 @@ export async function createTacticalPadLiteSurface(
     if (lastTappedPlayer?.playerId === removedPlayer.id) {
       lastTappedPlayer = null;
     }
+    for (const ballState of ballStatesByItemId.values()) {
+      if (ballState.attachedPlayerId !== removedPlayer.id) continue;
+      ballState.attachedPlayerId = null;
+      ballState.isFree = true;
+    }
     removedPlayer.token.removeAllListeners();
     removedPlayer.token.destroy({ children: true });
     syncPlayersToViewport();
@@ -2248,6 +2645,7 @@ export async function createTacticalPadLiteSurface(
       cancelPlaybackAnimation();
       startPositions = captureCurrentSnapshot();
       phases = [];
+      resetAllBallMovementPaths();
       options.onPhaseCountChange?.(0);
     },
     addPhase: () => {
@@ -2255,6 +2653,7 @@ export async function createTacticalPadLiteSurface(
       clearSelectedItem();
       cancelPlaybackAnimation();
       phases = [...phases, captureCurrentSnapshot()];
+      resetAllBallMovementPaths();
       options.onPhaseCountChange?.(phases.length);
     },
     undoPhase: () => {
@@ -2302,6 +2701,7 @@ export async function createTacticalPadLiteSurface(
         playElapsedMs = Math.max(0, Math.min(nextSegmentDurationMs, progress * nextSegmentDurationMs));
       }
     },
+    freeBall: detachPrimaryBall,
     addTacticalPlayer,
     removeTacticalPlayer: removeLastTacticalPlayer,
     getTacticalPlayer: getTacticalPlayerSnapshot,

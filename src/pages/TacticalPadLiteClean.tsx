@@ -2930,6 +2930,13 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     setItems([]);
   };
 
+  const freeBall = () => {
+    if (isPortraitViewingMode || isPlaybackLocked) return;
+    surfaceRef.current?.freeBall();
+    setTacticalTool("move");
+    surfaceRef.current?.setWhiteboardDrawTool("move");
+  };
+
   const handleWhiteboardBubblePointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
     if (event.button !== 0) return;
     const viewport = getViewportRect();
@@ -3915,6 +3922,14 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                         >
                           {effectiveItemMode === "edit" ? "Lock Items" : "Edit Items"}
                         </button>
+                        <button
+                          type="button"
+                          style={{ ...coachHubActionButtonStyle, gridColumn: "1 / -1" }}
+                          disabled={isPlaybackLocked}
+                          onClick={freeBall}
+                        >
+                          Free Ball
+                        </button>
                         {TACTICAL_ITEM_CHOICES.map((choice) => (
                           <button
                             key={`item-${choice.type}`}
@@ -4159,6 +4174,14 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                     onClick={() => setItemMode((previous) => (previous === "edit" ? "locked" : "edit"))}
                   >
                     {effectiveItemMode === "edit" ? "Lock Items" : "Edit Items"}
+                  </button>
+                  <button
+                    type="button"
+                    style={{ ...coachHubActionButtonStyle, gridColumn: "1 / -1" }}
+                    disabled={isPlaybackLocked}
+                    onClick={freeBall}
+                  >
+                    Free Ball
                   </button>
                   {TACTICAL_ITEM_CHOICES.map((choice) => (
                     <button
