@@ -61,6 +61,9 @@ const TOKEN_BASE_COLOR = 0x191919;
 const TOKEN_RADIUS = 3.66;
 const TOKEN_RING_WIDTH = 0.72;
 const TOKEN_IDLE_HALO_ALPHA = 0.22;
+const TOKEN_OUTER_HALO_RADIUS_SCALE = 1.4;
+const TOKEN_MID_HALO_RADIUS_SCALE = 1.22;
+const TOKEN_INNER_HALO_RADIUS_SCALE = 1.05;
 
 function clampColorChannel(value: number): number {
   return Math.max(0, Math.min(255, Math.round(value)));
@@ -153,12 +156,12 @@ export function createPremiumGlowPlayerToken({
 
   const shadow = new Graphics();
   shadow
-    .circle(0, 0, TOKEN_RADIUS * 1.56)
-    .stroke({ color: glowColor, width: 0.62, alpha: 0.84 })
-    .circle(0, 0, TOKEN_RADIUS * 1.34)
-    .stroke({ color: glowColor, width: 0.32, alpha: 0.72 })
-    .circle(0, 0, TOKEN_RADIUS * 1.16)
-    .fill({ color: glowColor, alpha: 0.12 });
+    .circle(0, 0, TOKEN_RADIUS * TOKEN_OUTER_HALO_RADIUS_SCALE)
+    .stroke({ color: glowColor, width: 0.58, alpha: 0.82 })
+    .circle(0, 0, TOKEN_RADIUS * TOKEN_MID_HALO_RADIUS_SCALE)
+    .stroke({ color: glowColor, width: 0.3, alpha: 0.7 })
+    .circle(0, 0, TOKEN_RADIUS * TOKEN_INNER_HALO_RADIUS_SCALE)
+    .fill({ color: glowColor, alpha: 0.14 });
   shadow.alpha = TOKEN_IDLE_HALO_ALPHA;
   token.addChild(shadow);
 
@@ -175,11 +178,11 @@ export function createPremiumGlowPlayerToken({
     .circle(0, 0, TOKEN_RADIUS)
     .fill({ color: TOKEN_BASE_COLOR })
     .circle(0, 0, TOKEN_RADIUS - 0.08)
-    .stroke({ color: mixColor(TOKEN_BASE_COLOR, 0x000000, 0.3), width: 0.42, alpha: 0.7 })
+    .stroke({ color: mixColor(TOKEN_BASE_COLOR, 0x000000, 0.38), width: 0.44, alpha: 0.84 })
     .circle(0, 0, TOKEN_RADIUS - 0.2)
-    .stroke({ color: ringColor, width: TOKEN_RING_WIDTH, alpha: 0.95 })
+    .stroke({ color: ringColor, width: TOKEN_RING_WIDTH, alpha: 0.98 })
     .circle(0, 0, TOKEN_RADIUS - TOKEN_RING_WIDTH - 0.06)
-    .stroke({ color: ringInnerShade, width: 0.2, alpha: 0.54 });
+    .stroke({ color: ringInnerShade, width: 0.18, alpha: 0.52 });
   token.addChild(tokenBase);
 
   const centreRadius = TOKEN_RADIUS - TOKEN_RING_WIDTH - 0.18;
