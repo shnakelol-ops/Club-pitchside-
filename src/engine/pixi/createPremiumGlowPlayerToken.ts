@@ -60,7 +60,10 @@ const DEFAULT_STYLE_BY_TEAM: Record<PremiumGlowTeamColor, PremiumGlowPlayerToken
 const TOKEN_BASE_COLOR = 0x191919;
 const TOKEN_RADIUS = 3.66;
 const TOKEN_RING_WIDTH = 0.72;
-const TOKEN_IDLE_HALO_ALPHA = 0.26;
+const TOKEN_IDLE_HALO_ALPHA = 0.22;
+const TOKEN_OUTER_HALO_RADIUS_SCALE = 1.4;
+const TOKEN_MID_HALO_RADIUS_SCALE = 1.22;
+const TOKEN_INNER_HALO_RADIUS_SCALE = 1.05;
 
 function clampColorChannel(value: number): number {
   return Math.max(0, Math.min(255, Math.round(value)));
@@ -153,12 +156,12 @@ export function createPremiumGlowPlayerToken({
 
   const shadow = new Graphics();
   shadow
-    .circle(0, 0, TOKEN_RADIUS * 1.56)
-    .stroke({ color: glowColor, width: 0.66, alpha: 0.96 })
-    .circle(0, 0, TOKEN_RADIUS * 1.34)
-    .stroke({ color: glowColor, width: 0.34, alpha: 0.9 })
-    .circle(0, 0, TOKEN_RADIUS * 1.16)
-    .fill({ color: glowColor, alpha: 0.18 });
+    .circle(0, 0, TOKEN_RADIUS * TOKEN_OUTER_HALO_RADIUS_SCALE)
+    .stroke({ color: glowColor, width: 0.58, alpha: 0.82 })
+    .circle(0, 0, TOKEN_RADIUS * TOKEN_MID_HALO_RADIUS_SCALE)
+    .stroke({ color: glowColor, width: 0.3, alpha: 0.7 })
+    .circle(0, 0, TOKEN_RADIUS * TOKEN_INNER_HALO_RADIUS_SCALE)
+    .fill({ color: glowColor, alpha: 0.14 });
   shadow.alpha = TOKEN_IDLE_HALO_ALPHA;
   token.addChild(shadow);
 
@@ -175,11 +178,11 @@ export function createPremiumGlowPlayerToken({
     .circle(0, 0, TOKEN_RADIUS)
     .fill({ color: TOKEN_BASE_COLOR })
     .circle(0, 0, TOKEN_RADIUS - 0.08)
-    .stroke({ color: mixColor(TOKEN_BASE_COLOR, 0x000000, 0.3), width: 0.42, alpha: 0.7 })
+    .stroke({ color: mixColor(TOKEN_BASE_COLOR, 0x000000, 0.38), width: 0.44, alpha: 0.84 })
     .circle(0, 0, TOKEN_RADIUS - 0.2)
-    .stroke({ color: ringColor, width: TOKEN_RING_WIDTH, alpha: 0.95 })
+    .stroke({ color: ringColor, width: TOKEN_RING_WIDTH, alpha: 0.98 })
     .circle(0, 0, TOKEN_RADIUS - TOKEN_RING_WIDTH - 0.06)
-    .stroke({ color: ringInnerShade, width: 0.2, alpha: 0.54 });
+    .stroke({ color: ringInnerShade, width: 0.18, alpha: 0.52 });
   token.addChild(tokenBase);
 
   const centreRadius = TOKEN_RADIUS - TOKEN_RING_WIDTH - 0.18;
@@ -188,13 +191,13 @@ export function createPremiumGlowPlayerToken({
     .circle(0, 0, centreRadius)
     .fill({ color: centreColor })
     .circle(0, 0, centreRadius * 0.96)
-    .fill({ color: innerTintColor, alpha: 0.2 })
+    .fill({ color: innerTintColor, alpha: 0.14 })
     .circle(0, -centreRadius * 0.16, centreRadius * 0.84)
-    .fill({ color: centreHighlightColor, alpha: 0.52 })
+    .fill({ color: centreHighlightColor, alpha: 0.34 })
     .circle(0, 0, centreRadius)
     .stroke({ color: centreRimColor, width: 0.22, alpha: 0.46 })
     .ellipse(-centreRadius * 0.22, -centreRadius * 0.46, centreRadius * 0.54, centreRadius * 0.2)
-    .fill({ color: 0xffffff, alpha: 0.16 });
+    .fill({ color: 0xffffff, alpha: 0.08 });
   token.addChild(centre);
 
   const notch = new Graphics();
@@ -211,13 +214,13 @@ export function createPremiumGlowPlayerToken({
   const isNumericLabel = /^\d+$/.test(safeLabel);
   const labelBaseY = isNumericLabel ? -0.02 : -0.06;
   const labelFontSize = isNumericLabel
-    ? safeLabel.length >= 2 ? 4.3 : 4.9
+    ? safeLabel.length >= 2 ? 4.5 : 5.05
     : 3.4;
   const labelLetterSpacing = isNumericLabel ? 0.04 : 0.1;
   const labelPlate = new Graphics();
   labelPlate
     .roundRect(-centreRadius * 0.9, -1.02, centreRadius * 1.8, 2.04, 0.58)
-    .fill({ color: 0x020617, alpha: 0.24 });
+    .fill({ color: 0x020617, alpha: 0.3 });
   labelPlate.position.y = labelBaseY;
   token.addChild(labelPlate);
 
@@ -228,31 +231,33 @@ export function createPremiumGlowPlayerToken({
     style: {
       fill: 0x020617,
       fontSize: labelFontSize,
-      fontWeight: "900",
+      fontWeight: isNumericLabel ? "bolder" : "900",
       fontFamily: "\"Barlow Condensed\", \"Inter Tight\", Inter, system-ui, sans-serif",
       align: "center",
       letterSpacing: labelLetterSpacing,
     },
   });
   labelShadow.anchor.set(0.5, 0.5);
-  labelShadow.position.y = labelBaseY + 0.1;
-  labelShadow.alpha = 0.34;
+  labelShadow.position.y = labelBaseY + 0.09;
+  labelShadow.alpha = isNumericLabel ? 0.44 : 0.34;
   labelShadow.resolution = textResolution;
   labelShadow.roundPixels = true;
   token.addChild(labelShadow);
 
+  const numericFill = 0xffffff;
+  const numberStrokeColor = mixColor(resolved.outlineColor, 0x000000, 0.58);
   const labelText = new Text({
     text: safeLabel,
     style: {
-      fill: resolved.textColor,
+      fill: isNumericLabel ? numericFill : resolved.textColor,
       fontSize: labelFontSize,
-      fontWeight: "900",
+      fontWeight: isNumericLabel ? "bolder" : "900",
       fontFamily: "\"Barlow Condensed\", \"Inter Tight\", Inter, system-ui, sans-serif",
       align: "center",
       letterSpacing: labelLetterSpacing,
       stroke: {
-        color: mixColor(resolved.outlineColor, 0x000000, 0.22),
-        width: isNumericLabel ? 0.8 : 0.62,
+        color: isNumericLabel ? numberStrokeColor : mixColor(resolved.outlineColor, 0x000000, 0.22),
+        width: isNumericLabel ? 1.02 : 0.62,
         join: "round",
       },
     },
