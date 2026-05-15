@@ -4524,8 +4524,11 @@ export default function StatsModeSurface() {
     </div>
   );
 
-  const shouldShowUtilityBubble =
-    matchState === "PRE_MATCH" || matchState === "HALF_TIME" || matchState === "FULL_TIME";
+  const isMatchClockRunning = matchEngineStateRef.current.isRunning;
+  const isPreMatch = matchState === "PRE_MATCH";
+  const isHalfTime = matchState === "HALF_TIME";
+  const isFullTime = matchState === "FULL_TIME";
+  const shouldShowUtilityBubble = !isMatchClockRunning || isHalfTime || isFullTime || isPreMatch;
   const utilityControlsClass = [
     isLandscape ? "utility-controls utility-controls--landscape" : "utility-controls utility-controls--portrait",
     shouldShowUtilityBubble ? "" : "utility-controls--hidden",
