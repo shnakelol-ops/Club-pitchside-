@@ -7,6 +7,7 @@ type BrandVariant = {
   src: string;
 };
 type PreviewMode = "all" | "dark" | "header" | "icons" | "export";
+type IconFocus = "all" | "favicon" | "app";
 
 const VARIANTS: readonly BrandVariant[] = [
   {
@@ -53,6 +54,13 @@ function getPreviewMode(): PreviewMode {
   if (mode === "dark" || mode === "header" || mode === "icons" || mode === "export") {
     return mode;
   }
+  return "all";
+}
+
+function getIconFocus(): IconFocus {
+  if (typeof window === "undefined") return "all";
+  const icon = new URLSearchParams(window.location.search).get("icon");
+  if (icon === "favicon" || icon === "app") return icon;
   return "all";
 }
 
@@ -386,6 +394,7 @@ const BRAND_PREVIEW_CSS = `
 export default function BrandPreview() {
   const visibleVariants = getVisibleVariants();
   const previewMode = getPreviewMode();
+  const iconFocus = getIconFocus();
 
   return (
     <main className="brand-preview">
@@ -459,14 +468,18 @@ export default function BrandPreview() {
                   <article className="brand-preview-panel">
                     <h3 className="brand-preview-panel-title">Favicon + app icon previews</h3>
                     <div className="brand-preview-icon-grid">
-                      <div className="brand-preview-icon-item">
-                        <PvIcon variantId={variant.id} size={32} />
-                        <span>Favicon</span>
-                      </div>
-                      <div className="brand-preview-icon-item">
-                        <PvIcon variantId={variant.id} size={160} />
-                        <span>App icon</span>
-                      </div>
+                      {iconFocus === "all" || iconFocus === "favicon" ? (
+                        <div className="brand-preview-icon-item">
+                          <PvIcon variantId={variant.id} size={32} />
+                          <span>Favicon</span>
+                        </div>
+                      ) : null}
+                      {iconFocus === "all" || iconFocus === "app" ? (
+                        <div className="brand-preview-icon-item">
+                          <PvIcon variantId={variant.id} size={160} />
+                          <span>App icon</span>
+                        </div>
+                      ) : null}
                     </div>
                   </article>
                 ) : null}
