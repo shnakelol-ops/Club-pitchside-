@@ -1,3 +1,31 @@
+type PvVariation = {
+  id: string;
+  title: string;
+  subtitle: string;
+  src: string;
+};
+
+const PV_VARIATIONS: readonly PvVariation[] = [
+  {
+    id: "pv-gap",
+    title: "1) P over V with slight gap",
+    subtitle: "Clean separation between P and V for maximum readability.",
+    src: "/icon-pv-1.svg",
+  },
+  {
+    id: "pv-touch",
+    title: "2) P touching V subtly",
+    subtitle: "The V kisses the base of the stem without merging into the bowl.",
+    src: "/icon-pv-2.svg",
+  },
+  {
+    id: "pv-shared-stem",
+    title: "3) P and V sharing the same vertical stem",
+    subtitle: "The V originates from the stem while staying clearly legible.",
+    src: "/icon-pv-3.svg",
+  },
+];
+
 const BRANDING_PREVIEW_CSS = `
 .branding-preview {
   min-height: 100dvh;
@@ -15,7 +43,7 @@ const BRANDING_PREVIEW_CSS = `
 }
 
 .branding-preview-content {
-  max-width: 900px;
+  max-width: 960px;
   margin: 0 auto;
   display: grid;
   gap: 14px;
@@ -29,10 +57,18 @@ const BRANDING_PREVIEW_CSS = `
   padding: 14px;
 }
 
-.branding-preview h1 {
+.branding-preview h1,
+.branding-preview h2 {
   margin: 0;
-  font-size: clamp(24px, 4vw, 30px);
   letter-spacing: 0.01em;
+}
+
+.branding-preview h1 {
+  font-size: clamp(24px, 4vw, 30px);
+}
+
+.branding-preview h2 {
+  font-size: clamp(16px, 2vw, 20px);
 }
 
 .branding-preview p {
@@ -44,7 +80,7 @@ const BRANDING_PREVIEW_CSS = `
 
 .branding-preview-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
 }
 
@@ -55,12 +91,10 @@ const BRANDING_PREVIEW_CSS = `
   padding: 12px;
   display: grid;
   gap: 8px;
-  justify-items: center;
+  align-content: start;
 }
 
 .branding-preview-sample-label {
-  width: 100%;
-  text-align: left;
   color: #f1f7f0;
   font-size: 12px;
   font-weight: 650;
@@ -116,75 +150,48 @@ export default function BrandingPreview() {
       <style>{BRANDING_PREVIEW_CSS}</style>
       <div className="branding-preview-content">
         <section className="branding-preview-card" style={{ display: "grid", gap: "8px" }}>
-          <h1>PaircView PV branding exploration</h1>
-          <p>Current TV mark versus a new minimalist PV monogram on the same premium green app-icon base.</p>
+          <h1>PaircView PV mark recalibration</h1>
+          <p>Three refinements using the same premium rounded-square icon style, tested at app icon, navbar, and favicon scales.</p>
         </section>
 
-        <section className="branding-preview-card" style={{ display: "grid", gap: "10px" }}>
-          <p style={{ color: "#f1f7f0", fontWeight: 650 }}>Current logo vs new PV logo</p>
-          <div className="branding-preview-grid">
-            <div className="branding-preview-sample">
-              <span className="branding-preview-sample-label">Current mark</span>
-              <img className="branding-preview-logo" src="/icon-tv-3.svg" alt="Current T mark" width={108} height={108} />
+        {PV_VARIATIONS.map((variation) => (
+          <section key={variation.id} className="branding-preview-card" style={{ display: "grid", gap: "10px" }}>
+            <h2>{variation.title}</h2>
+            <p>{variation.subtitle}</p>
+            <div className="branding-preview-grid">
+              <div className="branding-preview-sample">
+                <span className="branding-preview-sample-label">App icon size</span>
+                <img
+                  className="branding-preview-logo"
+                  src={variation.src}
+                  alt={`${variation.title} at app icon size`}
+                  width={180}
+                  height={180}
+                />
+              </div>
+              <div className="branding-preview-sample">
+                <span className="branding-preview-sample-label">Navbar/logo size</span>
+                <div className="branding-preview-navbar">
+                  <div className="branding-preview-brand">
+                    <img className="branding-preview-logo" src={variation.src} alt={`${variation.title} in navbar`} width={28} height={28} />
+                    <span>PaircView</span>
+                  </div>
+                  <span className="branding-preview-nav-pill">Vision Board</span>
+                </div>
+              </div>
+              <div className="branding-preview-sample">
+                <span className="branding-preview-sample-label">Favicon size (32px)</span>
+                <img
+                  className="branding-preview-logo"
+                  src={variation.src}
+                  alt={`${variation.title} at 32 pixels`}
+                  width={32}
+                  height={32}
+                />
+              </div>
             </div>
-            <div className="branding-preview-sample">
-              <span className="branding-preview-sample-label">New PV mark</span>
-              <img className="branding-preview-logo" src="/icon-pv-1.svg" alt="New PV monogram" width={108} height={108} />
-            </div>
-          </div>
-        </section>
-
-        <section className="branding-preview-card" style={{ display: "grid", gap: "10px" }}>
-          <p style={{ color: "#f1f7f0", fontWeight: 650 }}>Favicon size (32px)</p>
-          <div className="branding-preview-grid">
-            <div className="branding-preview-sample">
-              <span className="branding-preview-sample-label">Current 32px</span>
-              <img className="branding-preview-logo" src="/icon-tv-3.svg" alt="Current mark at 32 pixels" width={32} height={32} />
-            </div>
-            <div className="branding-preview-sample">
-              <span className="branding-preview-sample-label">PV 32px</span>
-              <img className="branding-preview-logo" src="/icon-pv-1.svg" alt="PV mark at 32 pixels" width={32} height={32} />
-            </div>
-          </div>
-        </section>
-
-        <section className="branding-preview-card" style={{ display: "grid", gap: "10px" }}>
-          <p style={{ color: "#f1f7f0", fontWeight: 650 }}>App icon size (180px)</p>
-          <div className="branding-preview-grid">
-            <div className="branding-preview-sample">
-              <span className="branding-preview-sample-label">Current app icon</span>
-              <img
-                className="branding-preview-logo"
-                src="/icon-tv-3.svg"
-                alt="Current app icon rendering"
-                width={180}
-                height={180}
-              />
-            </div>
-            <div className="branding-preview-sample">
-              <span className="branding-preview-sample-label">PV app icon</span>
-              <img className="branding-preview-logo" src="/icon-pv-1.svg" alt="PV app icon rendering" width={180} height={180} />
-            </div>
-          </div>
-        </section>
-
-        <section className="branding-preview-card" style={{ display: "grid", gap: "10px" }}>
-          <p style={{ color: "#f1f7f0", fontWeight: 650 }}>Dark navbar usage</p>
-          <div className="branding-preview-navbar">
-            <div className="branding-preview-brand">
-              <img className="branding-preview-logo" src="/icon-tv-3.svg" alt="Current mark in navbar" width={28} height={28} />
-              <span>Current</span>
-            </div>
-            <span className="branding-preview-nav-pill">Vision Board</span>
-          </div>
-          <div className="branding-preview-navbar">
-            <div className="branding-preview-brand">
-              <img className="branding-preview-logo" src="/icon-pv-1.svg" alt="PV mark in navbar" width={28} height={28} />
-              <span>PV proposal</span>
-            </div>
-            <span className="branding-preview-nav-pill">Vision Board</span>
-          </div>
-        </section>
+          </section>
+        ))}
       </div>
     </main>
   );
