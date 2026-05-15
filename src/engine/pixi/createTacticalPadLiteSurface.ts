@@ -147,7 +147,7 @@ type PhaseBallSnapshot = {
   id: string;
   x: number;
   y: number;
-  attachedPlayerId?: string | null;
+  attachedPlayerId: string | null;
   isFree: boolean;
   path?: NormalizedPoint[];
 };
