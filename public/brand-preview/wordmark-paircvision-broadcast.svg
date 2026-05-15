@@ -1,0 +1,50 @@
+<svg width="1320" height="320" viewBox="0 0 1320 320" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="PáircVision broadcast hybrid wordmark">
+  <defs>
+    <filter id="broadcast-glow" x="-8%" y="-24%" width="116%" height="165%">
+      <feGaussianBlur stdDeviation="6" result="soft" />
+      <feColorMatrix
+        in="soft"
+        type="matrix"
+        values="0 0 0 0 0.48
+                0 0 0 0 1
+                0 0 0 0 0.73
+                0 0 0 0.42 0"
+        result="mintGlow"
+      />
+      <feMerge>
+        <feMergeNode in="mintGlow" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    <linearGradient id="broadcast-line" x1="80" y1="62" x2="1120" y2="250" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF" />
+      <stop offset="1" stop-color="#D9FFE8" />
+    </linearGradient>
+  </defs>
+  <g filter="url(#broadcast-glow)">
+    <text
+      x="62"
+      y="214"
+      fill="#FFFFFF"
+      stroke="url(#broadcast-line)"
+      stroke-width="8.4"
+      stroke-linejoin="round"
+      stroke-linecap="round"
+      paint-order="stroke fill"
+      font-size="168"
+      font-weight="830"
+      letter-spacing="-1.8"
+      font-family="Inter, Avenir Next, Segoe UI, Arial, sans-serif"
+    >
+      PaircVision
+    </text>
+    <path
+      d="M177 88L224 55"
+      stroke="url(#broadcast-line)"
+      stroke-width="15"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <circle cx="224" cy="55" r="4.8" fill="#FFFFFF" opacity="0.86" />
+  </g>
+</svg>
