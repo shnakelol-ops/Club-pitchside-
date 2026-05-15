@@ -24,6 +24,14 @@ import {
   NORMALIZED_MIN,
   type NormalizedPoint,
 } from "../shared/normalization";
+import {
+  cloneMovementPathRecord,
+  interpolateMovementPathPoint,
+  sanitizeMovementPathRecord,
+  smoothMovementPathPoints,
+  type MovementPathEntityType,
+  type MovementPathRecord,
+} from "../shared/movementPaths";
 import { createTacticalDrawingController } from "../../features/quickboard/drawing/tacticalDrawingController";
 import {
   drawingToolToWhiteboardTool,
@@ -101,6 +109,7 @@ export type TacticalPadLiteSurface = {
   resumePlayback: () => void;
   setPlaybackSpeedMultiplier: (multiplier: number) => void;
   freeBall: () => void;
+  setFreeBallPathMode: (enabled: boolean) => void;
   addTacticalPlayer: (team?: "BLUE" | "RED") => void;
   removeTacticalPlayer: (team?: "BLUE" | "RED") => void;
   getTacticalPlayer: (playerId: string) => TacticalPlayerKitSnapshot | null;
@@ -172,6 +181,12 @@ const ATTACHED_BALL_OFFSETS_WORLD: ReadonlyArray<Readonly<NormalizedPoint>> = [
   { x: -7.2, y: 0 },
 ];
 const BALL_PATH_MIN_POINT_DISTANCE = 0.35;
+const MOVEMENT_PATH_MIN_POINT_DISTANCE = 0.45;
+const MOVEMENT_PATH_DASH_LENGTH = 2.4;
+const MOVEMENT_PATH_DASH_GAP = 1.25;
+const MOVEMENT_PATH_STROKE_WIDTH = 0.42;
+const MOVEMENT_PATH_ARROW_LENGTH = 2.1;
+const MOVEMENT_PATH_ARROW_HALF_WIDTH = 1.05;
 const WHITEBOARD_DEFAULT_STROKE_COLOR = 0x111111;
 const WHITEBOARD_BLUE_START_X = 30;
 const WHITEBOARD_RED_START_X = 70;
@@ -251,6 +266,13 @@ type BallRuntimeState = {
   attachedPlayerId: string | null;
   isFree: boolean;
   path: NormalizedPoint[];
+};
+
+type ActiveMovementPathDraft = {
+  pointerId: number | null;
+  entityId: string;
+  phaseIndex: number;
+  points: NormalizedPoint[];
 };
 
 type DragPointerState = {
@@ -779,6 +801,18 @@ export async function createTacticalPadLiteSurface(
   itemsLayer.eventMode = "passive";
   world.addChild(itemsLayer);
 
+  // Isolated Pixi-only path layer. It intentionally sits below tokens/balls so
+  // future player runs and synchronized movement guides never change token art.
+  const movementPathLayer = new Container();
+  movementPathLayer.eventMode = "none";
+  world.addChild(movementPathLayer);
+  const movementPathGraphics = new Graphics();
+  movementPathGraphics.eventMode = "none";
+  movementPathLayer.addChild(movementPathGraphics);
+  const movementPathPreviewGraphics = new Graphics();
+  movementPathPreviewGraphics.eventMode = "none";
+  movementPathLayer.addChild(movementPathPreviewGraphics);
+
   const playerOriginLayer = new Container();
   playerOriginLayer.eventMode = "none";
   world.addChild(playerOriginLayer);
@@ -1008,6 +1042,14 @@ export async function createTacticalPadLiteSurface(
     football: [],
   };
   let phases: PhaseSnapshot[] = [];
+  // V1.5 movement-path foundation: paths are entity/phase records rather than
+  // player-only or ball-only state. Player paths, synchronized multi-entity
+  // timing, curved runs, and shadow/dummy runs can build on this model by
+  // adding metadata while keeping playback and rendering keyed by entity/phase.
+  let movementPaths: MovementPathRecord[] = [];
+  let movementPathCounter = 0;
+  let isFreeBallPathMode = false;
+  let activeMovementPathDraft: ActiveMovementPathDraft | null = null;
 
   let activeDrag: ActiveDragState = null;
   let selectedItemId: string | null = null;
@@ -1085,6 +1127,7 @@ export async function createTacticalPadLiteSurface(
       setItemTouchHitArea(item, mapper);
     }
     renderTacticalItems();
+    renderMovementPaths();
     renderAllWhiteboardDrawings();
     renderPlayerOriginGraphic();
   }
@@ -1094,8 +1137,370 @@ export async function createTacticalPadLiteSurface(
       surfaceVariant === "tactical" &&
       itemMode === "edit" &&
       activeWhiteboardTool === "move" &&
+      !isFreeBallPathMode &&
       !isPlaybackInputLocked()
     );
+  }
+
+  function getCurrentMovementPathPhaseIndex(): number {
+    return phases.length;
+  }
+
+  function getMovementPathKey(
+    entityType: MovementPathEntityType,
+    entityId: string,
+    phaseIndex: number,
+  ): string {
+    return `${entityType}:${entityId}:${Math.max(0, Math.floor(phaseIndex))}`;
+  }
+
+  function createMovementPathId(
+    entityType: MovementPathEntityType,
+    entityId: string,
+    phaseIndex: number,
+  ): string {
+    movementPathCounter += 1;
+    return `movement-path-${getMovementPathKey(entityType, entityId, phaseIndex)}-${movementPathCounter}`;
+  }
+
+  function cloneMovementPathPoints(points: readonly NormalizedPoint[]): NormalizedPoint[] {
+    return points.map((point) => ({
+      x: clampNormalizedValue(point.x),
+      y: clampNormalizedValue(point.y),
+    }));
+  }
+
+  function findMovementPath(
+    entityType: MovementPathEntityType,
+    entityId: string,
+    phaseIndex: number,
+  ): MovementPathRecord | null {
+    const normalizedPhaseIndex = Math.max(0, Math.floor(phaseIndex));
+    return (
+      movementPaths.find(
+        (path) =>
+          path.entityType === entityType &&
+          path.entityId === entityId &&
+          path.phaseIndex === normalizedPhaseIndex,
+      ) ?? null
+    );
+  }
+
+  function upsertMovementPath(
+    entityType: MovementPathEntityType,
+    entityId: string,
+    phaseIndex: number,
+    points: readonly NormalizedPoint[],
+    metadata?: MovementPathRecord["metadata"],
+  ): void {
+    const normalizedPoints = cloneMovementPathPoints(points);
+    if (normalizedPoints.length < 2) return;
+    const normalizedPhaseIndex = Math.max(0, Math.floor(phaseIndex));
+    const existing = findMovementPath(entityType, entityId, normalizedPhaseIndex);
+    const nextPath: MovementPathRecord = {
+      id: existing?.id ?? createMovementPathId(entityType, entityId, normalizedPhaseIndex),
+      entityId,
+      entityType,
+      phaseIndex: normalizedPhaseIndex,
+      points: normalizedPoints,
+      ...(metadata ? { metadata: { ...metadata } } : existing?.metadata ? { metadata: { ...existing.metadata } } : {}),
+    };
+    if (existing) {
+      movementPaths = movementPaths.map((path) => (path.id === existing.id ? nextPath : path));
+    } else {
+      movementPaths = [...movementPaths, nextPath];
+    }
+    renderMovementPaths();
+  }
+
+  function pruneMovementPathsForPhaseCount(phaseCount: number): void {
+    const maxPhaseIndex = Math.max(0, Math.floor(phaseCount)) - 1;
+    movementPaths = movementPaths.filter((path) => path.phaseIndex <= maxPhaseIndex);
+    renderMovementPaths();
+  }
+
+  function migratePhaseBallPathsToMovementPaths(snapshots: readonly PhaseSnapshot[]): void {
+    for (let phaseIndex = 0; phaseIndex < snapshots.length; phaseIndex += 1) {
+      const snapshot = snapshots[phaseIndex];
+      if (!snapshot) continue;
+      for (const ball of snapshot.football) {
+        if (!ball.isFree || !ball.path || ball.path.length < 2) continue;
+        if (findMovementPath("ball", ball.id, phaseIndex)) continue;
+        upsertMovementPath("ball", ball.id, phaseIndex, ball.path, {
+          kind: "free-ball-path",
+          source: "legacy-phase-ball-path",
+        });
+      }
+    }
+  }
+
+  function resolveMovementPathPoints(
+    entityType: MovementPathEntityType,
+    entityId: string,
+    phaseIndex: number,
+    fromPoint: NormalizedPoint,
+    toPoint: NormalizedPoint,
+    fallbackPath?: readonly NormalizedPoint[],
+  ): NormalizedPoint[] {
+    const movementPath = findMovementPath(entityType, entityId, phaseIndex);
+    const pathPoints = movementPath?.points ?? fallbackPath ?? [];
+    if (pathPoints.length < 2) return [];
+    const normalizedPoints = cloneMovementPathPoints(pathPoints);
+    const firstPoint = normalizedPoints[0];
+    const lastPoint = normalizedPoints[normalizedPoints.length - 1];
+    if (
+      firstPoint &&
+      Math.hypot(firstPoint.x - fromPoint.x, firstPoint.y - fromPoint.y) >= MOVEMENT_PATH_MIN_POINT_DISTANCE
+    ) {
+      normalizedPoints.unshift({ x: clampNormalizedValue(fromPoint.x), y: clampNormalizedValue(fromPoint.y) });
+    }
+    if (
+      lastPoint &&
+      Math.hypot(lastPoint.x - toPoint.x, lastPoint.y - toPoint.y) >= MOVEMENT_PATH_MIN_POINT_DISTANCE
+    ) {
+      normalizedPoints.push({ x: clampNormalizedValue(toPoint.x), y: clampNormalizedValue(toPoint.y) });
+    }
+    return normalizedPoints;
+  }
+
+  function interpolateEntityMovementPath(
+    entityType: MovementPathEntityType,
+    entityId: string,
+    phaseIndex: number,
+    fromPoint: NormalizedPoint,
+    toPoint: NormalizedPoint,
+    progress: number,
+    fallbackPath?: readonly NormalizedPoint[],
+  ): NormalizedPoint | null {
+    const pathPoints = resolveMovementPathPoints(
+      entityType,
+      entityId,
+      phaseIndex,
+      fromPoint,
+      toPoint,
+      fallbackPath,
+    );
+    if (pathPoints.length < 2) return null;
+    return interpolateMovementPathPoint(pathPoints, progress);
+  }
+
+  function getMovementPathColor(path: Pick<MovementPathRecord, "entityType" | "metadata">): number {
+    const metadataColor = path.metadata?.color;
+    if (typeof metadataColor === "number" && Number.isFinite(metadataColor)) {
+      return Math.max(0, Math.floor(metadataColor));
+    }
+    return path.entityType === "ball" ? 0xf8fafc : 0x7dd3fc;
+  }
+
+  function drawDashedWorldPath(
+    graphic: Graphics,
+    points: readonly NormalizedPoint[],
+    color: number,
+    alpha: number,
+  ): void {
+    if (points.length < 2) return;
+    const worldPoints = smoothMovementPathPoints(points).map((point) => mapper.normalizedToWorld(point));
+    let dashRemaining = MOVEMENT_PATH_DASH_LENGTH;
+    let gapRemaining = 0;
+    for (let index = 1; index < worldPoints.length; index += 1) {
+      const previous = worldPoints[index - 1];
+      const current = worldPoints[index];
+      if (!previous || !current) continue;
+      const segmentDx = current.x - previous.x;
+      const segmentDy = current.y - previous.y;
+      const segmentLength = Math.hypot(segmentDx, segmentDy);
+      if (segmentLength <= 0) continue;
+      let consumed = 0;
+      while (consumed < segmentLength) {
+        const remainingSegment = segmentLength - consumed;
+        if (gapRemaining > 0) {
+          const gapStep = Math.min(gapRemaining, remainingSegment);
+          consumed += gapStep;
+          gapRemaining -= gapStep;
+          if (gapRemaining <= 0) {
+            dashRemaining = MOVEMENT_PATH_DASH_LENGTH;
+          }
+          continue;
+        }
+        const dashStep = Math.min(dashRemaining, remainingSegment);
+        const startRatio = consumed / segmentLength;
+        const endRatio = (consumed + dashStep) / segmentLength;
+        graphic
+          .moveTo(previous.x + segmentDx * startRatio, previous.y + segmentDy * startRatio)
+          .lineTo(previous.x + segmentDx * endRatio, previous.y + segmentDy * endRatio)
+          .stroke({
+            color,
+            alpha,
+            width: MOVEMENT_PATH_STROKE_WIDTH,
+            cap: "round",
+            join: "round",
+            alignment: 0.5,
+          });
+        consumed += dashStep;
+        dashRemaining -= dashStep;
+        if (dashRemaining <= 0) {
+          gapRemaining = MOVEMENT_PATH_DASH_GAP;
+        }
+      }
+    }
+  }
+
+  function drawMovementPathArrowhead(
+    graphic: Graphics,
+    points: readonly NormalizedPoint[],
+    color: number,
+    alpha: number,
+  ): void {
+    if (points.length < 2) return;
+    const smoothed = smoothMovementPathPoints(points);
+    const end = smoothed[smoothed.length - 1];
+    if (!end) return;
+    let previous = smoothed[smoothed.length - 2];
+    for (let index = smoothed.length - 2; index >= 0; index -= 1) {
+      const candidate = smoothed[index];
+      if (!candidate) continue;
+      if (Math.hypot(end.x - candidate.x, end.y - candidate.y) >= 0.1) {
+        previous = candidate;
+        break;
+      }
+    }
+    if (!previous) return;
+    const endWorld = mapper.normalizedToWorld(end);
+    const previousWorld = mapper.normalizedToWorld(previous);
+    const angle = Math.atan2(endWorld.y - previousWorld.y, endWorld.x - previousWorld.x);
+    const backX = endWorld.x - Math.cos(angle) * MOVEMENT_PATH_ARROW_LENGTH;
+    const backY = endWorld.y - Math.sin(angle) * MOVEMENT_PATH_ARROW_LENGTH;
+    const normalX = -Math.sin(angle) * MOVEMENT_PATH_ARROW_HALF_WIDTH;
+    const normalY = Math.cos(angle) * MOVEMENT_PATH_ARROW_HALF_WIDTH;
+    graphic
+      .poly([
+        endWorld.x,
+        endWorld.y,
+        backX + normalX,
+        backY + normalY,
+        backX - normalX,
+        backY - normalY,
+      ])
+      .fill({ color, alpha });
+  }
+
+  function drawMovementPathRecord(
+    graphic: Graphics,
+    path: MovementPathRecord,
+    alpha = 0.72,
+  ): void {
+    if (path.points.length < 2) return;
+    const color = getMovementPathColor(path);
+    drawDashedWorldPath(graphic, path.points, color, alpha);
+    drawMovementPathArrowhead(graphic, path.points, color, Math.min(0.9, alpha + 0.12));
+  }
+
+  function renderMovementPaths(): void {
+    movementPathGraphics.clear();
+    movementPathPreviewGraphics.clear();
+    if (surfaceVariant !== "tactical") return;
+    for (const path of movementPaths) {
+      drawMovementPathRecord(movementPathGraphics, path);
+    }
+    if (activeMovementPathDraft && activeMovementPathDraft.points.length >= 2) {
+      const previewPath: MovementPathRecord = {
+        id: "movement-path-preview",
+        entityId: activeMovementPathDraft.entityId,
+        entityType: "ball",
+        phaseIndex: activeMovementPathDraft.phaseIndex,
+        points: activeMovementPathDraft.points,
+        metadata: { color: activeWhiteboardColor },
+      };
+      drawMovementPathRecord(movementPathPreviewGraphics, previewPath, 0.9);
+    }
+  }
+
+  function getPrimaryFreeBallItem(): TacticalSurfaceItem | null {
+    const ball = findPrimaryBallItem();
+    if (!ball || !isBallItem(ball)) return null;
+    const state = getBallRuntimeState(ball);
+    return state.isFree ? ball : null;
+  }
+
+  function isMatchingMovementPathPointer(event: unknown): boolean {
+    if (!activeMovementPathDraft || activeMovementPathDraft.pointerId == null) return true;
+    const pointerId = getPointerIdFromEvent(event);
+    if (pointerId == null) return true;
+    return pointerId === activeMovementPathDraft.pointerId;
+  }
+
+  function appendMovementPathDraftPoint(point: NormalizedPoint): void {
+    if (!activeMovementPathDraft) return;
+    const normalized = {
+      x: clampNormalizedValue(point.x),
+      y: clampNormalizedValue(point.y),
+    };
+    const lastPoint = activeMovementPathDraft.points[activeMovementPathDraft.points.length - 1];
+    if (
+      lastPoint &&
+      Math.hypot(normalized.x - lastPoint.x, normalized.y - lastPoint.y) < MOVEMENT_PATH_MIN_POINT_DISTANCE
+    ) {
+      activeMovementPathDraft.points[activeMovementPathDraft.points.length - 1] = normalized;
+      return;
+    }
+    activeMovementPathDraft.points.push(normalized);
+  }
+
+  function startFreeBallMovementPath(event: unknown): void {
+    if (!isFreeBallPathMode || surfaceVariant !== "tactical" || isPlaybackInputLocked()) return;
+    if (activeDrag || activeMovementPathDraft) return;
+    const ball = getPrimaryFreeBallItem();
+    if (!ball) return;
+    const pointerNormalized = getBoundedNormalizedPointFromEvent(event);
+    if (!pointerNormalized) return;
+    activeMovementPathDraft = {
+      pointerId: getPointerIdFromEvent(event),
+      entityId: ball.id,
+      phaseIndex: getCurrentMovementPathPhaseIndex(),
+      points: [
+        { x: clampNormalizedValue(ball.x), y: clampNormalizedValue(ball.y) },
+        pointerNormalized,
+      ],
+    };
+    renderMovementPaths();
+  }
+
+  function updateFreeBallMovementPath(event: unknown): void {
+    if (!activeMovementPathDraft || !isMatchingMovementPathPointer(event)) return;
+    const pointerNormalized = getBoundedNormalizedPointFromEvent(event);
+    if (!pointerNormalized) return;
+    appendMovementPathDraftPoint(pointerNormalized);
+    renderMovementPaths();
+  }
+
+  function finishFreeBallMovementPath(event?: unknown): void {
+    if (!activeMovementPathDraft) return;
+    if (event != null && !isMatchingMovementPathPointer(event)) return;
+    const draft = activeMovementPathDraft;
+    activeMovementPathDraft = null;
+    const ball = findTacticalItemById(draft.entityId);
+    if (!ball || !isBallItem(ball) || draft.points.length < 2) {
+      renderMovementPaths();
+      return;
+    }
+    const finalPoint = draft.points[draft.points.length - 1]!;
+    const state = getBallRuntimeState(ball);
+    state.attachedPlayerId = null;
+    state.isFree = true;
+    state.path = cloneMovementPathPoints(draft.points);
+    ball.x = clampNormalizedValue(finalPoint.x);
+    ball.y = clampNormalizedValue(finalPoint.y);
+    setItemWorldPosition(ball, mapper);
+    upsertMovementPath("ball", ball.id, draft.phaseIndex, draft.points, {
+      color: activeWhiteboardColor,
+      kind: "free-ball-path",
+      // Future player paths and shadow runs can use the same entity/phase key
+      // while adding metadata such as role, timing offset, or dummy-run intent.
+      source: "free-ball-draw-mode",
+    });
+    options.onItemMove?.(ball.id, ball.x, ball.y);
+    renderTacticalItems();
+    renderMovementPaths();
   }
 
   function getBallRuntimeState(item: Pick<TacticalItem, "id" | "x" | "y">): BallRuntimeState {
@@ -1261,6 +1666,7 @@ export async function createTacticalPadLiteSurface(
       surfaceVariant === "tactical" &&
       state.isFree &&
       activeWhiteboardTool === "move" &&
+      !isFreeBallPathMode &&
       !isPlaybackInputLocked()
     );
   }
@@ -1317,6 +1723,11 @@ export async function createTacticalPadLiteSurface(
     if (!isDrawingEnabledSurface) return;
     const canInteractItems = isItemInteractionEnabled();
     const isDrawingInteractionActive = activeWhiteboardTool !== "move" && !isPlaybackInputLocked();
+    const isMovementPathInteractionActive =
+      surfaceVariant === "tactical" &&
+      isFreeBallPathMode &&
+      activeWhiteboardTool === "move" &&
+      !isPlaybackInputLocked();
     let draggingItemId: string | null = null;
     let draggingPlayerId: string | null = null;
     if (activeDrag && activeDrag.type === "item" && activeDrag.hasCrossedThreshold) {
@@ -1335,13 +1746,14 @@ export async function createTacticalPadLiteSurface(
       selectedItemId = null;
       renderTacticalItems();
     }
-    const canDragPlayers = activeWhiteboardTool === "move" && !isPlaybackInputLocked();
+    const canDragPlayers = activeWhiteboardTool === "move" && !isFreeBallPathMode && !isPlaybackInputLocked();
     for (const player of players) {
       const isCurrentPlayerDragging = draggingPlayerId === player.id;
       player.token.eventMode = canDragPlayers ? "static" : "none";
       player.token.cursor = isCurrentPlayerDragging ? "grabbing" : canDragPlayers ? "grab" : "default";
     }
-    whiteboardInputLayer.eventMode = isDrawingInteractionActive ? "static" : "none";
+    whiteboardInputLayer.eventMode =
+      isDrawingInteractionActive || isMovementPathInteractionActive ? "static" : "none";
     whiteboardInputLayer.cursor = activeWhiteboardTool === "eraser" ? "not-allowed" : "crosshair";
   }
 
@@ -1627,6 +2039,7 @@ export async function createTacticalPadLiteSurface(
       item.graphic.destroy();
       item.selectionGraphic.destroy();
       ballStatesByItemId.delete(item.id);
+      movementPaths = movementPaths.filter((path) => path.entityId !== item.id || path.entityType !== "ball");
       tacticalItems.splice(index, 1);
       if (selectedItemId === item.id) {
         selectedItemId = null;
@@ -1671,6 +2084,7 @@ export async function createTacticalPadLiteSurface(
     }
 
     renderTacticalItems();
+    renderMovementPaths();
     syncWhiteboardTokenInputMode();
   }
 
@@ -1732,6 +2146,11 @@ export async function createTacticalPadLiteSurface(
 
   function resetActiveWhiteboardDrawing(): void {
     tacticalDrawingController.cancelActiveDraft();
+  }
+
+  function resetActiveMovementPathDraft(): void {
+    activeMovementPathDraft = null;
+    renderMovementPaths();
   }
 
   function startWhiteboardDrawing(event: unknown): void {
@@ -1847,7 +2266,7 @@ export async function createTacticalPadLiteSurface(
     };
   }
 
-  function captureCurrentSnapshot(): PhaseSnapshot {
+  function captureCurrentSnapshot(targetPhaseIndex = getCurrentMovementPathPhaseIndex()): PhaseSnapshot {
     return {
       players: players.map((player) => ({ x: player.current.x, y: player.current.y })),
       football: tacticalItems
@@ -1866,6 +2285,12 @@ export async function createTacticalPadLiteSurface(
                   y: clampNormalizedValue(pathPoint.y),
                 }))
               : undefined;
+          if (state.isFree && path && path.length >= 2) {
+            upsertMovementPath("ball", item.id, targetPhaseIndex, path, {
+              kind: "free-ball-path",
+              source: "ball-runtime-state",
+            });
+          }
           return {
             id: item.id,
             x: point.x,
@@ -1942,6 +2367,7 @@ export async function createTacticalPadLiteSurface(
   function handlePlay(): void {
     releaseActiveDrag();
     clearSelectedItem();
+    resetActiveMovementPathDraft();
     if (isPaused && playbackPath.length >= 2) {
       isPaused = false;
       isPlaying = true;
@@ -1959,6 +2385,7 @@ export async function createTacticalPadLiteSurface(
   function interpolateBallPath(
     fromBall: PhaseBallSnapshot | null,
     toBall: PhaseBallSnapshot,
+    phaseIndex: number,
     progress: number,
   ): NormalizedPoint {
     const fallbackStart = fromBall ?? toBall;
@@ -1966,56 +2393,17 @@ export async function createTacticalPadLiteSurface(
       x: fallbackStart.x + (toBall.x - fallbackStart.x) * progress,
       y: fallbackStart.y + (toBall.y - fallbackStart.y) * progress,
     };
-    const storedPath = toBall.path ?? [];
-    if (storedPath.length < 2) {
-      return fallbackPoint;
-    }
-
-    const path = storedPath.map((point) => ({
-      x: clampNormalizedValue(point.x),
-      y: clampNormalizedValue(point.y),
-    }));
-    const firstPoint = path[0];
-    if (
-      fromBall &&
-      firstPoint &&
-      Math.hypot(firstPoint.x - fromBall.x, firstPoint.y - fromBall.y) >= BALL_PATH_MIN_POINT_DISTANCE
-    ) {
-      path.unshift({ x: clampNormalizedValue(fromBall.x), y: clampNormalizedValue(fromBall.y) });
-    }
-
-    let totalDistance = 0;
-    for (let index = 1; index < path.length; index += 1) {
-      const previous = path[index - 1];
-      const current = path[index];
-      if (!previous || !current) continue;
-      totalDistance += Math.hypot(current.x - previous.x, current.y - previous.y);
-    }
-    if (totalDistance <= 0) {
-      return fallbackPoint;
-    }
-
-    const targetDistance = totalDistance * progress;
-    let traveledDistance = 0;
-    for (let index = 1; index < path.length; index += 1) {
-      const previous = path[index - 1];
-      const current = path[index];
-      if (!previous || !current) continue;
-      const segmentDistance = Math.hypot(current.x - previous.x, current.y - previous.y);
-      if (segmentDistance <= 0) continue;
-      if (traveledDistance + segmentDistance >= targetDistance) {
-        const segmentProgress = (targetDistance - traveledDistance) / segmentDistance;
-        return {
-          x: previous.x + (current.x - previous.x) * segmentProgress,
-          y: previous.y + (current.y - previous.y) * segmentProgress,
-        };
-      }
-      traveledDistance += segmentDistance;
-    }
-    return {
-      x: clampNormalizedValue(toBall.x),
-      y: clampNormalizedValue(toBall.y),
-    };
+    return (
+      interpolateEntityMovementPath(
+        "ball",
+        toBall.id,
+        phaseIndex,
+        fallbackStart,
+        toBall,
+        progress,
+        toBall.path,
+      ) ?? fallbackPoint
+    );
   }
 
   function stepPlayback(deltaMs: number): void {
@@ -2041,10 +2429,19 @@ export async function createTacticalPadLiteSurface(
         const fromPoint = fromSnapshot.players[idx];
         const toPoint = toSnapshot.players[idx];
         if (!fromPoint || !toPoint) continue;
-        player.current = {
-          x: fromPoint.x + (toPoint.x - fromPoint.x) * progress,
-          y: fromPoint.y + (toPoint.y - fromPoint.y) * progress,
-        };
+        const pathPoint = interpolateEntityMovementPath(
+          "player",
+          player.id,
+          activeSegmentIndex,
+          fromPoint,
+          toPoint,
+          progress,
+        );
+        player.current =
+          pathPoint ?? {
+            x: fromPoint.x + (toPoint.x - fromPoint.x) * progress,
+            y: fromPoint.y + (toPoint.y - fromPoint.y) * progress,
+          };
         setTokenWorldPositionForPoint(player, player.current, mapper);
       }
       for (const toBall of toSnapshot.football) {
@@ -2062,7 +2459,7 @@ export async function createTacticalPadLiteSurface(
           item.x = attachedPoint.x;
           item.y = attachedPoint.y;
         } else {
-          const freePoint = interpolateBallPath(fromBall, toBall, progress);
+          const freePoint = interpolateBallPath(fromBall, toBall, activeSegmentIndex, progress);
           state.attachedPlayerId = null;
           state.isFree = true;
           state.path = toBall.path?.map((pathPoint) => ({ x: pathPoint.x, y: pathPoint.y })) ?? [];
@@ -2250,6 +2647,7 @@ export async function createTacticalPadLiteSurface(
       setTokenWorldPositionForPoint(player, player.current, mapper);
     }
     renderTacticalItems();
+    renderMovementPaths();
     renderPlayerOriginGraphic();
   }
 
@@ -2346,6 +2744,7 @@ export async function createTacticalPadLiteSurface(
     }));
     const drawingStates: TacticalBoardDrawingSnapshot[] = tacticalDrawingController.exportSnapshots();
     const phaseStates = phases.map((phase) => cloneSnapshot(phase));
+    const movementPathStates = movementPaths.map((path) => cloneMovementPathRecord(path));
     const currentTeamState: TacticalBoardTeamState = {
       colors: {
         blue: tacticalTeamColors.blue ?? "blue",
@@ -2374,7 +2773,7 @@ export async function createTacticalPadLiteSurface(
       items: itemStates,
       drawings: drawingStates,
       phases: phaseStates,
-      movementPaths: phaseStates.map((phase) => cloneSnapshot(phase)),
+      movementPaths: movementPathStates,
       kits: kitsByPlayer,
       teamKits: currentTeamKits,
       teamState: currentTeamState,
@@ -2418,6 +2817,11 @@ export async function createTacticalPadLiteSurface(
           .map((entry) => sanitizePhaseSnapshot(entry))
           .filter((entry): entry is PhaseSnapshot => entry != null)
       : [];
+    const parsedMovementPaths = Array.isArray(state.movementPaths)
+      ? state.movementPaths
+          .map((entry) => sanitizeMovementPathRecord(entry))
+          .filter((entry): entry is MovementPathRecord => entry != null)
+      : [];
     const parsedStart = sanitizePhaseSnapshot(state.startSnapshot);
     const parsedTeamState = isRecord(state.teamState) ? state.teamState : null;
     const nextBlueColor = sanitizeWhiteboardTokenColor(parsedTeamState?.colors && isRecord(parsedTeamState.colors) ? parsedTeamState.colors.blue : undefined);
@@ -2437,6 +2841,8 @@ export async function createTacticalPadLiteSurface(
     clearSelectedItem();
     cancelPlaybackAnimation();
     resetActiveWhiteboardDrawing();
+    resetActiveMovementPathDraft();
+    isFreeBallPathMode = false;
     lastTappedPlayer = null;
 
     for (const player of players) {
@@ -2489,6 +2895,15 @@ export async function createTacticalPadLiteSurface(
     );
     startPositions = nextStartSnapshot;
     phases = parsedPhases.map((phase) => normalizePhaseForPlayerCount(phase, players.length));
+    movementPaths = parsedMovementPaths.map((path) => cloneMovementPathRecord(path));
+    migratePhaseBallPathsToMovementPaths(phases);
+    const parsedMaxMovementPathSerial = movementPaths.reduce<number>((maxValue, path) => {
+      const match = /(\d+)$/.exec(path.id);
+      const serial = match?.[1] ? Number(match[1]) : Number.NaN;
+      if (!Number.isFinite(serial)) return maxValue;
+      return Math.max(maxValue, serial);
+    }, 0);
+    movementPathCounter = Math.max(movementPathCounter, parsedMaxMovementPathSerial);
     options.onPhaseCountChange?.(phases.length);
 
     const parsedDrawTool = sanitizeDrawingTool(state.drawTool);
@@ -2508,6 +2923,7 @@ export async function createTacticalPadLiteSurface(
     }
     syncWhiteboardTokenInputMode();
     renderTacticalItems();
+    renderMovementPaths();
     tacticalDrawingController.setColor(activeWhiteboardColor);
     tacticalDrawingController.setTool(sanitizeDrawingTool(activeWhiteboardTool) ?? "move");
     renderAllWhiteboardDrawings();
@@ -2585,6 +3001,9 @@ export async function createTacticalPadLiteSurface(
       ballState.attachedPlayerId = null;
       ballState.isFree = true;
     }
+    movementPaths = movementPaths.filter(
+      (path) => path.entityType !== "player" || path.entityId !== removedPlayer.id,
+    );
     removedPlayer.token.removeAllListeners();
     removedPlayer.token.destroy({ children: true });
     syncPlayersToViewport();
@@ -2597,6 +3016,7 @@ export async function createTacticalPadLiteSurface(
   syncPlayersToViewport();
 
   function handleStagePointerMove(event: unknown): void {
+    updateFreeBallMovementPath(event);
     updateDraggedPlayerFromEvent(event);
     updateDraggedItemFromEvent(event);
     updateWhiteboardDrawing(event);
@@ -2605,6 +3025,7 @@ export async function createTacticalPadLiteSurface(
   function handleStagePointerUp(event: unknown): void {
     if (!isMatchingActivePointer(event)) return;
     endWhiteboardDrawing(event);
+    finishFreeBallMovementPath(event);
     releaseActiveDrag();
   }
 
@@ -2620,6 +3041,7 @@ export async function createTacticalPadLiteSurface(
     }
   });
   whiteboardInputLayer.on("pointerdown", (event) => {
+    startFreeBallMovementPath(event);
     startWhiteboardDrawing(event);
   });
   app.ticker.add(() => {
@@ -2642,26 +3064,33 @@ export async function createTacticalPadLiteSurface(
     setStart: () => {
       releaseActiveDrag();
       clearSelectedItem();
+      resetActiveMovementPathDraft();
       cancelPlaybackAnimation();
       startPositions = captureCurrentSnapshot();
       phases = [];
+      movementPaths = [];
       resetAllBallMovementPaths();
+      renderMovementPaths();
       options.onPhaseCountChange?.(0);
     },
     addPhase: () => {
       releaseActiveDrag();
       clearSelectedItem();
+      resetActiveMovementPathDraft();
       cancelPlaybackAnimation();
-      phases = [...phases, captureCurrentSnapshot()];
+      const targetPhaseIndex = phases.length;
+      phases = [...phases, captureCurrentSnapshot(targetPhaseIndex)];
       resetAllBallMovementPaths();
       options.onPhaseCountChange?.(phases.length);
     },
     undoPhase: () => {
       releaseActiveDrag();
       clearSelectedItem();
+      resetActiveMovementPathDraft();
       cancelPlaybackAnimation();
       if (phases.length <= 0) return;
       phases = phases.slice(0, -1);
+      pruneMovementPathsForPhaseCount(phases.length);
       const previousSnapshot = phases[phases.length - 1] ?? startPositions;
       applySnapshotToSurface(previousSnapshot);
       options.onPhaseCountChange?.(phases.length);
@@ -2676,6 +3105,7 @@ export async function createTacticalPadLiteSurface(
       releaseActiveDrag();
       clearSelectedItem();
       resetActiveWhiteboardDrawing();
+      resetActiveMovementPathDraft();
       isPlaying = false;
       isPaused = true;
       emitPlaybackStateChange();
@@ -2702,6 +3132,20 @@ export async function createTacticalPadLiteSurface(
       }
     },
     freeBall: detachPrimaryBall,
+    setFreeBallPathMode: (enabled) => {
+      if (surfaceVariant !== "tactical") return;
+      const nextEnabled = Boolean(enabled);
+      if (nextEnabled === isFreeBallPathMode) return;
+      releaseActiveDrag();
+      resetActiveWhiteboardDrawing();
+      resetActiveMovementPathDraft();
+      isFreeBallPathMode = nextEnabled;
+      if (isFreeBallPathMode) {
+        activeWhiteboardTool = "move";
+      }
+      syncWhiteboardTokenInputMode();
+      renderMovementPaths();
+    },
     addTacticalPlayer,
     removeTacticalPlayer: removeLastTacticalPlayer,
     getTacticalPlayer: getTacticalPlayerSnapshot,
@@ -2721,6 +3165,7 @@ export async function createTacticalPadLiteSurface(
     },
     reset: () => {
       releaseActiveDrag();
+      resetActiveMovementPathDraft();
       cancelPlaybackAnimation();
       applySnapshotToSurface(startPositions);
     },
@@ -2749,8 +3194,10 @@ export async function createTacticalPadLiteSurface(
     setWhiteboardDrawTool: (tool) => {
       if (!isDrawingEnabledSurface) return;
       if (tool !== "move") {
+        isFreeBallPathMode = false;
         releaseActiveDrag();
         clearSelectedItem();
+        resetActiveMovementPathDraft();
       }
       activeWhiteboardTool = tool;
       tacticalDrawingController.setTool(sanitizeDrawingTool(tool) ?? "move");
