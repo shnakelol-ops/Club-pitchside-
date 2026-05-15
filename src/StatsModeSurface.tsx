@@ -1048,10 +1048,13 @@ function clampUtilityBubblePosition(
 }
 
 function getDefaultUtilityBubblePosition(viewport: ViewportRect): { left: number; top: number } {
+  const isPortrait =
+    typeof window !== "undefined" && window.matchMedia("(orientation: portrait)").matches;
+  const bubbleBottomOffset = isPortrait ? 160 : 90;
   return clampUtilityBubblePosition(
     {
       left: viewport.left + 16,
-      top: viewport.top + viewport.height - 90 - UTILITY_BUBBLE_SIZE,
+      top: viewport.top + viewport.height - bubbleBottomOffset - UTILITY_BUBBLE_SIZE,
     },
     viewport,
   );
@@ -1326,7 +1329,7 @@ const PANEL_CSS = `
 
 .counts-bubble-btn--portrait {
   position: fixed;
-  z-index: 22;
+  z-index: 24;
   left: max(10px, calc(env(safe-area-inset-left, 0px) + 8px));
   bottom: max(84px, calc(env(safe-area-inset-bottom, 0px) + 78px));
 }
@@ -1351,7 +1354,7 @@ const PANEL_CSS = `
 
 .utility-controls {
   position: fixed;
-  z-index: 9999;
+  z-index: 10000;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -1377,7 +1380,7 @@ const PANEL_CSS = `
 
 .utility-controls--portrait {
   left: 16px;
-  bottom: 90px;
+  bottom: max(160px, calc(env(safe-area-inset-bottom, 0px) + 152px));
   align-items: flex-start;
 }
 
@@ -1403,7 +1406,7 @@ const PANEL_CSS = `
     0 0 0 1px rgba(124, 255, 114, 0.08),
     0 0 8px rgba(124, 255, 114, 0.12),
     inset 0 1px 2px rgba(255, 255, 255, 0.12);
-  z-index: 9999;
+  z-index: 10000;
   color: rgba(236, 255, 238, 0.96);
   font-size: 15px;
   line-height: 1;
@@ -2353,6 +2356,11 @@ const PANEL_CSS = `
 }
 
 @media (orientation: portrait) {
+  .utility-bubble-btn {
+    left: max(10px, calc(env(safe-area-inset-left, 0px) + 8px));
+    bottom: max(160px, calc(env(safe-area-inset-bottom, 0px) + 152px));
+  }
+
   .scoreboard-strip {
     top: max(8px, calc(env(safe-area-inset-top, 0px) + 6px));
   }
