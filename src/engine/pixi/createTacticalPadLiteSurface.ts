@@ -175,6 +175,16 @@ const PLAYER_RADIUS = 4.1;
 const PLAYER_TOUCH_HIT_DIAMETER_PX = 48;
 const TACTICAL_PLAYER_VISUAL_SCALE = 0.8;
 const TACTICAL_ITEM_HALF_SIZE = 2.2;
+const FOOTBALL_RADIUS_BY_TYPE: Record<"footballSmall" | "football" | "footballLarge", number> = {
+  footballSmall: 1.75,
+  football: 2.25,
+  footballLarge: 2.7,
+};
+const SLIOTAR_RADIUS_BY_TYPE: Record<"sliotarSmall" | "sliotar" | "sliotarLarge", number> = {
+  sliotarSmall: 1.2,
+  sliotar: 1.55,
+  sliotarLarge: 1.9,
+};
 const TACTICAL_ITEM_DRAG_THRESHOLD_PX = 5;
 const TACTICAL_ITEM_TOUCH_HIT_DIAMETER_PX = 46;
 const ATTACHED_BALL_OFFSETS_WORLD: ReadonlyArray<Readonly<NormalizedPoint>> = [
@@ -1478,6 +1488,124 @@ export async function createTacticalPadLiteSurface(
     return tacticalItems.find((item) => item.id === itemId) ?? null;
   }
 
+  function drawGroundedBallShadow(
+    graphic: Graphics,
+    shadowConfig: {
+      castOffsetY: number;
+      castXRadius: number;
+      castYRadius: number;
+      castAlpha: number;
+      contactOffsetY: number;
+      contactXRadius: number;
+      contactYRadius: number;
+      contactAlpha: number;
+    },
+  ): void {
+    graphic
+      .ellipse(0, shadowConfig.castOffsetY, shadowConfig.castXRadius, shadowConfig.castYRadius)
+      .fill({ color: 0x020617, alpha: shadowConfig.castAlpha });
+    graphic
+      .ellipse(0, shadowConfig.contactOffsetY, shadowConfig.contactXRadius, shadowConfig.contactYRadius)
+      .fill({ color: 0x020617, alpha: shadowConfig.contactAlpha });
+  }
+
+  function drawFootballGraphic(graphic: Graphics, radius: number): void {
+    const shellStroke = Math.max(0.2, radius * 0.11);
+    const seamStroke = Math.max(0.2, radius * 0.13);
+    const seamDetailStroke = Math.max(0.16, radius * 0.1);
+
+    drawGroundedBallShadow(graphic, {
+      castOffsetY: radius * 0.58,
+      castXRadius: radius * 1.02,
+      castYRadius: radius * 0.35,
+      castAlpha: 0.11,
+      contactOffsetY: radius * 0.78,
+      contactXRadius: radius * 0.72,
+      contactYRadius: radius * 0.2,
+      contactAlpha: 0.19,
+    });
+
+    graphic
+      .circle(0, 0, radius)
+      .fill(0xf4f4ef)
+      .stroke({ color: 0x5f6c72, width: shellStroke, alpha: 0.9 });
+    graphic
+      .ellipse(radius * 0.03, radius * 0.52, radius * 0.72, radius * 0.33)
+      .fill({ color: 0x5b6471, alpha: 0.2 });
+    graphic
+      .ellipse(-radius * 0.34, -radius * 0.38, radius * 0.45, radius * 0.28)
+      .fill({ color: 0xffffff, alpha: 0.46 });
+    graphic
+      .ellipse(-radius * 0.08, -radius * 0.58, radius * 0.22, radius * 0.1)
+      .fill({ color: 0xffffff, alpha: 0.24 });
+
+    graphic
+      .arc(0, 0, radius * 0.72, Math.PI * 0.2, Math.PI * 0.8)
+      .stroke({ color: 0x5f6c72, width: seamStroke, alpha: 0.86 });
+    graphic
+      .arc(0, 0, radius * 0.72, Math.PI * 1.2, Math.PI * 1.8)
+      .stroke({ color: 0x5f6c72, width: seamStroke, alpha: 0.86 });
+    graphic
+      .moveTo(-radius * 0.62, -radius * 0.03)
+      .lineTo(-radius * 0.2, radius * 0.04)
+      .moveTo(radius * 0.62, -radius * 0.03)
+      .lineTo(radius * 0.2, radius * 0.04)
+      .stroke({ color: 0x677885, width: seamDetailStroke, alpha: 0.82, cap: "round", join: "round" });
+    graphic
+      .moveTo(0, -radius * 0.62)
+      .lineTo(0, -radius * 0.24)
+      .moveTo(0, radius * 0.24)
+      .lineTo(0, radius * 0.62)
+      .stroke({ color: 0x66717d, width: seamDetailStroke, alpha: 0.6, cap: "round", join: "round" });
+  }
+
+  function drawSliotarGraphic(graphic: Graphics, radius: number): void {
+    const shellStroke = Math.max(0.19, radius * 0.12);
+    const seamStroke = Math.max(0.19, radius * 0.16);
+    const stitchStroke = Math.max(0.16, radius * 0.13);
+
+    drawGroundedBallShadow(graphic, {
+      castOffsetY: radius * 0.56,
+      castXRadius: radius * 0.88,
+      castYRadius: radius * 0.3,
+      castAlpha: 0.1,
+      contactOffsetY: radius * 0.74,
+      contactXRadius: radius * 0.62,
+      contactYRadius: radius * 0.18,
+      contactAlpha: 0.18,
+    });
+
+    graphic
+      .circle(0, 0, radius)
+      .fill(0xf8e8c3)
+      .stroke({ color: 0x7a6948, width: shellStroke, alpha: 0.9 });
+    graphic
+      .ellipse(radius * 0.04, radius * 0.5, radius * 0.66, radius * 0.31)
+      .fill({ color: 0x8d7a58, alpha: 0.17 });
+    graphic
+      .ellipse(-radius * 0.32, -radius * 0.34, radius * 0.4, radius * 0.24)
+      .fill({ color: 0xfff9ea, alpha: 0.43 });
+
+    graphic
+      .moveTo(-radius * 0.8, -radius * 0.18)
+      .quadraticCurveTo(0, -radius * 0.76, radius * 0.8, radius * 0.04)
+      .stroke({ color: 0x786440, width: seamStroke, alpha: 0.88, cap: "round", join: "round" });
+    graphic
+      .moveTo(-radius * 0.8, radius * 0.14)
+      .quadraticCurveTo(0, -radius * 0.44, radius * 0.8, radius * 0.34)
+      .stroke({ color: 0x7d6844, width: seamStroke, alpha: 0.8, cap: "round", join: "round" });
+
+    const stitchOffsets = [-0.56, -0.3, -0.04, 0.22, 0.48];
+    for (const offset of stitchOffsets) {
+      const x = radius * offset;
+      const y = radius * (0.08 + offset * 0.2);
+      graphic
+        .moveTo(x - radius * 0.055, y - radius * 0.042)
+        .lineTo(x + radius * 0.055, y + radius * 0.042);
+    }
+    graphic.stroke({ color: 0x6b5534, width: stitchStroke, alpha: 0.74, cap: "round", join: "round" });
+  }
+
   function drawTacticalItemGraphic(graphic: Graphics, item: TacticalItem): void {
     graphic.clear();
     const shadowColor = 0x020617;
@@ -1554,43 +1682,13 @@ export async function createTacticalPadLiteSurface(
       return;
     }
     if (item.type === "footballSmall" || item.type === "football" || item.type === "footballLarge") {
-      const radius = TACTICAL_ITEM_HALF_SIZE * (item.type === "footballSmall" ? 0.72 : item.type === "footballLarge" ? 1.12 : 0.9);
-      graphic.circle(0, radius * 0.24, radius * 0.86).fill({ color: 0x020617, alpha: 0.12 });
-      graphic.circle(0, 0, radius).fill(0xf8fafc).stroke({ color: 0x475569, width: 0.26 });
-      graphic.circle(-radius * 0.22, -radius * 0.3, radius * 0.29).fill({ color: 0xffffff, alpha: 0.42 });
-      graphic.arc(0, 0, radius * 0.58, Math.PI * 0.18, Math.PI * 0.82).stroke({
-        color: 0x475569,
-        width: 0.12,
-        alpha: 0.82,
-      });
-      graphic.arc(0, 0, radius * 0.58, Math.PI * 1.18, Math.PI * 1.82).stroke({
-        color: 0x475569,
-        width: 0.12,
-        alpha: 0.82,
-      });
-      graphic
-        .moveTo(-radius * 0.56, 0)
-        .lineTo(-radius * 0.2, 0)
-        .moveTo(radius * 0.56, 0)
-        .lineTo(radius * 0.2, 0)
-        .stroke({ color: 0x64748b, width: 0.12, alpha: 0.74 });
+      const radius = FOOTBALL_RADIUS_BY_TYPE[item.type];
+      drawFootballGraphic(graphic, radius);
       return;
     }
     if (item.type === "sliotarSmall" || item.type === "sliotar" || item.type === "sliotarLarge") {
-      const radius = TACTICAL_ITEM_HALF_SIZE * (item.type === "sliotarSmall" ? 0.6 : item.type === "sliotarLarge" ? 0.9 : 0.74);
-      graphic.circle(0, radius * 0.22, radius * 0.82).fill({ color: 0x111827, alpha: 0.1 });
-      graphic.circle(0, 0, radius).fill(0xfff3d6).stroke({ color: 0x6b7280, width: 0.24 });
-      graphic.circle(-radius * 0.22, -radius * 0.32, radius * 0.26).fill({ color: 0xffffff, alpha: 0.45 });
-      graphic.arc(0, 0, radius * 0.66, Math.PI * 0.32, Math.PI * 0.78).stroke({
-        color: 0x4b5563,
-        width: 0.15,
-        alpha: 0.82,
-      });
-      graphic.arc(0, 0, radius * 0.66, Math.PI * 1.32, Math.PI * 1.78).stroke({
-        color: 0x4b5563,
-        width: 0.15,
-        alpha: 0.82,
-      });
+      const radius = SLIOTAR_RADIUS_BY_TYPE[item.type];
+      drawSliotarGraphic(graphic, radius);
       return;
     }
   }
