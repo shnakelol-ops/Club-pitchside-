@@ -228,7 +228,7 @@ export function createPremiumGlowPlayerToken({
     style: {
       fill: 0x020617,
       fontSize: labelFontSize,
-      fontWeight: isNumericLabel ? "950" : "900",
+      fontWeight: isNumericLabel ? "bolder" : "900",
       fontFamily: "\"Barlow Condensed\", \"Inter Tight\", Inter, system-ui, sans-serif",
       align: "center",
       letterSpacing: labelLetterSpacing,
@@ -248,7 +248,7 @@ export function createPremiumGlowPlayerToken({
     style: {
       fill: isNumericLabel ? numericFill : resolved.textColor,
       fontSize: labelFontSize,
-      fontWeight: isNumericLabel ? "950" : "900",
+      fontWeight: isNumericLabel ? "bolder" : "900",
       fontFamily: "\"Barlow Condensed\", \"Inter Tight\", Inter, system-ui, sans-serif",
       align: "center",
       letterSpacing: labelLetterSpacing,
