@@ -141,7 +141,8 @@ const TOKEN_STYLE_CHOICES: ReadonlyArray<{ value: TacticalPlayerTokenStyle; labe
   { value: "vision-v3", label: "Vision V3" },
   { value: "classic", label: "Classic" },
   { value: "premium", label: "Glow" },
-  { value: "torso", label: "Torso" },
+  { value: "pixi", label: "Pixi" },
+  { value: "phosphor", label: "Phosphor" },
 ];
 type KitEditorTab = "base" | "pattern" | "label";
 const KIT_EDITOR_TABS: ReadonlyArray<{ id: KitEditorTab; label: string }> = [

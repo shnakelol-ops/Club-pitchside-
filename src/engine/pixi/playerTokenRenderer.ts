@@ -1,12 +1,15 @@
 import type { Container, Graphics } from "pixi.js";
 
+import {
+  createCleanTacticalPlayerToken,
+  type CleanTacticalPlayerTokenStyle,
+} from "./createCleanTacticalPlayerToken";
 import { createMicroAthleteToken, type MicroAthleteKitPattern, type MicroAthleteStyle } from "./createMicroAthleteToken";
 import { createPremiumGlowPlayerToken } from "./createPremiumGlowPlayerToken";
-import { createTorsoPlayerToken } from "./createTorsoPlayerToken";
 import { createVisionV3PlayerToken } from "./createVisionV3PlayerToken";
 import type { PremiumPlayerTokenColor } from "./createPremiumPlayerToken";
 
-export type PlayerTokenStyle = "vision-v3" | "classic" | "premium" | "torso";
+export type PlayerTokenStyle = "vision-v3" | "classic" | "premium" | "pixi" | "phosphor";
 
 export type PlayerTokenRendererInput = {
   label: string;
@@ -60,23 +63,6 @@ export const PremiumGlowRenderer: PlayerTokenRenderer = ({
     kitPatternColor,
   });
 
-export const TorsoRenderer: PlayerTokenRenderer = ({
-  label,
-  teamColor,
-  scale,
-  style,
-  kitPattern,
-  kitPatternColor,
-}) =>
-  createTorsoPlayerToken({
-    label,
-    teamColor,
-    scale,
-    style,
-    kitPattern,
-    kitPatternColor,
-  });
-
 export const VisionV3Renderer: PlayerTokenRenderer = ({
   label,
   teamColor,
@@ -96,14 +82,59 @@ export const VisionV3Renderer: PlayerTokenRenderer = ({
     kitPatternColor,
   });
 
+export const ProceduralPixiRenderer: PlayerTokenRenderer = ({
+  label,
+  scale,
+  style,
+  kitPattern,
+  kitPatternColor,
+  radius,
+}) => {
+  const { token, shadow } = createCleanTacticalPlayerToken({
+    label,
+    style: style as Partial<CleanTacticalPlayerTokenStyle>,
+    radius,
+    kitPattern,
+    kitPatternColor,
+    variant: "pixi",
+  });
+  token.scale.set(scale);
+  return { token, shadow };
+};
+
+export const PhosphorRenderer: PlayerTokenRenderer = ({
+  label,
+  scale,
+  style,
+  kitPattern,
+  kitPatternColor,
+  radius,
+}) => {
+  const { token, shadow } = createCleanTacticalPlayerToken({
+    label,
+    style: style as Partial<CleanTacticalPlayerTokenStyle>,
+    radius,
+    kitPattern,
+    kitPatternColor,
+    variant: "phosphor",
+  });
+  token.scale.set(scale);
+  return { token, shadow };
+};
+
 export function resolvePlayerTokenRenderer(style: PlayerTokenStyle): PlayerTokenRenderer {
   if (style === "vision-v3") return VisionV3Renderer;
   if (style === "premium") return PremiumGlowRenderer;
-  if (style === "torso") return TorsoRenderer;
+  if (style === "pixi") return ProceduralPixiRenderer;
+  if (style === "phosphor") return PhosphorRenderer;
   return ClassicRingRenderer;
 }
 
 export function sanitizePlayerTokenStyle(value: unknown): PlayerTokenStyle {
-  if (value === "vision-v3" || value === "classic" || value === "premium" || value === "torso") return value;
+  if (value === "vision-v3" || value === "classic" || value === "premium" || value === "pixi" || value === "phosphor") {
+    return value;
+  }
+  // Migrate old torso selections to classic so older saved states still render.
+  if (value === "torso") return "classic";
   return "vision-v3";
 }
