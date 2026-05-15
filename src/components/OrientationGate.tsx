@@ -116,7 +116,7 @@ export function usePortraitOrientation(): boolean {
   return isPortrait;
 }
 
-export default function OrientationGate({ modeLabel = "Vision Board", children }: OrientationGateProps) {
+export default function OrientationGate({ modeLabel = "PáircVision Board", children }: OrientationGateProps) {
   const isPortrait = usePortraitOrientation();
 
   return (

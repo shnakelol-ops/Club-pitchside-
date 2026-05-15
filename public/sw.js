@@ -1,9 +1,9 @@
-const CACHE_NAME = "tacavision-shell-v1";
+const CACHE_NAME = "paircvision-shell-v1";
 const CORE_ASSETS = [
   "/",
   "/board",
   "/manifest.webmanifest",
-  "/icon-tv-3.svg",
+  "/pv-logo-icon.svg",
   "/android-chrome-192x192.png",
   "/android-chrome-512x512.png",
   "/apple-touch-icon.png",
@@ -28,8 +28,9 @@ self.addEventListener("activate", (event) => {
         keys.map((key) => {
           const normalized = key.toLowerCase();
           const isLegacyPitchFlowCache = normalized.includes("pitchflow");
-          const isOldTacavisionCache = normalized.startsWith("tacavision-") && key !== CACHE_NAME;
-          if (!isLegacyPitchFlowCache && !isOldTacavisionCache) return Promise.resolve(false);
+          const isOldBrandCache =
+            (normalized.startsWith("tacavision-") || normalized.startsWith("paircvision-")) && key !== CACHE_NAME;
+          if (!isLegacyPitchFlowCache && !isOldBrandCache) return Promise.resolve(false);
           return caches.delete(key);
         }),
       ),
