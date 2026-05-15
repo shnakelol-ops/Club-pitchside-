@@ -18,7 +18,7 @@
 .ppt-event-label{font-size:30px;line-height:1.05;font-weight:800}.ppt-event-label.small{font-size:14px;text-transform:uppercase}
 .ppt-points{margin-top:4px;font-size:28px}.ppt-points.pos{color:#4ade80}.ppt-points.neg{color:#fca5a5}
 .ppt-blue{background:#2563eb;border-color:#3b82f6}.ppt-orange{background:#f05907;border-color:#fb923c}.ppt-purple{background:#9810fa;border-color:#c084fc}.ppt-green{background:#068a44;border-color:#34d399}.ppt-red{background:#b50020;border-color:#ef4444}.ppt-red-heavy{background:#7f0015;border-color:#dc2626}.ppt-shotneg{background:#450a0a;border-color:#991b1b}
-.ppt-event.active{outline:2px solid #a5f3fc}
+.ppt-event.active{outline:2px solid #d8fbff;box-shadow:0 0 0 2px rgba(8,145,178,.45),0 6px 18px rgba(3,7,18,.52)}
 .ppt-players{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.ppt-player{display:flex;align-items:center;justify-content:space-between;border:1px solid #17324a;background:#0b1f31;color:#fff;border-radius:14px;padding:12px}.ppt-player-name{font-size:18px;font-weight:700}
 .ppt-chip{background:#facc15;border-radius:10px;padding:4px 10px;font-size:24px;font-weight:800;min-width:44px;text-align:center}
 .ppt-log{border:1px solid #17324a;background:#0b1f31;border-radius:16px;padding:10px}.ppt-log-head{display:flex;justify-content:space-between;align-items:center}.ppt-log-title{font-size:18px;letter-spacing:.08em;color:#9db1c6;font-weight:700}
@@ -33,3 +33,21 @@
 .ppt-save-session-btn-failure{background:#7f1d1d;border-color:#ef4444;color:#fee2e2}
 .ppt-ratings-title{font-size:34px;font-weight:700;margin:0 0 8px}.ppt-rating-card{border:1px solid #17324a;background:#0b1f31;border-radius:14px;padding:10px}.ppt-rating-card.top{border-color:#a16207;background:rgba(113,63,18,.18)}.ppt-rating-card.low{border-color:#b91c1c;background:rgba(127,29,29,.16)}
 .ppt-rating-card.compact{min-height:76px}.ppt-rating-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}.ppt-rating-name{font-size:24px;font-weight:700;line-height:1.1}.ppt-rating-name.compact{font-size:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ppt-rating-score{font-size:34px;font-weight:800;line-height:1}.ppt-rating-score.compact{font-size:34px;min-width:36px;text-align:right}.ppt-break{margin-top:6px;color:#a7b8c8;font-size:12px;display:flex;flex-wrap:wrap;gap:8px}.ppt-break.compact span{white-space:nowrap}
+
+.ppt-tracker{gap:12px}
+.ppt-active-event{margin-top:10px;font-size:13px;color:#c7d7e8;font-weight:600}
+.ppt-event-grid-shell{display:grid;gap:10px}
+.ppt-event-grid-shell .ppt-grid4,.ppt-event-grid-shell .ppt-grid3,.ppt-event-grid-shell .ppt-grid2{gap:10px}
+.ppt-event-grid-shots,.ppt-event-grid-rest{margin-top:2px}
+.ppt-event{min-height:90px;padding:11px 9px}
+.ppt-event-label.small{font-size:15px;letter-spacing:.02em}
+.ppt-points{font-size:30px}
+.ppt-player-grid{gap:10px}
+.ppt-player-tap{min-height:62px;padding:13px 12px}
+.ppt-player-tap .ppt-player-name{font-size:17px;line-height:1.2}
+.ppt-log-soft{background:#0a1a2a;border-color:#1b3348;padding:9px 10px}
+.ppt-log-soft .ppt-log-title{font-size:15px;letter-spacing:.06em;color:#8fa5bc}
+.ppt-log-soft .ppt-filters{background:#0a1d2e}
+.ppt-log-soft .ppt-log-entry{background:#0a1c2b;border-color:#1b3448;padding:9px}
+.ppt-log-soft .ppt-log-text{font-size:12px;color:#bfd0df}
+.ppt-log-soft .ppt-del{padding:4px 7px;font-size:12px}
