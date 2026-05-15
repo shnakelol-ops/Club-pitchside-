@@ -11,6 +11,7 @@ export type VisionV3PlayerTokenStyle = {
 
 export type VisionV3TeamColor = "blue" | "red" | "green" | "yellow" | "black" | "white";
 export type VisionV3KitPattern = "plain" | "hoops" | "stripes" | "slash" | "chestDash" | "gradient";
+const VISION_V3_SIZE_SCALE = 1.06;
 
 const DEFAULT_STYLE_BY_TEAM: Record<VisionV3TeamColor, VisionV3PlayerTokenStyle> = {
   blue: {
@@ -224,20 +225,22 @@ export function createVisionV3PlayerToken({
   token.cursor = "grab";
   token.scale.set(scale ?? 1);
 
-  const discRadius = Number.isFinite(radius) ? Math.max(2.8, Number(radius)) : 3.66;
+  const baseDiscRadius = Number.isFinite(radius) ? Math.max(2.8, Number(radius)) : 3.66;
+  const discRadius = baseDiscRadius * VISION_V3_SIZE_SCALE;
   const ringWidth = Math.max(0.58, discRadius * 0.2);
   const innerRadius = discRadius - ringWidth;
   const baseColor =
     resolved.goalkeeper && resolved.secondaryColor != null
       ? resolved.secondaryColor
       : resolved.primaryColor;
+  const pitchBlendSensitivePalette = teamColor === "green" || teamColor === "white";
   const accentColor = Number.isFinite(kitPatternColor)
     ? Number(kitPatternColor)
     : (resolved.secondaryColor ?? mixColor(baseColor, 0xffffff, 0.3));
   const ringColor = mixColor(baseColor, accentColor, 0.3);
-  const coreColor = mixColor(baseColor, 0x020617, 0.18);
+  const coreColor = mixColor(baseColor, 0x020617, pitchBlendSensitivePalette ? 0.23 : 0.18);
   const highlightColor = mixColor(coreColor, 0xffffff, 0.2);
-  const edgeColor = mixColor(resolved.outlineColor, 0x000000, 0.24);
+  const edgeColor = mixColor(resolved.outlineColor, 0x000000, pitchBlendSensitivePalette ? 0.3 : 0.24);
 
   const shadow = new Graphics();
   shadow
@@ -258,16 +261,21 @@ export function createVisionV3PlayerToken({
     .fill({ color: kitPattern === "gradient" ? mixColor(baseColor, 0xffffff, 0.12) : coreColor })
     .ellipse(0, -innerRadius * 0.34, innerRadius * 0.72, innerRadius * 0.22)
     .fill({ color: highlightColor, alpha: 0.3 });
-  drawPatternAccent(disc, kitPattern, mixColor(accentColor, 0xffffff, 0.1), innerRadius * 0.9);
+  drawPatternAccent(
+    disc,
+    kitPattern,
+    mixColor(accentColor, 0xffffff, pitchBlendSensitivePalette ? 0.2 : 0.1),
+    innerRadius * 0.9,
+  );
   const patternMask = new Graphics();
   patternMask.circle(0, 0, innerRadius).fill({ color: 0xffffff });
   disc.mask = patternMask;
   disc.addChild(patternMask);
   disc
     .circle(0, 0, discRadius)
-    .stroke({ color: edgeColor, width: Math.max(0.22, discRadius * 0.13), alpha: 0.7, alignment: 0.5 })
+    .stroke({ color: edgeColor, width: Math.max(0.22, discRadius * 0.13), alpha: 0.74, alignment: 0.5 })
     .circle(0, 0, innerRadius)
-    .stroke({ color: mixColor(edgeColor, 0xffffff, 0.08), width: Math.max(0.12, discRadius * 0.06), alpha: 0.4, alignment: 0.5 });
+    .stroke({ color: mixColor(edgeColor, 0xffffff, 0.08), width: Math.max(0.12, discRadius * 0.06), alpha: 0.42, alignment: 0.5 });
   token.addChild(disc);
 
   const iconLayer = new Graphics();
@@ -288,11 +296,12 @@ export function createVisionV3PlayerToken({
 
   const safeLabel = label.trim().slice(0, 3) || "?";
   const isNumericLabel = /^\d+$/.test(safeLabel);
-  const highContrastText = luminance(coreColor) < 132 ? 0xf8fafc : 0x0f172a;
-  const labelColor = isNumericLabel ? highContrastText : resolved.textColor;
-  const labelStroke = luminance(labelColor) > 140 ? 0x0f172a : 0xf8fafc;
+  const labelColor = isNumericLabel ? 0xffffff : resolved.textColor;
+  const labelStroke = isNumericLabel
+    ? mixColor(edgeColor, 0x000000, 0.52)
+    : (luminance(labelColor) > 140 ? 0x0f172a : 0xf8fafc);
   const labelFontSize = isNumericLabel
-    ? safeLabel.length >= 2 ? innerRadius * 1.1 : innerRadius * 1.26
+    ? safeLabel.length >= 2 ? innerRadius * 1.16 : innerRadius * 1.32
     : innerRadius * 0.86;
   const labelBaseY = isNumericLabel ? innerRadius * 0.03 : 0;
   const labelLetterSpacing = isNumericLabel && safeLabel.length >= 2 ? 0 : 0.04;
@@ -317,7 +326,7 @@ export function createVisionV3PlayerToken({
     style: {
       fill: mixColor(labelStroke, 0x020617, 0.35),
       fontSize: labelFontSize,
-      fontWeight: "900",
+      fontWeight: isNumericLabel ? "bolder" : "900",
       fontFamily: "\"Barlow Condensed\", \"Inter Tight\", Inter, system-ui, sans-serif",
       align: "center",
       letterSpacing: labelLetterSpacing,
@@ -325,7 +334,7 @@ export function createVisionV3PlayerToken({
   });
   labelShadow.anchor.set(0.5);
   labelShadow.position.y = labelBaseY + 0.09;
-  labelShadow.alpha = 0.3;
+  labelShadow.alpha = isNumericLabel ? 0.36 : 0.3;
   labelShadow.resolution = textResolution;
   labelShadow.roundPixels = true;
   token.addChild(labelShadow);
@@ -335,13 +344,13 @@ export function createVisionV3PlayerToken({
     style: {
       fill: labelColor,
       fontSize: labelFontSize,
-      fontWeight: "900",
+      fontWeight: isNumericLabel ? "bolder" : "900",
       fontFamily: "\"Barlow Condensed\", \"Inter Tight\", Inter, system-ui, sans-serif",
       align: "center",
       letterSpacing: labelLetterSpacing,
       stroke: {
         color: labelStroke,
-        width: isNumericLabel ? Math.max(0.42, innerRadius * 0.2) : Math.max(0.32, innerRadius * 0.14),
+        width: isNumericLabel ? Math.max(0.46, innerRadius * 0.22) : Math.max(0.32, innerRadius * 0.14),
         join: "round",
       },
     },
