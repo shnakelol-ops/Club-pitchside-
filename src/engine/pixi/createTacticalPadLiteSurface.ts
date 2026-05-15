@@ -1560,13 +1560,24 @@ export async function createTacticalPadLiteSurface(
       graphic.ellipse(0, radius * 0.54, radius * 0.78, radius * 0.22).fill({ color: 0x020617, alpha: 0.16 });
       graphic.circle(0, 0, radius).fill(0xf8fafc).stroke({ color: 0x334155, width: 0.3 });
       graphic.circle(-radius * 0.26, -radius * 0.28, radius * 0.27).fill({ color: 0xffffff, alpha: 0.5 });
-      graphic.circle(radius * 0.22, radius * 0.24, radius * 0.68).fill({ color: 0x94a3b8, alpha: 0.08 });
+      graphic.circle(radius * 0.24, radius * 0.26, radius * 0.7).fill({ color: 0x64748b, alpha: 0.11 });
+      graphic.arc(radius * 0.12, -radius * 0.02, radius * 0.72, Math.PI * 0.9, Math.PI * 1.42).stroke({
+        color: 0x4b5563,
+        width: 0.11,
+        alpha: 0.52,
+      });
+      graphic.arc(-radius * 0.1, radius * 0.06, radius * 0.72, Math.PI * 1.58, Math.PI * 2.06).stroke({
+        color: 0x4b5563,
+        width: 0.11,
+        alpha: 0.46,
+      });
       graphic.arc(0, 0, radius * 0.62, Math.PI * 0.18, Math.PI * 0.82).stroke({ color: 0x334155, width: 0.16, alpha: 0.9 });
       graphic.arc(0, 0, radius * 0.62, Math.PI * 1.18, Math.PI * 1.82).stroke({ color: 0x334155, width: 0.16, alpha: 0.9 });
       graphic
         .moveTo(-radius * 0.56, 0)
         .lineTo(radius * 0.56, 0)
         .stroke({ color: 0x475569, width: 0.14, alpha: 0.92 });
+      graphic.arc(0, 0, radius * 0.96, Math.PI * 0.02, Math.PI * 0.48).stroke({ color: 0x1f2937, width: 0.13, alpha: 0.28 });
       graphic
         .moveTo(-radius * 0.48, -radius * 0.02)
         .lineTo(-radius * 0.22, -radius * 0.02)
@@ -1577,16 +1588,18 @@ export async function createTacticalPadLiteSurface(
     }
     if (item.type === "sliotarSmall" || item.type === "sliotar" || item.type === "sliotarLarge") {
       const radius = TACTICAL_ITEM_HALF_SIZE * (item.type === "sliotarSmall" ? 0.6 : item.type === "sliotarLarge" ? 0.9 : 0.74);
+      const seamWidth = item.type === "sliotarSmall" ? 0.24 : 0.22;
+      const seamAlpha = item.type === "sliotarSmall" ? 1 : 0.95;
       graphic.ellipse(0, radius * 0.56, radius * 0.72, radius * 0.2).fill({ color: 0x111827, alpha: 0.15 });
       graphic.circle(0, 0, radius).fill(0xffefbd).stroke({ color: 0x4b5563, width: 0.3 });
       graphic.circle(-radius * 0.24, -radius * 0.3, radius * 0.24).fill({ color: 0xffffff, alpha: 0.44 });
       graphic.circle(radius * 0.25, radius * 0.22, radius * 0.62).fill({ color: 0xb45309, alpha: 0.08 });
-      graphic.arc(0, 0, radius * 0.68, Math.PI * 0.3, Math.PI * 0.82).stroke({ color: 0x374151, width: 0.22, alpha: 0.95 });
-      graphic.arc(0, 0, radius * 0.68, Math.PI * 1.3, Math.PI * 1.82).stroke({ color: 0x374151, width: 0.22, alpha: 0.95 });
+      graphic.arc(0, 0, radius * 0.68, Math.PI * 0.3, Math.PI * 0.82).stroke({ color: 0x374151, width: seamWidth, alpha: seamAlpha });
+      graphic.arc(0, 0, radius * 0.68, Math.PI * 1.3, Math.PI * 1.82).stroke({ color: 0x374151, width: seamWidth, alpha: seamAlpha });
       graphic
         .moveTo(-radius * 0.7, 0)
         .lineTo(radius * 0.7, 0)
-        .stroke({ color: 0x374151, width: 0.18, alpha: 0.94 });
+        .stroke({ color: 0x374151, width: item.type === "sliotarSmall" ? 0.2 : 0.18, alpha: item.type === "sliotarSmall" ? 0.98 : 0.94 });
       return;
     }
   }
