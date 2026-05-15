@@ -9,10 +9,10 @@ import {
   PREMIUM_TOKEN_IDLE_SHADOW_ALPHA,
   type PremiumPlayerTokenColor,
 } from "./createPremiumPlayerToken";
+import type { MicroAthleteKitPattern } from "./createMicroAthleteToken";
 import {
   resolvePlayerTokenRenderer,
   sanitizePlayerTokenStyle,
-  type PlayerTokenKitPattern,
   type PlayerTokenStyle,
 } from "./playerTokenRenderer";
 import {
@@ -33,7 +33,7 @@ import {
   type WhiteboardDrawTool,
 } from "../../features/quickboard/drawing/tacticalDrawingTypes";
 
-export type TacticalKitPattern = PlayerTokenKitPattern;
+export type TacticalKitPattern = MicroAthleteKitPattern;
 export type TacticalLabelMode = "number" | "initials";
 export type TacticalPlayerTokenStyle = PlayerTokenStyle;
 export type TacticalPlayerKitFields = {
@@ -321,15 +321,7 @@ function sanitizeKitColor(value: string | undefined): TacticalKitColor | undefin
 
 function sanitizeKitPattern(value: TacticalKitPattern | undefined): TacticalKitPattern | undefined {
   if (!value) return undefined;
-  if (
-    value === "plain" ||
-    value === "hoops" ||
-    value === "slash" ||
-    value === "stripes" ||
-    value === "chestDash"
-  ) {
-    return value;
-  }
+  if (value === "plain" || value === "hoops" || value === "slash" || value === "stripes") return value;
   return undefined;
 }
 

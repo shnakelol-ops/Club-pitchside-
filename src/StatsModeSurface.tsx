@@ -1355,9 +1355,10 @@ const PANEL_CSS = `
 }
 
 .utility-controls--portrait {
-  left: 16px;
-  bottom: 90px;
+  left: max(16px, calc(env(safe-area-inset-left, 0px) + 12px));
+  bottom: max(88px, calc(env(safe-area-inset-bottom, 0px) + 84px));
   align-items: flex-start;
+  z-index: 10001;
 }
 
 .utility-controls--landscape {
@@ -2325,6 +2326,38 @@ const PANEL_CSS = `
   .utility-controls--landscape .utility-menu {
     margin-left: 44px;
     margin-right: 0;
+  }
+}
+
+@media (orientation: portrait) {
+  .scoreboard-strip {
+    top: max(8px, calc(env(safe-area-inset-top, 0px) + 6px));
+  }
+
+  .match-stopwatch {
+    top: max(14px, calc(env(safe-area-inset-top, 0px) + 10px));
+    right: max(10px, calc(env(safe-area-inset-right, 0px) + 8px));
+  }
+
+  .review-strip--portrait {
+    top: max(104px, calc(env(safe-area-inset-top, 0px) + 100px));
+  }
+
+  .review-event-card--portrait {
+    top: max(104px, calc(env(safe-area-inset-top, 0px) + 100px));
+  }
+
+  .bubble-btn--counts {
+    position: fixed;
+    left: max(16px, calc(env(safe-area-inset-left, 0px) + 12px));
+    bottom: max(16px, calc(env(safe-area-inset-bottom, 0px) + 12px));
+    z-index: 10000;
+  }
+
+  .utility-controls--portrait .utility-bubble-btn {
+    left: max(16px, calc(env(safe-area-inset-left, 0px) + 12px));
+    bottom: max(88px, calc(env(safe-area-inset-bottom, 0px) + 84px));
+    z-index: 10001;
   }
 }
 
@@ -4485,7 +4518,7 @@ export default function StatsModeSurface() {
     ? "utility-controls utility-controls--landscape"
     : "utility-controls utility-controls--portrait";
   const utilityBubbleStyle =
-    utilityBubblePosition == null
+    !isLandscape || utilityBubblePosition == null
       ? undefined
       : {
           left: `${utilityBubblePosition.left}px`,
@@ -4496,7 +4529,7 @@ export default function StatsModeSurface() {
           cursor: utilityBubbleDragRef.current ? "grabbing" : "grab",
         };
   const utilityMenuStyle = (() => {
-    if (utilityBubblePosition == null) return undefined;
+    if (!isLandscape || utilityBubblePosition == null) return undefined;
 
     const viewport = getViewportRect();
     const minLeft = viewport.left + UTILITY_BUBBLE_MARGIN;
@@ -5606,7 +5639,7 @@ export default function StatsModeSurface() {
           {matchState !== "FULL_TIME" ? (
             <button
               type="button"
-              className="bubble-btn"
+              className="bubble-btn bubble-btn--counts"
               aria-label="Toggle live counts"
               aria-expanded={isCountsOverlayOpen}
               onClick={toggleCountsOverlay}
@@ -5638,7 +5671,7 @@ export default function StatsModeSurface() {
                 : "0 4px 10px rgba(2, 8, 15, 0.22)",
             }}
           >
-            <img src="/icon-tv-3.svg" alt="TacaVision menu" aria-hidden="true" style={EVENT_PICKER_LOGO_STYLE} />
+            <img src="/pv-logo-icon.svg" alt="PáircVision menu" aria-hidden="true" style={EVENT_PICKER_LOGO_STYLE} />
           </button>
       </div>
         <div
@@ -5648,12 +5681,13 @@ export default function StatsModeSurface() {
             zIndex: 1,
             width: "100%",
             height: "100%",
+            transform: isLandscape ? "none" : "translateY(-28px)",
             background: isPitchReady
               ? "transparent"
               : "radial-gradient(ellipse at center, rgba(29,90,54,0.96) 0%, rgba(29,90,54,0.88) 40%, rgba(29,90,54,0) 70%)",
             overflow: "hidden",
           }}
-          aria-label="TacaVision Pixi pitch"
+          aria-label="PáircVision Pixi pitch"
           role="img"
         />
       </main>

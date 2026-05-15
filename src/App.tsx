@@ -3470,7 +3470,7 @@ export default function App() {
             background: "#0a0f0c",
             overflow: "hidden",
           }}
-          aria-label="TacaVision Pixi pitch"
+          aria-label="PáircVision Pixi pitch"
           role="img"
         />
       </main>

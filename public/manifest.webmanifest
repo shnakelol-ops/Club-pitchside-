@@ -1,7 +1,7 @@
 {
-  "name": "TacaVision",
-  "short_name": "TacaVision",
-  "description": "TacaVision coaching workspace",
+  "name": "PáircVision",
+  "short_name": "PV",
+  "description": "PáircVision coaching workspace",
   "start_url": "/board",
   "scope": "/",
   "display": "standalone",
@@ -9,13 +9,13 @@
   "theme_color": "#03100B",
   "icons": [
     {
-      "src": "/icon-tv-3.svg",
+      "src": "/pv-logo-icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "/icon-tv-3.svg",
+      "src": "/pv-logo-icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "maskable"
