@@ -1,7 +1,7 @@
-<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="PaircView PV monogram with shared stem">
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="PaircView soft rounded premium PV monogram">
   <rect x="8" y="8" width="240" height="240" rx="56" fill="#0A4A34" />
   <path
-    d="M92 66V168"
+    d="M95 62L124 196"
     stroke="#FFFFFF"
     stroke-width="20"
     stroke-linecap="round"
@@ -9,7 +9,7 @@
     shape-rendering="geometricPrecision"
   />
   <path
-    d="M92 66H136C157 66 172 81 172 102C172 123 157 138 136 138H92"
+    d="M99 75H135C155 75 169 89 169 108C169 127 155 141 135 141H111"
     stroke="#FFFFFF"
     stroke-width="20"
     stroke-linecap="round"
@@ -17,7 +17,7 @@
     shape-rendering="geometricPrecision"
   />
   <path
-    d="M92 168L128 202L164 168"
+    d="M124 196C139 172 153 150 167 130"
     stroke="#FFFFFF"
     stroke-width="20"
     stroke-linecap="round"

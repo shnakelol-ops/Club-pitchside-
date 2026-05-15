@@ -7,21 +7,21 @@ type PvVariation = {
 
 const PV_VARIATIONS: readonly PvVariation[] = [
   {
-    id: "pv-gap",
-    title: "1) P over V with slight gap",
-    subtitle: "Clean separation between P and V for maximum readability.",
+    id: "pv-shared-geometric",
+    title: "1) Shared-stem geometric PV",
+    subtitle: "Balanced base model: inverted-V skeleton with the left leg reused as the P stem.",
     src: "/icon-pv-1.svg",
   },
   {
-    id: "pv-touch",
-    title: "2) P touching V subtly",
-    subtitle: "The V kisses the base of the stem without merging into the bowl.",
+    id: "pv-angular-tactical",
+    title: "2) More angular tactical PV",
+    subtitle: "Sharper planes and tighter angles while preserving the same shared-stem V-to-P logic.",
     src: "/icon-pv-2.svg",
   },
   {
-    id: "pv-shared-stem",
-    title: "3) P and V sharing the same vertical stem",
-    subtitle: "The V originates from the stem while staying clearly legible.",
+    id: "pv-soft-premium",
+    title: "3) Softer rounded premium PV",
+    subtitle: "Smoother curves and softened transitions for a more elegant premium app-icon feel.",
     src: "/icon-pv-3.svg",
   },
 ];
@@ -151,7 +151,10 @@ export default function BrandingPreview() {
       <div className="branding-preview-content">
         <section className="branding-preview-card" style={{ display: "grid", gap: "8px" }}>
           <h1>PaircView PV mark recalibration</h1>
-          <p>Three refinements using the same premium rounded-square icon style, tested at app icon, navbar, and favicon scales.</p>
+          <p>
+            Three explorations that all start from an upside-down V, reusing the left leg as the P stem and building the bowl from that
+            shared structure.
+          </p>
         </section>
 
         {PV_VARIATIONS.map((variation) => (
