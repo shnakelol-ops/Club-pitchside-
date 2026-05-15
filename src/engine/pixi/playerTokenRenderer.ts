@@ -3,10 +3,10 @@ import type { Container, Graphics } from "pixi.js";
 import { createMicroAthleteToken, type MicroAthleteKitPattern, type MicroAthleteStyle } from "./createMicroAthleteToken";
 import { createPremiumGlowPlayerToken } from "./createPremiumGlowPlayerToken";
 import { createTorsoPlayerToken } from "./createTorsoPlayerToken";
-import { createVisionV3PlayerToken } from "./createVisionV3PlayerToken";
+import { createPhosphorToken, createProceduralPixiToken } from "./vision-disc/createCleanTokenRenderers";
 import type { PremiumPlayerTokenColor } from "./createPremiumPlayerToken";
 
-export type PlayerTokenStyle = "vision-v3" | "classic" | "premium" | "torso";
+export type PlayerTokenStyle = "phosphor" | "pixi" | "classic" | "premium" | "torso";
 
 export type PlayerTokenRendererInput = {
   label: string;
@@ -77,33 +77,53 @@ export const TorsoRenderer: PlayerTokenRenderer = ({
     kitPatternColor,
   });
 
-export const VisionV3Renderer: PlayerTokenRenderer = ({
+export const ProceduralPixiRenderer: PlayerTokenRenderer = ({
   label,
-  teamColor,
   scale,
   style,
   kitPattern,
   kitPatternColor,
   radius,
 }) =>
-  createVisionV3PlayerToken({
+  createProceduralPixiToken({
     label,
-    teamColor,
-    radius,
     scale,
-    style,
-    kitPattern,
-    kitPatternColor,
+    radius,
+    baseColor: style.primaryColor ?? 0x2563eb,
+    patternColor: kitPatternColor,
+    numberColor: style.textColor,
+    outlineColor: style.outlineColor,
+    pattern: kitPattern,
+  });
+
+export const PhosphorRenderer: PlayerTokenRenderer = ({
+  label,
+  scale,
+  style,
+  kitPattern,
+  kitPatternColor,
+  radius,
+}) =>
+  createPhosphorToken({
+    label,
+    scale,
+    radius,
+    baseColor: style.primaryColor ?? 0x2563eb,
+    patternColor: kitPatternColor,
+    numberColor: style.textColor,
+    outlineColor: style.outlineColor,
+    pattern: kitPattern,
   });
 
 export function resolvePlayerTokenRenderer(style: PlayerTokenStyle): PlayerTokenRenderer {
-  if (style === "vision-v3") return VisionV3Renderer;
+  if (style === "pixi") return ProceduralPixiRenderer;
+  if (style === "phosphor") return PhosphorRenderer;
   if (style === "premium") return PremiumGlowRenderer;
   if (style === "torso") return TorsoRenderer;
   return ClassicRingRenderer;
 }
 
 export function sanitizePlayerTokenStyle(value: unknown): PlayerTokenStyle {
-  if (value === "vision-v3" || value === "classic" || value === "premium" || value === "torso") return value;
-  return "vision-v3";
+  if (value === "phosphor" || value === "pixi" || value === "classic" || value === "premium" || value === "torso") return value;
+  return "phosphor";
 }

@@ -10,7 +10,7 @@ export type MicroAthleteStyle = {
 };
 
 type MicroAthleteTeamColor = "blue" | "red" | "green" | "yellow" | "black" | "white";
-export type MicroAthleteKitPattern = "plain" | "hoops" | "slash" | "stripes";
+export type MicroAthleteKitPattern = "plain" | "hoops" | "slash" | "stripes" | "chestDash";
 
 const DEFAULT_STYLE_BY_TEAM: Record<MicroAthleteTeamColor, MicroAthleteStyle> = {
   blue: {
@@ -175,6 +175,14 @@ function drawJerseyPattern(body: Graphics, pattern: MicroAthleteKitPattern, colo
     }
     return;
   }
+  if (pattern === "chestDash") {
+    const y = TORSO_BOTTOM_Y - 1.5;
+    body
+      .roundRect(torsoLeftX(y) + 0.24, y, torsoRightX(y) - torsoLeftX(y) - 0.48, 0.56, 0.18)
+      .fill({ color, alpha: alpha + 0.06 });
+    return;
+  }
+
   body
     .poly([
       TORSO_TOP_LEFT_X + 0.26,
@@ -250,6 +258,13 @@ function drawBadgePattern(
         ])
         .fill({ color, alpha });
     }
+    return;
+  }
+
+  if (pattern === "chestDash") {
+    target
+      .roundRect(-radius * 0.62, radius * 0.22, radius * 1.24, radius * 0.3, radius * 0.12)
+      .fill({ color, alpha: alpha + 0.08 });
     return;
   }
 
