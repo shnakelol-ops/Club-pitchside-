@@ -178,12 +178,12 @@ const TACTICAL_ITEM_HALF_SIZE = 2.2;
 const TACTICAL_ITEM_DRAG_THRESHOLD_PX = 5;
 const TACTICAL_ITEM_TOUCH_HIT_DIAMETER_PX = 46;
 const ATTACHED_BALL_OFFSETS_WORLD: ReadonlyArray<Readonly<NormalizedPoint>> = [
-  { x: 4.8, y: -3.8 },
-  { x: 4.8, y: 3.8 },
-  { x: -4.8, y: -3.8 },
-  { x: -4.8, y: 3.8 },
-  { x: 5.6, y: 0 },
-  { x: -5.6, y: 0 },
+  { x: 4.0, y: -3.2 },
+  { x: 4.0, y: 3.2 },
+  { x: -4.0, y: -3.2 },
+  { x: -4.0, y: 3.2 },
+  { x: 4.7, y: 0 },
+  { x: -4.7, y: 0 },
 ];
 const ATTACHED_BALL_FOLLOW_MAX_LEAD_WORLD = 0.6;
 const ATTACHED_BALL_FOLLOW_SMOOTHING = 0.28;
