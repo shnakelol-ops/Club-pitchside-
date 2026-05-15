@@ -1,9 +1,9 @@
-const CACHE_NAME = "tacavision-shell-v1";
+const CACHE_NAME = "tacavision-shell-v2";
 const CORE_ASSETS = [
   "/",
   "/board",
   "/manifest.webmanifest",
-  "/icon-tv-3.svg",
+  "/icon-pv-1.svg",
   "/android-chrome-192x192.png",
   "/android-chrome-512x512.png",
   "/apple-touch-icon.png",

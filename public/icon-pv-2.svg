@@ -1,0 +1,27 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="PaircView angular tactical PV monogram">
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="#0A4A34" />
+  <path
+    d="M96 62L126 196"
+    stroke="#FFFFFF"
+    stroke-width="18"
+    stroke-linecap="round"
+    stroke-linejoin="miter"
+    shape-rendering="geometricPrecision"
+  />
+  <path
+    d="M104 74H146L171 94V104L146 124H114"
+    stroke="#FFFFFF"
+    stroke-width="18"
+    stroke-linecap="round"
+    stroke-linejoin="miter"
+    shape-rendering="geometricPrecision"
+  />
+  <path
+    d="M126 196L166 146"
+    stroke="#FFFFFF"
+    stroke-width="14"
+    stroke-linecap="round"
+    stroke-linejoin="miter"
+    shape-rendering="geometricPrecision"
+  />
+</svg>
