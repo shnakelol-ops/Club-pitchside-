@@ -2149,8 +2149,12 @@ export async function createTacticalPadLiteSurface(
     };
   }
 
-  function applySnapshotToSurface(snapshot: PhaseSnapshot): void {
+  function applySnapshotToSurface(
+    snapshot: PhaseSnapshot,
+    options?: { preserveActiveRoutePlayers?: boolean },
+  ): void {
     for (const player of players) {
+      if (options?.preserveActiveRoutePlayers && activeRouteRunsByPlayerId.has(player.id)) continue;
       const point = snapshot.players[players.indexOf(player)];
       if (!point) continue;
       player.current = { x: point.x, y: point.y };
@@ -2459,8 +2463,7 @@ export async function createTacticalPadLiteSurface(
       const easedProgress = getPlaybackEaseProgress(progress);
 
       for (const player of players) {
-        const activeRoute = activeRouteRunsByPlayerId.get(player.id);
-        if (activeRoute && activeRoute.segmentIndex === activeSegmentIndex) continue;
+        if (activeRouteRunsByPlayerId.has(player.id)) continue;
         const idx = players.indexOf(player);
         const fromPoint = fromSnapshot.players[idx];
         const toPoint = toSnapshot.players[idx];
@@ -2508,12 +2511,7 @@ export async function createTacticalPadLiteSurface(
       }
 
       if (progress >= 1) {
-        for (const [playerId, activeRoute] of activeRouteRunsByPlayerId.entries()) {
-          if (activeRoute.segmentIndex !== activeSegmentIndex) continue;
-          activeRoute.session.cancel();
-          activeRouteRunsByPlayerId.delete(playerId);
-        }
-        applySnapshotToSurface(toSnapshot);
+        applySnapshotToSurface(toSnapshot, { preserveActiveRoutePlayers: true });
         activeSegmentIndex += 1;
         playElapsedMs = 0;
         if (activeSegmentIndex >= playbackPath.length - 1) {
@@ -3268,7 +3266,6 @@ export async function createTacticalPadLiteSurface(
       releaseActiveDrag();
       cancelPlaybackAnimation();
       cancelBasicRouteFollow({ restoreOrigin: true });
-      clearBasicRouteCapture();
       applySnapshotToSurface(startPositions);
     },
     setBasicRouteFollowDevMode: (enabled) => {
