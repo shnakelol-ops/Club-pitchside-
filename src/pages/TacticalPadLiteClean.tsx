@@ -282,40 +282,40 @@ const BACKGROUND_BASE_STYLE: CSSProperties = {
   position: "absolute",
   inset: 0,
   background:
-    "radial-gradient(circle at top left, rgba(0, 120, 100, 0.09), transparent 60%), radial-gradient(circle at top right, rgba(0, 120, 100, 0.09), transparent 60%), linear-gradient(to bottom, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0) 30%), linear-gradient(to top, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0) 35%), linear-gradient(to bottom, rgba(0, 0, 0, 0) 58%, rgba(0, 80, 60, 0.13) 100%), linear-gradient(135deg, rgba(220, 238, 242, 1) 0%, rgba(172, 203, 214, 1) 45%, rgba(108, 158, 183, 1) 100%)",
+    "radial-gradient(circle at top left, rgba(0, 120, 100, 0.07), transparent 64%), radial-gradient(circle at top right, rgba(0, 120, 100, 0.07), transparent 64%), linear-gradient(to bottom, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0) 34%), linear-gradient(to top, rgba(0, 0, 0, 0.09), rgba(0, 0, 0, 0) 38%), linear-gradient(to bottom, rgba(0, 0, 0, 0) 62%, rgba(0, 80, 60, 0.1) 100%), linear-gradient(135deg, rgba(220, 238, 242, 1) 0%, rgba(172, 203, 214, 1) 45%, rgba(108, 158, 183, 1) 100%)",
 };
 
 const BACKGROUND_VIGNETTE_STYLE: CSSProperties = {
   position: "absolute",
   inset: 0,
   background:
-    "radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 50%, rgba(4, 12, 18, 0.2) 74%, rgba(0, 0, 0, 0.44) 100%)",
+    "radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 58%, rgba(4, 12, 18, 0.16) 78%, rgba(0, 0, 0, 0.34) 100%)",
 };
 
 const STADIUM_FLOODLIGHT_CSS = `
 .stadium-light {
   position: absolute;
-  top: 6%;
-  width: 88px;
-  height: 70px;
+  top: 5%;
+  width: 76px;
+  height: 58px;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 7px;
+  gap: 6px;
   pointer-events: none;
   z-index: 1;
-  opacity: 0.95;
-  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.75))
-    drop-shadow(0 0 28px rgba(180, 235, 255, 0.55));
+  opacity: 0.72;
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.58))
+    drop-shadow(0 0 20px rgba(180, 235, 255, 0.36));
 }
 
 .stadium-light span {
-  width: 11px;
-  height: 11px;
+  width: 9px;
+  height: 9px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.82);
   box-shadow:
-    0 0 10px rgba(255, 255, 255, 0.9),
-    0 0 22px rgba(185, 235, 255, 0.65);
+    0 0 8px rgba(255, 255, 255, 0.72),
+    0 0 16px rgba(185, 235, 255, 0.45);
 }
 
 .stadium-light-left {
@@ -331,18 +331,18 @@ const STADIUM_FLOODLIGHT_CSS = `
 .stadium-light::before {
   content: "";
   position: absolute;
-  top: 18px;
-  width: 210px;
-  height: 220px;
+  top: 14px;
+  width: 174px;
+  height: 178px;
   pointer-events: none;
   background: radial-gradient(
     ellipse at top,
-    rgba(210, 240, 255, 0.28) 0%,
-    rgba(160, 220, 235, 0.16) 35%,
-    rgba(100, 180, 190, 0.08) 58%,
-    transparent 78%
+    rgba(210, 240, 255, 0.2) 0%,
+    rgba(160, 220, 235, 0.11) 35%,
+    rgba(100, 180, 190, 0.06) 58%,
+    transparent 80%
   );
-  filter: blur(22px);
+  filter: blur(17px);
   z-index: -1;
 }
 
@@ -363,9 +363,9 @@ const STADIUM_FLOODLIGHT_CSS = `
   pointer-events: none;
   z-index: 1;
   background:
-    radial-gradient(ellipse at 15% 0%, rgba(255, 255, 255, 0.14), transparent 38%),
-    radial-gradient(ellipse at 85% 0%, rgba(255, 255, 255, 0.14), transparent 38%),
-    linear-gradient(to bottom, rgba(0, 0, 0, 0.12), transparent 42%);
+    radial-gradient(ellipse at 15% 0%, rgba(255, 255, 255, 0.1), transparent 42%),
+    radial-gradient(ellipse at 85% 0%, rgba(255, 255, 255, 0.1), transparent 42%),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.08), transparent 44%);
 }
 
 .floating-bubble {
@@ -515,14 +515,14 @@ const STADIUM_BEAM_BASE_STYLE: CSSProperties = {
   position: "absolute",
   left: "50%",
   transform: "translateX(-50%)",
-  bottom: "-16%",
-  width: "108%",
-  height: "66%",
+  bottom: "-12%",
+  width: "104%",
+  height: "58%",
   pointerEvents: "none",
-  filter: "blur(24px)",
-  opacity: 0.78,
+  filter: "blur(18px)",
+  opacity: 0.58,
   background:
-    "radial-gradient(ellipse at center, rgba(0, 0, 0, 0.42) 0%, rgba(0, 0, 0, 0.28) 36%, rgba(0, 0, 0, 0.16) 58%, rgba(0, 0, 0, 0.06) 74%, transparent 84%)",
+    "radial-gradient(ellipse at center, rgba(0, 0, 0, 0.34) 0%, rgba(0, 0, 0, 0.22) 38%, rgba(0, 0, 0, 0.12) 60%, rgba(0, 0, 0, 0.04) 76%, transparent 86%)",
   zIndex: 0,
 };
 
@@ -536,7 +536,7 @@ const STADIUM_BEAM_RIGHT_STYLE: CSSProperties = {
   pointerEvents: "none",
   zIndex: 0,
   background:
-    "linear-gradient(to bottom, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0) 32%), linear-gradient(to top, rgba(0, 0, 0, 0.22), rgba(0, 0, 0, 0) 54%)",
+    "linear-gradient(to bottom, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0) 36%), linear-gradient(to top, rgba(0, 0, 0, 0.16), rgba(0, 0, 0, 0) 58%)",
 };
 
 const CONTENT_STYLE: CSSProperties = {
@@ -839,52 +839,39 @@ const CONTROLS_POPOUT_STYLE: CSSProperties = {
 
 const COMPACT_MOVEMENT_TOOLBAR_STYLE: CSSProperties = {
   position: "fixed",
-  left: "max(8px, calc(env(safe-area-inset-left, 0px) + 6px))",
-  right: "max(8px, calc(env(safe-area-inset-right, 0px) + 6px))",
-  bottom: "max(8px, calc(env(safe-area-inset-bottom, 0px) + 6px))",
+  left: "max(7px, calc(env(safe-area-inset-left, 0px) + 5px))",
+  right: "max(7px, calc(env(safe-area-inset-right, 0px) + 5px))",
+  bottom: "max(6px, calc(env(safe-area-inset-bottom, 0px) + 4px))",
   display: "grid",
-  gap: "6px",
-  padding: "8px",
-  borderRadius: "14px",
-  border: "1px solid rgba(196, 222, 214, 0.24)",
-  background: "linear-gradient(180deg, rgba(9, 16, 21, 0.84) 0%, rgba(7, 14, 19, 0.9) 100%)",
-  backdropFilter: "blur(14px)",
-  WebkitBackdropFilter: "blur(14px)",
-  boxShadow: "0 10px 28px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.1)",
+  gap: "3px",
+  padding: "5px",
+  borderRadius: "11px",
+  border: "1px solid rgba(196, 222, 214, 0.18)",
+  background: "linear-gradient(180deg, rgba(9, 16, 21, 0.8) 0%, rgba(7, 14, 19, 0.86) 100%)",
+  backdropFilter: "blur(10px)",
+  WebkitBackdropFilter: "blur(10px)",
+  boxShadow: "0 7px 20px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.08)",
   zIndex: 24,
-};
-
-const COMPACT_MOVEMENT_META_ROW_STYLE: CSSProperties = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  gap: "8px",
-  padding: "0 2px",
-  color: "rgba(218, 235, 228, 0.86)",
-  fontFamily: "Inter, system-ui, sans-serif",
-  fontSize: "9.2px",
-  fontWeight: 620,
-  letterSpacing: "0.14px",
 };
 
 const COMPACT_MOVEMENT_TOP_ROW_STYLE: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-  gap: "5px",
+  gap: "4px",
 };
 
 const COMPACT_MOVEMENT_MODE_BUTTON_STYLE: CSSProperties = {
-  height: "38px",
-  borderRadius: "10px",
-  border: "1px solid rgba(142, 170, 157, 0.3)",
-  background: "rgba(18, 29, 34, 0.78)",
+  height: "31px",
+  borderRadius: "8px",
+  border: "1px solid rgba(142, 170, 157, 0.26)",
+  background: "rgba(18, 29, 34, 0.74)",
   color: "rgba(227, 238, 233, 0.96)",
   fontFamily: "Inter, system-ui, sans-serif",
-  fontSize: "10px",
-  fontWeight: 650,
-  letterSpacing: "0.16px",
+  fontSize: "9.1px",
+  fontWeight: 640,
+  letterSpacing: "0.12px",
   cursor: "pointer",
-  padding: "0 6px",
+  padding: "0 5px",
   minWidth: 0,
 };
 
@@ -900,36 +887,36 @@ const COMPACT_MOVEMENT_SPEED_CELL_STYLE: CSSProperties = {
   display: "grid",
   gridTemplateRows: "auto auto",
   alignContent: "center",
-  gap: "3px",
-  padding: "4px 5px",
+  gap: "2px",
+  padding: "2px 4px",
 };
 
 const COMPACT_MOVEMENT_SPEED_LABEL_STYLE: CSSProperties = {
   margin: 0,
   textTransform: "uppercase",
-  fontSize: "8px",
-  letterSpacing: "0.2px",
+  fontSize: "7px",
+  letterSpacing: "0.16px",
   color: "rgba(211, 228, 220, 0.74)",
   lineHeight: 1,
 };
 
 const COMPACT_MOVEMENT_SPEED_STEPPER_STYLE: CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "22px minmax(0, 1fr) 22px",
+  gridTemplateColumns: "18px minmax(0, 1fr) 18px",
   alignItems: "center",
-  gap: "3px",
+  gap: "2px",
 };
 
 const COMPACT_MOVEMENT_SPEED_STEP_BUTTON_STYLE: CSSProperties = {
-  width: "22px",
-  height: "18px",
-  borderRadius: "6px",
-  border: "1px solid rgba(170, 197, 186, 0.34)",
+  width: "18px",
+  height: "15px",
+  borderRadius: "5px",
+  border: "1px solid rgba(170, 197, 186, 0.26)",
   background: "rgba(8, 16, 19, 0.88)",
   color: "#e9f5ef",
   fontFamily: "Inter, system-ui, sans-serif",
   fontWeight: 700,
-  fontSize: "11px",
+  fontSize: "10px",
   lineHeight: 1,
   padding: 0,
   cursor: "pointer",
@@ -939,31 +926,31 @@ const COMPACT_MOVEMENT_SPEED_VALUE_STYLE: CSSProperties = {
   textAlign: "center",
   fontFamily: "Inter, system-ui, sans-serif",
   color: "#ecf7f2",
-  fontSize: "9px",
+  fontSize: "8px",
   fontWeight: 700,
-  letterSpacing: "0.12px",
+  letterSpacing: "0.1px",
   whiteSpace: "nowrap",
 };
 
 const COMPACT_MOVEMENT_PLAYBACK_ROW_STYLE: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(6, minmax(0, 1fr))",
-  gap: "5px",
+  gap: "4px",
 };
 
 const COMPACT_MOVEMENT_ACTION_BUTTON_STYLE: CSSProperties = {
-  height: "36px",
-  borderRadius: "9px",
-  border: "1px solid rgba(158, 179, 171, 0.3)",
+  height: "27px",
+  borderRadius: "7px",
+  border: "1px solid rgba(158, 179, 171, 0.25)",
   background: "rgba(15, 26, 30, 0.82)",
   color: "rgba(233, 241, 236, 0.97)",
   fontFamily: "Inter, system-ui, sans-serif",
-  fontSize: "9.4px",
-  fontWeight: 650,
-  letterSpacing: "0.14px",
+  fontSize: "8.2px",
+  fontWeight: 620,
+  letterSpacing: "0.1px",
   cursor: "pointer",
   minWidth: 0,
-  padding: "0 4px",
+  padding: "0 3px",
 };
 
 const ACTIONS_POPOUT_STYLE: CSSProperties = {
@@ -3241,7 +3228,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const compactLandscapeViewportWidth = isCompactLandscapeTools ? getViewportRect().width : 0;
   const isTightCompactLandscapeTools = isCompactLandscapeTools && compactLandscapeViewportWidth <= 760;
   const showCompactMovementToolbar = isCompactLandscapeTools;
-  const compactMovementToolbarReservePx = isTightCompactLandscapeTools ? 84 : 92;
+  const compactMovementToolbarReservePx = isTightCompactLandscapeTools ? 56 : 62;
   const tacticalRootStyle: CSSProperties =
     showCompactMovementToolbar
       ? {
@@ -3255,10 +3242,10 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     showCompactMovementToolbar
       ? {
           ...CONTENT_STYLE,
-          width: `min(calc(${VIEWPORT_WIDTH_UNIT} - 10px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), calc((${VIEWPORT_HEIGHT_UNIT} - ${compactMovementToolbarReservePx}px - env(safe-area-inset-bottom, 0px)) * 2.08), 1520px)`,
-          maxWidth: "calc(100vw - 10px)",
+          width: `min(calc(${VIEWPORT_WIDTH_UNIT} - 8px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), calc((${VIEWPORT_HEIGHT_UNIT} - ${compactMovementToolbarReservePx}px - env(safe-area-inset-bottom, 0px)) * 2.2), 1560px)`,
+          maxWidth: "calc(100vw - 8px)",
           maxHeight: `calc(${VIEWPORT_HEIGHT_UNIT} - ${compactMovementToolbarReservePx}px - env(safe-area-inset-bottom, 0px))`,
-          aspectRatio: "19 / 9",
+          aspectRatio: "20 / 9",
         }
       : CONTENT_STYLE;
   const controlsPopoutStyle: CSSProperties =
@@ -3924,10 +3911,6 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         ) : null}
         {showCompactMovementToolbar ? (
           <div style={COMPACT_MOVEMENT_TOOLBAR_STYLE} role="group" aria-label="Movement quick toolbar">
-            <div style={COMPACT_MOVEMENT_META_ROW_STYLE}>
-              <span>Phases: {phaseCount}</span>
-              <span>{isPlaying ? "Playing" : isPaused ? "Paused" : "Ready"}</span>
-            </div>
             <div style={COMPACT_MOVEMENT_TOP_ROW_STYLE}>
               <button
                 type="button"
@@ -3955,7 +3938,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                 Ball
               </button>
               <div style={COMPACT_MOVEMENT_SPEED_CELL_STYLE}>
-                <p style={COMPACT_MOVEMENT_SPEED_LABEL_STYLE}>Speed</p>
+                <p style={COMPACT_MOVEMENT_SPEED_LABEL_STYLE}>Speed · P{phaseCount}</p>
                 <div style={COMPACT_MOVEMENT_SPEED_STEPPER_STYLE}>
                   <button
                     type="button"
