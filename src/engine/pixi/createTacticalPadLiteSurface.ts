@@ -1058,6 +1058,7 @@ export async function createTacticalPadLiteSurface(
   let playElapsedMs = 0;
   let playbackPath: PhaseSnapshot[] = [];
   let activeSegmentIndex = 0;
+  let singlePlayTargetSnapshot: PhaseSnapshot | null = null;
   let startPositions: PhaseSnapshot = {
     players: players.map((player) => ({ ...player.current })),
     football: [],
@@ -1065,6 +1066,7 @@ export async function createTacticalPadLiteSurface(
   let phases: PhaseSnapshot[] = [];
   let selectedPlayerId: string | null = null;
   let activeRouteRunsByPlayerId = new Map<string, ActiveBasicRouteFollow>();
+  let routeControlledPlayerIds = new Set<string>();
   let isBasicRouteDevMode = false;
   let routeByPlayerId = new Map<string, RoutePoint[]>();
   let currentRouteDraftPoints: RoutePoint[] = [];
@@ -2154,7 +2156,7 @@ export async function createTacticalPadLiteSurface(
     options?: { preserveActiveRoutePlayers?: boolean },
   ): void {
     for (const player of players) {
-      if (options?.preserveActiveRoutePlayers && activeRouteRunsByPlayerId.has(player.id)) continue;
+      if (options?.preserveActiveRoutePlayers && routeControlledPlayerIds.has(player.id)) continue;
       const point = snapshot.players[players.indexOf(player)];
       if (!point) continue;
       player.current = { x: point.x, y: point.y };
@@ -2194,17 +2196,19 @@ export async function createTacticalPadLiteSurface(
   }
 
   function cancelBasicRouteFollow(options?: { restoreOrigin?: boolean }): void {
-    if (activeRouteRunsByPlayerId.size <= 0) return;
-    for (const previous of activeRouteRunsByPlayerId.values()) {
-      previous.session.cancel();
-      const player = players.find((entry) => entry.id === previous.playerId);
-      if (options?.restoreOrigin && player) {
-        player.current = { x: previous.origin.x, y: previous.origin.y };
-        setTokenWorldPositionForPoint(player, player.current, mapper);
-        updateAttachedBallsForPlayer(player.id);
+    if (activeRouteRunsByPlayerId.size > 0) {
+      for (const previous of activeRouteRunsByPlayerId.values()) {
+        previous.session.cancel();
+        const player = players.find((entry) => entry.id === previous.playerId);
+        if (options?.restoreOrigin && player) {
+          player.current = { x: previous.origin.x, y: previous.origin.y };
+          setTokenWorldPositionForPoint(player, player.current, mapper);
+          updateAttachedBallsForPlayer(player.id);
+        }
       }
     }
     activeRouteRunsByPlayerId.clear();
+    routeControlledPlayerIds.clear();
   }
 
   function clearBasicRoutePreview(): void {
@@ -2332,6 +2336,7 @@ export async function createTacticalPadLiteSurface(
       });
     }
     activeRouteRunsByPlayerId = runs;
+    routeControlledPlayerIds = new Set(runs.keys());
     return true;
   }
 
@@ -2345,11 +2350,34 @@ export async function createTacticalPadLiteSurface(
     applySnapshotToSurface(path[0]!);
     activeRouteRunsByPlayerId =
       routeByPlayerId.size > 0 ? buildBasicRouteRunsForCurrentPlayers(activeSegmentIndex) : new Map();
+    routeControlledPlayerIds = new Set(activeRouteRunsByPlayerId.keys());
     emitPlaybackStateChange();
   }
 
+  function isCurrentAtStartPosition(): boolean {
+    const epsilon = 0.0001;
+    for (const player of players) {
+      const idx = players.indexOf(player);
+      const startPoint = startPositions.players[idx];
+      if (!startPoint) continue;
+      if (
+        Math.abs(player.current.x - startPoint.x) > epsilon ||
+        Math.abs(player.current.y - startPoint.y) > epsilon
+      ) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   function playSingleStartToCurrent(): void {
-    const playbackTarget = captureCurrentSnapshot();
+    const shouldReplayStoredTarget = singlePlayTargetSnapshot != null && isCurrentAtStartPosition();
+    const playbackTarget = shouldReplayStoredTarget
+      ? cloneSnapshot(singlePlayTargetSnapshot)
+      : captureCurrentSnapshot();
+    if (!shouldReplayStoredTarget) {
+      singlePlayTargetSnapshot = cloneSnapshot(playbackTarget);
+    }
     startPlayback([cloneSnapshot(startPositions), playbackTarget]);
   }
 
@@ -2463,7 +2491,7 @@ export async function createTacticalPadLiteSurface(
       const easedProgress = getPlaybackEaseProgress(progress);
 
       for (const player of players) {
-        if (activeRouteRunsByPlayerId.has(player.id)) continue;
+        if (routeControlledPlayerIds.has(player.id)) continue;
         const idx = players.indexOf(player);
         const fromPoint = fromSnapshot.players[idx];
         const toPoint = toSnapshot.players[idx];
@@ -2903,6 +2931,7 @@ export async function createTacticalPadLiteSurface(
     cancelPlaybackAnimation();
     cancelBasicRouteFollow();
     clearBasicRouteCapture();
+    singlePlayTargetSnapshot = null;
     resetActiveWhiteboardDrawing();
     lastTappedPlayer = null;
 
@@ -3181,6 +3210,7 @@ export async function createTacticalPadLiteSurface(
       cancelPlaybackAnimation();
       cancelBasicRouteFollow();
       clearBasicRouteCapture();
+      singlePlayTargetSnapshot = null;
       startPositions = captureCurrentSnapshot();
       phases = [];
       resetAllBallMovementPaths();
@@ -3191,7 +3221,7 @@ export async function createTacticalPadLiteSurface(
       clearSelectedItem();
       cancelPlaybackAnimation();
       cancelBasicRouteFollow();
-      clearBasicRouteCapture();
+      singlePlayTargetSnapshot = null;
       phases = [...phases, captureCurrentSnapshot()];
       resetAllBallMovementPaths();
       options.onPhaseCountChange?.(phases.length);
@@ -3201,7 +3231,7 @@ export async function createTacticalPadLiteSurface(
       clearSelectedItem();
       cancelPlaybackAnimation();
       cancelBasicRouteFollow();
-      clearBasicRouteCapture();
+      singlePlayTargetSnapshot = null;
       if (phases.length <= 0) return;
       phases = phases.slice(0, -1);
       const previousSnapshot = phases[phases.length - 1] ?? startPositions;
@@ -3211,6 +3241,7 @@ export async function createTacticalPadLiteSurface(
     newBoard: () => {
       if (surfaceVariant !== "tactical") return;
       clearBasicRouteCapture();
+      singlePlayTargetSnapshot = null;
       importBoardState(cloneBoardStateSnapshot(pristineBoardState));
     },
     play: handlePlay,
