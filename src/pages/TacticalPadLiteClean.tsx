@@ -3725,6 +3725,17 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             >
               Reset
             </button>
+            <button
+              type="button"
+              className="control-button"
+              style={RESET_BUTTON_STYLE}
+              onClick={() => {
+                surfaceRef.current?.triggerBasicRouteFollowDev();
+                closeControlsMenu();
+              }}
+            >
+              TEST ROUTE
+            </button>
           </div>
         ) : null}
         {isToolsOverlayOpen && overlayPortalRoot
