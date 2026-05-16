@@ -98,6 +98,7 @@ type WhiteboardToolControl =
   | "circleZone"
   | "eraser";
 type WhiteboardToolAction = WhiteboardToolControl;
+type MovementModePillOption = "move" | "route" | "ball";
 const WHITEBOARD_BUBBLE_SIZE = 36;
 const WHITEBOARD_BUBBLE_MARGIN = 12;
 const KIT_EDITOR_MARGIN = 10;
@@ -1526,6 +1527,53 @@ const PLAYBACK_SPEED_SLIDER_STYLE: CSSProperties = {
   minWidth: 0,
 };
 
+const MOVEMENT_MODE_PILL_STYLE: CSSProperties = {
+  position: "fixed",
+  left: "50%",
+  transform: "translateX(-50%)",
+  bottom: "max(54px, calc(env(safe-area-inset-bottom, 0px) + 52px))",
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "4px",
+  padding: "4px",
+  borderRadius: "999px",
+  border: "1px solid rgba(220, 236, 228, 0.26)",
+  background: "rgba(9, 22, 18, 0.52)",
+  backdropFilter: "blur(14px)",
+  WebkitBackdropFilter: "blur(14px)",
+  boxShadow: "0 12px 26px rgba(1, 7, 4, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.2)",
+  zIndex: 20,
+};
+
+const MOVEMENT_MODE_PILL_BUTTON_STYLE: CSSProperties = {
+  minWidth: "58px",
+  height: "30px",
+  borderRadius: "999px",
+  border: "1px solid rgba(212, 229, 222, 0.26)",
+  background: "rgba(14, 30, 24, 0.66)",
+  color: "rgba(230, 244, 236, 0.9)",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "10.5px",
+  fontWeight: 640,
+  letterSpacing: "0.2px",
+  padding: "0 11px",
+  cursor: "pointer",
+  boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.14)",
+};
+
+const MOVEMENT_MODE_PILL_BUTTON_ACTIVE_STYLE: CSSProperties = {
+  ...MOVEMENT_MODE_PILL_BUTTON_STYLE,
+  border: "1px solid rgba(124, 255, 114, 0.56)",
+  background: "linear-gradient(180deg, rgba(34, 112, 66, 0.82) 0%, rgba(14, 42, 27, 0.94) 100%)",
+  color: "#f4fff6",
+  boxShadow: "0 0 0 1px rgba(124, 255, 114, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.2)",
+};
+
+const MOVEMENT_MODE_PILL_BUTTON_DISABLED_STYLE: CSSProperties = {
+  opacity: 0.46,
+  cursor: "not-allowed",
+};
+
 const SHARE_TIP_TOAST_STYLE: CSSProperties = {
   position: "fixed",
   left: "max(62px, calc(env(safe-area-inset-left, 0px) + 60px))",
@@ -1932,6 +1980,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     if (typeof window === "undefined") return false;
     return shouldUseIphoneLandscapeToolsOverride(getViewportRect());
   });
+  const [movementModePillSelection, setMovementModePillSelection] = useState<MovementModePillOption>("move");
   const [phasesOpen, setPhasesOpen] = useState(false);
   const [kitEditorState, setKitEditorState] = useState<KitEditorState | null>(null);
   const [kitEditorTab, setKitEditorTab] = useState<KitEditorTab>("base");
@@ -2296,6 +2345,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     if (isStatsMode || isWhiteboardMode || !isPortraitViewingMode) return;
     setToolsOpen(false);
     setKitEditorState(null);
+    setMovementModePillSelection("move");
     setItemMode("locked");
     setTacticalTool("move");
     const surface = surfaceRef.current;
@@ -2323,6 +2373,17 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     if (isStatsMode || isWhiteboardMode) return;
     surfaceRef.current?.setItemMode(effectiveItemMode);
   }, [isStatsMode, isWhiteboardMode, effectiveItemMode]);
+
+  useEffect(() => {
+    if (isStatsMode || isWhiteboardMode) return;
+    if (tacticalTool !== "move") {
+      setMovementModePillSelection("route");
+      return;
+    }
+    if (itemMode === "edit") {
+      setMovementModePillSelection("move");
+    }
+  }, [isStatsMode, isWhiteboardMode, tacticalTool, itemMode]);
 
   useEffect(() => {
     if (!isWhiteboardMode) return;
@@ -2889,6 +2950,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     surface.newBoard();
     tacticalItemCounterRef.current = 0;
     setItems([]);
+    setMovementModePillSelection("move");
     setItemMode("locked");
     setTacticalTool("move");
     setKitEditorState(null);
@@ -2949,8 +3011,26 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const freeBall = () => {
     if (isPortraitViewingMode || isPlaybackLocked) return;
     surfaceRef.current?.freeBall();
+    setMovementModePillSelection("ball");
     setTacticalTool("move");
     surfaceRef.current?.setWhiteboardDrawTool("move");
+  };
+
+  const applyMovementModePillSelection = (nextMode: MovementModePillOption) => {
+    if (isPortraitViewingMode || isPlaybackLocked) return;
+    setMovementModePillSelection(nextMode);
+    if (nextMode === "move") {
+      setItemMode("edit");
+      applyTacticalTool("move");
+      return;
+    }
+    if (nextMode === "route") {
+      setItemMode("locked");
+      applyTacticalTool("arrow");
+      return;
+    }
+    setItemMode("locked");
+    freeBall();
   };
 
   const handleWhiteboardBubblePointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
@@ -3633,6 +3713,32 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             ) : (
               <div style={PHASES_EMPTY_STYLE}>No phases</div>
             )}
+          </div>
+        ) : null}
+        {!isWhiteboardMode && !isPortraitViewingMode ? (
+          <div style={MOVEMENT_MODE_PILL_STYLE} role="group" aria-label="Movement mode">
+            {([
+              { id: "move", label: "Move" },
+              { id: "route", label: "Route" },
+              { id: "ball", label: "Ball" },
+            ] as const).map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                className="control-button"
+                style={{
+                  ...(movementModePillSelection === option.id
+                    ? MOVEMENT_MODE_PILL_BUTTON_ACTIVE_STYLE
+                    : MOVEMENT_MODE_PILL_BUTTON_STYLE),
+                  ...(isPlaybackLocked ? MOVEMENT_MODE_PILL_BUTTON_DISABLED_STYLE : null),
+                }}
+                aria-pressed={movementModePillSelection === option.id}
+                disabled={isPlaybackLocked}
+                onClick={() => applyMovementModePillSelection(option.id)}
+              >
+                {option.label}
+              </button>
+            ))}
           </div>
         ) : null}
         {!isWhiteboardMode && (controlsOpen || isPortraitViewingMode) ? (
