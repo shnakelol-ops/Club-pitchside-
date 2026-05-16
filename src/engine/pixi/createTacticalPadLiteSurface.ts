@@ -272,6 +272,7 @@ type PlayerSeed = {
 type ActiveBasicRouteFollow = {
   playerId: string;
   origin: NormalizedPoint;
+  segmentIndex: number;
   session: BasicRouteFollowSession;
 };
 const MAX_BASIC_ROUTE_PLAYERS = 6;
@@ -2288,7 +2289,7 @@ export async function createTacticalPadLiteSurface(
     ];
   }
 
-  function buildBasicRouteRunsForCurrentPlayers(): Map<string, ActiveBasicRouteFollow> {
+  function buildBasicRouteRunsForCurrentPlayers(segmentIndex: number): Map<string, ActiveBasicRouteFollow> {
     const runs = new Map<string, ActiveBasicRouteFollow>();
     for (const [playerId, route] of routeByPlayerId.entries()) {
       const player = players.find((entry) => entry.id === playerId);
@@ -2299,7 +2300,7 @@ export async function createTacticalPadLiteSurface(
         route: route.map((point) => ({ ...point })),
         speed: BASIC_ROUTE_FOLLOW_DEV_SPEED,
       });
-      runs.set(player.id, { playerId: player.id, origin, session });
+      runs.set(player.id, { playerId: player.id, origin, segmentIndex, session });
     }
     return runs;
   }
@@ -2312,7 +2313,7 @@ export async function createTacticalPadLiteSurface(
     cancelPlaybackAnimation();
     cancelBasicRouteFollow();
     releaseActiveDrag();
-    const runs = buildBasicRouteRunsForCurrentPlayers();
+    const runs = buildBasicRouteRunsForCurrentPlayers(activeSegmentIndex);
     if (runs.size <= 0 && selectedPlayer) {
       const session = createBasicRouteFollowSession({
         target: selectedPlayer.current,
@@ -2322,6 +2323,7 @@ export async function createTacticalPadLiteSurface(
       runs.set(selectedPlayer.id, {
         playerId: selectedPlayer.id,
         origin: { x: selectedPlayer.current.x, y: selectedPlayer.current.y },
+        segmentIndex: activeSegmentIndex,
         session,
       });
     }
@@ -2337,6 +2339,8 @@ export async function createTacticalPadLiteSurface(
     isPaused = false;
     playElapsedMs = 0;
     applySnapshotToSurface(path[0]!);
+    activeRouteRunsByPlayerId =
+      routeByPlayerId.size > 0 ? buildBasicRouteRunsForCurrentPlayers(activeSegmentIndex) : new Map();
     emitPlaybackStateChange();
   }
 
@@ -2361,9 +2365,6 @@ export async function createTacticalPadLiteSurface(
     }
     cancelBasicRouteFollow();
     cancelPlaybackAnimation();
-    if (routeByPlayerId.size > 0) {
-      activeRouteRunsByPlayerId = buildBasicRouteRunsForCurrentPlayers();
-    }
     if (phases.length > 0) {
       playSavedPhaseSequence();
       return;
@@ -2458,7 +2459,8 @@ export async function createTacticalPadLiteSurface(
       const easedProgress = getPlaybackEaseProgress(progress);
 
       for (const player of players) {
-        if (activeRouteRunsByPlayerId.has(player.id)) continue;
+        const activeRoute = activeRouteRunsByPlayerId.get(player.id);
+        if (activeRoute && activeRoute.segmentIndex === activeSegmentIndex) continue;
         const idx = players.indexOf(player);
         const fromPoint = fromSnapshot.players[idx];
         const toPoint = toSnapshot.players[idx];
@@ -2506,6 +2508,11 @@ export async function createTacticalPadLiteSurface(
       }
 
       if (progress >= 1) {
+        for (const [playerId, activeRoute] of activeRouteRunsByPlayerId.entries()) {
+          if (activeRoute.segmentIndex !== activeSegmentIndex) continue;
+          activeRoute.session.cancel();
+          activeRouteRunsByPlayerId.delete(playerId);
+        }
         applySnapshotToSurface(toSnapshot);
         activeSegmentIndex += 1;
         playElapsedMs = 0;
