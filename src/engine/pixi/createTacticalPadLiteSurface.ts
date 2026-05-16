@@ -195,6 +195,7 @@ const ATTACHED_BALL_FOLLOW_SMOOTHING = 0.28;
 const BALL_PATH_MIN_POINT_DISTANCE = 0.35;
 const BASIC_ROUTE_FOLLOW_DEV_ENABLED = false;
 const BASIC_ROUTE_FOLLOW_DEV_SPEED = 18;
+const BASIC_ROUTE_FOLLOW_DEV_HOTKEY_ENABLED = true;
 const WHITEBOARD_DEFAULT_STROKE_COLOR = 0x111111;
 const WHITEBOARD_BLUE_START_X = 30;
 const WHITEBOARD_RED_START_X = 70;
@@ -2195,8 +2196,8 @@ export async function createTacticalPadLiteSurface(
     ];
   }
 
-  function startBasicRouteFollowForSelectedPlayer(): boolean {
-    if (!BASIC_ROUTE_FOLLOW_DEV_ENABLED) return false;
+  function startBasicRouteFollowForSelectedPlayer(options?: { force?: boolean }): boolean {
+    if (!options?.force && !BASIC_ROUTE_FOLLOW_DEV_ENABLED) return false;
     if (surfaceVariant !== "tactical") return false;
     if (!selectedPlayerId) return false;
     const player = players.find((entry) => entry.id === selectedPlayerId);
@@ -2969,6 +2970,18 @@ export async function createTacticalPadLiteSurface(
     stepBasicRouteFollow(app.ticker.deltaMS);
     animatePlayerDragVisuals(app.ticker.deltaMS);
   });
+  const handleDevRouteFollowHotkey = (event: KeyboardEvent): void => {
+    if (!BASIC_ROUTE_FOLLOW_DEV_HOTKEY_ENABLED) return;
+    if (surfaceVariant !== "tactical") return;
+    if (!event.altKey || !event.shiftKey) return;
+    if (event.code !== "KeyR") return;
+    if (event.repeat) return;
+    event.preventDefault();
+    void startBasicRouteFollowForSelectedPlayer({ force: true });
+  };
+  if (typeof window !== "undefined") {
+    window.addEventListener("keydown", handleDevRouteFollowHotkey);
+  }
 
   syncWhiteboardTokenInputMode();
 
@@ -3157,6 +3170,9 @@ export async function createTacticalPadLiteSurface(
       }
     },
     destroy: () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("keydown", handleDevRouteFollowHotkey);
+      }
       resizeObserver.disconnect();
       app.stage.removeAllListeners();
       app.ticker.stop();
