@@ -1480,6 +1480,152 @@ export async function createTacticalPadLiteSurface(
     return tacticalItems.find((item) => item.id === itemId) ?? null;
   }
 
+  function clampStrokeWidth(value: number, min: number, max: number): number {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  function drawBallGroundingShadows(
+    graphic: Graphics,
+    radius: number,
+    options: {
+      castYOffset: number;
+      castXScale: number;
+      castYScale: number;
+      castAlpha: number;
+      contactYOffset: number;
+      contactXScale: number;
+      contactYScale: number;
+      contactAlpha: number;
+    },
+  ): void {
+    graphic
+      .ellipse(0, radius * options.castYOffset, radius * options.castXScale, radius * options.castYScale)
+      .fill({ color: 0x020617, alpha: options.castAlpha });
+    graphic
+      .ellipse(0, radius * options.contactYOffset, radius * options.contactXScale, radius * options.contactYScale)
+      .fill({ color: 0x020617, alpha: options.contactAlpha });
+  }
+
+  // Custom in-house renderer inspired by real GAA football characteristics.
+  // This is procedural tactical artwork and does not copy branded ball graphics.
+  function drawPremiumFootball(graphic: Graphics, radius: number): void {
+    const shellStroke = clampStrokeWidth(radius * 0.12, 0.2, 0.34);
+    const panelBandStroke = clampStrokeWidth(radius * 0.12, 0.19, 0.28);
+    const seamStroke = clampStrokeWidth(radius * 0.1, 0.17, 0.24);
+
+    drawBallGroundingShadows(graphic, radius, {
+      castYOffset: 0.6,
+      castXScale: 1.06,
+      castYScale: 0.36,
+      castAlpha: 0.12,
+      contactYOffset: 0.84,
+      contactXScale: 0.78,
+      contactYScale: 0.23,
+      contactAlpha: 0.2,
+    });
+
+    // Experiment: token-material-inspired tonal confidence with football panel identity.
+    graphic
+      .circle(0, 0, radius)
+      .fill(0xaab3bb)
+      .circle(0, -radius * 0.015, radius * 0.92)
+      .fill(0xf5f4ee)
+      .stroke({ color: 0x69747e, width: shellStroke, alpha: 0.88, alignment: 0.5 });
+
+    graphic
+      .ellipse(radius * 0.03, radius * 0.53, radius * 0.76, radius * 0.34)
+      .fill({ color: 0x6c7781, alpha: 0.19 });
+    graphic
+      .ellipse(-radius * 0.32, -radius * 0.35, radius * 0.48, radius * 0.27)
+      .fill({ color: 0xffffff, alpha: 0.45 });
+    graphic
+      .ellipse(-radius * 0.1, -radius * 0.56, radius * 0.24, radius * 0.1)
+      .fill({ color: 0xffffff, alpha: 0.22 });
+
+    // Subtle tonal hoop/panel cues (low contrast) for premium tactical abstraction.
+    graphic
+      .arc(0, 0, radius * 0.69, Math.PI * 0.22, Math.PI * 0.78)
+      .stroke({ color: 0x7b8792, width: panelBandStroke, alpha: 0.34, cap: "round", join: "round" });
+    graphic
+      .arc(0, 0, radius * 0.69, Math.PI * 1.22, Math.PI * 1.78)
+      .stroke({ color: 0x7b8792, width: panelBandStroke, alpha: 0.34, cap: "round", join: "round" });
+
+    const panelRidgeStroke = clampStrokeWidth(panelBandStroke * 0.42, 0.12, 0.18);
+    graphic
+      .arc(0, 0, radius * 0.69, Math.PI * 0.24, Math.PI * 0.76)
+      .stroke({ color: 0xf7f8f8, width: panelRidgeStroke, alpha: 0.22, cap: "round", join: "round" });
+    graphic
+      .arc(0, 0, radius * 0.69, Math.PI * 1.24, Math.PI * 1.76)
+      .stroke({ color: 0xf7f8f8, width: panelRidgeStroke, alpha: 0.22, cap: "round", join: "round" });
+
+    graphic
+      .moveTo(-radius * 0.61, -radius * 0.03)
+      .lineTo(-radius * 0.23, radius * 0.03)
+      .moveTo(radius * 0.61, -radius * 0.03)
+      .lineTo(radius * 0.23, radius * 0.03)
+      .stroke({ color: 0x6f7c87, width: seamStroke, alpha: 0.42, cap: "round", join: "round" });
+    graphic
+      .moveTo(0, -radius * 0.56)
+      .lineTo(0, -radius * 0.29)
+      .moveTo(0, radius * 0.29)
+      .lineTo(0, radius * 0.56)
+      .stroke({ color: 0x6f7c87, width: seamStroke, alpha: 0.3, cap: "round", join: "round" });
+  }
+
+  // Custom in-house renderer inspired by real sliotar seam/ridge behavior.
+  // This remains original tactical artwork and does not copy branded assets.
+  function drawPremiumSliotar(graphic: Graphics, radius: number): void {
+    const shellStroke = clampStrokeWidth(radius * 0.14, 0.21, 0.34);
+    const seamBandStroke = clampStrokeWidth(radius * 0.17, 0.2, 0.32);
+
+    drawBallGroundingShadows(graphic, radius, {
+      castYOffset: 0.57,
+      castXScale: 0.92,
+      castYScale: 0.31,
+      castAlpha: 0.12,
+      contactYOffset: 0.79,
+      contactXScale: 0.66,
+      contactYScale: 0.2,
+      contactAlpha: 0.2,
+    });
+
+    graphic
+      .circle(0, 0, radius)
+      .fill(0xca8a04)
+      .circle(0, -radius * 0.01, radius * 0.91)
+      .fill(0xfacc15)
+      .stroke({ color: 0x6d5a1f, width: shellStroke, alpha: 0.92, alignment: 0.5 });
+    graphic
+      .ellipse(radius * 0.04, radius * 0.52, radius * 0.68, radius * 0.33)
+      .fill({ color: 0x9b7a1e, alpha: 0.22 });
+    graphic
+      .ellipse(-radius * 0.3, -radius * 0.34, radius * 0.42, radius * 0.25)
+      .fill({ color: 0xfff4b0, alpha: 0.5 });
+    graphic
+      .ellipse(-radius * 0.1, -radius * 0.55, radius * 0.21, radius * 0.1)
+      .fill({ color: 0xfff8cc, alpha: 0.24 });
+
+    // Two readable curved seam bands are the key sliotar identity cue at tactical scale.
+    graphic
+      .moveTo(-radius * 0.82, -radius * 0.17)
+      .quadraticCurveTo(0, -radius * 0.75, radius * 0.82, radius * 0.04)
+      .stroke({ color: 0x1f2937, width: seamBandStroke, alpha: 0.54, cap: "round", join: "round" });
+    graphic
+      .moveTo(-radius * 0.82, radius * 0.12)
+      .quadraticCurveTo(0, -radius * 0.47, radius * 0.82, radius * 0.32)
+      .stroke({ color: 0x1f2937, width: seamBandStroke, alpha: 0.5, cap: "round", join: "round" });
+
+    const seamRidgeStroke = clampStrokeWidth(seamBandStroke * 0.34, 0.13, 0.2);
+    graphic
+      .moveTo(-radius * 0.82, -radius * 0.18)
+      .quadraticCurveTo(0, -radius * 0.71, radius * 0.82, radius * 0.01)
+      .stroke({ color: 0xfde68a, width: seamRidgeStroke, alpha: 0.25, cap: "round", join: "round" });
+    graphic
+      .moveTo(-radius * 0.82, radius * 0.1)
+      .quadraticCurveTo(0, -radius * 0.44, radius * 0.82, radius * 0.28)
+      .stroke({ color: 0xfde68a, width: seamRidgeStroke, alpha: 0.22, cap: "round", join: "round" });
+  }
+
   function drawTacticalItemGraphic(graphic: Graphics, item: TacticalItem): void {
     graphic.clear();
     const shadowColor = 0x020617;
@@ -1557,49 +1703,12 @@ export async function createTacticalPadLiteSurface(
     }
     if (item.type === "footballSmall" || item.type === "football" || item.type === "footballLarge") {
       const radius = TACTICAL_ITEM_HALF_SIZE * (item.type === "footballSmall" ? 0.72 : item.type === "footballLarge" ? 1.12 : 0.9);
-      graphic.ellipse(0, radius * 0.54, radius * 0.78, radius * 0.22).fill({ color: 0x020617, alpha: 0.16 });
-      graphic.circle(0, 0, radius).fill(0xf8fafc).stroke({ color: 0x334155, width: 0.3 });
-      graphic.circle(-radius * 0.26, -radius * 0.28, radius * 0.27).fill({ color: 0xffffff, alpha: 0.5 });
-      graphic.circle(radius * 0.24, radius * 0.26, radius * 0.7).fill({ color: 0x64748b, alpha: 0.11 });
-      graphic.arc(radius * 0.12, -radius * 0.02, radius * 0.72, Math.PI * 0.9, Math.PI * 1.42).stroke({
-        color: 0x4b5563,
-        width: 0.11,
-        alpha: 0.52,
-      });
-      graphic.arc(-radius * 0.1, radius * 0.06, radius * 0.72, Math.PI * 1.58, Math.PI * 2.06).stroke({
-        color: 0x4b5563,
-        width: 0.11,
-        alpha: 0.46,
-      });
-      graphic.arc(0, 0, radius * 0.62, Math.PI * 0.18, Math.PI * 0.82).stroke({ color: 0x334155, width: 0.16, alpha: 0.9 });
-      graphic.arc(0, 0, radius * 0.62, Math.PI * 1.18, Math.PI * 1.82).stroke({ color: 0x334155, width: 0.16, alpha: 0.9 });
-      graphic
-        .moveTo(-radius * 0.56, 0)
-        .lineTo(radius * 0.56, 0)
-        .stroke({ color: 0x475569, width: 0.14, alpha: 0.92 });
-      graphic.arc(0, 0, radius * 0.96, Math.PI * 0.02, Math.PI * 0.48).stroke({ color: 0x1f2937, width: 0.13, alpha: 0.28 });
-      graphic
-        .moveTo(-radius * 0.48, -radius * 0.02)
-        .lineTo(-radius * 0.22, -radius * 0.02)
-        .moveTo(radius * 0.22, radius * 0.02)
-        .lineTo(radius * 0.48, radius * 0.02)
-        .stroke({ color: 0x64748b, width: 0.1, alpha: 0.75 });
+      drawPremiumFootball(graphic, radius);
       return;
     }
     if (item.type === "sliotarSmall" || item.type === "sliotar" || item.type === "sliotarLarge") {
       const radius = TACTICAL_ITEM_HALF_SIZE * (item.type === "sliotarSmall" ? 0.6 : item.type === "sliotarLarge" ? 0.9 : 0.74);
-      const seamWidth = item.type === "sliotarSmall" ? 0.24 : 0.22;
-      const seamAlpha = item.type === "sliotarSmall" ? 1 : 0.95;
-      graphic.ellipse(0, radius * 0.56, radius * 0.72, radius * 0.2).fill({ color: 0x111827, alpha: 0.15 });
-      graphic.circle(0, 0, radius).fill(0xffefbd).stroke({ color: 0x4b5563, width: 0.3 });
-      graphic.circle(-radius * 0.24, -radius * 0.3, radius * 0.24).fill({ color: 0xffffff, alpha: 0.44 });
-      graphic.circle(radius * 0.25, radius * 0.22, radius * 0.62).fill({ color: 0xb45309, alpha: 0.08 });
-      graphic.arc(0, 0, radius * 0.68, Math.PI * 0.3, Math.PI * 0.82).stroke({ color: 0x374151, width: seamWidth, alpha: seamAlpha });
-      graphic.arc(0, 0, radius * 0.68, Math.PI * 1.3, Math.PI * 1.82).stroke({ color: 0x374151, width: seamWidth, alpha: seamAlpha });
-      graphic
-        .moveTo(-radius * 0.7, 0)
-        .lineTo(radius * 0.7, 0)
-        .stroke({ color: 0x374151, width: item.type === "sliotarSmall" ? 0.2 : 0.18, alpha: item.type === "sliotarSmall" ? 0.98 : 0.94 });
+      drawPremiumSliotar(graphic, radius);
       return;
     }
   }
