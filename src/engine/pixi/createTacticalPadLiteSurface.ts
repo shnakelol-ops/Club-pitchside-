@@ -1575,8 +1575,8 @@ export async function createTacticalPadLiteSurface(
   // Custom in-house renderer inspired by real sliotar seam/ridge behavior.
   // This remains original tactical artwork and does not copy branded assets.
   function drawPremiumSliotar(graphic: Graphics, radius: number): void {
-    const shellStroke = clampStrokeWidth(radius * 0.14, 0.21, 0.36);
-    const seamBandStroke = clampStrokeWidth(radius * 0.24, 0.3, 0.52);
+    const shellStroke = clampStrokeWidth(radius * 0.14, 0.21, 0.34);
+    const seamBandStroke = clampStrokeWidth(radius * 0.17, 0.2, 0.32);
 
     drawBallGroundingShadows(graphic, radius, {
       castYOffset: 0.57,
@@ -1591,39 +1591,39 @@ export async function createTacticalPadLiteSurface(
 
     graphic
       .circle(0, 0, radius)
-      .fill(0xb28f45)
+      .fill(0xca8a04)
       .circle(0, -radius * 0.01, radius * 0.91)
-      .fill(0xf8dd78)
-      .stroke({ color: 0x6f5930, width: shellStroke, alpha: 0.92, alignment: 0.5 });
+      .fill(0xfacc15)
+      .stroke({ color: 0x6d5a1f, width: shellStroke, alpha: 0.92, alignment: 0.5 });
     graphic
       .ellipse(radius * 0.04, radius * 0.52, radius * 0.68, radius * 0.33)
-      .fill({ color: 0x7a6232, alpha: 0.22 });
+      .fill({ color: 0x9b7a1e, alpha: 0.22 });
     graphic
       .ellipse(-radius * 0.3, -radius * 0.34, radius * 0.42, radius * 0.25)
-      .fill({ color: 0xfff9dc, alpha: 0.48 });
+      .fill({ color: 0xfff4b0, alpha: 0.5 });
     graphic
       .ellipse(-radius * 0.1, -radius * 0.55, radius * 0.21, radius * 0.1)
-      .fill({ color: 0xfffbe6, alpha: 0.24 });
+      .fill({ color: 0xfff8cc, alpha: 0.24 });
 
     // Two readable curved seam bands are the key sliotar identity cue at tactical scale.
     graphic
       .moveTo(-radius * 0.82, -radius * 0.17)
       .quadraticCurveTo(0, -radius * 0.75, radius * 0.82, radius * 0.04)
-      .stroke({ color: 0x3f434a, width: seamBandStroke, alpha: 0.58, cap: "round", join: "round" });
+      .stroke({ color: 0x1f2937, width: seamBandStroke, alpha: 0.54, cap: "round", join: "round" });
     graphic
       .moveTo(-radius * 0.82, radius * 0.12)
       .quadraticCurveTo(0, -radius * 0.47, radius * 0.82, radius * 0.32)
-      .stroke({ color: 0x3e434a, width: seamBandStroke, alpha: 0.54, cap: "round", join: "round" });
+      .stroke({ color: 0x1f2937, width: seamBandStroke, alpha: 0.5, cap: "round", join: "round" });
 
     const seamRidgeStroke = clampStrokeWidth(seamBandStroke * 0.34, 0.13, 0.2);
     graphic
       .moveTo(-radius * 0.82, -radius * 0.18)
       .quadraticCurveTo(0, -radius * 0.71, radius * 0.82, radius * 0.01)
-      .stroke({ color: 0xe9ce8a, width: seamRidgeStroke, alpha: 0.28, cap: "round", join: "round" });
+      .stroke({ color: 0xfde68a, width: seamRidgeStroke, alpha: 0.25, cap: "round", join: "round" });
     graphic
       .moveTo(-radius * 0.82, radius * 0.1)
       .quadraticCurveTo(0, -radius * 0.44, radius * 0.82, radius * 0.28)
-      .stroke({ color: 0xe8cb87, width: seamRidgeStroke, alpha: 0.26, cap: "round", join: "round" });
+      .stroke({ color: 0xfde68a, width: seamRidgeStroke, alpha: 0.22, cap: "round", join: "round" });
   }
 
   function drawTacticalItemGraphic(graphic: Graphics, item: TacticalItem): void {
