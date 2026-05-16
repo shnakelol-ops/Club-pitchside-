@@ -1509,9 +1509,9 @@ export async function createTacticalPadLiteSurface(
   // Custom in-house renderer inspired by real GAA football characteristics.
   // This is procedural tactical artwork and does not copy branded ball graphics.
   function drawPremiumFootball(graphic: Graphics, radius: number): void {
-    const shellStroke = clampStrokeWidth(radius * 0.14, 0.24, 0.42);
-    const primarySeamStroke = clampStrokeWidth(radius * 0.16, 0.24, 0.4);
-    const seamDetailStroke = clampStrokeWidth(radius * 0.12, 0.2, 0.34);
+    const shellStroke = clampStrokeWidth(radius * 0.12, 0.2, 0.34);
+    const panelBandStroke = clampStrokeWidth(radius * 0.12, 0.19, 0.28);
+    const seamStroke = clampStrokeWidth(radius * 0.1, 0.17, 0.24);
 
     drawBallGroundingShadows(graphic, radius, {
       castYOffset: 0.6,
@@ -1524,52 +1524,52 @@ export async function createTacticalPadLiteSurface(
       contactAlpha: 0.2,
     });
 
+    // Experiment: token-material-inspired tonal confidence with football panel identity.
     graphic
       .circle(0, 0, radius)
-      .fill(0x98a2aa)
+      .fill(0xaab3bb)
       .circle(0, -radius * 0.015, radius * 0.92)
-      .fill(0xf4f3ec)
-      .stroke({ color: 0x5e6972, width: shellStroke, alpha: 0.9, alignment: 0.5 });
-
-    // Chunkier tactical shading boosts object presence at phone-scale.
-    graphic
-      .ellipse(radius * 0.04, radius * 0.53, radius * 0.78, radius * 0.35)
-      .fill({ color: 0x5e6872, alpha: 0.23 });
-    graphic
-      .ellipse(-radius * 0.3, -radius * 0.36, radius * 0.48, radius * 0.28)
-      .fill({ color: 0xffffff, alpha: 0.48 });
-    graphic
-      .ellipse(-radius * 0.07, -radius * 0.58, radius * 0.23, radius * 0.11)
-      .fill({ color: 0xffffff, alpha: 0.26 });
+      .fill(0xf5f4ee)
+      .stroke({ color: 0x69747e, width: shellStroke, alpha: 0.88, alignment: 0.5 });
 
     graphic
-      .arc(0, 0, radius * 0.72, Math.PI * 0.2, Math.PI * 0.8)
-      .stroke({ color: 0x5a6670, width: primarySeamStroke, alpha: 0.88, cap: "round", join: "round" });
+      .ellipse(radius * 0.03, radius * 0.53, radius * 0.76, radius * 0.34)
+      .fill({ color: 0x6c7781, alpha: 0.19 });
     graphic
-      .arc(0, 0, radius * 0.72, Math.PI * 1.2, Math.PI * 1.8)
-      .stroke({ color: 0x5a6670, width: primarySeamStroke, alpha: 0.88, cap: "round", join: "round" });
+      .ellipse(-radius * 0.32, -radius * 0.35, radius * 0.48, radius * 0.27)
+      .fill({ color: 0xffffff, alpha: 0.45 });
     graphic
-      .moveTo(-radius * 0.63, -radius * 0.04)
-      .lineTo(-radius * 0.2, radius * 0.03)
-      .moveTo(radius * 0.63, -radius * 0.04)
-      .lineTo(radius * 0.2, radius * 0.03)
-      .stroke({ color: 0x64717c, width: seamDetailStroke, alpha: 0.82, cap: "round", join: "round" });
-    graphic
-      .moveTo(0, -radius * 0.62)
-      .lineTo(0, -radius * 0.24)
-      .moveTo(0, radius * 0.24)
-      .lineTo(0, radius * 0.62)
-      .stroke({ color: 0x5f6b76, width: seamDetailStroke, alpha: 0.64, cap: "round", join: "round" });
+      .ellipse(-radius * 0.1, -radius * 0.56, radius * 0.24, radius * 0.1)
+      .fill({ color: 0xffffff, alpha: 0.22 });
 
-    const stitchTickStroke = clampStrokeWidth(radius * 0.09, 0.16, 0.24);
-    const stitchTickOffsets = [-0.46, -0.3, -0.14, 0.14, 0.3, 0.46];
-    for (const offset of stitchTickOffsets) {
-      const x = radius * offset;
-      graphic
-        .moveTo(x - radius * 0.028, -radius * 0.03)
-        .lineTo(x + radius * 0.028, radius * 0.03);
-    }
-    graphic.stroke({ color: 0x727f8a, width: stitchTickStroke, alpha: 0.56, cap: "round", join: "round" });
+    // Subtle tonal hoop/panel cues (low contrast) for premium tactical abstraction.
+    graphic
+      .arc(0, 0, radius * 0.69, Math.PI * 0.22, Math.PI * 0.78)
+      .stroke({ color: 0x7b8792, width: panelBandStroke, alpha: 0.34, cap: "round", join: "round" });
+    graphic
+      .arc(0, 0, radius * 0.69, Math.PI * 1.22, Math.PI * 1.78)
+      .stroke({ color: 0x7b8792, width: panelBandStroke, alpha: 0.34, cap: "round", join: "round" });
+
+    const panelRidgeStroke = clampStrokeWidth(panelBandStroke * 0.42, 0.12, 0.18);
+    graphic
+      .arc(0, 0, radius * 0.69, Math.PI * 0.24, Math.PI * 0.76)
+      .stroke({ color: 0xf7f8f8, width: panelRidgeStroke, alpha: 0.22, cap: "round", join: "round" });
+    graphic
+      .arc(0, 0, radius * 0.69, Math.PI * 1.24, Math.PI * 1.76)
+      .stroke({ color: 0xf7f8f8, width: panelRidgeStroke, alpha: 0.22, cap: "round", join: "round" });
+
+    graphic
+      .moveTo(-radius * 0.61, -radius * 0.03)
+      .lineTo(-radius * 0.23, radius * 0.03)
+      .moveTo(radius * 0.61, -radius * 0.03)
+      .lineTo(radius * 0.23, radius * 0.03)
+      .stroke({ color: 0x6f7c87, width: seamStroke, alpha: 0.42, cap: "round", join: "round" });
+    graphic
+      .moveTo(0, -radius * 0.56)
+      .lineTo(0, -radius * 0.29)
+      .moveTo(0, radius * 0.29)
+      .lineTo(0, radius * 0.56)
+      .stroke({ color: 0x6f7c87, width: seamStroke, alpha: 0.3, cap: "round", join: "round" });
   }
 
   // Custom in-house renderer inspired by real sliotar seam/ridge behavior.
