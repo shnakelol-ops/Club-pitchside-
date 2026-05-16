@@ -676,11 +676,16 @@ function setTokenWorldPositionForPoint(
 }
 
 function setItemTouchHitArea(
-  item: Pick<TacticalSurfaceItem, "graphic">,
+  item: Pick<TacticalSurfaceItem, "graphic" | "type">,
   mapper: ReturnType<typeof createWorldViewport>,
 ): void {
   const touchRadiusInWorld = (TACTICAL_ITEM_TOUCH_HIT_DIAMETER_PX * 0.5) / mapper.transform.scale;
-  const itemVisualRadius = TACTICAL_ITEM_HALF_SIZE * 1.35;
+  const itemVisualRadius =
+    item.type === "miniGoal"
+      ? TACTICAL_ITEM_HALF_SIZE * 1.9
+      : item.type === "mannequin"
+        ? TACTICAL_ITEM_HALF_SIZE * 1.75
+        : TACTICAL_ITEM_HALF_SIZE * 1.35;
   const hitRadius = Math.max(itemVisualRadius, touchRadiusInWorld);
   const hitRadiusSquared = hitRadius * hitRadius;
   item.graphic.hitArea = {
@@ -1699,6 +1704,75 @@ export async function createTacticalPadLiteSurface(
         .roundRect(-width / 2, -height / 2, width, height, 0.65)
         .fill(0x334155)
         .stroke({ color: 0x0f172a, width: 0.36 });
+      return;
+    }
+    if (item.type === "miniGoal") {
+      const width = TACTICAL_ITEM_HALF_SIZE * 2.8;
+      const height = TACTICAL_ITEM_HALF_SIZE * 1.7;
+      const postThickness = 0.26;
+      const left = -width / 2;
+      const top = -height * 0.4;
+      graphic.ellipse(0, top + height + TACTICAL_ITEM_HALF_SIZE * 0.34, width * 0.4, TACTICAL_ITEM_HALF_SIZE * 0.24).fill({ color: shadowColor, alpha: 0.14 });
+      graphic
+        .roundRect(left, top, postThickness, height, 0.08)
+        .fill(0xf8fafc)
+        .stroke({ color: 0x64748b, width: 0.12 });
+      graphic
+        .roundRect(left + width - postThickness, top, postThickness, height, 0.08)
+        .fill(0xf8fafc)
+        .stroke({ color: 0x64748b, width: 0.12 });
+      graphic
+        .roundRect(left, top, width, postThickness, 0.08)
+        .fill(0xf8fafc)
+        .stroke({ color: 0x64748b, width: 0.12 });
+      graphic
+        .roundRect(left + postThickness * 1.2, top + postThickness * 1.8, width - postThickness * 2.4, height - postThickness * 2.2, 0.12)
+        .stroke({ color: 0x94a3b8, width: 0.12, alpha: 0.9 });
+      const netLines = 3;
+      for (let i = 1; i <= netLines; i += 1) {
+        const x = left + (width * i) / (netLines + 1);
+        graphic
+          .moveTo(x, top + postThickness)
+          .lineTo(x, top + height)
+          .stroke({ color: 0xcbd5e1, width: 0.1, alpha: 0.78 });
+      }
+      for (let i = 1; i <= 2; i += 1) {
+        const y = top + postThickness + ((height - postThickness) * i) / 3;
+        graphic
+          .moveTo(left + postThickness, y)
+          .lineTo(left + width - postThickness, y)
+          .stroke({ color: 0xcbd5e1, width: 0.1, alpha: 0.72 });
+      }
+      return;
+    }
+    if (item.type === "mannequin") {
+      const bodyWidth = TACTICAL_ITEM_HALF_SIZE * 1.18;
+      const bodyHeight = TACTICAL_ITEM_HALF_SIZE * 2.35;
+      const bodyTop = -bodyHeight * 0.5;
+      const headRadius = TACTICAL_ITEM_HALF_SIZE * 0.28;
+      graphic.ellipse(0, bodyTop + bodyHeight + TACTICAL_ITEM_HALF_SIZE * 0.3, bodyWidth * 0.64, TACTICAL_ITEM_HALF_SIZE * 0.22).fill({ color: shadowColor, alpha: 0.14 });
+      graphic
+        .circle(0, bodyTop + headRadius + 0.04, headRadius)
+        .fill(0xf9fafb)
+        .stroke({ color: 0x64748b, width: 0.13 });
+      graphic
+        .roundRect(-bodyWidth / 2, bodyTop + headRadius * 2.1, bodyWidth, bodyHeight - headRadius * 2.1, 0.24)
+        .fill(0xf8fafc)
+        .stroke({ color: 0x64748b, width: 0.14 });
+      graphic
+        .roundRect(-bodyWidth * 0.18, bodyTop + headRadius * 2.2, bodyWidth * 0.36, bodyHeight - headRadius * 2.35, 0.12)
+        .fill({ color: 0x94a3b8, alpha: 0.26 });
+      const sideInset = bodyWidth * 0.28;
+      graphic
+        .moveTo(-bodyWidth / 2 + sideInset, bodyTop + headRadius * 2.3)
+        .lineTo(-bodyWidth / 2 + sideInset, bodyTop + bodyHeight * 0.95)
+        .moveTo(bodyWidth / 2 - sideInset, bodyTop + headRadius * 2.3)
+        .lineTo(bodyWidth / 2 - sideInset, bodyTop + bodyHeight * 0.95)
+        .stroke({ color: 0x94a3b8, width: 0.11, alpha: 0.68 });
+      graphic
+        .roundRect(-bodyWidth * 0.62, bodyTop + bodyHeight - 0.12, bodyWidth * 1.24, 0.24, 0.08)
+        .fill(0xcbd5e1)
+        .stroke({ color: 0x64748b, width: 0.1 });
       return;
     }
     if (item.type === "footballSmall" || item.type === "football" || item.type === "footballLarge") {
