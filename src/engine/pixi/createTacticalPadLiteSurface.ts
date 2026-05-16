@@ -127,6 +127,7 @@ export type TacticalPadLiteSurface = {
   setItems: (items: TacticalItem[]) => void;
   setItemMode: (mode: ItemMode) => void;
   reset: () => void;
+  triggerBasicRouteFollowDev: () => void;
   reflow: () => void;
   setWhiteboardTeamConfig: (config: {
     counts: { blue: number; red: number };
@@ -3083,6 +3084,9 @@ export async function createTacticalPadLiteSurface(
       cancelPlaybackAnimation();
       cancelBasicRouteFollow({ restoreOrigin: true });
       applySnapshotToSurface(startPositions);
+    },
+    triggerBasicRouteFollowDev: () => {
+      void startBasicRouteFollowForSelectedPlayer({ force: true });
     },
     reflow: () => {
       fitToHost();
