@@ -42,7 +42,7 @@ const VIEWPORT_HEIGHT_UNIT = CAN_USE_CSS_SUPPORTS && window.CSS.supports("height
 const VIEWPORT_WIDTH_UNIT = CAN_USE_CSS_SUPPORTS && window.CSS.supports("width: 100dvw") ? "100dvw" : "100vw";
 
 const CONTENT_WIDTH_EXPR =
-  `min(calc(${VIEWPORT_WIDTH_UNIT} - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), calc((${VIEWPORT_HEIGHT_UNIT} - 10px) * 1.6), 1360px)`;
+  `min(calc(${VIEWPORT_WIDTH_UNIT} - 16px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), calc((${VIEWPORT_HEIGHT_UNIT} - 6px) * 1.68), 1440px)`;
 const WHITEBOARD_PLAYER_COLOR_CHOICES: ReadonlyArray<{
   value: WhiteboardTokenColor;
   css: string;
@@ -282,40 +282,40 @@ const BACKGROUND_BASE_STYLE: CSSProperties = {
   position: "absolute",
   inset: 0,
   background:
-    "radial-gradient(circle at top left, rgba(0, 120, 100, 0.09), transparent 60%), radial-gradient(circle at top right, rgba(0, 120, 100, 0.09), transparent 60%), linear-gradient(to bottom, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0) 30%), linear-gradient(to top, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0) 35%), linear-gradient(to bottom, rgba(0, 0, 0, 0) 58%, rgba(0, 80, 60, 0.13) 100%), linear-gradient(135deg, rgba(220, 238, 242, 1) 0%, rgba(172, 203, 214, 1) 45%, rgba(108, 158, 183, 1) 100%)",
+    "radial-gradient(circle at top left, rgba(0, 120, 100, 0.07), transparent 64%), radial-gradient(circle at top right, rgba(0, 120, 100, 0.07), transparent 64%), linear-gradient(to bottom, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0) 34%), linear-gradient(to top, rgba(0, 0, 0, 0.09), rgba(0, 0, 0, 0) 38%), linear-gradient(to bottom, rgba(0, 0, 0, 0) 62%, rgba(0, 80, 60, 0.1) 100%), linear-gradient(135deg, rgba(220, 238, 242, 1) 0%, rgba(172, 203, 214, 1) 45%, rgba(108, 158, 183, 1) 100%)",
 };
 
 const BACKGROUND_VIGNETTE_STYLE: CSSProperties = {
   position: "absolute",
   inset: 0,
   background:
-    "radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 42%, rgba(4, 12, 18, 0.28) 68%, rgba(0, 0, 0, 0.62) 100%)",
+    "radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 58%, rgba(4, 12, 18, 0.16) 78%, rgba(0, 0, 0, 0.34) 100%)",
 };
 
 const STADIUM_FLOODLIGHT_CSS = `
 .stadium-light {
   position: absolute;
-  top: 6%;
-  width: 88px;
-  height: 70px;
+  top: 5%;
+  width: 76px;
+  height: 58px;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 7px;
+  gap: 6px;
   pointer-events: none;
   z-index: 1;
-  opacity: 0.95;
-  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.75))
-    drop-shadow(0 0 28px rgba(180, 235, 255, 0.55));
+  opacity: 0.72;
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.58))
+    drop-shadow(0 0 20px rgba(180, 235, 255, 0.36));
 }
 
 .stadium-light span {
-  width: 11px;
-  height: 11px;
+  width: 9px;
+  height: 9px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.82);
   box-shadow:
-    0 0 10px rgba(255, 255, 255, 0.9),
-    0 0 22px rgba(185, 235, 255, 0.65);
+    0 0 8px rgba(255, 255, 255, 0.72),
+    0 0 16px rgba(185, 235, 255, 0.45);
 }
 
 .stadium-light-left {
@@ -331,18 +331,18 @@ const STADIUM_FLOODLIGHT_CSS = `
 .stadium-light::before {
   content: "";
   position: absolute;
-  top: 18px;
-  width: 210px;
-  height: 220px;
+  top: 14px;
+  width: 174px;
+  height: 178px;
   pointer-events: none;
   background: radial-gradient(
     ellipse at top,
-    rgba(210, 240, 255, 0.28) 0%,
-    rgba(160, 220, 235, 0.16) 35%,
-    rgba(100, 180, 190, 0.08) 58%,
-    transparent 78%
+    rgba(210, 240, 255, 0.2) 0%,
+    rgba(160, 220, 235, 0.11) 35%,
+    rgba(100, 180, 190, 0.06) 58%,
+    transparent 80%
   );
-  filter: blur(22px);
+  filter: blur(17px);
   z-index: -1;
 }
 
@@ -363,9 +363,9 @@ const STADIUM_FLOODLIGHT_CSS = `
   pointer-events: none;
   z-index: 1;
   background:
-    radial-gradient(ellipse at 15% 0%, rgba(255, 255, 255, 0.18), transparent 35%),
-    radial-gradient(ellipse at 85% 0%, rgba(255, 255, 255, 0.18), transparent 35%),
-    linear-gradient(to bottom, rgba(0, 0, 0, 0.18), transparent 40%);
+    radial-gradient(ellipse at 15% 0%, rgba(255, 255, 255, 0.1), transparent 42%),
+    radial-gradient(ellipse at 85% 0%, rgba(255, 255, 255, 0.1), transparent 42%),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.08), transparent 44%);
 }
 
 .floating-bubble {
@@ -515,14 +515,14 @@ const STADIUM_BEAM_BASE_STYLE: CSSProperties = {
   position: "absolute",
   left: "50%",
   transform: "translateX(-50%)",
-  bottom: "-20%",
-  width: "115%",
-  height: "75%",
+  bottom: "-12%",
+  width: "104%",
+  height: "58%",
   pointerEvents: "none",
-  filter: "blur(32px)",
-  opacity: 1,
+  filter: "blur(18px)",
+  opacity: 0.58,
   background:
-    "radial-gradient(ellipse at center, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0.38) 35%, rgba(0, 0, 0, 0.2) 60%, rgba(0, 0, 0, 0.08) 75%, transparent 85%)",
+    "radial-gradient(ellipse at center, rgba(0, 0, 0, 0.34) 0%, rgba(0, 0, 0, 0.22) 38%, rgba(0, 0, 0, 0.12) 60%, rgba(0, 0, 0, 0.04) 76%, transparent 86%)",
   zIndex: 0,
 };
 
@@ -536,14 +536,14 @@ const STADIUM_BEAM_RIGHT_STYLE: CSSProperties = {
   pointerEvents: "none",
   zIndex: 0,
   background:
-    "linear-gradient(to bottom, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0) 30%), linear-gradient(to top, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0) 50%)",
+    "linear-gradient(to bottom, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0) 36%), linear-gradient(to top, rgba(0, 0, 0, 0.16), rgba(0, 0, 0, 0) 58%)",
 };
 
 const CONTENT_STYLE: CSSProperties = {
   width: CONTENT_WIDTH_EXPR,
-  maxWidth: "calc(100vw - 24px)",
+  maxWidth: "calc(100vw - 16px)",
   aspectRatio: "16 / 10",
-  maxHeight: `calc(${VIEWPORT_HEIGHT_UNIT} - 10px)`,
+  maxHeight: `calc(${VIEWPORT_HEIGHT_UNIT} - 6px)`,
   boxSizing: "border-box",
   position: "relative",
   zIndex: 1,
@@ -835,6 +835,122 @@ const CONTROLS_POPOUT_STYLE: CSSProperties = {
   flexWrap: "nowrap",
   background: "rgba(20, 16, 17, 0.58)",
   border: "1px solid rgba(238, 146, 146, 0.16)",
+};
+
+const COMPACT_MOVEMENT_TOOLBAR_STYLE: CSSProperties = {
+  position: "fixed",
+  left: "max(7px, calc(env(safe-area-inset-left, 0px) + 5px))",
+  right: "max(7px, calc(env(safe-area-inset-right, 0px) + 5px))",
+  bottom: "max(6px, calc(env(safe-area-inset-bottom, 0px) + 4px))",
+  display: "grid",
+  gap: "3px",
+  padding: "5px",
+  borderRadius: "11px",
+  border: "1px solid rgba(196, 222, 214, 0.18)",
+  background: "linear-gradient(180deg, rgba(9, 16, 21, 0.8) 0%, rgba(7, 14, 19, 0.86) 100%)",
+  backdropFilter: "blur(10px)",
+  WebkitBackdropFilter: "blur(10px)",
+  boxShadow: "0 7px 20px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.08)",
+  zIndex: 24,
+};
+
+const COMPACT_MOVEMENT_TOP_ROW_STYLE: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+  gap: "4px",
+};
+
+const COMPACT_MOVEMENT_MODE_BUTTON_STYLE: CSSProperties = {
+  height: "31px",
+  borderRadius: "8px",
+  border: "1px solid rgba(142, 170, 157, 0.26)",
+  background: "rgba(18, 29, 34, 0.74)",
+  color: "rgba(227, 238, 233, 0.96)",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "9.1px",
+  fontWeight: 640,
+  letterSpacing: "0.12px",
+  cursor: "pointer",
+  padding: "0 5px",
+  minWidth: 0,
+};
+
+const COMPACT_MOVEMENT_MODE_BUTTON_ACTIVE_STYLE: CSSProperties = {
+  ...COMPACT_MOVEMENT_MODE_BUTTON_STYLE,
+  border: "1px solid rgba(124, 255, 114, 0.5)",
+  background: "rgba(124, 255, 114, 0.14)",
+  color: "#f5fff2",
+};
+
+const COMPACT_MOVEMENT_SPEED_CELL_STYLE: CSSProperties = {
+  ...COMPACT_MOVEMENT_MODE_BUTTON_STYLE,
+  display: "grid",
+  gridTemplateRows: "auto auto",
+  alignContent: "center",
+  gap: "2px",
+  padding: "2px 4px",
+};
+
+const COMPACT_MOVEMENT_SPEED_LABEL_STYLE: CSSProperties = {
+  margin: 0,
+  textTransform: "uppercase",
+  fontSize: "7px",
+  letterSpacing: "0.16px",
+  color: "rgba(211, 228, 220, 0.74)",
+  lineHeight: 1,
+};
+
+const COMPACT_MOVEMENT_SPEED_STEPPER_STYLE: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "18px minmax(0, 1fr) 18px",
+  alignItems: "center",
+  gap: "2px",
+};
+
+const COMPACT_MOVEMENT_SPEED_STEP_BUTTON_STYLE: CSSProperties = {
+  width: "18px",
+  height: "15px",
+  borderRadius: "5px",
+  border: "1px solid rgba(170, 197, 186, 0.26)",
+  background: "rgba(8, 16, 19, 0.88)",
+  color: "#e9f5ef",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontWeight: 700,
+  fontSize: "10px",
+  lineHeight: 1,
+  padding: 0,
+  cursor: "pointer",
+};
+
+const COMPACT_MOVEMENT_SPEED_VALUE_STYLE: CSSProperties = {
+  textAlign: "center",
+  fontFamily: "Inter, system-ui, sans-serif",
+  color: "#ecf7f2",
+  fontSize: "8px",
+  fontWeight: 700,
+  letterSpacing: "0.1px",
+  whiteSpace: "nowrap",
+};
+
+const COMPACT_MOVEMENT_PLAYBACK_ROW_STYLE: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(6, minmax(0, 1fr))",
+  gap: "4px",
+};
+
+const COMPACT_MOVEMENT_ACTION_BUTTON_STYLE: CSSProperties = {
+  height: "27px",
+  borderRadius: "7px",
+  border: "1px solid rgba(158, 179, 171, 0.25)",
+  background: "rgba(15, 26, 30, 0.82)",
+  color: "rgba(233, 241, 236, 0.97)",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "8.2px",
+  fontWeight: 620,
+  letterSpacing: "0.1px",
+  cursor: "pointer",
+  minWidth: 0,
+  padding: "0 3px",
 };
 
 const ACTIONS_POPOUT_STYLE: CSSProperties = {
@@ -2542,6 +2658,17 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     setPlaybackSpeedMultiplier(nextSpeed);
   };
 
+  const bumpPlaybackSpeed = (delta: -1 | 1) => {
+    setPlaybackSpeedMultiplier((current) => {
+      const currentIndex = Math.max(
+        0,
+        PLAYBACK_SPEED_OPTIONS.findIndex((option) => option.multiplier === current),
+      );
+      const nextIndex = Math.max(0, Math.min(PLAYBACK_SPEED_OPTIONS.length - 1, currentIndex + delta));
+      return PLAYBACK_SPEED_OPTIONS[nextIndex]?.multiplier ?? current;
+    });
+  };
+
   const phaseItems = Array.from({ length: phaseCount }, (_, index) => index + 1);
   const floodlightDots = Array.from({ length: 12 }, (_, index) => index);
   const activeTacticalPenColor = tacticalPenColor;
@@ -2953,6 +3080,31 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     surfaceRef.current?.setWhiteboardDrawTool("move");
   };
 
+  const handleSetStartPress = () => {
+    if (isPlaybackLocked) return;
+    surfaceRef.current?.setStart();
+    closeControlsMenu();
+  };
+
+  const handleAddPhasePress = () => {
+    if (isPlaybackLocked) return;
+    surfaceRef.current?.addPhase();
+    closeControlsMenu();
+  };
+
+  const handleUndoPhasePress = () => {
+    if (phaseCount <= 0) return;
+    surfaceRef.current?.undoPhase();
+    closeControlsMenu();
+  };
+
+  const handleResetPress = () => {
+    surfaceRef.current?.reset();
+    setIsPlaying(false);
+    setIsPaused(false);
+    closeControlsMenu();
+  };
+
   const handleWhiteboardBubblePointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
     if (event.button !== 0) return;
     const viewport = getViewportRect();
@@ -3075,6 +3227,50 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const isIphoneLandscapeTools = isCompactLandscapeTools && isIphoneLandscapeToolsMenu;
   const compactLandscapeViewportWidth = isCompactLandscapeTools ? getViewportRect().width : 0;
   const isTightCompactLandscapeTools = isCompactLandscapeTools && compactLandscapeViewportWidth <= 760;
+  const showCompactMovementToolbar = isCompactLandscapeTools;
+  const compactMovementToolbarReservePx = isTightCompactLandscapeTools ? 56 : 62;
+  const tacticalRootStyle: CSSProperties =
+    showCompactMovementToolbar
+      ? {
+          ...ROOT_STYLE,
+          alignItems: "flex-start",
+          paddingTop: "max(2px, calc(env(safe-area-inset-top, 0px) + 1px))",
+          paddingBottom: "max(2px, calc(env(safe-area-inset-bottom, 0px) + 1px))",
+        }
+      : ROOT_STYLE;
+  const tacticalContentStyle: CSSProperties =
+    showCompactMovementToolbar
+      ? {
+          ...CONTENT_STYLE,
+          width: `min(calc(${VIEWPORT_WIDTH_UNIT} - 8px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), calc((${VIEWPORT_HEIGHT_UNIT} - ${compactMovementToolbarReservePx}px - env(safe-area-inset-bottom, 0px)) * 2.2), 1560px)`,
+          maxWidth: "calc(100vw - 8px)",
+          maxHeight: `calc(${VIEWPORT_HEIGHT_UNIT} - ${compactMovementToolbarReservePx}px - env(safe-area-inset-bottom, 0px))`,
+          aspectRatio: "20 / 9",
+        }
+      : CONTENT_STYLE;
+  const controlsPopoutStyle: CSSProperties =
+    showCompactMovementToolbar
+      ? {
+          ...CONTROLS_POPOUT_STYLE,
+          bottom: `max(${compactMovementToolbarReservePx + 16}px, calc(env(safe-area-inset-bottom, 0px) + ${compactMovementToolbarReservePx + 12}px))`,
+        }
+      : CONTROLS_POPOUT_STYLE;
+  const controlsBubbleStyle: CSSProperties =
+    showCompactMovementToolbar
+      ? {
+          ...LEFT_BUBBLE_STYLE,
+          bottom: `max(${compactMovementToolbarReservePx + 10}px, calc(env(safe-area-inset-bottom, 0px) + ${compactMovementToolbarReservePx + 8}px))`,
+        }
+      : LEFT_BUBBLE_STYLE;
+  const baseToolsBubbleStyle: CSSProperties = isCompactLandscapeTools ? MOBILE_TOOLS_BUBBLE_STYLE : TOOL_BUBBLE_STYLE;
+  const toolsBubbleStyle: CSSProperties =
+    showCompactMovementToolbar
+      ? {
+          ...baseToolsBubbleStyle,
+          bottom: `max(${compactMovementToolbarReservePx + 10}px, calc(env(safe-area-inset-bottom, 0px) + ${compactMovementToolbarReservePx + 8}px))`,
+        }
+      : baseToolsBubbleStyle;
+  const isRouteModeActive = tacticalTool !== "move";
   const mobileCoachHubOverlayStyle = isIphoneLandscapeTools ? IPHONE_LANDSCAPE_TOOLS_OVERLAY_STYLE : MOBILE_COACH_HUB_OVERLAY_STYLE;
   const mobileCoachHubPanelStyle = isCompactLandscapeTools
     ? {
@@ -3229,7 +3425,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   return (
     <OrientationGate modeLabel="PáircVision Board">
       <div
-        style={isWhiteboardMode ? ROOT_WHITEBOARD_STYLE : ROOT_STYLE}
+        style={isWhiteboardMode ? ROOT_WHITEBOARD_STYLE : tacticalRootStyle}
         className={isWhiteboardMode ? undefined : "simulator-container"}
       >
         {!isWhiteboardMode ? <style>{STADIUM_FLOODLIGHT_CSS}</style> : null}
@@ -3251,7 +3447,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             <div style={BACKGROUND_VIGNETTE_STYLE} />
           </div>
         ) : null}
-        <div style={isWhiteboardMode ? WHITEBOARD_CONTENT_STYLE : CONTENT_STYLE}>
+        <div style={isWhiteboardMode ? WHITEBOARD_CONTENT_STYLE : tacticalContentStyle}>
           <div ref={hostRef} style={pitchSurfaceStyle} />
           {!isWhiteboardMode && isPortraitViewingMode ? <div style={PORTRAIT_INTERACTION_SHIELD_STYLE} aria-hidden="true" /> : null}
         </div>
@@ -3636,7 +3832,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
           </div>
         ) : null}
         {!isWhiteboardMode && (controlsOpen || isPortraitViewingMode) ? (
-          <div style={CONTROLS_POPOUT_STYLE}>
+          <div style={controlsPopoutStyle}>
             <div style={PLAYBACK_SPEED_BAR_STYLE}>
               <span style={PLAYBACK_SPEED_LABEL_STYLE}>SPEED</span>
               <input
@@ -3658,10 +3854,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                 className="control-button"
                 disabled={isPlaybackLocked}
                 style={isPlaybackLocked ? DISABLED_CONTROL_BUTTON_STYLE : SET_START_BUTTON_STYLE}
-                onClick={() => {
-                  surfaceRef.current?.setStart();
-                  closeControlsMenu();
-                }}
+                onClick={handleSetStartPress}
               >
                 Set Start
               </button>
@@ -3672,10 +3865,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                 className="control-button"
                 disabled={isPlaybackLocked}
                 style={isPlaybackLocked ? DISABLED_CONTROL_BUTTON_STYLE : ADD_PHASE_BUTTON_STYLE}
-                onClick={() => {
-                  surfaceRef.current?.addPhase();
-                  closeControlsMenu();
-                }}
+                onClick={handleAddPhasePress}
               >
                 Add Phase
               </button>
@@ -3704,10 +3894,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                 className="control-button"
                 disabled={phaseCount <= 0}
                 style={phaseCount <= 0 ? DISABLED_CONTROL_BUTTON_STYLE : UNDO_PHASE_BUTTON_STYLE}
-                onClick={() => {
-                  surfaceRef.current?.undoPhase();
-                  closeControlsMenu();
-                }}
+                onClick={handleUndoPhasePress}
               >
                 Undo Phase
               </button>
@@ -3716,15 +3903,140 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
               type="button"
               className="control-button"
               style={RESET_BUTTON_STYLE}
-              onClick={() => {
-                surfaceRef.current?.reset();
-                setIsPlaying(false);
-                setIsPaused(false);
-                closeControlsMenu();
-              }}
+              onClick={handleResetPress}
             >
               Reset
             </button>
+          </div>
+        ) : null}
+        {showCompactMovementToolbar ? (
+          <div style={COMPACT_MOVEMENT_TOOLBAR_STYLE} role="group" aria-label="Movement quick toolbar">
+            <div style={COMPACT_MOVEMENT_TOP_ROW_STYLE}>
+              <button
+                type="button"
+                className="control-button"
+                style={tacticalTool === "move" ? COMPACT_MOVEMENT_MODE_BUTTON_ACTIVE_STYLE : COMPACT_MOVEMENT_MODE_BUTTON_STYLE}
+                onClick={() => applyTacticalTool("move")}
+              >
+                Move
+              </button>
+              <button
+                type="button"
+                className="control-button"
+                style={isRouteModeActive ? COMPACT_MOVEMENT_MODE_BUTTON_ACTIVE_STYLE : COMPACT_MOVEMENT_MODE_BUTTON_STYLE}
+                onClick={() => applyTacticalTool("arrow")}
+              >
+                Route
+              </button>
+              <button
+                type="button"
+                className="control-button"
+                disabled={isPlaybackLocked}
+                style={isPlaybackLocked ? { ...COMPACT_MOVEMENT_MODE_BUTTON_STYLE, opacity: 0.48, cursor: "not-allowed" } : COMPACT_MOVEMENT_MODE_BUTTON_STYLE}
+                onClick={freeBall}
+              >
+                Ball
+              </button>
+              <div style={COMPACT_MOVEMENT_SPEED_CELL_STYLE}>
+                <p style={COMPACT_MOVEMENT_SPEED_LABEL_STYLE}>Speed · P{phaseCount}</p>
+                <div style={COMPACT_MOVEMENT_SPEED_STEPPER_STYLE}>
+                  <button
+                    type="button"
+                    className="control-button"
+                    style={COMPACT_MOVEMENT_SPEED_STEP_BUTTON_STYLE}
+                    onClick={() => bumpPlaybackSpeed(-1)}
+                    aria-label="Lower playback speed"
+                  >
+                    −
+                  </button>
+                  <span style={COMPACT_MOVEMENT_SPEED_VALUE_STYLE}>{playbackSpeedLabel}</span>
+                  <button
+                    type="button"
+                    className="control-button"
+                    style={COMPACT_MOVEMENT_SPEED_STEP_BUTTON_STYLE}
+                    onClick={() => bumpPlaybackSpeed(1)}
+                    aria-label="Increase playback speed"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div style={COMPACT_MOVEMENT_PLAYBACK_ROW_STYLE}>
+              <button
+                type="button"
+                className="control-button"
+                disabled={isPlaybackLocked}
+                style={
+                  isPlaybackLocked
+                    ? { ...COMPACT_MOVEMENT_ACTION_BUTTON_STYLE, opacity: 0.48, cursor: "not-allowed" }
+                    : COMPACT_MOVEMENT_ACTION_BUTTON_STYLE
+                }
+                onClick={handleSetStartPress}
+              >
+                Set Start
+              </button>
+              <button
+                type="button"
+                className="control-button"
+                disabled={isPlaybackLocked}
+                style={
+                  isPlaybackLocked
+                    ? { ...COMPACT_MOVEMENT_ACTION_BUTTON_STYLE, opacity: 0.48, cursor: "not-allowed" }
+                    : COMPACT_MOVEMENT_ACTION_BUTTON_STYLE
+                }
+                onClick={handleAddPhasePress}
+              >
+                Add Phase
+              </button>
+              <button
+                type="button"
+                className="control-button"
+                disabled={isPlaying}
+                style={
+                  isPlaying
+                    ? { ...COMPACT_MOVEMENT_ACTION_BUTTON_STYLE, opacity: 0.48, cursor: "not-allowed" }
+                    : { ...COMPACT_MOVEMENT_ACTION_BUTTON_STYLE, border: "1px solid rgba(34, 197, 94, 0.56)" }
+                }
+                onClick={handlePlayPress}
+              >
+                Play
+              </button>
+              <button
+                type="button"
+                className="control-button"
+                disabled={!isPlaying}
+                style={
+                  !isPlaying
+                    ? { ...COMPACT_MOVEMENT_ACTION_BUTTON_STYLE, opacity: 0.48, cursor: "not-allowed" }
+                    : { ...COMPACT_MOVEMENT_ACTION_BUTTON_STYLE, border: "1px solid rgba(245, 158, 11, 0.58)" }
+                }
+                onClick={handlePausePress}
+              >
+                Pause
+              </button>
+              <button
+                type="button"
+                className="control-button"
+                disabled={phaseCount <= 0}
+                style={
+                  phaseCount <= 0
+                    ? { ...COMPACT_MOVEMENT_ACTION_BUTTON_STYLE, opacity: 0.48, cursor: "not-allowed" }
+                    : { ...COMPACT_MOVEMENT_ACTION_BUTTON_STYLE, border: "1px solid rgba(168, 85, 247, 0.56)" }
+                }
+                onClick={handleUndoPhasePress}
+              >
+                Undo
+              </button>
+              <button
+                type="button"
+                className="control-button"
+                style={{ ...COMPACT_MOVEMENT_ACTION_BUTTON_STYLE, border: "1px solid rgba(239, 68, 68, 0.58)" }}
+                onClick={handleResetPress}
+              >
+                Reset
+              </button>
+            </div>
           </div>
         ) : null}
         {isToolsOverlayOpen && overlayPortalRoot
@@ -4373,7 +4685,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
           <button
             type="button"
             className="floating-bubble"
-            style={LEFT_BUBBLE_STYLE}
+            style={controlsBubbleStyle}
             aria-label="Open controls"
             onClick={() =>
               setControlsOpen((open) => {
@@ -4395,7 +4707,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             ref={toolsBubbleButtonRef}
             type="button"
             className={isCompactLandscapeTools ? "floating-bubble" : "floating-bubble floating-bubble-tool"}
-            style={isCompactLandscapeTools ? MOBILE_TOOLS_BUBBLE_STYLE : TOOL_BUBBLE_STYLE}
+            style={toolsBubbleStyle}
             aria-label={toolsOpen ? "Close tools" : "Open tools"}
             aria-expanded={toolsOpen}
             onClick={() =>
