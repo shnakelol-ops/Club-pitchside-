@@ -1909,6 +1909,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const [tacticalTokenStyle, setTacticalTokenStyle] = useState<TacticalPlayerTokenStyle>("vision-v3");
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [isRouteMode, setIsRouteMode] = useState(false);
   const [playbackSpeedMultiplier, setPlaybackSpeedMultiplier] = useState<number>(DEFAULT_PLAYBACK_SPEED_MULTIPLIER);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [quickShareOpen, setQuickShareOpen] = useState(false);
@@ -2268,6 +2269,11 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   }, [isStatsMode, isWhiteboardMode, whiteboardTool, whiteboardPenColor, tacticalTool, tacticalPenColor]);
 
   useEffect(() => {
+    if (isStatsMode || isWhiteboardMode) return;
+    surfaceRef.current?.setBasicRouteFollowDevMode(isRouteMode);
+  }, [isStatsMode, isWhiteboardMode, isRouteMode]);
+
+  useEffect(() => {
     if (isStatsMode) return;
     surfaceRef.current?.setPlaybackSpeedMultiplier(playbackSpeedMultiplier);
   }, [isStatsMode, playbackSpeedMultiplier]);
@@ -2526,6 +2532,11 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const handlePausePress = () => {
     surfaceRef.current?.pausePlayback();
     setControlsOpen(false);
+  };
+  const handleRouteModeToggle = () => {
+    const next = !isRouteMode;
+    setIsRouteMode(next);
+    surfaceRef.current?.setBasicRouteFollowDevMode(next);
   };
 
   const handleToolsBackdropPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -3724,6 +3735,25 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
               }}
             >
               Reset
+            </button>
+            <button
+              type="button"
+              className="control-button"
+              style={isRouteMode ? ADD_PHASE_BUTTON_STYLE : RESET_BUTTON_STYLE}
+              onClick={handleRouteModeToggle}
+            >
+              ROUTE
+            </button>
+            <button
+              type="button"
+              className="control-button"
+              style={RESET_BUTTON_STYLE}
+              onClick={() => {
+                surfaceRef.current?.triggerBasicRouteFollowDev();
+                closeControlsMenu();
+              }}
+            >
+              TEST ROUTE
             </button>
           </div>
         ) : null}
