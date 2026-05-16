@@ -2260,6 +2260,24 @@ export async function createTacticalPadLiteSurface(
     renderBasicRoutePreview();
   }
 
+  function findRouteSelectablePlayerAtWorldPoint(worldPoint: { x: number; y: number }): TacticalPlayer | null {
+    if (surfaceVariant !== "tactical") return null;
+    const touchRadiusInWorld = (PLAYER_TOUCH_HIT_DIAMETER_PX * 0.5) / mapper.transform.scale;
+    const maxDistanceSquared = Math.max(PLAYER_RADIUS, touchRadiusInWorld) ** 2;
+    let closest: TacticalPlayer | null = null;
+    let closestDistanceSquared = maxDistanceSquared;
+    for (const player of players) {
+      const playerWorldPoint = mapper.normalizedToWorld(player.current);
+      const dx = playerWorldPoint.x - worldPoint.x;
+      const dy = playerWorldPoint.y - worldPoint.y;
+      const distanceSquared = dx * dx + dy * dy;
+      if (distanceSquared > closestDistanceSquared) continue;
+      closest = player;
+      closestDistanceSquared = distanceSquared;
+    }
+    return closest;
+  }
+
   function buildDevRouteForPlayer(player: TacticalPlayer): RoutePoint[] {
     const offset = 7.5;
     return [
@@ -3102,6 +3120,13 @@ export async function createTacticalPadLiteSurface(
       clearSelectedItem();
       const worldPoint = getBoundedWorldPointFromEvent(event);
       if (!worldPoint) return;
+      const previousSelectedPlayerId = selectedPlayerId;
+      const tappedPlayer = findRouteSelectablePlayerAtWorldPoint(worldPoint);
+      if (tappedPlayer) {
+        selectedPlayerId = tappedPlayer.id;
+        syncWhiteboardTokenInputMode();
+        if (previousSelectedPlayerId !== tappedPlayer.id) return;
+      }
       if (!selectedPlayerId) return;
       basicRouteCapturePointerId = getPointerIdFromEvent(event);
       currentRouteDraftPlayerId = selectedPlayerId;
