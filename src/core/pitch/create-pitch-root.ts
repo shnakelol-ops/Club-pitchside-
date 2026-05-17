@@ -324,10 +324,10 @@ export function createPitchRoot(sport: PitchSport): PitchRootMount {
   root.addChild(panel);
 
   const chassis = new Graphics();
-  const pad = 2.95;
-  const cornerR = 2.35;
+  const pad = 0;
+  const cornerR = 0;
   chassis.roundRect(-pad, -pad, vbW + pad * 2, vbH + pad * 2, cornerR).fill({
-    color: 0x020706,
+    color: sport === "soccer" ? 0x10261c : 0x103629,
     alpha: 1,
   });
   panel.addChild(chassis);
