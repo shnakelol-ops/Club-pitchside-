@@ -45,7 +45,7 @@ const VIEWPORT_WIDTH_UNIT = CAN_USE_CSS_SUPPORTS && window.CSS.supports("width: 
 const CONTENT_WIDTH_EXPR =
   `min(calc(${VIEWPORT_WIDTH_UNIT} - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), calc((${VIEWPORT_HEIGHT_UNIT} - 10px) * 1.6), 1360px)`;
 const LANDSCAPE_TACTICAL_CONTENT_WIDTH_EXPR =
-  `min(calc(${VIEWPORT_WIDTH_UNIT} - 12px), calc((${VIEWPORT_HEIGHT_UNIT} - 4px) * 1.6), 1360px)`;
+  `min(calc(${VIEWPORT_WIDTH_UNIT} - 4px), calc((${VIEWPORT_HEIGHT_UNIT} - 3px) * 1.6), 1360px)`;
 const WHITEBOARD_PLAYER_COLOR_CHOICES: ReadonlyArray<{
   value: WhiteboardTokenColor;
   css: string;
@@ -298,7 +298,7 @@ const BACKGROUND_VIGNETTE_STYLE: CSSProperties = {
 const LANDSCAPE_TACTICAL_BACKGROUND_VIGNETTE_STYLE: CSSProperties = {
   ...BACKGROUND_VIGNETTE_STYLE,
   background:
-    "radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 54%, rgba(4, 12, 18, 0.2) 78%, rgba(0, 0, 0, 0.4) 100%)",
+    "radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 62%, rgba(4, 12, 18, 0.16) 86%, rgba(0, 0, 0, 0.28) 100%)",
 };
 
 const STADIUM_FLOODLIGHT_CSS = `
@@ -562,17 +562,17 @@ const CONTENT_STYLE: CSSProperties = {
 
 const LANDSCAPE_TACTICAL_ROOT_STYLE: CSSProperties = {
   ...ROOT_STYLE,
-  paddingTop: "max(2px, calc(env(safe-area-inset-top, 0px) + 1px))",
-  paddingRight: "max(2px, calc(env(safe-area-inset-right, 0px) + 1px))",
-  paddingBottom: "max(2px, calc(env(safe-area-inset-bottom, 0px) + 1px))",
-  paddingLeft: "max(2px, calc(env(safe-area-inset-left, 0px) + 1px))",
+  paddingTop: "max(1px, calc(env(safe-area-inset-top, 0px) + 1px))",
+  paddingRight: "max(1px, calc(env(safe-area-inset-right, 0px) * 0.6))",
+  paddingBottom: "max(1px, calc(env(safe-area-inset-bottom, 0px) + 1px))",
+  paddingLeft: "max(1px, calc(env(safe-area-inset-left, 0px) * 0.6))",
 };
 
 const LANDSCAPE_TACTICAL_CONTENT_STYLE: CSSProperties = {
   ...CONTENT_STYLE,
   width: LANDSCAPE_TACTICAL_CONTENT_WIDTH_EXPR,
-  maxWidth: "calc(100vw - 12px)",
-  maxHeight: `calc(${VIEWPORT_HEIGHT_UNIT} - 4px)`,
+  maxWidth: "calc(100vw - 4px)",
+  maxHeight: `calc(${VIEWPORT_HEIGHT_UNIT} - 3px)`,
 };
 
 const WHITEBOARD_CONTENT_STYLE: CSSProperties = {
