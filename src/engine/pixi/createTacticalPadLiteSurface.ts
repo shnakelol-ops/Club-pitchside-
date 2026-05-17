@@ -105,6 +105,8 @@ export type TacticalBoardState = {
   itemMode?: unknown;
 };
 
+export type PitchViewMode = "full" | "half-left" | "half-right";
+
 export type TacticalPadLiteSurface = {
   setStart: () => void;
   addPhase: () => void;
@@ -133,6 +135,8 @@ export type TacticalPadLiteSurface = {
   eraseWhiteboardPenStroke: () => void;
   undoWhiteboardStroke: () => void;
   clearWhiteboardStrokes: () => void;
+  setPitchViewMode: (mode: PitchViewMode) => void;
+  getPitchViewMode: () => PitchViewMode;
   exportBoardState: () => TacticalBoardState;
   importBoardState: (state: TacticalBoardState) => boolean;
   exportImageCanvas: () => HTMLCanvasElement | null;
@@ -327,6 +331,14 @@ const TACTICAL_INITIAL_TEAM_COUNTS = {
 const DEFAULT_PLAYBACK_SPEED_MULTIPLIER = 1;
 const MIN_PLAYBACK_SPEED_MULTIPLIER = 0.25;
 const MAX_PLAYBACK_SPEED_MULTIPLIER = 1.5;
+const FULL_PITCH_VIEW_BOUNDS = { x: 0, y: 0, width: WORLD_SIZE.width, height: WORLD_SIZE.height } as const;
+const HALF_LEFT_PITCH_VIEW_BOUNDS = { x: 0, y: -6, width: 96, height: 112 } as const;
+const HALF_RIGHT_PITCH_VIEW_BOUNDS = {
+  x: 64,
+  y: -6,
+  width: 96,
+  height: 112,
+} as const;
 
 function clampWorld(value: number, max: number): number {
   if (!Number.isFinite(value)) return 0;
@@ -654,6 +666,28 @@ function teamColor(
   return colors?.blue ?? "blue";
 }
 
+function resolvePitchViewConfig(mode: PitchViewMode): {
+  viewBounds: { x: number; y: number; width: number; height: number };
+  fitMode: "contain" | "cover";
+} {
+  if (mode === "half-left") {
+    return {
+      viewBounds: HALF_LEFT_PITCH_VIEW_BOUNDS,
+      fitMode: "cover",
+    };
+  }
+  if (mode === "half-right") {
+    return {
+      viewBounds: HALF_RIGHT_PITCH_VIEW_BOUNDS,
+      fitMode: "cover",
+    };
+  }
+  return {
+    viewBounds: FULL_PITCH_VIEW_BOUNDS,
+    fitMode: "contain",
+  };
+}
+
 function setPlayerTouchHitArea(
   player: TacticalPlayer,
   mapper: ReturnType<typeof createWorldViewport>,
@@ -837,10 +871,16 @@ export async function createTacticalPadLiteSurface(
   };
   world.addChild(whiteboardInputLayer);
 
-  let mapper = createWorldViewport(
-    WORLD_SIZE,
-    { width: host.clientWidth || 800, height: host.clientHeight || 520 },
-  );
+  let pitchViewMode: PitchViewMode = "full";
+  const createMapperForViewport = (width: number, height: number) => {
+    const viewConfig = resolvePitchViewConfig(pitchViewMode);
+    return createWorldViewport(
+      WORLD_SIZE,
+      { width, height },
+      { viewBounds: viewConfig.viewBounds, fitMode: viewConfig.fitMode },
+    );
+  };
+  let mapper = createMapperForViewport(host.clientWidth || 800, host.clientHeight || 520);
 
   let tacticalTeamColors: TacticalPadLiteSurfaceOptions["whiteboardTeamColors"] = {
     blue: options.whiteboardTeamColors?.blue ?? "blue",
@@ -1109,7 +1149,7 @@ export async function createTacticalPadLiteSurface(
     app.renderer.resolution = Math.min(2, window.devicePixelRatio || 1);
     app.renderer.resize(width, height);
 
-    mapper = createWorldViewport(WORLD_SIZE, { width, height });
+    mapper = createMapperForViewport(width, height);
     world.scale.set(mapper.transform.scale, mapper.transform.scale);
     world.position.set(mapper.transform.offsetX, mapper.transform.offsetY);
 
@@ -3031,6 +3071,15 @@ export async function createTacticalPadLiteSurface(
       if (!isDrawingEnabledSurface) return;
       tacticalDrawingController.clear();
     },
+    setPitchViewMode: (mode) => {
+      if (mode !== "full" && mode !== "half-left" && mode !== "half-right") return;
+      if (mode === pitchViewMode) return;
+      pitchViewMode = mode;
+      releaseActiveDrag();
+      resetActiveWhiteboardDrawing();
+      fitToHost();
+    },
+    getPitchViewMode: () => pitchViewMode,
     exportBoardState: () => captureBoardState(),
     importBoardState: (state) => importBoardState(state),
     exportImageCanvas: () => {
