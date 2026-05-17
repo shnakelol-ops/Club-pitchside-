@@ -206,6 +206,9 @@ const BALL_PATH_MIN_POINT_DISTANCE = 0.35;
 const BASIC_ROUTE_FOLLOW_SPEED = 18;
 const BASIC_ROUTE_MIN_POINT_DISTANCE = 0.9;
 const MAX_BASIC_ROUTE_PLAYERS = 6;
+const BASIC_ROUTE_PREVIEW_SHADOW_COLOR = 0x1c1205;
+const BASIC_ROUTE_PREVIEW_CORE_COLOR = 0xf59e0b;
+const BASIC_ROUTE_PREVIEW_HIGHLIGHT_COLOR = 0xffd8a1;
 const WHITEBOARD_DEFAULT_STROKE_COLOR = 0x111111;
 const WHITEBOARD_BLUE_START_X = 30;
 const WHITEBOARD_RED_START_X = 70;
@@ -2235,29 +2238,43 @@ export async function createTacticalPadLiteSurface(
 
   function renderBasicRoutePreview(): void {
     clearBasicRoutePreview();
-    const drawPath = (points: RoutePoint[]): void => {
+    const worldPaths: Array<Array<{ x: number; y: number }>> = [];
+    const appendPath = (points: RoutePoint[]): void => {
       if (points.length < 2) return;
-      const first = mapper.normalizedToWorld(points[0]!);
-      basicRoutePreviewGraphic.moveTo(first.x, first.y);
-      for (let index = 1; index < points.length; index += 1) {
-        const point = mapper.normalizedToWorld(points[index]!);
-        basicRoutePreviewGraphic.lineTo(point.x, point.y);
-      }
+      worldPaths.push(points.map((point) => mapper.normalizedToWorld(point)));
     };
     for (const route of routeByPlayerId.values()) {
-      drawPath(route);
+      appendPath(route);
     }
     if (currentRouteDraftPoints.length > 0) {
-      drawPath(currentRouteDraftPoints);
+      appendPath(currentRouteDraftPoints);
     }
-    basicRoutePreviewGraphic.stroke({
-      color: 0xf59e0b,
-      width: 1.1,
-      alpha: 0.88,
-      cap: "round",
-      join: "round",
-      alignment: 0.5,
-    });
+    if (worldPaths.length <= 0) return;
+
+    const strokePaths = (style: { color: number; width: number; alpha: number }): void => {
+      for (const path of worldPaths) {
+        const first = path[0];
+        if (!first) continue;
+        basicRoutePreviewGraphic.moveTo(first.x, first.y);
+        for (let index = 1; index < path.length; index += 1) {
+          const point = path[index];
+          if (!point) continue;
+          basicRoutePreviewGraphic.lineTo(point.x, point.y);
+        }
+      }
+      basicRoutePreviewGraphic.stroke({
+        ...style,
+        cap: "round",
+        join: "round",
+        alignment: 0.5,
+      });
+    };
+
+    // Layered tactical stroke keeps lines readable on dark pitch and screen share,
+    // while preserving a restrained telestrator feel.
+    strokePaths({ color: BASIC_ROUTE_PREVIEW_SHADOW_COLOR, width: 2.3, alpha: 0.33 });
+    strokePaths({ color: BASIC_ROUTE_PREVIEW_CORE_COLOR, width: 1.35, alpha: 0.95 });
+    strokePaths({ color: BASIC_ROUTE_PREVIEW_HIGHLIGHT_COLOR, width: 0.58, alpha: 0.46 });
   }
 
   function clearRouteDraft(): void {
