@@ -1839,33 +1839,36 @@ const PANEL_CSS = `
   z-index: 20;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
   width: fit-content;
-  max-width: min(620px, calc(100vw - 154px));
-  max-height: 120px;
-  padding: 6px 8px;
-  border-radius: 999px;
+  max-width: min(592px, calc(100vw - 160px));
+  max-height: 112px;
+  padding: 5px 7px;
+  border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(10, 20, 35, 0.72);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
-  box-shadow: 0 8px 16px rgba(4, 12, 24, 0.24);
+  box-shadow: 0 7px 14px rgba(4, 12, 24, 0.22);
 }
 
 .landscape-toolbar-row {
   display: flex;
-  gap: 4px;
+  align-items: center;
+  gap: 3px;
 }
 
 .landscape-toolbar-secondary {
   display: flex;
   gap: 3px;
-  margin-top: 2px;
+  margin-top: 0;
+  padding-top: 2px;
+  border-top: 1px solid rgba(148, 163, 184, 0.16);
 }
 
 .landscape-toolbar-btn {
-  min-width: 44px;
-  height: 26px;
+  min-width: 43px;
+  height: 25px;
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.4);
   background: rgba(15, 23, 42, 0.86);
@@ -1873,7 +1876,7 @@ const PANEL_CSS = `
   font-size: 9px;
   font-weight: 700;
   line-height: 1;
-  padding: 0 8px;
+  padding: 0 7px;
   cursor: pointer;
   white-space: nowrap;
   letter-spacing: 0.16px;
@@ -1886,10 +1889,10 @@ const PANEL_CSS = `
   border: 1px solid rgba(148, 163, 184, 0.36);
   background: rgba(15, 23, 42, 0.84);
   color: #dbe7f5;
-  font-size: 9px;
+  font-size: 8.8px;
   font-weight: 600;
   line-height: 1;
-  padding: 0 7px;
+  padding: 0 6px;
   cursor: pointer;
   white-space: nowrap;
   letter-spacing: 0.18px;
