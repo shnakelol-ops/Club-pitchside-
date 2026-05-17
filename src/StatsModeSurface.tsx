@@ -1189,8 +1189,8 @@ const PANEL_CSS = `
 .event-panel {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  padding: 6px;
+  gap: 6px;
+  padding: 7px;
   border-radius: 9px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(10, 20, 35, 0.75);
@@ -1199,12 +1199,13 @@ const PANEL_CSS = `
   box-shadow: 0 8px 18px rgba(4, 12, 24, 0.26);
   width: min(calc(100vw - 32px), 308px);
   max-width: 95vw;
+  box-sizing: border-box;
 }
 
 .event-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 3px;
+  gap: 4px;
 }
 
 .event-btn {
@@ -1212,8 +1213,8 @@ const PANEL_CSS = `
   color: #e2e8f0;
   font-size: 8.8px;
   line-height: 1.1;
-  padding: 5px 4px;
-  min-height: 27px;
+  padding: 5px;
+  min-height: 28px;
   cursor: pointer;
   text-align: center;
   white-space: nowrap;
@@ -1253,10 +1254,11 @@ const PANEL_CSS = `
 }
 
 .visibility-row {
-  margin-top: 1px;
+  margin-top: 2px;
   display: flex;
-  gap: 3px;
+  gap: 4px;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .visibility-btn {
@@ -1265,17 +1267,28 @@ const PANEL_CSS = `
   font-size: 9.5px;
   font-weight: 600;
   line-height: 1.1;
-  padding: 3px 7px;
+  padding: 4px 8px;
+  min-height: 26px;
   cursor: pointer;
   white-space: nowrap;
   letter-spacing: 0.3px;
   text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .undo-wrap {
-  margin-top: 7px;
-  padding-top: 7px;
+  margin-top: 6px;
+  padding-top: 6px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.undo-actions-row {
+  display: grid;
+  grid-template-columns: 1fr 1.35fr 1fr;
+  gap: 4px;
+  width: 100%;
 }
 
 .undo-btn {
@@ -1286,11 +1299,13 @@ const PANEL_CSS = `
   font-weight: 600;
   line-height: 1.2;
   padding: 5px 8px;
+  min-height: 28px;
   cursor: pointer;
-  text-align: left;
+  text-align: center;
   white-space: nowrap;
   letter-spacing: 0.25px;
   text-transform: uppercase;
+  width: 100%;
 }
 
 .active-chip {
@@ -5452,7 +5467,7 @@ export default function StatsModeSurface() {
                 </button>
               </div>
               <div className="undo-wrap">
-                <div style={{ display: "flex", gap: "4px" }}>
+                <div className="undo-actions-row">
                   <button
                     type="button"
                     className="undo-btn"
