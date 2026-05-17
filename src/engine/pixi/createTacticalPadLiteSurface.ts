@@ -3229,7 +3229,8 @@ export async function createTacticalPadLiteSurface(
       releaseActiveDrag();
       clearSelectedItem();
       cancelBasicRouteFollow();
-      clearRouteDraft();
+      clearRouteAssignments();
+      setRouteCaptureModeState(false);
       cancelPlaybackAnimation();
       singlePlayTargetSnapshot = null;
       replaySingleTargetFromReset = false;
@@ -3239,9 +3240,11 @@ export async function createTacticalPadLiteSurface(
       options.onPhaseCountChange?.(0);
     },
     addPhase: () => {
-      if (isRouteCaptureMode || routeByPlayerId.size > 0) return;
       releaseActiveDrag();
       clearSelectedItem();
+      cancelBasicRouteFollow();
+      clearRouteAssignments();
+      setRouteCaptureModeState(false);
       cancelPlaybackAnimation();
       singlePlayTargetSnapshot = null;
       replaySingleTargetFromReset = false;
@@ -3252,6 +3255,9 @@ export async function createTacticalPadLiteSurface(
     undoPhase: () => {
       releaseActiveDrag();
       clearSelectedItem();
+      cancelBasicRouteFollow();
+      clearRouteAssignments();
+      setRouteCaptureModeState(false);
       cancelPlaybackAnimation();
       singlePlayTargetSnapshot = null;
       replaySingleTargetFromReset = false;
@@ -3342,18 +3348,7 @@ export async function createTacticalPadLiteSurface(
       cancelPlaybackAnimation();
       clearRouteDraft();
       cancelBasicRouteFollow();
-      const resetSnapshot = cloneSnapshot(startPositions);
-      applySnapshotToSurface(resetSnapshot);
-      for (const playerId of routeByPlayerId.keys()) {
-        const player = players.find((entry) => entry.id === playerId);
-        if (!player) continue;
-        const playerIndex = players.indexOf(player);
-        const startPoint = resetSnapshot.players[playerIndex];
-        if (!startPoint) continue;
-        player.current = { x: startPoint.x, y: startPoint.y };
-        setTokenWorldPositionForPoint(player, player.current, mapper);
-        updateAttachedBallsForPlayer(player.id);
-      }
+      applySnapshotToSurface(cloneSnapshot(startPositions));
       replaySingleTargetFromReset = singlePlayTargetSnapshot != null;
     },
     reflow: () => {
