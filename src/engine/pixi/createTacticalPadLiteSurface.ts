@@ -3341,9 +3341,20 @@ export async function createTacticalPadLiteSurface(
       releaseActiveDrag();
       cancelPlaybackAnimation();
       clearRouteDraft();
-      cancelBasicRouteFollow({ restoreOrigin: true });
-      applySnapshotToSurface(startPositions);
-      replaySingleTargetFromReset = true;
+      cancelBasicRouteFollow();
+      const resetSnapshot = cloneSnapshot(startPositions);
+      applySnapshotToSurface(resetSnapshot);
+      for (const playerId of routeByPlayerId.keys()) {
+        const player = players.find((entry) => entry.id === playerId);
+        if (!player) continue;
+        const playerIndex = players.indexOf(player);
+        const startPoint = resetSnapshot.players[playerIndex];
+        if (!startPoint) continue;
+        player.current = { x: startPoint.x, y: startPoint.y };
+        setTokenWorldPositionForPoint(player, player.current, mapper);
+        updateAttachedBallsForPlayer(player.id);
+      }
+      replaySingleTargetFromReset = singlePlayTargetSnapshot != null;
     },
     reflow: () => {
       fitToHost();
