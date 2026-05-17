@@ -2128,9 +2128,11 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   useEffect(() => {
     const media = window.matchMedia("(orientation: landscape)");
     const settleMs = isIphoneDevice() ? ORIENTATION_SETTLE_DEBOUNCE_MS : 0;
+    const resumeSettleMs = Math.max(180, settleMs);
     let rafA = 0;
     let rafB = 0;
     let settleTimer: number | null = null;
+    let resumeTimer: number | null = null;
 
     const runDoubleRafReflow = () => {
       rafA = window.requestAnimationFrame(() => {
@@ -2157,8 +2159,28 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
       }, settleMs);
     };
 
+    const scheduleResumeRecovery = () => {
+      scheduleReflow();
+      if (resumeTimer != null) {
+        window.clearTimeout(resumeTimer);
+        resumeTimer = null;
+      }
+      resumeTimer = window.setTimeout(() => {
+        resumeTimer = null;
+        scheduleReflow();
+        window.dispatchEvent(new Event("resize"));
+      }, resumeSettleMs);
+    };
+
     const handleViewportChange = () => {
       scheduleReflow();
+    };
+    const handleResume = () => {
+      scheduleResumeRecovery();
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== "visible") return;
+      scheduleResumeRecovery();
     };
 
     if (typeof media.addEventListener === "function") {
@@ -2168,12 +2190,19 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     }
     window.addEventListener("orientationchange", handleViewportChange);
     window.addEventListener("resize", handleViewportChange);
+    window.addEventListener("focus", handleResume);
+    window.addEventListener("pageshow", handleResume);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
     const viewport = window.visualViewport;
     viewport?.addEventListener("resize", handleViewportChange);
+    viewport?.addEventListener("scroll", handleViewportChange);
 
     return () => {
       if (settleTimer != null) {
         window.clearTimeout(settleTimer);
+      }
+      if (resumeTimer != null) {
+        window.clearTimeout(resumeTimer);
       }
       window.cancelAnimationFrame(rafA);
       window.cancelAnimationFrame(rafB);
@@ -2184,7 +2213,11 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
       }
       window.removeEventListener("orientationchange", handleViewportChange);
       window.removeEventListener("resize", handleViewportChange);
+      window.removeEventListener("focus", handleResume);
+      window.removeEventListener("pageshow", handleResume);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       viewport?.removeEventListener("resize", handleViewportChange);
+      viewport?.removeEventListener("scroll", handleViewportChange);
     };
   }, []);
 
