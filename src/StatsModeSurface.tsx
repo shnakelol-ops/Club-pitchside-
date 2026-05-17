@@ -1839,12 +1839,13 @@ const PANEL_CSS = `
   z-index: 20;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
   width: fit-content;
   max-width: min(620px, calc(100vw - 154px));
-  max-height: 120px;
-  padding: 6px 8px;
-  border-radius: 999px;
+  max-height: min(46vh, 190px);
+  overflow-y: auto;
+  padding: 7px 9px;
+  border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(10, 20, 35, 0.72);
   backdrop-filter: blur(6px);
@@ -1853,35 +1854,49 @@ const PANEL_CSS = `
 }
 
 .landscape-toolbar-row {
-  display: flex;
-  gap: 4px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  column-gap: 6px;
+  row-gap: 6px;
+  align-items: stretch;
 }
 
 .landscape-toolbar-secondary {
   display: flex;
-  gap: 3px;
-  margin-top: 2px;
+  flex-wrap: wrap;
+  justify-content: center;
+  column-gap: 5px;
+  row-gap: 5px;
+  margin-top: 1px;
 }
 
 .landscape-toolbar-btn {
-  min-width: 44px;
+  min-width: 0;
+  min-height: 26px;
   height: 26px;
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.4);
   background: rgba(15, 23, 42, 0.86);
   color: #e2e8f0;
-  font-size: 9px;
+  font-size: 9.2px;
   font-weight: 700;
   line-height: 1;
-  padding: 0 8px;
+  padding: 0 9px;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   letter-spacing: 0.16px;
   text-transform: uppercase;
 }
 
 .landscape-toolbar-secondary-btn {
-  height: 22px;
+  min-width: 0;
+  min-height: 26px;
+  height: 26px;
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.36);
   background: rgba(15, 23, 42, 0.84);
@@ -1889,9 +1904,14 @@ const PANEL_CSS = `
   font-size: 9px;
   font-weight: 600;
   line-height: 1;
-  padding: 0 7px;
+  padding: 0 8px;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   letter-spacing: 0.18px;
   text-transform: uppercase;
 }
