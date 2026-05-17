@@ -53,13 +53,6 @@ function resolveFitMode(value: ViewportFitMode | undefined): ViewportFitMode {
   return value === "cover" ? "cover" : "contain";
 }
 
-function clampRangeStart(value: number, min: number, max: number): number {
-  if (!Number.isFinite(value)) return min;
-  if (value < min) return min;
-  if (value > max) return max;
-  return value;
-}
-
 function resolveViewBounds(worldSize: WorldSize, viewBounds: WorldViewportBounds | undefined): WorldViewportBounds {
   const worldWidth = safeDimension(worldSize.width);
   const worldHeight = safeDimension(worldSize.height);
@@ -79,15 +72,12 @@ function resolveViewBounds(worldSize: WorldSize, viewBounds: WorldViewportBounds
     return fallback;
   }
 
-  const width = Math.min(worldWidth, boundedWidth);
-  const height = Math.min(worldHeight, boundedHeight);
-  if (width <= 0 || height <= 0) {
-    return fallback;
-  }
-
-  const x = clampRangeStart(viewBounds.x, 0, worldWidth - width);
-  const y = clampRangeStart(viewBounds.y, 0, worldHeight - height);
-  return { x, y, width, height };
+  return {
+    x: Number.isFinite(viewBounds.x) ? viewBounds.x : 0,
+    y: Number.isFinite(viewBounds.y) ? viewBounds.y : 0,
+    width: boundedWidth,
+    height: boundedHeight,
+  };
 }
 
 function getFitScale(
