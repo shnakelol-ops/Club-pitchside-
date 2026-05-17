@@ -5681,7 +5681,6 @@ export default function StatsModeSurface() {
             zIndex: 1,
             width: "100%",
             height: "100%",
-            transform: isLandscape ? "none" : "translateY(-28px)",
             background: isPitchReady
               ? "transparent"
               : "radial-gradient(ellipse at center, rgba(29,90,54,0.96) 0%, rgba(29,90,54,0.88) 40%, rgba(29,90,54,0) 70%)",
