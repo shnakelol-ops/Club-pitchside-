@@ -2577,10 +2577,8 @@ export async function createTacticalPadLiteSurface(
     }
     for (const playerId of completedIds) {
       activeRouteRunsByPlayerId.delete(playerId);
-      routeControlledPlayerIds.delete(playerId);
     }
     if (activeRouteRunsByPlayerId.size <= 0) {
-      routeControlledPlayerIds.clear();
       syncWhiteboardTokenInputMode();
     }
   }
