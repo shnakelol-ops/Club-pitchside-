@@ -17,9 +17,25 @@ export type ViewportTransform = {
   offsetY: number;
 };
 
+export type ViewportFitMode = "contain" | "cover";
+
+export type WorldViewportBounds = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+export type WorldViewportOptions = {
+  viewBounds?: WorldViewportBounds;
+  fitMode?: ViewportFitMode;
+};
+
 export type WorldViewportMapper = {
   readonly worldSize: WorldSize;
   readonly viewportSize: ViewportSize;
+  readonly viewBounds: WorldViewportBounds;
+  readonly fitMode: ViewportFitMode;
   readonly transform: ViewportTransform;
   normalizedToWorld: (point: NormalizedPoint) => WorldPoint;
   worldToNormalized: (point: WorldPoint) => NormalizedPoint;
@@ -33,6 +49,59 @@ function safeDimension(value: number): number {
   return Number.isFinite(value) && value > 0 ? value : 0;
 }
 
+function resolveFitMode(value: ViewportFitMode | undefined): ViewportFitMode {
+  return value === "cover" ? "cover" : "contain";
+}
+
+function clampRangeStart(value: number, min: number, max: number): number {
+  if (!Number.isFinite(value)) return min;
+  if (value < min) return min;
+  if (value > max) return max;
+  return value;
+}
+
+function resolveViewBounds(worldSize: WorldSize, viewBounds: WorldViewportBounds | undefined): WorldViewportBounds {
+  const worldWidth = safeDimension(worldSize.width);
+  const worldHeight = safeDimension(worldSize.height);
+  const fallback: WorldViewportBounds = {
+    x: 0,
+    y: 0,
+    width: worldWidth,
+    height: worldHeight,
+  };
+  if (!viewBounds || worldWidth <= 0 || worldHeight <= 0) {
+    return fallback;
+  }
+
+  const boundedWidth = safeDimension(viewBounds.width);
+  const boundedHeight = safeDimension(viewBounds.height);
+  if (boundedWidth <= 0 || boundedHeight <= 0) {
+    return fallback;
+  }
+
+  const width = Math.min(worldWidth, boundedWidth);
+  const height = Math.min(worldHeight, boundedHeight);
+  if (width <= 0 || height <= 0) {
+    return fallback;
+  }
+
+  const x = clampRangeStart(viewBounds.x, 0, worldWidth - width);
+  const y = clampRangeStart(viewBounds.y, 0, worldHeight - height);
+  return { x, y, width, height };
+}
+
+function getFitScale(
+  sourceWidth: number,
+  sourceHeight: number,
+  viewportWidth: number,
+  viewportHeight: number,
+  fitMode: ViewportFitMode,
+): number {
+  const fitX = viewportWidth / sourceWidth;
+  const fitY = viewportHeight / sourceHeight;
+  return fitMode === "cover" ? Math.max(fitX, fitY) : Math.min(fitX, fitY);
+}
+
 /**
  * Computes a letterbox fit so the full world is visible in the viewport.
  * Offsets center the scaled world in whichever axis has spare room.
@@ -40,17 +109,19 @@ function safeDimension(value: number): number {
 export function getLetterboxTransform(
   worldSize: WorldSize,
   viewportSize: ViewportSize,
+  fitMode: ViewportFitMode = "contain",
 ): ViewportTransform {
   const worldWidth = safeDimension(worldSize.width);
   const worldHeight = safeDimension(worldSize.height);
   const viewportWidth = safeDimension(viewportSize.width);
   const viewportHeight = safeDimension(viewportSize.height);
+  const resolvedFitMode = resolveFitMode(fitMode);
 
   if (worldWidth <= 0 || worldHeight <= 0 || viewportWidth <= 0 || viewportHeight <= 0) {
     return { scale: 0, offsetX: 0, offsetY: 0 };
   }
 
-  const scale = Math.min(viewportWidth / worldWidth, viewportHeight / worldHeight);
+  const scale = getFitScale(worldWidth, worldHeight, viewportWidth, viewportHeight, resolvedFitMode);
   const offsetX = (viewportWidth - worldWidth * scale) / 2;
   const offsetY = (viewportHeight - worldHeight * scale) / 2;
 
@@ -64,8 +135,20 @@ export function getLetterboxTransform(
 export function createWorldViewport(
   worldSize: WorldSize,
   viewportSize: ViewportSize,
+  options: WorldViewportOptions = {},
 ): WorldViewportMapper {
-  const transform = getLetterboxTransform(worldSize, viewportSize);
+  const fitMode = resolveFitMode(options.fitMode);
+  const viewBounds = resolveViewBounds(worldSize, options.viewBounds);
+  const boundsTransform = getLetterboxTransform(
+    { width: viewBounds.width, height: viewBounds.height },
+    viewportSize,
+    fitMode,
+  );
+  const transform = {
+    scale: boundsTransform.scale,
+    offsetX: boundsTransform.offsetX - viewBounds.x * boundsTransform.scale,
+    offsetY: boundsTransform.offsetY - viewBounds.y * boundsTransform.scale,
+  };
   const scale = transform.scale;
 
   const toViewport = (point: WorldPoint): WorldPoint => ({
@@ -84,6 +167,8 @@ export function createWorldViewport(
   return {
     worldSize,
     viewportSize,
+    viewBounds,
+    fitMode,
     transform,
     normalizedToWorld: (point) => normalizedToWorld(point, worldSize),
     worldToNormalized: (point) => worldToNormalized(point, worldSize),

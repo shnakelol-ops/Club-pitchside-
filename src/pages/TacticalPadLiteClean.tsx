@@ -11,6 +11,7 @@ import {
   type TacticalPlayerKitSnapshot,
   type TacticalPadLiteSurface,
   type TacticalItem,
+  type PitchViewMode,
   type WhiteboardTokenColor,
   sanitizeInitials,
 } from "../engine/pixi/createTacticalPadLiteSurface";
@@ -1923,6 +1924,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const [loadedBoardName, setLoadedBoardName] = useState<string | null>(null);
   const [controlsOpen, setControlsOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [pitchViewMode, setPitchViewMode] = useState<PitchViewMode>("full");
   const [activeToolsSection, setActiveToolsSection] = useState<"draw" | "teams" | "items" | "board">("draw");
   const [isCompactLandscapeToolsMenu, setIsCompactLandscapeToolsMenu] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -2226,6 +2228,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
       surface.setPlaybackSpeedMultiplier(playbackSpeedMultiplierRef.current);
       surface.setWhiteboardDrawTool(initialDrawTool);
       surface.setWhiteboardDrawColor(initialDrawColor);
+      surface.setPitchViewMode(isWhiteboardMode ? "full" : pitchViewMode);
       if (!isWhiteboardMode) {
         surface.setItems(items);
         const initialSurfaceItemMode: ItemMode =
@@ -2291,6 +2294,13 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     if (isStatsMode || isWhiteboardMode) return;
     surfaceRef.current?.setTacticalTokenStyle(tacticalTokenStyle);
   }, [isStatsMode, isWhiteboardMode, tacticalTokenStyle]);
+
+  useEffect(() => {
+    if (isStatsMode) return;
+    const surface = surfaceRef.current;
+    if (!surface) return;
+    surface.setPitchViewMode(isWhiteboardMode ? "full" : pitchViewMode);
+  }, [isStatsMode, isWhiteboardMode, pitchViewMode]);
 
   useEffect(() => {
     if (isStatsMode || isWhiteboardMode || !isPortraitViewingMode) return;
@@ -2864,6 +2874,13 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
       setToolsOpen(false);
     }
   };
+  const applyPitchViewFromMenu = (view: "full" | "half") => {
+    if (isPortraitViewingMode) return;
+    const nextMode: PitchViewMode = view === "full" ? "full" : "half-left";
+    setPitchViewMode(nextMode);
+    surfaceRef.current?.setPitchViewMode(nextMode);
+  };
+  const isHalfPitchView = pitchViewMode !== "full";
 
   const clearTacticalDrawings = () => {
     if (isPortraitViewingMode) return;
@@ -3973,6 +3990,36 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
                     <div style={COACH_HUB_SECTION_STYLE}>
                       <p style={coachHubSectionTitleStyle}>Board</p>
                       <div style={COACH_HUB_ACTION_GRID_STYLE}>
+                        <button
+                          type="button"
+                          style={
+                            !isHalfPitchView
+                              ? {
+                                  ...coachHubActionButtonStyle,
+                                  border: "1px solid rgba(125, 211, 252, 0.82)",
+                                  boxShadow: "0 0 0 1px rgba(125, 211, 252, 0.42) inset",
+                                }
+                              : coachHubActionButtonStyle
+                          }
+                          onClick={() => applyPitchViewFromMenu("full")}
+                        >
+                          Full
+                        </button>
+                        <button
+                          type="button"
+                          style={
+                            isHalfPitchView
+                              ? {
+                                  ...coachHubActionButtonStyle,
+                                  border: "1px solid rgba(125, 211, 252, 0.82)",
+                                  boxShadow: "0 0 0 1px rgba(125, 211, 252, 0.42) inset",
+                                }
+                              : coachHubActionButtonStyle
+                          }
+                          onClick={() => applyPitchViewFromMenu("half")}
+                        >
+                          Half
+                        </button>
                         <button type="button" style={coachHubActionButtonStyle} onClick={handleNewBoard}>
                           New Board
                         </button>
@@ -4226,6 +4273,36 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
               <div style={COACH_HUB_SECTION_STYLE}>
                 <p style={coachHubSectionTitleStyle}>Board</p>
                 <div style={COACH_HUB_ACTION_GRID_STYLE}>
+                  <button
+                    type="button"
+                    style={
+                      !isHalfPitchView
+                        ? {
+                            ...coachHubActionButtonStyle,
+                            border: "1px solid rgba(125, 211, 252, 0.82)",
+                            boxShadow: "0 0 0 1px rgba(125, 211, 252, 0.42) inset",
+                          }
+                        : coachHubActionButtonStyle
+                    }
+                    onClick={() => applyPitchViewFromMenu("full")}
+                  >
+                    Full
+                  </button>
+                  <button
+                    type="button"
+                    style={
+                      isHalfPitchView
+                        ? {
+                            ...coachHubActionButtonStyle,
+                            border: "1px solid rgba(125, 211, 252, 0.82)",
+                            boxShadow: "0 0 0 1px rgba(125, 211, 252, 0.42) inset",
+                          }
+                        : coachHubActionButtonStyle
+                    }
+                    onClick={() => applyPitchViewFromMenu("half")}
+                  >
+                    Half
+                  </button>
                   <button type="button" style={coachHubActionButtonStyle} onClick={handleNewBoard}>
                     New Board
                   </button>
