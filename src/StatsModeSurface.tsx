@@ -5677,7 +5677,8 @@ export default function StatsModeSurface() {
         <div
           ref={hostRef}
           style={{
-            position: "relative",
+            position: "absolute",
+            inset: 0,
             zIndex: 1,
             width: "100%",
             height: "100%",
