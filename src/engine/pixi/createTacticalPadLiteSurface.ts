@@ -332,11 +332,11 @@ const DEFAULT_PLAYBACK_SPEED_MULTIPLIER = 1;
 const MIN_PLAYBACK_SPEED_MULTIPLIER = 0.25;
 const MAX_PLAYBACK_SPEED_MULTIPLIER = 1.5;
 const FULL_PITCH_VIEW_BOUNDS = { x: 0, y: 0, width: WORLD_SIZE.width, height: WORLD_SIZE.height } as const;
-const HALF_LEFT_PITCH_VIEW_BOUNDS = { x: 0, y: -6, width: 96, height: 112 } as const;
+const HALF_LEFT_PITCH_VIEW_BOUNDS = { x: 0, y: -6, width: 100, height: 112 } as const;
 const HALF_RIGHT_PITCH_VIEW_BOUNDS = {
-  x: 64,
+  x: 60,
   y: -6,
-  width: 96,
+  width: 100,
   height: 112,
 } as const;
 
