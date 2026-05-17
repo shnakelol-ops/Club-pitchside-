@@ -10,6 +10,7 @@ import {
   type TacticalPlayerKitPatch,
   type TacticalPlayerKitSnapshot,
   type TacticalPadLiteSurface,
+  type TacticalRouteState,
   type TacticalItem,
   type WhiteboardTokenColor,
   sanitizeInitials,
@@ -98,6 +99,7 @@ type WhiteboardToolControl =
   | "circleZone"
   | "eraser";
 type WhiteboardToolAction = WhiteboardToolControl;
+type MovementModePillOption = "move" | "route" | "ball";
 const WHITEBOARD_BUBBLE_SIZE = 36;
 const WHITEBOARD_BUBBLE_MARGIN = 12;
 const KIT_EDITOR_MARGIN = 10;
@@ -1526,6 +1528,53 @@ const PLAYBACK_SPEED_SLIDER_STYLE: CSSProperties = {
   minWidth: 0,
 };
 
+const MOVEMENT_MODE_PILL_STYLE: CSSProperties = {
+  position: "fixed",
+  left: "50%",
+  transform: "translateX(-50%)",
+  bottom: "max(54px, calc(env(safe-area-inset-bottom, 0px) + 52px))",
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "4px",
+  padding: "4px",
+  borderRadius: "999px",
+  border: "1px solid rgba(220, 236, 228, 0.26)",
+  background: "rgba(9, 22, 18, 0.52)",
+  backdropFilter: "blur(14px)",
+  WebkitBackdropFilter: "blur(14px)",
+  boxShadow: "0 12px 26px rgba(1, 7, 4, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.2)",
+  zIndex: 20,
+};
+
+const MOVEMENT_MODE_PILL_BUTTON_STYLE: CSSProperties = {
+  minWidth: "58px",
+  height: "30px",
+  borderRadius: "999px",
+  border: "1px solid rgba(212, 229, 222, 0.26)",
+  background: "rgba(14, 30, 24, 0.66)",
+  color: "rgba(230, 244, 236, 0.9)",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: "10.5px",
+  fontWeight: 640,
+  letterSpacing: "0.2px",
+  padding: "0 11px",
+  cursor: "pointer",
+  boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.14)",
+};
+
+const MOVEMENT_MODE_PILL_BUTTON_ACTIVE_STYLE: CSSProperties = {
+  ...MOVEMENT_MODE_PILL_BUTTON_STYLE,
+  border: "1px solid rgba(124, 255, 114, 0.56)",
+  background: "linear-gradient(180deg, rgba(34, 112, 66, 0.82) 0%, rgba(14, 42, 27, 0.94) 100%)",
+  color: "#f4fff6",
+  boxShadow: "0 0 0 1px rgba(124, 255, 114, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.2)",
+};
+
+const MOVEMENT_MODE_PILL_BUTTON_DISABLED_STYLE: CSSProperties = {
+  opacity: 0.46,
+  cursor: "not-allowed",
+};
+
 const SHARE_TIP_TOAST_STYLE: CSSProperties = {
   position: "fixed",
   left: "max(62px, calc(env(safe-area-inset-left, 0px) + 60px))",
@@ -1909,6 +1958,12 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
   const [tacticalTokenStyle, setTacticalTokenStyle] = useState<TacticalPlayerTokenStyle>("vision-v3");
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [movementModePillSelection, setMovementModePillSelection] = useState<MovementModePillOption>("move");
+  const [routeState, setRouteState] = useState<TacticalRouteState>({
+    isRouteCaptureMode: false,
+    routeCount: 0,
+    maxRoutes: 6,
+  });
   const [playbackSpeedMultiplier, setPlaybackSpeedMultiplier] = useState<number>(DEFAULT_PLAYBACK_SPEED_MULTIPLIER);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [quickShareOpen, setQuickShareOpen] = useState(false);
@@ -2186,6 +2241,10 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
         setIsPlaying(state.isPlaying);
         setIsPaused(state.isPaused);
       },
+      onRouteStateChange: (state) => {
+        if (disposed) return;
+        setRouteState(state);
+      },
       onItemMove: (itemId, x, y) => {
         if (disposed) return;
         const nextX = Math.max(0, Math.min(100, x));
@@ -2233,6 +2292,7 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             ? "edit"
             : "locked";
         surface.setItemMode(initialSurfaceItemMode);
+        surface.setRouteCaptureMode(false);
         const query = new URLSearchParams(window.location.search);
         const boardIdFromQuery = query.get("boardId")?.trim() ?? "";
         if (boardIdFromQuery.length > 0) {
@@ -2296,15 +2356,20 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     if (isStatsMode || isWhiteboardMode || !isPortraitViewingMode) return;
     setToolsOpen(false);
     setKitEditorState(null);
+    setMovementModePillSelection("move");
     setItemMode("locked");
     setTacticalTool("move");
+    setRouteState((previous) => ({ ...previous, isRouteCaptureMode: false }));
     const surface = surfaceRef.current;
     if (!surface) return;
     surface.setItemMode("locked");
     surface.setWhiteboardDrawTool("move");
+    surface.setRouteCaptureMode(false);
   }, [isPortraitViewingMode, isStatsMode, isWhiteboardMode]);
 
   const isPlaybackLocked = isPlaying || isPaused;
+  const hasAssignedRoutes = routeState.routeCount > 0;
+  const isAddPhaseBlocked = isPlaybackLocked || routeState.isRouteCaptureMode || hasAssignedRoutes;
   const playbackSpeedOptionIndex = Math.max(
     0,
     PLAYBACK_SPEED_OPTIONS.findIndex((option) => option.multiplier === playbackSpeedMultiplier),
@@ -2317,12 +2382,26 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     "--speed-track": `linear-gradient(90deg, rgba(34, 197, 94, 0.95) 0%, rgba(34, 197, 94, 0.95) ${playbackSpeedTrackFillPercent}%, rgba(255, 255, 255, 0.9) ${playbackSpeedTrackFillPercent}%, rgba(255, 255, 255, 0.9) 100%)`,
   } as CSSProperties;
   const effectiveItemMode: ItemMode =
-    isPortraitViewingMode || (itemMode !== "edit" || tacticalTool !== "move" || isPlaybackLocked) ? "locked" : "edit";
+    isPortraitViewingMode || routeState.isRouteCaptureMode || (itemMode !== "edit" || tacticalTool !== "move" || isPlaybackLocked)
+      ? "locked"
+      : "edit";
 
   useEffect(() => {
     if (isStatsMode || isWhiteboardMode) return;
     surfaceRef.current?.setItemMode(effectiveItemMode);
   }, [isStatsMode, isWhiteboardMode, effectiveItemMode]);
+
+  useEffect(() => {
+    if (isStatsMode || isWhiteboardMode) return;
+    if (routeState.isRouteCaptureMode) {
+      setMovementModePillSelection("route");
+      return;
+    }
+    if (tacticalTool !== "move") return;
+    if (itemMode === "edit") {
+      setMovementModePillSelection("move");
+    }
+  }, [isStatsMode, isWhiteboardMode, routeState.isRouteCaptureMode, tacticalTool, itemMode]);
 
   useEffect(() => {
     if (!isWhiteboardMode) return;
@@ -2850,10 +2929,20 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     surfaceRef.current?.setWhiteboardDrawColor(color);
   };
 
+  const setRouteCaptureMode = (enabled: boolean) => {
+    if (isPortraitViewingMode) return;
+    const surface = surfaceRef.current;
+    if (!surface) return;
+    surface.setRouteCaptureMode(enabled);
+  };
+
   const applyTacticalTool = (tool: WhiteboardToolAction) => {
     if (isPortraitViewingMode && tool !== "move") return;
     const surface = surfaceRef.current;
     if (!surface) return;
+    if (tool !== "move") {
+      setRouteCaptureMode(false);
+    }
     setTacticalTool(tool);
     surface.setWhiteboardDrawTool(tool);
     surface.setWhiteboardDrawColor(tacticalPenColor);
@@ -2889,6 +2978,8 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
     surface.newBoard();
     tacticalItemCounterRef.current = 0;
     setItems([]);
+    setMovementModePillSelection("move");
+    setRouteState((previous) => ({ ...previous, isRouteCaptureMode: false, routeCount: 0 }));
     setItemMode("locked");
     setTacticalTool("move");
     setKitEditorState(null);
@@ -2948,9 +3039,30 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
 
   const freeBall = () => {
     if (isPortraitViewingMode || isPlaybackLocked) return;
+    setRouteCaptureMode(false);
     surfaceRef.current?.freeBall();
+    setMovementModePillSelection("ball");
     setTacticalTool("move");
     surfaceRef.current?.setWhiteboardDrawTool("move");
+  };
+
+  const applyMovementModePillSelection = (nextMode: MovementModePillOption) => {
+    if (isPortraitViewingMode || isPlaybackLocked) return;
+    setMovementModePillSelection(nextMode);
+    if (nextMode === "move") {
+      setRouteCaptureMode(false);
+      setItemMode("edit");
+      applyTacticalTool("move");
+      return;
+    }
+    if (nextMode === "route") {
+      setItemMode("locked");
+      applyTacticalTool("move");
+      setRouteCaptureMode(true);
+      return;
+    }
+    setItemMode("locked");
+    freeBall();
   };
 
   const handleWhiteboardBubblePointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
@@ -3635,6 +3747,32 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
             )}
           </div>
         ) : null}
+        {!isWhiteboardMode && !isPortraitViewingMode && controlsOpen ? (
+          <div style={MOVEMENT_MODE_PILL_STYLE} role="group" aria-label="Movement mode">
+            {([
+              { id: "move", label: "Move" },
+              { id: "route", label: "Route" },
+              { id: "ball", label: "Ball" },
+            ] as const).map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                className="control-button"
+                style={{
+                  ...(movementModePillSelection === option.id
+                    ? MOVEMENT_MODE_PILL_BUTTON_ACTIVE_STYLE
+                    : MOVEMENT_MODE_PILL_BUTTON_STYLE),
+                  ...(isPlaybackLocked ? MOVEMENT_MODE_PILL_BUTTON_DISABLED_STYLE : null),
+                }}
+                aria-pressed={movementModePillSelection === option.id}
+                disabled={isPlaybackLocked}
+                onClick={() => applyMovementModePillSelection(option.id)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
         {!isWhiteboardMode && (controlsOpen || isPortraitViewingMode) ? (
           <div style={CONTROLS_POPOUT_STYLE}>
             <div style={PLAYBACK_SPEED_BAR_STYLE}>
@@ -3670,8 +3808,8 @@ export default function TacticalPadLiteClean({ initialMode = "tactical" }: Tacti
               <button
                 type="button"
                 className="control-button"
-                disabled={isPlaybackLocked}
-                style={isPlaybackLocked ? DISABLED_CONTROL_BUTTON_STYLE : ADD_PHASE_BUTTON_STYLE}
+                disabled={isAddPhaseBlocked}
+                style={isAddPhaseBlocked ? DISABLED_CONTROL_BUTTON_STYLE : ADD_PHASE_BUTTON_STYLE}
                 onClick={() => {
                   surfaceRef.current?.addPhase();
                   closeControlsMenu();
