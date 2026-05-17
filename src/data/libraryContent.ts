@@ -9,6 +9,8 @@ export type LibraryCategory =
 export type SportFilter = "gaelic-football" | "ladies-football" | "hurling" | "camogie";
 
 export type AgeGroupFilter = "u6-u8" | "u10" | "u12" | "u14" | "u16" | "minor" | "adult";
+export type ContentIdentity = "underage" | "football" | "ladies" | "hurling" | "camogie";
+export type IdentityEngine = "underage" | "football" | "hurling";
 
 export type ProblemTag =
   | "struggling-to-score"
@@ -21,6 +23,7 @@ export type LibraryItem = {
   title: string;
   summary: string;
   category: LibraryCategory;
+  identity: ContentIdentity;
   sports: SportFilter[];
   ageGroups: AgeGroupFilter[];
   problemTags: ProblemTag[];
@@ -106,7 +109,24 @@ export const AGE_LABELS: Record<AgeGroupFilter, string> = {
   adult: "Adult",
 };
 
-type RawLibraryItem = Omit<LibraryItem, "coachingPoints" | "whatToWatchFor"> & {
+export const IDENTITY_LABELS: Record<ContentIdentity, string> = {
+  underage: "Underage",
+  football: "Football",
+  ladies: "Ladies",
+  hurling: "Hurling",
+  camogie: "Camogie",
+};
+
+export const IDENTITY_ENGINE_MAP: Record<ContentIdentity, IdentityEngine> = {
+  underage: "underage",
+  football: "football",
+  ladies: "football",
+  hurling: "hurling",
+  camogie: "hurling",
+};
+
+type RawLibraryItem = Omit<LibraryItem, "identity" | "coachingPoints" | "whatToWatchFor"> & {
+  identity?: ContentIdentity;
   coachingPoints?: string;
   whatToWatchFor?: string;
 };
@@ -1637,14 +1657,55 @@ function normalizeItemSports(item: Omit<RawLibraryItem, "coachingPoints" | "what
   return baseSports;
 }
 
+function deriveContentIdentity(
+  item: Omit<RawLibraryItem, "coachingPoints" | "whatToWatchFor">,
+  normalizedSports: ReadonlyArray<SportFilter>,
+): ContentIdentity {
+  if (item.identity) {
+    return item.identity;
+  }
+
+  if (item.sectionLabel === "Underage & Club Development") {
+    return "underage";
+  }
+
+  const searchableText = [item.title, item.summary, item.setup, item.howItWorks, item.matchUse, ...item.keywords]
+    .join(" ")
+    .toLowerCase();
+
+  if (searchableText.includes("camogie")) {
+    return "camogie";
+  }
+
+  if (searchableText.includes("ladies")) {
+    return "ladies";
+  }
+
+  if (normalizedSports.includes("camogie") && !normalizedSports.includes("hurling")) {
+    return "camogie";
+  }
+
+  if (normalizedSports.includes("ladies-football") && !normalizedSports.includes("gaelic-football")) {
+    return "ladies";
+  }
+
+  if (normalizedSports.includes("hurling") || normalizedSports.includes("camogie")) {
+    return "hurling";
+  }
+
+  return "football";
+}
+
 export const LIBRARY_ITEMS: ReadonlyArray<LibraryItem> = RAW_LIBRARY_ITEMS.map(
   ({ coachingPoints, whatToWatchFor, commonMistakes, ...item }) => {
     const normalizedWatch = normalizeBulletList(whatToWatchFor ?? coachingPoints ?? "");
     const normalizedCommonMistakes = commonMistakes ? normalizeBulletList(commonMistakes) : undefined;
     const normalizedSports = normalizeItemSports(item);
+    const identity = deriveContentIdentity(item, normalizedSports);
 
     return {
       ...item,
+      identity,
       sports: normalizedSports,
       coachingPoints: normalizedWatch,
       whatToWatchFor: normalizedWatch,
