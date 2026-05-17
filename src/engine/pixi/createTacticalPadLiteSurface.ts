@@ -332,12 +332,12 @@ const DEFAULT_PLAYBACK_SPEED_MULTIPLIER = 1;
 const MIN_PLAYBACK_SPEED_MULTIPLIER = 0.25;
 const MAX_PLAYBACK_SPEED_MULTIPLIER = 1.5;
 const FULL_PITCH_VIEW_BOUNDS = { x: 0, y: 0, width: WORLD_SIZE.width, height: WORLD_SIZE.height } as const;
-const HALF_LEFT_PITCH_VIEW_BOUNDS = { x: -4, y: -5, width: 88, height: 110 } as const;
+const HALF_LEFT_PITCH_VIEW_BOUNDS = { x: 0, y: -6, width: 96, height: 112 } as const;
 const HALF_RIGHT_PITCH_VIEW_BOUNDS = {
-  x: 76,
-  y: -5,
-  width: 88,
-  height: 110,
+  x: 64,
+  y: -6,
+  width: 96,
+  height: 112,
 } as const;
 
 function clampWorld(value: number, max: number): number {
