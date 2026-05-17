@@ -1,0 +1,39 @@
+<svg width="960" height="320" viewBox="0 0 960 320" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="PV tactical monogram direction C">
+  <defs>
+    <filter id="c-glow" x="-8%" y="-24%" width="116%" height="165%">
+      <feGaussianBlur stdDeviation="5.4" result="soft" />
+      <feColorMatrix
+        in="soft"
+        type="matrix"
+        values="0 0 0 0 0.46
+                0 0 0 0 0.98
+                0 0 0 0 0.71
+                0 0 0 0.28 0"
+        result="mintGlow"
+      />
+      <feMerge>
+        <feMergeNode in="mintGlow" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <g filter="url(#c-glow)">
+    <text
+      x="190"
+      y="214"
+      fill="#FFFFFF"
+      stroke="#FFFFFF"
+      stroke-width="9.4"
+      stroke-linejoin="round"
+      stroke-linecap="round"
+      paint-order="stroke fill"
+      font-size="210"
+      font-weight="845"
+      letter-spacing="-8"
+      font-family="Inter, Avenir Next, Segoe UI, Arial, sans-serif"
+    >
+      PV
+    </text>
+    <path d="M172 248H716" stroke="#FFFFFF" stroke-width="7.6" stroke-linecap="round" opacity="0.86" />
+  </g>
+</svg>

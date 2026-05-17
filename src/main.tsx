@@ -5,6 +5,7 @@ import { OverlayPortalProvider } from "./overlay/OverlayPortalContext";
 import PitchFlowCoachShell from "./pages/PitchFlowCoachShell";
 import TacticalPadLiteClean from "./pages/TacticalPadLiteClean";
 import PlayerPerformanceTracker from "./pages/PlayerPerformanceTracker";
+import BrandPreview from "./pages/BrandPreview";
 
 const boardShell = () => <PitchFlowCoachShell initialTab="home" />;
 const VISION_BOARD_PATH = "/vision-board";
@@ -12,6 +13,7 @@ const QUICK_BOARD_PATH = "/quickboard";
 const FLOW_STATS_PATH = "/flowstats";
 const NOTES_PATH = "/notes";
 const PLAYER_PERFORMANCE_TRACKER_PATH = "/player-performance-tracker";
+const BRAND_PREVIEW_PATH = "/brand-preview";
 
 function redirectToBoard() {
   if (window.location.pathname !== "/board") {
@@ -90,6 +92,9 @@ function pickRootComponent() {
   }
   if (normalizedPath === PLAYER_PERFORMANCE_TRACKER_PATH) {
     return PlayerPerformanceTracker;
+  }
+  if (normalizedPath === BRAND_PREVIEW_PATH) {
+    return BrandPreview;
   }
   return redirectToBoard();
 }
