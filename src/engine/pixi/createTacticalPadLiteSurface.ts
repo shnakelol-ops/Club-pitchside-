@@ -1067,6 +1067,7 @@ export async function createTacticalPadLiteSurface(
   let playbackPath: PhaseSnapshot[] = [];
   let activeSegmentIndex = 0;
   let singlePlayTargetSnapshot: PhaseSnapshot | null = null;
+  let replaySingleTargetFromReset = false;
   let startPositions: PhaseSnapshot = {
     players: players.map((player) => ({ ...player.current })),
     football: [],
@@ -2370,6 +2371,11 @@ export async function createTacticalPadLiteSurface(
   }
 
   function playSingleStartToCurrent(): void {
+    if (replaySingleTargetFromReset && singlePlayTargetSnapshot != null) {
+      replaySingleTargetFromReset = false;
+      startPlayback([cloneSnapshot(startPositions), cloneSnapshot(singlePlayTargetSnapshot)]);
+      return;
+    }
     const shouldReplayStoredTarget = singlePlayTargetSnapshot != null && isCurrentAtStartPosition();
     const playbackTarget = shouldReplayStoredTarget
       ? cloneSnapshot(singlePlayTargetSnapshot)
@@ -2377,6 +2383,7 @@ export async function createTacticalPadLiteSurface(
     if (!shouldReplayStoredTarget) {
       singlePlayTargetSnapshot = cloneSnapshot(playbackTarget);
     }
+    replaySingleTargetFromReset = false;
     startPlayback([cloneSnapshot(startPositions), playbackTarget]);
   }
 
@@ -2943,6 +2950,7 @@ export async function createTacticalPadLiteSurface(
     clearRouteAssignments();
     setRouteCaptureModeState(false);
     singlePlayTargetSnapshot = null;
+    replaySingleTargetFromReset = false;
     resetActiveWhiteboardDrawing();
     lastTappedPlayer = null;
 
@@ -3224,6 +3232,7 @@ export async function createTacticalPadLiteSurface(
       clearRouteDraft();
       cancelPlaybackAnimation();
       singlePlayTargetSnapshot = null;
+      replaySingleTargetFromReset = false;
       startPositions = captureCurrentSnapshot();
       phases = [];
       resetAllBallMovementPaths();
@@ -3235,6 +3244,7 @@ export async function createTacticalPadLiteSurface(
       clearSelectedItem();
       cancelPlaybackAnimation();
       singlePlayTargetSnapshot = null;
+      replaySingleTargetFromReset = false;
       phases = [...phases, captureCurrentSnapshot()];
       resetAllBallMovementPaths();
       options.onPhaseCountChange?.(phases.length);
@@ -3244,6 +3254,7 @@ export async function createTacticalPadLiteSurface(
       clearSelectedItem();
       cancelPlaybackAnimation();
       singlePlayTargetSnapshot = null;
+      replaySingleTargetFromReset = false;
       if (phases.length <= 0) return;
       phases = phases.slice(0, -1);
       const previousSnapshot = phases[phases.length - 1] ?? startPositions;
@@ -3256,6 +3267,7 @@ export async function createTacticalPadLiteSurface(
       clearRouteAssignments();
       setRouteCaptureModeState(false);
       singlePlayTargetSnapshot = null;
+      replaySingleTargetFromReset = false;
       importBoardState(cloneBoardStateSnapshot(pristineBoardState));
     },
     play: handlePlay,
@@ -3331,6 +3343,7 @@ export async function createTacticalPadLiteSurface(
       clearRouteDraft();
       cancelBasicRouteFollow({ restoreOrigin: true });
       applySnapshotToSurface(startPositions);
+      replaySingleTargetFromReset = true;
     },
     reflow: () => {
       fitToHost();
