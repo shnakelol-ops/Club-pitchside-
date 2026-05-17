@@ -332,12 +332,12 @@ const DEFAULT_PLAYBACK_SPEED_MULTIPLIER = 1;
 const MIN_PLAYBACK_SPEED_MULTIPLIER = 0.25;
 const MAX_PLAYBACK_SPEED_MULTIPLIER = 1.5;
 const FULL_PITCH_VIEW_BOUNDS = { x: 0, y: 0, width: WORLD_SIZE.width, height: WORLD_SIZE.height } as const;
-const HALF_LEFT_PITCH_VIEW_BOUNDS = { x: 0, y: -4, width: 112, height: 108 } as const;
+const HALF_LEFT_PITCH_VIEW_BOUNDS = { x: 0, y: 0, width: 90, height: 100 } as const;
 const HALF_RIGHT_PITCH_VIEW_BOUNDS = {
-  x: 48,
-  y: -4,
-  width: 112,
-  height: 108,
+  x: 70,
+  y: 0,
+  width: 90,
+  height: 100,
 } as const;
 
 function clampWorld(value: number, max: number): number {
@@ -673,13 +673,13 @@ function resolvePitchViewConfig(mode: PitchViewMode): {
   if (mode === "half-left") {
     return {
       viewBounds: HALF_LEFT_PITCH_VIEW_BOUNDS,
-      fitMode: "cover",
+      fitMode: "contain",
     };
   }
   if (mode === "half-right") {
     return {
       viewBounds: HALF_RIGHT_PITCH_VIEW_BOUNDS,
-      fitMode: "cover",
+      fitMode: "contain",
     };
   }
   return {
