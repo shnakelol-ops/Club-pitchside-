@@ -1834,41 +1834,54 @@ const PANEL_CSS = `
 
 .landscape-toolbar {
   position: fixed;
-  right: 92px;
-  bottom: 30px;
+  left: 50%;
+  right: auto;
+  bottom: max(20px, calc(env(safe-area-inset-bottom, 0px) + 12px));
+  transform: translateX(-50%);
   z-index: 20;
-  display: flex;
+  display: inline-flex;
   flex-direction: column;
-  gap: 4px;
-  width: fit-content;
-  max-width: min(592px, calc(100vw - 160px));
-  max-height: 112px;
-  padding: 5px 7px;
-  border-radius: 14px;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: max-content;
+  max-width: min(72vw, 760px);
+  padding: 8px 10px;
+  border-radius: 20px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(10, 20, 35, 0.72);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
-  box-shadow: 0 7px 14px rgba(4, 12, 24, 0.22);
+  box-shadow: 0 8px 18px rgba(4, 12, 24, 0.24);
+  overflow: visible;
 }
 
 .landscape-toolbar-row {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 3px;
+  justify-content: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  width: max-content;
+  max-width: 100%;
 }
 
 .landscape-toolbar-secondary {
-  display: flex;
-  gap: 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  width: max-content;
+  max-width: 100%;
   margin-top: 0;
-  padding-top: 2px;
+  padding-top: 3px;
   border-top: 1px solid rgba(148, 163, 184, 0.16);
 }
 
 .landscape-toolbar-btn {
-  min-width: 43px;
-  height: 25px;
+  min-width: 44px;
+  height: 26px;
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.4);
   background: rgba(15, 23, 42, 0.86);
@@ -1876,7 +1889,7 @@ const PANEL_CSS = `
   font-size: 9px;
   font-weight: 700;
   line-height: 1;
-  padding: 0 7px;
+  padding: 0 8px;
   cursor: pointer;
   white-space: nowrap;
   letter-spacing: 0.16px;
@@ -1884,7 +1897,7 @@ const PANEL_CSS = `
 }
 
 .landscape-toolbar-secondary-btn {
-  height: 22px;
+  height: 24px;
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.36);
   background: rgba(15, 23, 42, 0.84);
@@ -1892,7 +1905,7 @@ const PANEL_CSS = `
   font-size: 8.8px;
   font-weight: 600;
   line-height: 1;
-  padding: 0 6px;
+  padding: 0 7px;
   cursor: pointer;
   white-space: nowrap;
   letter-spacing: 0.18px;
