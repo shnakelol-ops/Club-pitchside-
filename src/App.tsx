@@ -1903,6 +1903,7 @@ export default function App() {
         const teamSide = activeTeamRef.current;
         const nextEvent: LoggedMatchEvent = {
           ...event,
+          half: matchEngineStateRef.current.currentHalf,
           id: `team-${teamSide.toLowerCase()}-${event.id}`,
           team: teamSide,
         };
