@@ -1082,11 +1082,18 @@ const PANEL_CSS = `
   opacity: 0;
   transition: opacity 150ms ease;
   background:
-    radial-gradient(circle at top left, rgba(0, 120, 100, 0.09), transparent 60%),
-    radial-gradient(circle at top right, rgba(0, 120, 100, 0.09), transparent 60%),
-    linear-gradient(to bottom, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0) 30%),
-    linear-gradient(to top, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0) 35%),
-    linear-gradient(to bottom, rgba(0, 0, 0, 0) 58%, rgba(0, 80, 60, 0.13) 100%),
+    radial-gradient(circle at top left, rgba(0, 120, 100, 0.06), transparent 60%),
+    radial-gradient(circle at top right, rgba(0, 120, 100, 0.06), transparent 60%),
+    linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.15) 0%,
+      rgba(0, 0, 0, 0) 46%,
+      rgba(0, 0, 0, 0) 54%,
+      rgba(0, 0, 0, 0.15) 100%
+    ),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.065), rgba(0, 0, 0, 0) 30%),
+    linear-gradient(to top, rgba(0, 0, 0, 0.078), rgba(0, 0, 0, 0) 35%),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0) 58%, rgba(0, 80, 60, 0.085) 100%),
     linear-gradient(135deg, rgba(220, 238, 242, 1) 0%, rgba(172, 203, 214, 1) 45%, rgba(108, 158, 183, 1) 100%);
 }
 
@@ -1099,7 +1106,7 @@ const PANEL_CSS = `
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 42%, rgba(4, 12, 18, 0.28) 68%, rgba(0, 0, 0, 0.62) 100%);
+    radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 58%, rgba(4, 12, 18, 0.18) 76%, rgba(0, 0, 0, 0.4) 100%);
 }
 
 .stats-stadium-background::after {
@@ -1107,9 +1114,9 @@ const PANEL_CSS = `
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse at 15% 0%, rgba(255, 255, 255, 0.18), transparent 35%),
-    radial-gradient(ellipse at 85% 0%, rgba(255, 255, 255, 0.18), transparent 35%),
-    linear-gradient(to bottom, rgba(0, 0, 0, 0.18), transparent 40%);
+    radial-gradient(ellipse at 15% 0%, rgba(255, 255, 255, 0.12), transparent 35%),
+    radial-gradient(ellipse at 85% 0%, rgba(255, 255, 255, 0.12), transparent 35%),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.12), transparent 40%);
 }
 
 .stats-stadium-light {
@@ -1161,7 +1168,7 @@ const PANEL_CSS = `
     rgba(100, 180, 190, 0.08) 58%,
     transparent 78%
   );
-  filter: blur(22px);
+  filter: blur(18px);
   z-index: -1;
 }
 
@@ -2304,7 +2311,7 @@ const PANEL_CSS = `
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.14), 0 3px 10px rgba(2, 6, 23, 0.32),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    inset 0 1px 0 rgba(255, 255, 255, 0.035);
   color: #cbd5e1;
   font-size: 10px;
   font-weight: 600;
@@ -2459,7 +2466,7 @@ const HOME_ICON_BUTTON_STYLE: CSSProperties = {
   cursor: "pointer",
   backdropFilter: "blur(10px)",
   WebkitBackdropFilter: "blur(10px)",
-  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
 };
 
 export default function StatsModeSurface() {
